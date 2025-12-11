@@ -1,0 +1,184 @@
+import 'package:flutter/material.dart';
+import '../../../core/services/expense_service.dart';
+import '../../../core/services/user_service.dart';
+import '../../../features/auth/providers/app_auth_provider.dart';
+import '../models/expense_model.dart';
+
+class ExpenseProvider with ChangeNotifier {
+  final ExpenseService expenseService;
+  final UserService userService;
+  final AppAuthProvider appAuthProvider;
+
+  ExpenseProvider({
+    required this.expenseService,
+    required this.userService,
+    required this.appAuthProvider,
+  });
+
+  List<ExpenseModel> _expenses = [];
+  List<ExpenseModel> _programExpenses = [];
+  bool _isLoading = false;
+  final Map<String, double> _expenseTotalsCache = {};
+
+  List<ExpenseModel> get expenses => _expenses;
+  List<ExpenseModel> get programExpenses => _programExpenses;
+  bool get isLoading => _isLoading;
+
+  /// Create new expense
+  Future<void> createExpense(ExpenseModel expense) async {
+    try {
+      final currentUser = appAuthProvider.user;
+      if (currentUser == null) {
+        throw Exception('User must be logged in to add expenses');
+      }
+
+      // ✅ Check if user is in the program
+      final isInProgram = await userService.isUserInProgram(currentUser.uid, expense.programId);
+      if (!isInProgram) {
+        throw Exception('You must be a participant in this program to add expenses');
+      }
+
+      await expenseService.createExpense(expense);
+      _expenseTotalsCache.clear(); // Invalidate cache
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Load all expenses under a community
+  Future<void> loadCommunityExpenses(String communityId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _expenses = await expenseService.getExpensesByCommunity(communityId);
+    } catch (e) {
+      debugPrint('Error loading community expenses: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load expenses for a program
+  Future<void> loadProgramExpenses(String programId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _programExpenses = await expenseService.getExpensesByProgram(programId);
+    } catch (e) {
+      debugPrint('Error loading program expenses: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Update expense status (approved, pending, rejected)
+  Future<void> updateExpenseStatus(String expenseId, String status) async {
+    try {
+      await expenseService.updateExpenseStatus(expenseId, status);
+      _expenseTotalsCache.clear();
+
+      // Update local state
+      final expenseIndex =
+          _expenses.indexWhere((expense) => expense.expenseId == expenseId);
+      if (expenseIndex != -1) {
+        _expenses[expenseIndex] =
+            _expenses[expenseIndex].copyWith(status: status);
+      }
+
+      final programExpenseIndex =
+          _programExpenses.indexWhere((expense) => expense.expenseId == expenseId);
+      if (programExpenseIndex != -1) {
+        _programExpenses[programExpenseIndex] =
+            _programExpenses[programExpenseIndex].copyWith(status: status);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete an expense
+  Future<void> deleteExpense(String expenseId) async {
+    try {
+      await expenseService.deleteExpense(expenseId);
+      _expenseTotalsCache.clear();
+      _expenses.removeWhere((expense) => expense.expenseId == expenseId);
+      _programExpenses.removeWhere((expense) => expense.expenseId == expenseId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Cached total for a program
+  Future<double> getProgramTotalExpenses(String programId) async {
+    final cacheKey = 'program_$programId';
+    if (_expenseTotalsCache.containsKey(cacheKey)) {
+      return _expenseTotalsCache[cacheKey]!;
+    }
+    try {
+      final total = await expenseService.getProgramTotalExpenses(programId);
+      _expenseTotalsCache[cacheKey] = total;
+      return total;
+    } catch (e) {
+      debugPrint('Error getting program total expenses: $e');
+      return 0;
+    }
+  }
+
+  /// Cached total for a community
+  Future<double> getCommunityTotalExpenses(String communityId) async {
+    final cacheKey = 'community_$communityId';
+    if (_expenseTotalsCache.containsKey(cacheKey)) {
+      return _expenseTotalsCache[cacheKey]!;
+    }
+    try {
+      final total = await expenseService.getCommunityTotalExpenses(communityId);
+      _expenseTotalsCache[cacheKey] = total;
+      return total;
+    } catch (e) {
+      debugPrint('Error getting community total expenses: $e');
+      return 0;
+    }
+  }
+
+  /// Expenses by category
+  Future<Map<String, double>> getProgramExpensesByCategory(String programId) async {
+    try {
+      return await expenseService.getProgramExpensesByCategory(programId);
+    } catch (e) {
+      debugPrint('Error getting expenses by category: $e');
+      return {};
+    }
+  }
+
+  /// Approved & pending filters
+  List<ExpenseModel> getApprovedExpenses() =>
+      _expenses.where((e) => e.status == 'approved').toList();
+
+  List<ExpenseModel> getPendingExpenses() =>
+      _expenses.where((e) => e.status == 'pending').toList();
+
+  List<ExpenseModel> getApprovedProgramExpenses() =>
+      _programExpenses.where((e) => e.status == 'approved').toList();
+
+  List<ExpenseModel> getPendingProgramExpenses() =>
+      _programExpenses.where((e) => e.status == 'pending').toList();
+
+  /// Clear all cached totals
+  void clearCache() => _expenseTotalsCache.clear();
+
+  /// Real-time listeners
+  Stream<List<ExpenseModel>> streamCommunityExpenses(String communityId) =>
+      expenseService.streamCommunityExpenses(communityId);
+
+  Stream<List<ExpenseModel>> streamProgramExpenses(String programId) =>
+      expenseService.streamProgramExpenses(programId);
+
+  Stream<double> streamProgramTotalExpenses(String programId) =>
+      expenseService.streamProgramTotalExpenses(programId);
+}

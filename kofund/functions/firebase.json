@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "source": ".",
+    "predeploy": [],
+    "ingressSettings": "ALLOW_ALL",
+    "vpcConnectorEgressSettings": "",
+    "vpcConnector": "",
+    "runtime": "nodejs20"
+  }
+}

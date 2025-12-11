@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "136492130886",
+    "project_id": "kofund-153ba",
+    "storage_bucket": "kofund-153ba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:136492130886:android:19d8e4c483e12fc6682047",
+        "android_client_info": {
+          "package_name": "com.example.kofund"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "136492130886-esp1pngi4cim7sjbdb1hvsgl67cf3c58.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBgRegrFPDpsYi_-P_mM-fMnzdGywsuJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "136492130886-esp1pngi4cim7sjbdb1hvsgl67cf3c58.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "136492130886-eed1anj3egfnv7nac3ntqrq786a2kch0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.kofund.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:136492130886:android:391b789efcd73fc0682047",
+        "android_client_info": {
+          "package_name": "com.kofund.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "136492130886-3foh9s5kh893s5p62jgbarkmel6vgo0q.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kofund.app",
+            "certificate_hash": "380c0ff90dbe38a39c3837fe386524da67a1e9b1"
+          }
+        },
+        {
+          "client_id": "136492130886-esp1pngi4cim7sjbdb1hvsgl67cf3c58.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBgRegrFPDpsYi_-P_mM-fMnzdGywsuJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "136492130886-esp1pngi4cim7sjbdb1hvsgl67cf3c58.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "136492130886-eed1anj3egfnv7nac3ntqrq786a2kch0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.kofund.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

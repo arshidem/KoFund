@@ -1,0 +1,1 @@
+// Community card widget 
