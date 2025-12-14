@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../../features/auth/providers/app_auth_provider.dart';
 import '../../../features/programs/models/program_model.dart';
 import '../../../features/participants/providers/participant_provider.dart';
@@ -25,6 +26,11 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
   String _selectedUserId = '';
   String _selectedPaymentMethod = 'cash';
   String _searchQuery = '';
+  
+  // ✅ ADD: For monthly tracking
+  bool _isMonthlyProgram = false;
+  String? _selectedMonth; // Format: "2025-01"
+  List<String> _availableMonths = [];
 
   List<ProgramModel> _programs = [];
   List<ParticipantModel> _programParticipants = [];
@@ -80,6 +86,31 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
           .where('status', isEqualTo: 'active')
           .get();
 
+      // ✅ ADD: Debug all programs with more details
+      print('=== LOADING ALL PROGRAMS ===');
+      print('Community ID: ${currentUser.communityId}');
+      print('Total programs found: ${snapshot.docs.length}');
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        print('\n📋 Program: ${data['title']}');
+        print('   📍 ID: ${doc.id}');
+        print('   📊 Status: ${data['status']}');
+        print('   💰 Suggested: ${data['suggestedContribution']}');
+        
+        // ✅ Check if the field exists in Firestore
+        if (data.containsKey('isMonthlyPaymentProgram')) {
+          print('   📅 isMonthlyPaymentProgram: ${data['isMonthlyPaymentProgram']} (found in Firestore)');
+        } else {
+          print('   ❌ isMonthlyPaymentProgram: FIELD NOT FOUND in Firestore');
+          print('   ⚠️ Defaulting to: false');
+        }
+        
+        final program = ProgramModel.fromMap(data, doc.id);
+        print('   ✅ Parsed isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
+        print('---');
+      }
+      
       setState(() {
         _programs = snapshot.docs
             .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
@@ -92,6 +123,7 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
     }
   }
 
+  // ✅ ADD: Load participants method (this was missing!)
   Future<void> _loadParticipants(String programId) async {
     setState(() => _isLoading = true);
     
@@ -99,7 +131,7 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
       final participantProvider = context.read<ParticipantProvider>();
       await participantProvider.loadProgramParticipants(programId);
       
-      // Get program details for suggested contribution
+      // Get program details
       final programDoc = await FirebaseFirestore.instance
           .collection('programs')
           .doc(programId)
@@ -107,17 +139,36 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
       
       if (programDoc.exists) {
         final programData = programDoc.data()!;
+        final program = ProgramModel.fromMap(programData, programId);
+        
+        // ✅ ADD DEBUG PRINTS
+        print('=== LOADING PARTICIPANTS FOR PROGRAM ===');
+        print('Program Title: ${program.title}');
+        print('isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
+        
         setState(() {
-          _suggestedContribution = (programData['suggestedContribution'] ?? 0).toDouble();
+          _suggestedContribution = program.suggestedContribution ?? 0;
+          _isMonthlyProgram = program.isMonthlyPaymentProgram; // ✅ Get monthly flag
+          
+          // ✅ If monthly program, generate month options
+          if (_isMonthlyProgram) {
+            print('✅ This is a MONTHLY program - showing month selector');
+            _availableMonths = _generateMonthOptions();
+            _selectedMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+            print('Available months: $_availableMonths');
+            print('Selected month: $_selectedMonth');
+          } else {
+            print('❌ This is NOT a monthly program');
+          }
         });
       }
       
       setState(() {
         _programParticipants = participantProvider.programParticipants
-            .where((participant) => participant.status == 'joined') // Only show active participants
+            .where((participant) => participant.status == 'joined')
             .toList();
         _filteredParticipants = _programParticipants;
-        _searchController.clear(); // Clear search when loading new participants
+        _searchController.clear();
         _searchQuery = '';
       });
     } catch (e) {
@@ -130,6 +181,22 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
     }
   }
 
+  // ✅ ADD: Generate available months for selection
+  List<String> _generateMonthOptions() {
+    final List<String> months = [];
+    final now = DateTime.now();
+    
+    // Generate previous 3 months, current month, and next 3 months
+    for (int i = -3; i <= 3; i++) {
+      final date = DateTime(now.year, now.month + i, 1);
+      final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+      months.add(monthStr);
+    }
+    
+    return months;
+  }
+
+  // ✅ UPDATED: _addContribution method with monthly support
   Future<void> _addContribution() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedProgramId.isEmpty || _selectedUserId.isEmpty) {
@@ -138,10 +205,19 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
       );
       return;
     }
+    
+    // ✅ ADD: Validate month selection for monthly programs
+    if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select month for monthly contribution')),
+      );
+      return;
+    }
 
     final provider = context.read<ContributionProvider>();
     final currentUser = context.read<AppAuthProvider>().user;
 
+    // ✅ UPDATED: Create contribution with monthly data
     final contribution = ContributionModel(
       contributionId: '', // Will be generated by Firestore
       programId: _selectedProgramId,
@@ -149,6 +225,9 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
       communityId: currentUser?.communityId ?? '',
       amount: double.parse(_amountController.text),
       paymentMethod: _selectedPaymentMethod,
+      // ✅ SET: Monthly fields based on program type
+      isMonthlyContribution: _isMonthlyProgram, // true if monthly program
+      monthId: _isMonthlyProgram ? _selectedMonth : null, // only set if monthly
       createdAt: Timestamp.now(),
     );
 
@@ -193,8 +272,72 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
           });
     } catch (e) {
       print('Error updating participant payment status: $e');
-      // Don't throw error here - contribution was already added successfully
     }
+  }
+
+  // ✅ ADD: Month selector widget
+  Widget _buildMonthSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Month *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 60,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _availableMonths.length,
+            itemBuilder: (context, index) {
+              final month = _availableMonths[index];
+              final isSelected = _selectedMonth == month;
+              final isCurrentMonth = month == "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+              
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(
+                    _getMonthDisplayName(month),
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                      fontWeight: isCurrentMonth ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: Colors.blue,
+                  backgroundColor: isCurrentMonth ? Colors.blue[50] : Colors.grey[100],
+                  onSelected: (selected) {
+                    setState(() => _selectedMonth = month);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  String _getMonthDisplayName(String monthId) {
+    final parts = monthId.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final date = DateTime(year, month, 1);
+    
+    // Show "Jan 2024" format
+    final monthName = DateFormat('MMM').format(date);
+    
+    // Add "(Current)" for current month
+    final currentMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+    final suffix = monthId == currentMonth ? " (Current)" : "";
+    
+    return "$monthName $year$suffix";
   }
 
   Widget _buildParticipantList() {
@@ -220,8 +363,8 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
               textAlign: TextAlign.center,
             ),
           ],
-        ),
-      );
+        )
+        );
     }
 
     return Column(
@@ -477,6 +620,24 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                                       color: Colors.grey[600],
                                     ),
                                   ),
+                                  // ✅ ADD: Show monthly program badge
+                                  if (program.isMonthlyPaymentProgram)
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[100],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Monthly Program',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.green[800],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             )),
@@ -484,11 +645,14 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                       onChanged: (value) {
                         setState(() {
                           _selectedProgramId = value!;
-                          _selectedUserId = ''; // Reset participant selection
+                          _selectedUserId = '';
                           _programParticipants.clear();
                           _filteredParticipants.clear();
                           _searchController.clear();
                           _suggestedContribution = 0;
+                          _isMonthlyProgram = false; // Reset
+                          _selectedMonth = null; // Reset
+                          _availableMonths = []; // Reset
                         });
                         _loadParticipants(value!);
                       },
@@ -502,22 +666,41 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                     const SizedBox(height: 20),
 
                     // Program Info Card
-                    if (_selectedProgramId.isNotEmpty && _suggestedContribution > 0)
+                    if (_selectedProgramId.isNotEmpty)
                       Card(
-                        color: Colors.blue[50],
+                        color: _isMonthlyProgram ? Colors.green[50] : Colors.blue[50],
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Row(
                             children: [
-                              const Icon(Icons.info, color: Colors.blue, size: 20),
+                              Icon(
+                                _isMonthlyProgram ? Icons.calendar_month : Icons.info,
+                                color: _isMonthlyProgram ? Colors.green : Colors.blue,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  'Suggested contribution: ₹$_suggestedContribution',
-                                  style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _isMonthlyProgram 
+                                          ? 'Monthly Program Contribution'
+                                          : 'One-time Program Contribution',
+                                      style: TextStyle(
+                                        color: _isMonthlyProgram ? Colors.green : Colors.blue,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Suggested amount: ₹$_suggestedContribution',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: _isMonthlyProgram ? Colors.green[700] : Colors.blue[700],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -525,6 +708,10 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                         ),
                       ),
                     const SizedBox(height: 16),
+
+                    // ✅ ADD: Month Selector for monthly programs
+                    if (_isMonthlyProgram && _availableMonths.isNotEmpty) 
+                      _buildMonthSelector(),
 
                     // Participants Section
                     if (_selectedProgramId.isNotEmpty) ...[
@@ -565,6 +752,12 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                         }
                         return null;
                       },
+                      // ✅ ADD: Auto-fill suggested amount
+                      onTap: () {
+                        if (_amountController.text.isEmpty && _suggestedContribution > 0) {
+                          _amountController.text = _suggestedContribution.toString();
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
 
@@ -593,8 +786,6 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ✅ REMOVED: Status dropdown (all contributions are completed)
-
                     // Add Button
                     SizedBox(
                       width: double.infinity,
@@ -602,13 +793,13 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                         onPressed: _addContribution,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.blue,
+                          backgroundColor: _isMonthlyProgram ? Colors.green : Colors.blue,
                           foregroundColor: Colors.white,
                         ),
-                        icon: const Icon(Icons.add),
-                        label: const Text(
-                          'Add Contribution',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        icon: Icon(_isMonthlyProgram ? Icons.calendar_month : Icons.add),
+                        label: Text(
+                          _isMonthlyProgram ? 'Add Monthly Contribution' : 'Add Contribution',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ),

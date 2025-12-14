@@ -118,6 +118,28 @@
           "order": "DESCENDING"
         }
       ]
+    },
+      {
+      "collectionGroup": "contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isMonthlyContribution",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "monthId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "programId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
 
   ],

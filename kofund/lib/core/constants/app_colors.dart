@@ -13,6 +13,7 @@ class AppColors {
   static const lightTextPrimary = Color(0xFF1A2E2A);
   static const lightTextSecondary = Color(0xFF5F6B6B);
   static const lightTextTertiary = Color(0xFF8A9A9A);
+  static const lightTextCards = Color(0xFF052224);
   static const lightRevenue = Color(0xFF00BFA6);
   static const lightExpense = Color(0xFFFF6B6B);
   static const lightBalance = Color(0xFF2196F3);
@@ -34,6 +35,7 @@ class AppColors {
   static const darkTextPrimary = Color(0xFFE0F2EF);
   static const darkTextSecondary = Color(0xFF9EB6B4);
   static const darkTextTertiary = Color(0xFF6B8A87);
+  static const darkTextCards = Color(0xFFF1FFF3);
   static const darkRevenue = Color(0xFF00E3C3);
   static const darkExpense = Color(0xFFFF8A8A);
   static const darkBalance = Color(0xFF4FC3F7);
@@ -65,6 +67,9 @@ class AppColors {
   
   static Color textTertiary(BuildContext context) => 
       Theme.of(context).brightness == Brightness.dark ? darkTextTertiary : lightTextTertiary;
+
+    static Color textCards(BuildContext context) => 
+      Theme.of(context).brightness == Brightness.dark ? darkTextCards : lightTextCards;
   
   static Color revenue(BuildContext context) => 
       Theme.of(context).brightness == Brightness.dark ? darkRevenue : lightRevenue;

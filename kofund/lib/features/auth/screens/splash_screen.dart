@@ -13,8 +13,12 @@ import '../../../features/community/screens/community_dashboard.dart';
 import '../../../features/community/screens/pending_approval_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
-import '../../../features/notifications/providers/notification_provider.dart';
+import '../../../core/constants/app_colors.dart';
+
 import '../../../core/services/fcm_token_service.dart';
+import '../../../features/notifications/providers/notification_provider.dart';
+// Import your animated logo
+import '../../../core/widgets/animated_logo.dart';
 
 void unawaited(Future<void> future) {}
 
@@ -32,9 +36,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Start initialization immediately
-    _initializeAppWithTimeout();
+    _startSplashTimer();
   }
+  /// ⭐ NEW: Ensure splash shows for at least 2 seconds
+void _startSplashTimer() {
+  Future.delayed(const Duration(seconds: 3), () {
+    if (!mounted) return;
+    _initializeAppWithTimeout(); // your existing logic
+  });
+}
 
   /// ⭐ NEW: Initialize notification system ASYNCHRONOUSLY
   Future<void> _initializeNotificationSystemInBackground() async {
@@ -248,146 +258,34 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<app_auth.AppAuthProvider>(context);
-    
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App logo/icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.account_balance_wallet,
-                size: 64,
-                color: Colors.blue,
-              ),
-            ),
-            
-            const SizedBox(height: 30),
-            
-            // App name
-            const Text(
-              'KoFund',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-            
-            const SizedBox(height: 10),
-            
-            // Tagline
-            const Text(
-              'Community Funds Management',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-            
-            // Loading indicator
-            if (_isInitializing) ...[
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.white.withOpacity(0.8),
-                ),
-                strokeWidth: 2,
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Status text
-              Text(
-                _status,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 14,
-                ),
-              ),
-              
-              const SizedBox(height: 10),
-              
-              // Mode indicator
-              if (authProvider.isOfflineMode)
-                Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.orange, width: 1),
-                  ),
-                  child: const Text(
-                    'Offline Mode',
-                    style: TextStyle(
-                      color: Colors.orange,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-            
-            // Error state (should not normally show)
-            if (!_isInitializing && authProvider.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Error: ${authProvider.error}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Retry
-                        setState(() {
-                          _isInitializing = true;
-                          _status = 'Retrying...';
-                        });
-                        _initializeAppWithTimeout();
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+@override
+Widget build(BuildContext context) {
+  final authProvider = Provider.of<app_auth.AppAuthProvider>(context);
+  
+return Scaffold(
+  body: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+    ),
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animated Logo only (transparent background)
+          const AnimatedLogo(
+            size: 200,
+            showBackground: false,
+            loopAnimation: true,
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Status text only when loading
+      
+        ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

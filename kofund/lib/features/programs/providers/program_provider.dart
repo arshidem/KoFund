@@ -87,114 +87,84 @@ void clearAllData() {
       rethrow;
     }
   }
-
-  // ✅ ADDED: Stream that includes contribution data for program participants
-  Stream<List<ParticipantModel>> streamProgramParticipantsWithContributions(String programId) {
-    return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
-      final updatedParticipants = <ParticipantModel>[];
-      
-      for (final participant in participants) {
-        try {
-          // Get contribution data for each participant
-          final contributions = await _contributionService.getContributionsByUserAndProgram(
-            userId: participant.userId,
-            programId: programId,
-          );
-          
-          // Calculate total paid
-          final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
-          
-          // Get program to check suggested contribution
-          final program = await _firestore.collection('programs').doc(programId).get();
-          final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
-          
-          updatedParticipants.add(participant.copyWith(
-            contributionPaid: totalPaid,
-            hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
-          ));
-        } catch (e) {
-          print('❌ Error processing participant ${participant.userId}: $e');
-          // Add participant without contribution data as fallback
-          updatedParticipants.add(participant);
-        }
+// ✅ Stream with monthly contributions - CORRECTED VERSION
+// ✅ STREAM WITH MONTHLY CONTRIBUTIONS - CORRECTED with proper parameters
+Stream<List<ParticipantModel>> streamProgramParticipantsWithMonthlyContributions(
+  String programId, 
+  String monthId
+) {
+  return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
+    final updatedParticipants = <ParticipantModel>[];
+    
+    for (final participant in participants) {
+      try {
+        // ✅ CORRECT: Pass all 3 required parameters
+        final hasPaid = await _contributionService.hasUserPaidForMonth(
+          participant.userId,    // userId
+          programId,             // programId  
+          monthId,               // monthId
+        );
+        
+        // Get monthly contributions for this user
+        final monthlyContributions = await _contributionService.getMonthlyContributionsForProgram(
+          programId,
+          monthId,
+        );
+        
+        final userMonthlyContributions = monthlyContributions
+            .where((c) => c.userId == participant.userId)
+            .toList();
+        
+        final monthlyPaid = userMonthlyContributions.fold(
+          0.0, (sum, c) => sum + c.amount
+        );
+        
+        final program = await _firestore.collection('programs').doc(programId).get();
+        final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
+        
+        updatedParticipants.add(participant.copyWith(
+          contributionPaid: monthlyPaid,
+          hasPaidContribution: hasPaid,
+        ));
+      } catch (e) {
+        print('❌ Error processing monthly participant ${participant.userId}: $e');
+        updatedParticipants.add(participant);
       }
-      
-      return updatedParticipants;
-    });
-  }
-
-  // ✅ ADDED: Get program participants with real-time contribution data
-  Future<List<ParticipantModel>> getProgramParticipantsWithContributions(String programId) async {
-    try {
-      final participants = await _participantService.getProgramParticipants(programId);
-      final updatedParticipants = <ParticipantModel>[];
-      
-      for (final participant in participants) {
-        try {
-          // Get contribution data for each participant
-          final contributions = await _contributionService.getContributionsByUserAndProgram(
-            userId: participant.userId,
-            programId: programId,
-          );
-          
-          // Calculate total paid
-          final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
-          
-          // Get program to check suggested contribution
-          final program = await _firestore.collection('programs').doc(programId).get();
-          final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
-          
-          updatedParticipants.add(participant.copyWith(
-            contributionPaid: totalPaid,
-            hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
-          ));
-        } catch (e) {
-          print('❌ Error processing participant ${participant.userId}: $e');
-          updatedParticipants.add(participant);
-        }
-      }
-      
-      return updatedParticipants;
-    } catch (e) {
-      print('❌ Error getting participants with contributions: $e');
-      return [];
     }
-  }
+    
+    return updatedParticipants;
+  });
+}
 
-  // ✅ ADDED: Get program financial summary with real-time data
-  Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async {
-    try {
-      final participants = await getProgramParticipantsWithContributions(programId);
-      final program = await _programService.getProgramById(programId);
-      
-      if (program == null) {
-        return {
-          'totalParticipants': 0,
-          'paidParticipants': 0,
-          'pendingParticipants': 0,
-          'totalCollected': 0.0,
-          'totalExpected': 0.0,
-          'collectionRate': 0.0,
-        };
+// ✅ Get payment counts per month
+Future<Map<String, int>> getMonthlyPaymentCounts(String programId) async {
+  try {
+    final contributions = await _contributionService.getProgramContributions(programId);
+    
+    final counts = <String, int>{};
+    
+    for (final contribution in contributions) {
+      if (contribution.isMonthlyContribution && contribution.monthId != null) {
+        counts[contribution.monthId!] = (counts[contribution.monthId!] ?? 0) + 1;
       }
-
-      final paidParticipants = participants.where((p) => p.hasPaidContribution).length;
-      final totalCollected = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0));
-      final suggestedContribution = program.suggestedContribution ?? 0;
-      final totalExpected = suggestedContribution * participants.length;
-      final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
-
-      return {
-        'totalParticipants': participants.length,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': participants.length - paidParticipants,
-        'totalCollected': totalCollected,
-        'totalExpected': totalExpected,
-        'collectionRate': collectionRate,
-        'suggestedContribution': suggestedContribution,
-      };
-    } catch (e) {
-      print('❌ Error getting financial summary: $e');
+    }
+    
+    return counts;
+  } catch (e) {
+    print('❌ Error getting monthly payment counts: $e');
+    return {};
+  }
+}
+// ✅ FIXED: Monthly financial summary
+Stream<Map<String, dynamic>> streamProgramMonthlyFinancialSummary(
+  String programId, 
+  String monthId
+) {
+  return streamProgramParticipantsWithMonthlyContributions(programId, monthId)
+      .asyncMap((participants) async {
+    final program = await _programService.getProgramById(programId);
+    
+    if (program == null) {
       return {
         'totalParticipants': 0,
         'paidParticipants': 0,
@@ -202,45 +172,233 @@ void clearAllData() {
         'totalCollected': 0.0,
         'totalExpected': 0.0,
         'collectionRate': 0.0,
-        'suggestedContribution': 0.0,
       };
     }
-  }
 
-  // ✅ ADDED: Stream program financial summary
-  Stream<Map<String, dynamic>> streamProgramFinancialSummary(String programId) {
-    return streamProgramParticipantsWithContributions(programId).asyncMap((participants) async {
-      final program = await _programService.getProgramById(programId);
+    // ✅ Get monthly contributions for total collected
+    final monthlyContributions = await _contributionService.getMonthlyContributionsForProgram(
+      programId,
+      monthId,
+    );
+    
+    final suggestedContribution = program.suggestedContribution ?? 0;
+    
+    // ✅ FIXED: Calculate paid participants correctly
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    // Group contributions by user
+    final userContributions = <String, double>{};
+    for (final contribution in monthlyContributions) {
+      userContributions[contribution.userId] = 
+          (userContributions[contribution.userId] ?? 0) + contribution.amount;
+      totalCollected += contribution.amount;
+    }
+    
+    // Count paid participants
+    for (final participant in participants) {
+      final userId = participant.userId;
+      final userPaid = userContributions[userId] ?? 0;
       
-      if (program == null) {
-        return {
-          'totalParticipants': 0,
-          'paidParticipants': 0,
-          'pendingParticipants': 0,
-          'totalCollected': 0.0,
-          'totalExpected': 0.0,
-          'collectionRate': 0.0,
-        };
+      // ✅ CORRECT LOGIC: Only count as paid if paid full amount for this month
+      if (suggestedContribution > 0 && userPaid >= suggestedContribution) {
+        paidParticipants++;
       }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
 
-      final paidParticipants = participants.where((p) => p.hasPaidContribution).length;
-      final totalCollected = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0));
-      final suggestedContribution = program.suggestedContribution ?? 0;
-      final totalExpected = suggestedContribution * participants.length;
-      final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants, // ✅ NOW CORRECT
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+      'monthId': monthId,
+    };
+  });
+}
+  // ✅ ADDED: Stream that includes contribution data for program participants
+// ✅ ADDED: Stream that includes contribution data for program participants
+Stream<List<ParticipantModel>> streamProgramParticipantsWithContributions(String programId) {
+  return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
+    final updatedParticipants = <ParticipantModel>[];
+    
+    for (final participant in participants) {
+      try {
+        // Get contribution data for each participant
+        final contributions = await _contributionService.getContributionsByUserAndProgram(
+          userId: participant.userId,
+          programId: programId,
+        );
+        
+        // Calculate total paid
+        final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
+        
+        // Get program to check suggested contribution
+        final program = await _firestore.collection('programs').doc(programId).get();
+        final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
+        
+        updatedParticipants.add(participant.copyWith(
+          contributionPaid: totalPaid,
+          hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
+        ));
+      } catch (e) {
+        print('❌ Error processing participant ${participant.userId}: $e');
+        // Add participant without contribution data as fallback
+        updatedParticipants.add(participant);
+      }
+    }
+    
+    return updatedParticipants;
+  });
+}
 
-      return {
-        'totalParticipants': participants.length,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': participants.length - paidParticipants,
-        'totalCollected': totalCollected,
-        'totalExpected': totalExpected,
-        'collectionRate': collectionRate,
-        'suggestedContribution': suggestedContribution,
-      };
-    });
+// ✅ ADDED: Get program participants with real-time contribution data
+Future<List<ParticipantModel>> getProgramParticipantsWithContributions(String programId) async {
+  try {
+    final participants = await _participantService.getProgramParticipants(programId);
+    final updatedParticipants = <ParticipantModel>[];
+    
+    for (final participant in participants) {
+      try {
+        // Get contribution data for each participant
+        final contributions = await _contributionService.getContributionsByUserAndProgram(
+          userId: participant.userId,
+          programId: programId,
+        );
+        
+        // Calculate total paid
+        final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
+        
+        // Get program to check suggested contribution
+        final program = await _firestore.collection('programs').doc(programId).get();
+        final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
+        
+        updatedParticipants.add(participant.copyWith(
+          contributionPaid: totalPaid,
+          hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
+        ));
+      } catch (e) {
+        print('❌ Error processing participant ${participant.userId}: $e');
+        updatedParticipants.add(participant);
+      }
+    }
+    
+    return updatedParticipants;
+  } catch (e) {
+    print('❌ Error getting participants with contributions: $e');
+    return [];
   }
+}
+  // ✅ ADDED: Get program financial summary with real-time data
+// ✅ FIXED: Get program financial summary
+Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async {
+  try {
+    final participants = await getProgramParticipantsWithContributions(programId);
+    final program = await _programService.getProgramById(programId);
+    
+    if (program == null) {
+      return {
+        'totalParticipants': 0,
+        'paidParticipants': 0,
+        'pendingParticipants': 0,
+        'totalCollected': 0.0,
+        'totalExpected': 0.0,
+        'collectionRate': 0.0,
+      };
+    }
 
+    final suggestedContribution = program.suggestedContribution ?? 0;
+    
+    // ✅ FIXED: Count only participants who paid full amount
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    for (final participant in participants) {
+      final contributionPaid = participant.contributionPaid ?? 0;
+      totalCollected += contributionPaid;
+      
+      // ✅ CORRECT LOGIC: Only count as paid if paid full suggested amount
+      if (suggestedContribution > 0 && contributionPaid >= suggestedContribution) {
+        paidParticipants++;
+      }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants, // ✅ NOW CORRECT
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+    };
+  } catch (e) {
+    print('❌ Error getting financial summary: $e');
+    return {
+      'totalParticipants': 0,
+      'paidParticipants': 0,
+      'pendingParticipants': 0,
+      'totalCollected': 0.0,
+      'totalExpected': 0.0,
+      'collectionRate': 0.0,
+      'suggestedContribution': 0.0,
+    };
+  }
+}
+// ✅ FIXED: Stream program financial summary
+Stream<Map<String, dynamic>> streamProgramFinancialSummary(String programId) {
+  return streamProgramParticipantsWithContributions(programId).asyncMap((participants) async {
+    final program = await _programService.getProgramById(programId);
+    
+    if (program == null) {
+      return {
+        'totalParticipants': 0,
+        'paidParticipants': 0,
+        'pendingParticipants': 0,
+        'totalCollected': 0.0,
+        'totalExpected': 0.0,
+        'collectionRate': 0.0,
+      };
+    }
+
+    final suggestedContribution = program.suggestedContribution ?? 0;
+    
+    // ✅ FIXED: Count only participants who paid full amount
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    for (final participant in participants) {
+      final contributionPaid = participant.contributionPaid ?? 0;
+      totalCollected += contributionPaid;
+      
+      // ✅ CORRECT LOGIC: Only count as paid if paid full suggested amount
+      if (suggestedContribution > 0 && contributionPaid >= suggestedContribution) {
+        paidParticipants++;
+      }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants, // ✅ NOW CORRECT
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+    };
+  });
+}
   Future<void> createProgram(ProgramModel program) async {
     try {
       await _programService.createProgram(program);
@@ -1059,6 +1217,53 @@ Future<void> updateProgramReminderSettings({
       loadMyParticipations(userId, communityId),
     ]);
   }
+
+  // Add this method to your ProgramProvider class in program_provider.dart
+
+// 🔹 Get participants with monthly payment status
+Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
+  String programId, 
+  String monthId,
+  String communityId
+) async {
+  try {
+    // Get contribution service instance
+    final contributionService = ContributionService();
+    
+    // Get all approved users in the community
+    final usersSnapshot = await _firestore
+        .collection('users')
+        .where('communityId', isEqualTo: communityId)
+        .where('isApproved', isEqualTo: true)
+        .get();
+    
+    // Get monthly payment status for each user
+    final paymentStatus = await contributionService.getMonthlyPaymentStatus(programId, monthId);
+    
+    final List<Map<String, dynamic>> result = [];
+    
+    for (final userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      final userId = userDoc.id;
+      
+      result.add({
+        'userId': userId,
+        'userName': userData['displayName'] ?? 'Unknown User',
+        'userEmail': userData['email'] ?? '',
+        'userAvatar': userData['photoURL'] ?? '',
+        'hasPaidForMonth': paymentStatus[userId] ?? false,
+      });
+    }
+    
+    // Sort by name
+    result.sort((a, b) => (a['userName'] as String).compareTo(b['userName'] as String));
+    
+    return result;
+  } catch (e) {
+    print('❌ Error getting participants with monthly status: $e');
+    return [];
+  }
+}
 
   // ✅ Clear all data
   void clearData() {

@@ -471,4 +471,19 @@ void clearAllData() {
         .where((contribution) => contribution.userId == userId)
         .fold(0, (sum, contribution) => sum + contribution.amount);
   }
+// Add this method to ContributionProvider class in contribution_provider.dart
+
+// 🔹 Get monthly contributions for a program-month
+Future<List<ContributionModel>> getMonthlyContributionsForProgram(
+  String programId, 
+  String monthId
+) async {
+  try {
+    return await _contributionService.getMonthlyContributionsForProgram(programId, monthId);
+  } catch (e) {
+    print('❌ Error getting monthly contributions: $e');
+    return [];
+  }
+}
+
 }

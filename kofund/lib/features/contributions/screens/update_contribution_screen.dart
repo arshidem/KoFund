@@ -1,9 +1,9 @@
 // lib/features/contributions/screens/update_contribution_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/contribution_provider.dart';
 import '../models/contribution_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UpdateContributionScreen extends StatefulWidget {
   final ContributionModel contribution;
@@ -41,11 +41,13 @@ class _UpdateContributionScreenState extends State<UpdateContributionScreen> {
 
     final provider = context.read<ContributionProvider>();
     
-    // Create updated contribution - status is always 'completed'
+    // Use copyWith from ContributionModel
     final updatedContribution = widget.contribution.copyWith(
       amount: double.parse(_amountController.text),
       paymentMethod: _selectedPaymentMethod,
-      // Status is not included since it's always 'completed'
+      // Keep monthly fields unchanged
+      isMonthlyContribution: widget.contribution.isMonthlyContribution,
+      monthId: widget.contribution.monthId,
     );
 
     try {
@@ -89,7 +91,7 @@ class _UpdateContributionScreenState extends State<UpdateContributionScreen> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               // Current Contribution Details
               Card(
@@ -116,6 +118,18 @@ class _UpdateContributionScreenState extends State<UpdateContributionScreen> {
                       _buildDetailRow('Payment Method:', widget.contribution.paymentMethod),
                       _buildDetailRow('Status:', 'Completed', isCompleted: true),
                       _buildDetailRow('Created:', _formatDate(widget.contribution.createdAt)),
+                      
+                      // ✅ FIXED: Show monthly contribution info if applicable
+                      if (widget.contribution.isMonthlyContribution && widget.contribution.monthId != null) ...[
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        _buildDetailRow('Type:', 'Monthly Contribution', isCompleted: true),
+                        _buildDetailRow('Month:', widget.contribution.monthId!, isCompleted: true),
+                      ] else if (widget.contribution.isMonthlyContribution) ...[
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        _buildDetailRow('Type:', 'Monthly Contribution', isCompleted: true),
+                      ],
                     ],
                   ),
                 ),
@@ -264,28 +278,5 @@ class _UpdateContributionScreenState extends State<UpdateContributionScreen> {
   String _formatDate(Timestamp timestamp) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-}
-
-// Add copyWith method to ContributionModel if not exists
-extension ContributionModelCopyWith on ContributionModel {
-  ContributionModel copyWith({
-    String? contributionId,
-    String? programId,
-    String? userId,
-    String? communityId,
-    double? amount,
-    String? paymentMethod,
-    Timestamp? createdAt,
-  }) {
-    return ContributionModel(
-      contributionId: contributionId ?? this.contributionId,
-      programId: programId ?? this.programId,
-      userId: userId ?? this.userId,
-      communityId: communityId ?? this.communityId,
-      amount: amount ?? this.amount,
-      paymentMethod: paymentMethod ?? this.paymentMethod,
-      createdAt: createdAt ?? this.createdAt,
-    );
   }
 }

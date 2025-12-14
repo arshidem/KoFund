@@ -727,4 +727,106 @@ Future<void> sendProgramContributionReminders({
           .toList();
     });
   }
+  // Add this method to your ProgramService class in program_service.dart
+
+// 🔹 Generate month list for monthly program
+List<String> generateMonthList(ProgramModel program) {
+  final List<String> months = [];
+  
+  if (!program.isMonthlyPaymentProgram) {
+    return months;
+  }
+  
+  // Use firstPaymentDueDate if available, otherwise use programDate
+  final startDate = program.firstPaymentDueDate ?? program.programDate;
+  
+  // Generate 12 months from start date (or customize as needed)
+  final now = DateTime.now();
+  final startYear = startDate.year;
+  final startMonth = startDate.month;
+  
+  // Generate months from start date to current date + 3 months ahead
+  for (int i = 0; i < 15; i++) { // 15 months: 12 past + 3 future
+    final date = DateTime(startYear, startMonth + i, 1);
+    
+    // Don't generate dates in the past before program start
+    if (date.isBefore(startDate) && i > 0) continue;
+    
+    // Don't generate too far in the future
+    if (date.isAfter(now.add(const Duration(days: 120)))) break;
+    
+    final monthId = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+    months.add(monthId);
+  }
+  
+  return months;
+}
+// Add this method to ProgramService class in program_service.dart
+Future<Map<String, bool>> getMonthlyPaymentStatus(
+  String programId, 
+  String monthId
+) async {
+  try {
+    final snapshot = await _firestore
+        .collection('contributions')
+        .where('programId', isEqualTo: programId)
+        .where('monthId', isEqualTo: monthId)
+        .where('isMonthlyContribution', isEqualTo: true)
+        .get();
+
+    final Map<String, bool> paymentStatus = {};
+    
+    for (final doc in snapshot.docs) {
+      final contribution = doc.data();
+      final userId = contribution['userId'] as String;
+      paymentStatus[userId] = true;
+    }
+    
+    return paymentStatus;
+  } catch (e) {
+    print('❌ Error getting monthly payment status: $e');
+    return {};
+  }
+}
+// 🔹 Get program participants with monthly payment status
+Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
+  String programId, 
+  String monthId,
+  String communityId
+) async {
+  try {
+    // First get all approved users in the community
+    final usersSnapshot = await _firestore
+        .collection('users')
+        .where('communityId', isEqualTo: communityId)
+        .where('isApproved', isEqualTo: true)
+        .get();
+    
+    // Get monthly payment status for each user
+    final paymentStatus = await getMonthlyPaymentStatus(programId, monthId);
+    
+    final List<Map<String, dynamic>> result = [];
+    
+    for (final userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      final userId = userDoc.id;
+      
+      result.add({
+        'userId': userId,
+        'userName': userData['displayName'] ?? 'Unknown User',
+        'userEmail': userData['email'] ?? '',
+        'userAvatar': userData['photoURL'] ?? '',
+        'hasPaidForMonth': paymentStatus[userId] ?? false,
+      });
+    }
+    
+    // Sort by name
+    result.sort((a, b) => (a['userName'] as String).compareTo(b['userName'] as String));
+    
+    return result;
+  } catch (e) {
+    print('❌ Error getting participants with monthly status: $e');
+    return [];
+  }
+}
 }

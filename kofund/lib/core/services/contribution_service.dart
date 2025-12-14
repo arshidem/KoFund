@@ -629,4 +629,115 @@ Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
       return total;
     });
   }
+  // Add these methods to your ContributionService class in contribution_service.dart
+
+// 🔹 Get monthly contributions for a specific program-month
+Future<List<ContributionModel>> getMonthlyContributionsForProgram(
+  String programId, 
+  String monthId
+) async {
+  try {
+    final snapshot = await _firestore
+        .collection('contributions')
+        .where('programId', isEqualTo: programId)
+        .where('monthId', isEqualTo: monthId)
+        .where('isMonthlyContribution', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => 
+            ContributionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+  } catch (e) {
+    print('❌ Error getting monthly contributions: $e');
+    return [];
+  }
+}
+
+// 🔹 Check if user paid for specific month
+Future<bool> hasUserPaidForMonth(
+  String userId, 
+  String programId, 
+  String monthId
+) async {
+  try {
+    final snapshot = await _firestore
+        .collection('contributions')
+        .where('userId', isEqualTo: userId)
+        .where('programId', isEqualTo: programId)
+        .where('monthId', isEqualTo: monthId)
+        .where('isMonthlyContribution', isEqualTo: true)
+        .limit(1)
+        .get();
+
+    return snapshot.docs.isNotEmpty;
+  } catch (e) {
+    print('❌ Error checking monthly payment: $e');
+    return false;
+  }
+}
+
+// 🔹 Get all monthly contributions for a program (grouped by month)
+Future<Map<String, List<ContributionModel>>> getMonthlyContributionsByMonth(
+  String programId
+) async {
+  try {
+    final snapshot = await _firestore
+        .collection('contributions')
+        .where('programId', isEqualTo: programId)
+        .where('isMonthlyContribution', isEqualTo: true)
+        .orderBy('monthId', descending: true)
+        .get();
+
+    // Group by monthId
+    final Map<String, List<ContributionModel>> monthlyMap = {};
+    
+    for (final doc in snapshot.docs) {
+      final contribution = ContributionModel.fromMap(
+        doc.data() as Map<String, dynamic>, 
+        doc.id
+      );
+      final monthId = contribution.monthId ?? 'unknown';
+      
+      if (!monthlyMap.containsKey(monthId)) {
+        monthlyMap[monthId] = [];
+      }
+      monthlyMap[monthId]!.add(contribution);
+    }
+    
+    return monthlyMap;
+  } catch (e) {
+    print('❌ Error getting monthly contributions by month: $e');
+    return {};
+  }
+}
+
+// 🔹 Get monthly payment status for all participants
+Future<Map<String, bool>> getMonthlyPaymentStatus(
+  String programId, 
+  String monthId
+) async {
+  try {
+    final snapshot = await _firestore
+        .collection('contributions')
+        .where('programId', isEqualTo: programId)
+        .where('monthId', isEqualTo: monthId)
+        .where('isMonthlyContribution', isEqualTo: true)
+        .get();
+
+    final Map<String, bool> paymentStatus = {};
+    
+    for (final doc in snapshot.docs) {
+      final contribution = doc.data();
+      final userId = contribution['userId'] as String;
+      paymentStatus[userId] = true;
+    }
+    
+    return paymentStatus;
+  } catch (e) {
+    print('❌ Error getting monthly payment status: $e');
+    return {};
+  }
+}
 }

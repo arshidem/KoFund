@@ -10,6 +10,8 @@ import '../../../auth/providers/app_auth_provider.dart';
 import '../../../participants/providers/participant_provider.dart';
 import '../../../programs/providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
+import '../../../../core/constants/app_colors.dart';
+import 'dart:ui';
 
 class ProgramOverviewTab extends StatelessWidget {
   final ProgramModel program;
@@ -23,609 +25,1386 @@ class ProgramOverviewTab extends StatelessWidget {
     final participantProvider = Provider.of<ParticipantProvider>(context);
     final programProvider = Provider.of<ProgramProvider>(context);
 
-    return SingleChildScrollView(
+return SingleChildScrollView(
+  padding: const EdgeInsets.all(8),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // 🔹 Centered Program Header
+     _buildProgramHeader(context, participantProvider),
+
+
+      const SizedBox(height: 12),
+
+      // 🔹 Financial Summary FIRST (High priority)
+      _buildFinancialSummaryCard(
+        context,
+        contributionProvider,
+        expenseProvider,
+        participantProvider,
+      ),
+
+      const SizedBox(height: 12),
+
+      // 🔹 Program Information (Secondary)
+      _buildProgramInfoCard(context, participantProvider),
+
+      const SizedBox(height: 12),
+
+      // 🔹 Program Status
+      _buildProgramStatusCard(context, participantProvider),
+
+      const SizedBox(height: 12),
+
+
+    ],
+  ),
+);
+
+  }
+
+
+
+Widget _buildProgramHeader(
+  BuildContext context,
+  ParticipantProvider participantProvider,
+) {
+  return StreamBuilder<List<ParticipantModel>>(
+    stream: participantProvider.streamProgramParticipants(program.programId),
+    builder: (context, snapshot) {
+      final participants = snapshot.data ?? [];
+      final participantCount = participants.length;
+
+      final isFull = program.participantType == 'fixed' &&
+          participantCount >= program.maxParticipants;
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border(context)),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.05),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// 🔹 PROGRAM TITLE
+            Text(
+              program.title,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary(context),
+                height: 1.3,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            /// 🔹 PARTICIPANTS STATUS (HIGHLIGHTED)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isFull
+                    ? AppColors.error(context).withOpacity(0.08)
+                    : AppColors.primary(context).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.people_alt_rounded,
+                        size: 18,
+                        color: isFull
+                            ? AppColors.error(context)
+                            : AppColors.primary(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Participants',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        '$participantCount',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isFull
+                              ? AppColors.error(context)
+                              : AppColors.primary(context),
+                        ),
+                      ),
+                      if (program.participantType == 'fixed') ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '/ ${program.maxParticipants}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ],
+              ),
+                ]
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          /// 🔹 QUICK INFO GRID
+          GridView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 2.8,
+            ),
+            children: [
+              // 📅 DATE
+              _buildHeaderInfoTile(
+                context,
+                icon: Icons.calendar_today_rounded,
+                title: 'Date',
+                value: DateFormat('MMM dd, yyyy').format(program.programDate)
+,                valueColor: AppColors.primary(context),
+              ),
+
+   _buildHeaderInfoTile(
+                context,
+                icon: Icons.monetization_on_rounded,
+                title: 'Contribution',
+                value: program.suggestedContribution != null
+                    ? '₹${program.suggestedContribution!.toStringAsFixed(0)}'
+                    : 'Flexible',
+                valueColor: program.suggestedContribution != null
+                    ? AppColors.primary(context)
+                    : AppColors.textSecondary(context),
+              ),
+                    _buildHeaderInfoTile(
+                context,
+                icon: Icons.flag_rounded,
+                title: 'Status',
+                value: program.isActive
+                    ? 'Active'
+                    : program.isCompleted
+                        ? 'Completed'
+                        : 'Inactive',
+                valueColor: program.isActive
+                    ? AppColors.primary(context)
+                    : program.isCompleted
+                        ? AppColors.textTertiary(context)
+                        : AppColors.error(context),
+              ),
+              // 📍 LOCATION
+  _buildHeaderInfoTile(
+  context,
+  icon: Icons.assessment_rounded,
+  title: 'Estimated Total', // Changed from 'label' to 'title'
+  value: '₹${program.estimatedTotalAmount.toStringAsFixed(0)}', // Removed space after ₹
+  valueColor: AppColors.primary(context),
+),
+              // 💰 CONTRIBUTION
+           
+
+              // 🎯 STATUS
+        
+            ],
+          ),
+        ],
+      ),
+    );
+  },
+);
+}
+
+// Helper for header info tiles
+Widget _buildHeaderInfoTile(
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  required String value,
+  Color? valueColor,
+}) {
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: AppColors.primary(context).withOpacity(0.05),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(
+        color: AppColors.border(context).withOpacity(0.3),
+        width: 0.8,
+      ),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: AppColors.primary(context),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
+  Widget _buildSectionTitle(String title, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8), // Reduced from 12
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16, // Reduced from 18
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+    );
+  }
+
+Widget _buildProgramInfoCard(
+  BuildContext context,
+  ParticipantProvider participantProvider,
+) {
+  return Card(
+    color: AppColors.card(context),
+    elevation: 0.8,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: AppColors.border(context),
+        width: 0.6,
+      ),
+    ),
+    child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Program Header
-          _buildProgramHeader(),
-          const SizedBox(height: 20),
-
-          // Program Information Card
-          _buildSectionTitle('Program Information'),
-          _buildProgramInfoCard(participantProvider),
-
-          const SizedBox(height: 20),
-
-          // Financial Summary Card (Real-time)
-          _buildSectionTitle('Financial Summary'),
-          _buildFinancialSummaryCard(context, contributionProvider, expenseProvider, participantProvider),
-
-          const SizedBox(height: 20),
-
-          // Program Status Card
-          _buildSectionTitle('Program Status'),
-          _buildProgramStatusCard(participantProvider),
-
-          const SizedBox(height: 20),
-
-          // Quick Actions
-          _buildSectionTitle('Quick Actions'),
-          _buildActionButtons(context, participantProvider),
-
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgramHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          program.title,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blue.shade100),
-              ),
-              child: Text(
-                program.programType.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.blue.shade700,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getStatusColor(program.status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _getStatusColor(program.status).withOpacity(0.3)),
-              ),
-              child: Text(
-                program.status.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _getStatusColor(program.status),
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgramInfoCard(ParticipantProvider participantProvider) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildInfoRow(
-              Icons.calendar_today,
-              'Program Date',
-              DateFormat('EEEE, MMMM dd, yyyy').format(program.programDate),
-            ),
-            
-         
-
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.location_on, 'Location', program.location),
-
-            // Suggested Contribution (handle null)
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              Icons.monetization_on,
-              'Suggested Contribution',
-              program.suggestedContribution != null 
-                  ? '₹ ${program.suggestedContribution!.toStringAsFixed(2)}'
-                  : 'Not set',
-            ),
-
-            // Total Program Amount (handle null)
-            if (program.totalProgramAmount != null) ...[
-              const SizedBox(height: 12),
-              _buildInfoRow(
-                Icons.account_balance_wallet,
-                'Total Program Budget',
-                '₹ ${program.totalProgramAmount!.toStringAsFixed(2)}',
-              ),
-            ],
-
-            // Estimated Total Amount
-            if (program.hasFinancialGoals) ...[
-              const SizedBox(height: 12),
-              _buildInfoRow(
-                Icons.assessment,
-                'Estimated Total',
-                '₹ ${program.estimatedTotalAmount.toStringAsFixed(2)}',
-              ),
-            ],
-
-            // Real-time participant count
-            const SizedBox(height: 12),
-            StreamBuilder<int>(
-              stream: participantProvider.streamProgramParticipantCount(program.programId),
-              builder: (context, snapshot) {
-                final participantCount = snapshot.data ?? 0;
-                return _buildInfoRow(
-                  Icons.people,
-                  'Participants',
-                  '$participantCount / ${program.participantType == 'fixed' ? program.maxParticipants : 'Unlimited'}',
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.person, 'Created By', program.createdBy),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFinancialSummaryCard(
-    BuildContext context, 
-    ContributionProvider contributionProvider, 
-    ExpenseProvider expenseProvider,
-    ParticipantProvider participantProvider,
-  ) {
-    return Column(
-      children: [
-        // Real-time financial progress
-        StreamBuilder<double>(
-          stream: contributionProvider.streamProgramTotalContributions(program.programId),
-          builder: (context, contributionSnapshot) {
-            final totalCollected = contributionSnapshot.data ?? 0.0;
-            
-            return StreamBuilder<double>(
-              stream: expenseProvider.streamProgramTotalExpenses(program.programId),
-              builder: (context, expenseSnapshot) {
-                final totalExpenses = expenseSnapshot.data ?? 0.0;
-                final balanceAmount = totalCollected - totalExpenses;
-                
-                // USE PROGRAM MODEL'S BUILT-IN METHODS
-                final totalExpected = program.estimatedTotalAmount;
-                final progressPercentage = program.calculateProgress(totalCollected);
-                final hasFinancialGoals = program.hasFinancialGoals;
-
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Financial Overview Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildFinancialItem('Collected', totalCollected, Colors.green),
-                            _buildFinancialItem('Expenses', totalExpenses, Colors.red),
-                            _buildFinancialItem('Balance', balanceAmount, 
-                                balanceAmount >= 0 ? Colors.blue : Colors.orange),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Collection Progress
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Collection Progress',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                Text(
-                                  '₹ ${totalCollected.toStringAsFixed(2)} / ₹ ${totalExpected.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (program.totalProgramAmount != null)
-                                  Text(
-                                    'Target: ₹ ${program.totalProgramAmount!.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                if (program.totalProgramAmount == null && program.suggestedContribution != null)
-                                  Text(
-                                    'Estimated: ₹ ${program.suggestedContribution!} × ${program.currentParticipants} participants',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            Text(
-                              '${progressPercentage.toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _getProgressColor(progressPercentage),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        LinearProgressIndicator(
-                          value: totalExpected > 0 ? totalCollected / totalExpected : 0,
-                          backgroundColor: Colors.grey.shade300,
-                          valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progressPercentage)),
-                          minHeight: 12,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Financial Health Indicator
-                        if (balanceAmount < 0)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.orange.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.warning, color: Colors.orange.shade600, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Expenses exceed contributions by ₹ ${balanceAmount.abs().toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.orange.shade800,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Detailed Financial Breakdown
-        _buildDetailedFinancialBreakdown(contributionProvider, expenseProvider),
-      ],
-    );
-  }
-
-  Widget _buildDetailedFinancialBreakdown(ContributionProvider contributionProvider, ExpenseProvider expenseProvider) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Financial Breakdown',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            
-            // Real-time Contribution Statistics
-            StreamBuilder<List<ContributionModel>>(
-              stream: contributionProvider.streamProgramContributions(program.programId),
-              builder: (context, contributionListSnapshot) {
-                final contributions = contributionListSnapshot.data ?? [];
-                final completedContributions = contributions.where((c) => c.status == 'completed').length;
-                final pendingContributions = contributions.where((c) => c.status == 'pending').length;
-                
-                return _buildFinancialRow(
-                  'Contributions',
-                  '${contributions.length} total ($completedContributions completed, $pendingContributions pending)',
-                  Icons.payments,
-                  Colors.green,
-                );
-              },
-            ),
-            
-            const SizedBox(height: 8),
-            
-            // Real-time Expense Statistics
-            StreamBuilder<List<ExpenseModel>>(
-              stream: expenseProvider.streamProgramExpenses(program.programId),
-              builder: (context, expenseListSnapshot) {
-                final expenses = expenseListSnapshot.data ?? [];
-                final approvedExpenses = expenses.where((e) => e.status == 'approved').length;
-                final pendingExpenses = expenses.where((e) => e.status == 'pending').length;
-                
-                return _buildFinancialRow(
-                  'Expenses',
-                  '${expenses.length} total ($approvedExpenses approved, $pendingExpenses pending)',
-                  Icons.receipt,
-                  Colors.red,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFinancialItem(String title, double amount, Color color) {
-    return Column(
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '₹ ${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFinancialRow(String title, String subtitle, IconData icon, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // 🔹 HEADER
+          Row(
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+              Icon(
+                Icons.info_outline_rounded,
+                size: 20,
+                color: AppColors.primary(context),
               ),
+              const SizedBox(width: 8),
               Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+                'Program Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ],
           ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildProgramStatusCard(ParticipantProvider participantProvider) {
-    return StreamBuilder<int>(
-      stream: participantProvider.streamProgramParticipantCount(program.programId),
-      builder: (context, snapshot) {
-        final participantCount = snapshot.data ?? 0;
-        final isFull = program.participantType == 'fixed' && participantCount >= program.maxParticipants;
-        final canJoin = program.participantType == 'unlimited' || !isFull;
-        final availableSpots = program.participantType == 'unlimited' ? 999 : program.maxParticipants - participantCount;
+          const SizedBox(height: 16),
 
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          // 📅 FULL DATE WITH DAY
+          _buildDetailTile(
+            context,
+            icon: Icons.calendar_today_rounded,
+            label: 'Program Date',
+            value: DateFormat('EEEE, MMMM dd, yyyy').format(program.programDate),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 📍 LOCATION WITH MAP ICON
+          _buildDetailTile(
+            context,
+            icon: Icons.location_on_rounded,
+            label: 'Location',
+            value: program.location,
+          ),
+
+          const SizedBox(height: 12),
+
+          // 💰 SUGGESTED CONTRIBUTION DETAILS
+          if (program.suggestedContribution != null)
+            Column(
               children: [
-                _buildStatusRow('Program Status', program.status.toUpperCase(), 
-                    _getStatusColor(program.status)),
-                
-                const SizedBox(height: 12),
-                
-                _buildStatusRow(
-                  'Available Spots',
-                  availableSpots == 999 ? 'Unlimited' : availableSpots.toString(),
-                  canJoin ? Colors.green : Colors.red,
+                _buildDetailTile(
+                  context,
+                  icon: Icons.monetization_on_rounded,
+                  label: 'Suggested Contribution',
+                  value: '₹ ${program.suggestedContribution!.toStringAsFixed(0)} per person',
+                  valueColor: AppColors.success(context),
                 ),
-                
                 const SizedBox(height: 12),
-                
-                _buildStatusRow(
-                  'Current Participants',
-                  participantCount.toString(),
-                  Colors.blue,
+              ],
+            ),
+
+          // 💼 TOTAL BUDGET
+          if (program.totalProgramAmount != null)
+            Column(
+              children: [
+                _buildDetailTile(
+                  context,
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'Total Program Budget',
+                  value: '₹ ${program.totalProgramAmount!.toStringAsFixed(0)}',
+                  valueColor: AppColors.primary(context),
                 ),
-                
                 const SizedBox(height: 12),
-                
-                _buildStatusRow(
-                  'Participant Type',
-                  program.participantType == 'fixed' ? 'Fixed Limit' : 'Unlimited',
-                  Colors.blue,
+              ],
+            ),
+
+          // 📊 ESTIMATED TOTAL
+          if (program.hasFinancialGoals)
+            Column(
+              children: [
+                _buildDetailTile(
+                  context,
+                  icon: Icons.assessment_rounded,
+                  label: 'Estimated Total Collection',
+                  value: '₹ ${program.estimatedTotalAmount.toStringAsFixed(0)}',
+                  valueColor: AppColors.primary(context),
                 ),
-                
                 const SizedBox(height: 12),
-                
-                // ✅ UPDATED: Remove isUpcoming reference
-                _buildStatusRow(
-                  'Timeline',
-                  program.isOngoing ? 'Ongoing' : 
-                  program.isCompleted ? 'Completed' : 'Active',
-                  program.isOngoing ? Colors.orange : 
-                  program.isCompleted ? Colors.grey : Colors.green,
+              ],
+            ),
+
+          // 👥 PARTICIPANT DETAILS
+          StreamBuilder<int>(
+            stream: participantProvider
+                .streamProgramParticipantCount(program.programId),
+            builder: (context, snapshot) {
+              final participantCount = snapshot.data ?? 0;
+
+              return Column(
+                children: [
+                  _buildDetailTile(
+                    context,
+                    icon: Icons.people_alt_rounded,
+                    label: 'Participant Capacity',
+                    value: program.participantType == 'fixed'
+                        ? '$participantCount / ${program.maxParticipants} participants'
+                        : 'Unlimited (Currently $participantCount joined)',
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            },
+          ),
+
+          // 👤 CREATED BY
+          _buildDetailTile(
+            context,
+            icon: Icons.person_outline_rounded,
+            label: 'Organized By',
+            value: program.createdBy,
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🏷️ PARTICIPANT TYPE
+          _buildDetailTile(
+            context,
+            icon: Icons.groups_rounded,
+            label: 'Participant Type',
+            value: program.participantType == 'fixed'
+                ? 'Fixed (Limited slots)'
+                : 'Unlimited (Open for all)',
+            valueColor: program.participantType == 'fixed'
+                ? AppColors.warning(context)
+                : AppColors.success(context),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🚩 PROGRAM STATUS
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _getStatusColor(program.status, context).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _getStatusColor(program.status, context).withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _getStatusIcon(program.status),
+                  size: 18,
+                  color: _getStatusColor(program.status, context),
                 ),
-                
-                const SizedBox(height: 12),
-                
-                _buildStatusRow(
-                  'Capacity',
-                  isFull ? 'Full' : 'Available',
-                  isFull ? Colors.red : Colors.green,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Program Status',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        program.status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _getStatusColor(program.status, context),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ],
+      ),
+    ),
+  );
+}
 
-  Widget _buildActionButtons(BuildContext context, ParticipantProvider participantProvider) {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    
-    return StreamBuilder<int>(
-      stream: participantProvider.streamProgramParticipantCount(program.programId),
-      builder: (context, snapshot) {
-        final participantCount = snapshot.data ?? 0;
-        final currentUserId = authProvider.user?.uid;
-        final hasUserJoined = currentUserId != null && 
-            participantProvider.programParticipants.any((p) => p.userId == currentUserId && p.status == 'joined');
+// Helper for detail tiles
+Widget _buildDetailTile(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required String value,
+  Color? valueColor,
+}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Icon
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary(context).withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: AppColors.primary(context),
+        ),
+      ),
 
-        final isFull = program.participantType == 'fixed' && participantCount >= program.maxParticipants;
-        final canJoin = program.participantType == 'unlimited' || !isFull;
+      const SizedBox(width: 12),
 
-        return Row(
+      // Text content
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ UPDATED: Remove isUpcoming reference - allow joining active programs
-            if (!hasUserJoined && canJoin && program.isActive) ...[
-              Expanded(
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.person_add_alt_1, size: 20),
-                  label: const Text('Join Program'),
-                  onPressed: () => _joinProgram(context, participantProvider, authProvider),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary(context),
               ),
-              const SizedBox(width: 12),
-            ],
-
-            // ✅ UPDATED: Remove isUpcoming reference - allow leaving active programs
-            if (hasUserJoined && program.isActive) ...[
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.exit_to_app, size: 20),
-                  label: const Text('Leave Program'),
-                  onPressed: () => _leaveProgram(context, participantProvider, authProvider),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Colors.red),
-                    foregroundColor: Colors.red,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.share, size: 20),
-                label: const Text('Share'),
-                onPressed: _shareProgram,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? AppColors.textPrimary(context),
               ),
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      ),
+    ],
+  );
+}
 
-  Widget _buildInfoRow(IconData icon, String title, String value) {
-    return Row(
+
+
+// Helper to get status icon
+IconData _getStatusIcon(String status) {
+  switch (status.toLowerCase()) {
+    case 'active':
+      return Icons.play_arrow_rounded;
+    case 'completed':
+      return Icons.check_circle_rounded;
+    case 'cancelled':
+      return Icons.cancel_rounded;
+    case 'upcoming':
+      return Icons.schedule_rounded;
+    default:
+      return Icons.info_rounded;
+  }
+}
+Widget _buildModernInfoTile(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required String value,
+  Color? valueColor,
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+    decoration: BoxDecoration(
+      color: AppColors.primary(context).withOpacity(0.05),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.blue.shade700, size: 22),
+        // Icon badge
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primary(context).withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: AppColors.primary(context),
+          ),
+        ),
+
+        const SizedBox(width: 10),
+
+        // Text content
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: valueColor ?? AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+Widget _buildFinancialSummaryCard(
+  BuildContext context,
+  ContributionProvider contributionProvider,
+  ExpenseProvider expenseProvider,
+  ParticipantProvider participantProvider,
+) {
+  return Column(
+    children: [
+      StreamBuilder<double>(
+        stream: contributionProvider
+            .streamProgramTotalContributions(program.programId),
+        builder: (context, contributionSnapshot) {
+          final totalCollected = contributionSnapshot.data ?? 0.0;
+
+          return StreamBuilder<double>(
+            stream: expenseProvider
+                .streamProgramTotalExpenses(program.programId),
+            builder: (context, expenseSnapshot) {
+              final totalExpenses = expenseSnapshot.data ?? 0.0;
+              final balanceAmount = totalCollected - totalExpenses;
+
+              final totalExpected = program.estimatedTotalAmount;
+              final progressPercentage =
+                  program.calculateProgress(totalCollected);
+
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                      color: Colors.black.withOpacity(0.08),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 🔹 Header
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 18,
+                          color: AppColors.textCards(context),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Financial Summary',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textCards(context),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 🔹 Top Stats (Collected / Expenses / Balance)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildSummaryMetric(
+                          context,
+                          label: 'Collected',
+                          value: totalCollected,
+                          icon: Icons.payments_rounded,
+                          accent: AppColors.textCards(context),
+                        ),
+                        _buildSummaryMetric(
+                          context,
+                          label: 'Expenses',
+                          value: totalExpenses,
+                          icon: Icons.receipt_long_rounded,
+                          accent: AppColors.textCards(context),
+                        ),
+                        _buildSummaryMetric(
+                          context,
+                          label: 'Balance',
+                          value: balanceAmount,
+                          icon: Icons.account_balance_rounded,
+                          accent: balanceAmount >= 0
+                              ? AppColors.textCards(context)
+                              : AppColors.warning(context),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 🔹 Progress Section
+                    Text(
+                      'Collection Progress',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textCards(context).withOpacity(0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '₹${totalCollected.toStringAsFixed(0)} / ₹${totalExpected.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textCards(context),
+                          ),
+                        ),
+                        Text(
+                          '${progressPercentage.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textCards(context),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: totalExpected > 0
+                            ? totalCollected / totalExpected
+                            : 0,
+                        minHeight: 6,
+                        backgroundColor: AppColors.textCards(context)
+                            .withOpacity(0.25),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.textCards(context),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // 🔹 Target / Estimate Info
+                    if (program.totalProgramAmount != null)
+                      Text(
+                        'Target Budget: ₹${program.totalProgramAmount!.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textCards(context)
+                              .withOpacity(0.75),
+                        ),
+                      )
+                    else if (program.suggestedContribution != null)
+                      Text(
+                        'Estimated: ₹${program.suggestedContribution!.toStringAsFixed(0)} × ${program.currentParticipants} participants',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textCards(context)
+                              .withOpacity(0.75),
+                        ),
+                      ),
+
+                    const SizedBox(height: 10),
+
+                    // 🔹 Financial Warning
+                    if (balanceAmount < 0)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning(context)
+                              .withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 16,
+                              color: AppColors.warning(context),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Expenses exceed contributions by ₹${balanceAmount.abs().toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.warning(context),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+
+      const SizedBox(height: 10),
+
+      // 🔹 Detailed Breakdown
+      _buildDetailedFinancialBreakdown(
+        context,
+        contributionProvider,
+        expenseProvider,
+      ),
+    ],
+  );
+}
+Widget _buildSummaryMetric(
+  BuildContext context, {
+  required String label,
+  required double value,
+  required IconData icon,
+  required Color accent,
+}) {
+  return Column(
+    children: [
+      Icon(icon, size: 18, color: accent),
+      const SizedBox(height: 4),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          color: AppColors.textCards(context).withOpacity(0.8),
+        ),
+      ),
+      const SizedBox(height: 2),
+      Text(
+        '₹${value.toStringAsFixed(0)}',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textCards(context),
+        ),
+      ),
+    ],
+  );
+}
+
+
+ Widget _buildDetailedFinancialBreakdown(
+  BuildContext context,
+  ContributionProvider contributionProvider,
+  ExpenseProvider expenseProvider,
+) {
+  return Card(
+    color: AppColors.card(context),
+    elevation: 0.8,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: AppColors.border(context),
+        width: 0.6,
+      ),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔹 Header
+          Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet_rounded,
+                size: 18,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Financial Breakdown',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // 🔹 Contribution Stats
+          StreamBuilder<List<ContributionModel>>(
+            stream: contributionProvider
+                .streamProgramContributions(program.programId),
+            builder: (context, snapshot) {
+              final contributions = snapshot.data ?? [];
+              final completed = contributions
+                  .where((c) => c.status == 'completed')
+                  .length;
+              final pending = contributions
+                  .where((c) => c.status == 'pending')
+                  .length;
+
+              return _buildModernStatTile(
+                context: context,
+                title: 'Contributions',
+                icon: Icons.payments_rounded,
+                accentColor: AppColors.success(context),
+                total: contributions.length,
+                approvedLabel: 'Completed',
+                approvedCount: completed,
+                pendingCount: pending,
+              );
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          // 🔹 Expense Stats
+          StreamBuilder<List<ExpenseModel>>(
+            stream:
+                expenseProvider.streamProgramExpenses(program.programId),
+            builder: (context, snapshot) {
+              final expenses = snapshot.data ?? [];
+              final approved =
+                  expenses.where((e) => e.status == 'approved').length;
+              final pending =
+                  expenses.where((e) => e.status == 'pending').length;
+
+              return _buildModernStatTile(
+                context: context,
+                title: 'Expenses',
+                icon: Icons.receipt_long_rounded,
+                accentColor: AppColors.error(context),
+                total: expenses.length,
+                approvedLabel: 'Approved',
+                approvedCount: approved,
+                pendingCount: pending,
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget _buildModernStatTile({
+  required BuildContext context,
+  required String title,
+  required IconData icon,
+  required Color accentColor,
+  required int total,
+  required String approvedLabel,
+  required int approvedCount,
+  required int pendingCount,
+}) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: accentColor.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        // Icon Badge
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: accentColor,
+          ),
+        ),
+
         const SizedBox(width: 12),
+
+        // Stats
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
+                '$total total • $approvedLabel: $approvedCount • Pending: $pendingCount',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+  Widget _buildFinancialItem(BuildContext context, String title, double amount, Color color) {
+    return Column(
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 11, // Reduced from 12
+            color: AppColors.textCards(context).withOpacity(0.85),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2), // Reduced from 4
+        Text(
+          '₹${amount.toStringAsFixed(0)}', // Removed space
+          style: TextStyle(
+            fontSize: 14, // Reduced from 16
+            fontWeight: FontWeight.bold,
+            color: AppColors.textCards(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinancialRow(BuildContext context, String title, String subtitle, IconData icon, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 32, // Reduced from 36
+          height: 32, // Reduced from 36
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18), // Reduced from 20
+        ),
+        const SizedBox(width: 10), // Reduced from 12
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13, // Reduced from 14
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11, // Reduced from 12
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+Widget _buildProgramStatusCard(
+  BuildContext context,
+  ParticipantProvider participantProvider,
+) {
+  return StreamBuilder<int>(
+    stream: participantProvider
+        .streamProgramParticipantCount(program.programId),
+    builder: (context, snapshot) {
+      final participantCount = snapshot.data ?? 0;
+
+      final isFull = program.participantType == 'fixed' &&
+          participantCount >= program.maxParticipants;
+
+      final canJoin =
+          program.participantType == 'unlimited' || !isFull;
+
+      final availableSpots = program.participantType == 'unlimited'
+          ? null
+          : program.maxParticipants - participantCount;
+
+      final statusColor =
+          _getStatusColor(program.status, context);
+
+      return Card(
+        color: AppColors.card(context),
+        elevation: 0.8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: AppColors.border(context),
+            width: 0.6,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔹 Header with Status Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timeline_rounded,
+                        size: 18,
+                        color: AppColors.primary(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Program Status',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              AppColors.textPrimary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  _buildStatusBadge(
+                    program.status.toUpperCase(),
+                    statusColor,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // 🔹 Status Grid
+              GridView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 2.6,
+                ),
+                children: [
+                  _buildStatusTile(
+                    context,
+                    icon: Icons.people_alt_rounded,
+                    label: 'Participants',
+                    value: participantCount.toString(),
+                    color: AppColors.primary(context),
+                  ),
+                  _buildStatusTile(
+                    context,
+                    icon: Icons.event_seat_rounded,
+                    label: 'Available Spots',
+                    value: program.participantType ==
+                            'unlimited'
+                        ? 'Unlimited'
+                        : availableSpots.toString(),
+                    color: canJoin
+                        ? AppColors.success(context)
+                        : AppColors.error(context),
+                  ),
+                  _buildStatusTile(
+                    context,
+                    icon: Icons.groups_rounded,
+                    label: 'Participant Type',
+                    value: program.participantType ==
+                            'fixed'
+                        ? 'Fixed'
+                        : 'Unlimited',
+                    color: AppColors.primary(context),
+                  ),
+                  _buildStatusTile(
+                    context,
+                    icon: Icons.flag_rounded,
+                    label: 'Timeline',
+                    value: program.isOngoing
+                        ? 'Ongoing'
+                        : program.isCompleted
+                            ? 'Completed'
+                            : 'Active',
+                    color: program.isOngoing
+                        ? AppColors.warning(context)
+                        : program.isCompleted
+                            ? AppColors.textTertiary(
+                                context)
+                            : AppColors.success(context),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // 🔹 Capacity Indicator
+              _buildCapacityIndicator(
+                context,
+                isFull: isFull,
+                participantCount: participantCount,
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+Widget _buildStatusBadge(String text, Color color) {
+  return Container(
+    padding:
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: color,
+        letterSpacing: 0.4,
+      ),
+    ),
+  );
+}
+Widget _buildStatusTile(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required String value,
+  required Color color,
+}) {
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color:
+                      AppColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+Widget _buildCapacityIndicator(
+  BuildContext context, {
+  required bool isFull,
+  required int participantCount,
+}) {
+  final color =
+      isFull ? AppColors.error(context) : AppColors.success(context);
+
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          isFull ? Icons.block_rounded : Icons.check_circle_rounded,
+          size: 18,
+          color: color,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          isFull
+              ? 'Program capacity is full'
+              : 'Program has available slots',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.primary(context), size: 20), // Reduced from 22
+        const SizedBox(width: 10), // Reduced from 12
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13, // Reduced from 14
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 2), // Reduced from 4
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14, // Reduced from 16
+                  color: AppColors.textPrimary(context),
                   height: 1.3,
                 ),
               ),
@@ -636,29 +1415,29 @@ class ProgramOverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusRow(String title, String value, Color color) {
+  Widget _buildStatusRow(BuildContext context, String title, String value, Color color) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 14,
+          style: TextStyle(
+            fontSize: 13, // Reduced from 14
             fontWeight: FontWeight.w500,
-            color: Colors.black87,
+            color: AppColors.textPrimary(context),
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), // Reduced from 12,4
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10), // Reduced from 12
             border: Border.all(color: color.withOpacity(0.3)),
           ),
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11, // Reduced from 12
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -668,24 +1447,24 @@ class ProgramOverviewTab extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String status, BuildContext context) {
     switch (status.toLowerCase()) {
       case 'active':
-        return Colors.green;
+        return AppColors.success(context);
       case 'completed':
-        return Colors.grey;
+        return AppColors.textTertiary(context);
       case 'cancelled':
-        return Colors.red;
+        return AppColors.error(context);
       default:
-        return Colors.grey;
+        return AppColors.textTertiary(context);
     }
   }
 
-  Color _getProgressColor(double percentage) {
-    if (percentage >= 75) return Colors.green;
-    if (percentage >= 50) return Colors.blue.shade600;
-    if (percentage >= 25) return Colors.orange;
-    return Colors.red;
+  Color _getProgressColor(double percentage, BuildContext context) {
+    if (percentage >= 75) return AppColors.success(context);
+    if (percentage >= 50) return AppColors.primary(context);
+    if (percentage >= 25) return AppColors.warning(context);
+    return AppColors.error(context);
   }
 
   void _joinProgram(BuildContext context, ParticipantProvider participantProvider, AppAuthProvider authProvider) async {
@@ -703,17 +1482,23 @@ class ProgramOverviewTab extends StatelessWidget {
         joinedAt: DateTime.now(),
         status: 'joined',
         contributionPaid: program.suggestedContribution != null ? 0 : null,
-        hasPaidContribution: program.suggestedContribution == null, // If no suggested amount, consider as paid
+        hasPaidContribution: program.suggestedContribution == null,
       );
 
       await participantProvider.joinProgram(participant);
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Successfully joined the program!')),
+        SnackBar(
+          content: Text('Successfully joined the program!'),
+          backgroundColor: AppColors.success(context),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to join program: $e')),
+        SnackBar(
+          content: Text('Failed to join program: $e'),
+          backgroundColor: AppColors.error(context),
+        ),
       );
     }
   }
@@ -726,11 +1511,17 @@ class ProgramOverviewTab extends StatelessWidget {
       await participantProvider.leaveProgram(program.programId, currentUser.uid);
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Left the program successfully!')),
+        SnackBar(
+          content: Text('Left the program successfully!'),
+          backgroundColor: AppColors.success(context),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to leave program: $e')),
+        SnackBar(
+          content: Text('Failed to leave program: $e'),
+          backgroundColor: AppColors.error(context),
+        ),
       );
     }
   }

@@ -39,6 +39,7 @@ import 'features/history/providers/history_provider.dart';
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
 
+// Screens
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
 
@@ -148,6 +149,7 @@ class FirebaseInitializationWrapper extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return MaterialApp(
+            debugShowCheckedModeBanner: false,
             home: Scaffold(
               backgroundColor: Colors.blue,
               body: Center(
@@ -176,6 +178,7 @@ class FirebaseInitializationWrapper extends StatelessWidget {
         
         if (snapshot.hasError) {
           return MaterialApp(
+            debugShowCheckedModeBanner: false,
             home: Scaffold(
               backgroundColor: Colors.blue,
               body: Center(
@@ -332,35 +335,15 @@ class _AppProvidersState extends State<AppProviders> {
   @override
   Widget build(BuildContext context) {
     // Show loading screen while auth provider initializes
-    if (!_isAuthInitialized) {
-      return MaterialApp(
-        home: Scaffold(
-          backgroundColor: Colors.blue,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(color: Colors.white),
-                const SizedBox(height: 20),
-                const Text(
-                  'Initializing offline support...',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _authProvider.isOfflineMode ? 'Offline Mode' : 'Online Mode',
-                  style: TextStyle(
-                    color: _authProvider.isOfflineMode ? Colors.orange : Colors.green,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+if (!_isAuthInitialized) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      backgroundColor: AppColors.primary(context),
+      body: Container(),
+    ),
+  );
+}
     
     return MultiProvider(
       providers: [
