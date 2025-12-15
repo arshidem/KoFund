@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/services.dart';
+import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
@@ -184,24 +185,45 @@ Future<void> _updateProfile() async {
     );
   }
 
-  Widget _buildFormFields() {
+Widget _buildFormFields() {
     return Column(
       children: [
         // Display Name Field
         TextFormField(
           controller: _nameController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Display Name *',
             hintText: 'Enter your display name',
-            prefixIcon: Icon(Icons.person),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.person),
+            border: const OutlineInputBorder(),
+            counterText: '${_nameController.text.length}/25',
+            suffixIcon: _nameController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      _nameController.clear();
+                      if (mounted) setState(() {});
+                    },
+                  )
+                : null,
           ),
+          maxLength: 25,
+          onChanged: (value) {
+            if (mounted) setState(() {});
+          },
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Please enter your display name';
             }
             if (value.trim().length < 2) {
               return 'Name must be at least 2 characters';
+            }
+            if (value.trim().length > 50) {
+              return 'Name must be 50 characters or less';
+            }
+            // Check for excessive spaces
+            if (value.trim().contains('  ')) {
+              return 'Avoid multiple spaces in name';
             }
             return null;
           },
@@ -217,53 +239,99 @@ Future<void> _updateProfile() async {
             border: const OutlineInputBorder(),
             filled: true,
             fillColor: Colors.grey[100],
+            counterText: '${widget.user.email?.length ?? 0}/100',
           ),
           readOnly: true,
           enabled: false,
+          maxLength: 100,
         ),
         const SizedBox(height: 20),
 
         // Phone Number Field
         TextFormField(
           controller: _phoneController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Phone Number',
             hintText: 'Enter your phone number',
-            prefixIcon: Icon(Icons.phone),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.phone),
+            border: const OutlineInputBorder(),
+            counterText: '${_phoneController.text.length}/10',
+            suffixIcon: _phoneController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      _phoneController.clear();
+                      if (mounted) setState(() {});
+                    },
+                  )
+                : null,
           ),
+          maxLength: 10,
           keyboardType: TextInputType.phone,
+          onChanged: (value) {
+            if (mounted) setState(() {});
+          },
           validator: (value) {
             if (value != null && value.trim().isNotEmpty) {
-              final phoneRegex = RegExp(r'^[0-9]{10}$');
-              if (!phoneRegex.hasMatch(value.trim())) {
+              // Remove any non-digit characters for validation
+              final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+              
+              if (digitsOnly.length != 10) {
                 return 'Please enter a valid 10-digit phone number';
+              }
+              
+              // Check if it's a realistic phone number (doesn't start with 0)
+              if (digitsOnly.startsWith('0')) {
+                return 'Phone number cannot start with 0';
               }
             }
             return null;
           },
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly, // Only allow digits
+          ],
         ),
         const SizedBox(height: 20),
 
         // Info Card
         Card(
           color: Colors.blue[50],
-          child: const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Row(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info, color: Colors.blue),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Your display name will be visible to other community members. Email cannot be changed.',
-                    style: TextStyle(fontSize: 12, color: Colors.blue),
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue),
+                    SizedBox(width: 12),
+                    Text(
+                      'Input Limits',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '• Display Name: 2-25 characters\n'
+                  '• Email: 100 characters max\n'
+                  '• Phone: 10 digits only\n\n'
+                  'Your display name will be visible to other community members. '
+                  'Email cannot be changed.',
+                  style: const TextStyle(fontSize: 12, color: Colors.blue),
                 ),
               ],
             ),
           ),
         ),
+        
+        // Character limit summary
+        const SizedBox(height: 16),
+   
       ],
     );
   }
@@ -274,7 +342,7 @@ Future<void> _updateProfile() async {
       child: ElevatedButton(
         onPressed: profileProvider.isLoading ? null : _updateProfile,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: AppColors.primary(context),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

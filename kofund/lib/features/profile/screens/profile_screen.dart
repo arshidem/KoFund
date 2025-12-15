@@ -566,7 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
           child: _buildStatCard(
             title: 'Contributions',
             value: contributions.toString(),
-            subtitle: '₹${totalAmount.toStringAsFixed(2)}',
+            // subtitle: '₹${totalAmount.toStringAsFixed(2)}',
             icon: Icons.attach_money,
             color: Colors.green,
             onTap: _navigateToContributionHistory,

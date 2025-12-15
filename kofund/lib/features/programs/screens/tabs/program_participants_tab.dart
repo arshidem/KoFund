@@ -1,12 +1,17 @@
 // ✅ FIXED: Stats logic and auto-close month selector
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/program_model.dart';
 import '../../providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
+import '../../../auth/models/user_model.dart';
 import '../../../participants/providers/participant_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+// Add these imports to your participants_tab.dart file if not already present
+import 'package:kofund/core/services/user_service.dart';
+import 'package:kofund/features/members/screens/member_details_screen.dart';
 
 class ProgramParticipantsTab extends StatefulWidget {
   final ProgramModel program;
@@ -1199,94 +1204,381 @@ Widget _statChip(
     return filtered;
   }
 
-  void _showParticipantActions(ParticipantModel participant, BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.card(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.person,
-                  color: AppColors.primary(context),
-                  size: 20, // ✅ Smaller icon
+void _showParticipantActions(ParticipantModel participant, BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize: 0.25,
+        maxChildSize: 0.8,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: AppColors.card(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
                 ),
-                title: Text(
-                  'View Profile',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13, // ✅ Smaller font
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              if (widget.program.suggestedContribution != null && widget.program.suggestedContribution! > 0)
-                ListTile(
-                  leading: Icon(
-                    participant.hasPaidContribution ? Icons.payment : Icons.payment_outlined,
-                    color: participant.hasPaidContribution ? AppColors.success(context) : AppColors.warning(context),
-                    size: 20, // ✅ Smaller icon
-                  ),
-                  title: Text(
-                    widget.program.isMonthlyPaymentProgram && _selectedMonth != null
-                      ? participant.hasPaidContribution 
-                        ? 'Mark as Pending for ${_formatMonthDisplay(_selectedMonth!)}'
-                        : 'Mark as Paid for ${_formatMonthDisplay(_selectedMonth!)}'
-                      : participant.hasPaidContribution ? 'Mark as Pending' : 'Mark as Paid',
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 13, // ✅ Smaller font
+              ],
+            ),
+            padding: const EdgeInsets.only(right: 16, left: 16, top: 20, bottom: 0),
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.border(context),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _togglePaymentStatus(participant, context);
-                  },
+
+           // Participant Header - Entire row is clickable
+InkWell(
+  onTap: () {
+    Navigator.pop(context); // Close the bottom sheet
+    _navigateToMemberProfile(participant, context);
+  },
+  borderRadius: BorderRadius.circular(12),
+  child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.primary(context).withOpacity(0.1),
+          child: Icon(
+            Icons.person,
+            color: AppColors.primary(context),
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                participant.userName,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              ListTile(
-                leading: Icon(
-                  Icons.remove_circle_outline,
-                  color: AppColors.error(context),
-                  size: 20, // ✅ Smaller icon
-                ),
-                title: Text(
-                  'Remove from Program',
-                  style: TextStyle(
-                    color: AppColors.error(context),
-                    fontSize: 13, // ✅ Smaller font
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (participant.userEmail.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    participant.userEmail,
+                    style: TextStyle(
+                      color: AppColors.textSecondary(context),
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showRemoveConfirmation(participant, context);
-                },
-              ),
-              SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 13, // ✅ Smaller font
-                  ),
-                ),
-              ),
             ],
           ),
-        );
-      },
+        ),
+        Icon(
+          Icons.arrow_forward_ios,
+          size: 20,
+          color: AppColors.primary(context),
+        ),
+      ],
+    ),
+  ),
+),
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+
+                  // Action Tiles - Add View Profile tile
+                  _buildActionTile(
+                    context: context,
+                    icon: Icons.person_outline,
+                    title: 'View Profile',
+                    color: AppColors.primary(context),
+                    onTap: () {
+                      Navigator.pop(context); // Close the bottom sheet
+                      _navigateToMemberProfile(participant, context);
+                    },
+                  ),
+
+                  if (widget.program.suggestedContribution != null &&
+                      widget.program.suggestedContribution! > 0)
+                    _buildActionTile(
+                      context: context,
+                      icon: participant.hasPaidContribution
+                          ? Icons.payment
+                          : Icons.payment_outlined,
+                      title: _getPaymentActionText(participant),
+                      color: participant.hasPaidContribution
+                          ? AppColors.success(context)
+                          : AppColors.warning(context),
+                      subtitle: _getPaymentSubtitle(participant),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _togglePaymentStatus(participant, context);
+                      },
+                    ),
+
+                  _buildActionTile(
+                    context: context,
+                    icon: Icons.remove_circle_outline,
+                    title: 'Remove from Program',
+                    color: AppColors.error(context),
+                    isDestructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showRemoveConfirmation(participant, context);
+                    },
+                  ),
+
+                  const SizedBox(height: 0),
+
+                  // Cancel Button
+                  SizedBox(
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.card(context),
+                        foregroundColor: AppColors.textPrimary(context),
+                        side: BorderSide(color: AppColors.border(context)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 0),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+// ==================== NEW NAVIGATION METHOD ====================
+void _navigateToMemberProfile(ParticipantModel participant, BuildContext context) async {
+  try {
+    print('🔄 DEBUG: Navigating to member profile for ${participant.userId}');
+    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
     );
+    
+    final userService = UserService();
+    final UserModel? member = await userService.getUserById(participant.userId);
+    
+    // Close loading dialog
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+    
+    if (member == null) {
+      print('❌ DEBUG: Could not find user with ID: ${participant.userId}');
+      
+      // Create a basic UserModel from participant data as fallback
+      // REMOVED: photoURL parameter
+      final fallbackMember = UserModel(
+        uid: participant.userId,
+        email: participant.userEmail,
+        displayName: participant.userName,
+        isAdmin: false,
+        isApproved: true,
+        communityId: widget.program.communityId,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        phoneNumber: '', // Keep this if it exists, otherwise make it optional
+      );
+      
+      // Navigate with fallback data
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MemberDetailsScreen(member: fallbackMember),
+        ),
+      );
+    } else {
+      // Navigate with actual member data
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MemberDetailsScreen(member: member),
+        ),
+      );
+    }
+    
+    // Refresh participants list after returning from member profile
+    if (mounted) {
+      setState(() {
+        _streamKey++; // This will refresh the StreamBuilder
+      });
+    }
+    
+  } catch (error, stackTrace) {
+    print('❌ DEBUG: Error navigating to member profile: $error');
+    print('Stack trace: $stackTrace');
+    
+    // Close loading dialog if still open
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    
+    // Show error message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load member profile: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
+}
+// ADD THESE HELPER METHODS TO YOUR _ProgramParticipantsTabState CLASS:
+
+Widget _buildActionTile({
+  required BuildContext context,
+  required IconData icon,
+  required String title,
+  required Color color,
+  String? subtitle,
+  bool isDestructive = false,
+  required VoidCallback onTap,
+}) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: AppColors.border(context),
+        width: 1,
+      ),
+    ),
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: isDestructive 
+                            ? AppColors.error(context) 
+                            : AppColors.textPrimary(context),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (subtitle != null && subtitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!isDestructive)
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textSecondary(context),
+                  size: 20,
+                ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+String _getPaymentActionText(ParticipantModel participant) {
+  if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
+    return participant.hasPaidContribution 
+        ? 'Mark as Pending'
+        : 'Mark as Paid';
+  }
+  return participant.hasPaidContribution ? 'Mark as Pending' : 'Mark as Paid';
+}
+
+String? _getPaymentSubtitle(ParticipantModel participant) {
+  if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
+    return 'For ${_formatMonthDisplay(_selectedMonth!)}';
+  }
+  return null;
+}
+
+
 
   void _togglePaymentStatus(ParticipantModel participant, BuildContext context) {
     if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
