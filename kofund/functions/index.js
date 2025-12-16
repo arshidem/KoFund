@@ -1,11 +1,15 @@
+
+
+
 /**
+ * 
  * Cloud Functions for KoFund - v2 API
  * UPDATED FOR COMMUNITY-BASED NOTIFICATION SYSTEM
  */
 const { onCall } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
-
+const functions = require("firebase-functions");
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
@@ -125,6 +129,189 @@ exports.registerFCMToken = onCall(
   }
 );
 
+
+
+
+// Make sure your functions/index.js has the handleJoinWeb function
+// Add this if you haven't:
+
+
+// In functions/index.js
+// ✅ MUST EXIST: This function handles /join/** routes
+exports.handleJoinWeb = functions.https.onRequest((req, res) => {
+  // Extract invite code from URL: /join/CUOVUA3H
+  const path = req.path;
+  const segments = path.split('/').filter(s => s);
+  
+  let inviteCode = '';
+  
+  if (segments.length >= 2 && segments[0] === 'join') {
+    inviteCode = segments[1]; // Get the code
+  } else if (req.query.code) {
+    inviteCode = req.query.code; // Fallback to query param
+  }
+  
+  // Clean the code
+  inviteCode = inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (!inviteCode) {
+    // No code, redirect to home
+    res.redirect('https://kofund-153ba.web.app');
+    return;
+  }
+  
+  // Create HTML that redirects to app
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Join KoFund Community</title>
+    <meta http-equiv="refresh" content="0; url=kofund:///join-community?code=${inviteCode}">
+    <script>
+      // Try to open app immediately
+      window.location.href = "kofund:///join-community?code=${inviteCode}";
+      
+      // Fallback after 2 seconds
+      setTimeout(() => {
+        document.getElementById('fallback').style.display = 'block';
+      }, 2000);
+    </script>
+    <style>
+      body { 
+        font-family: Arial, sans-serif; 
+        text-align: center; 
+        padding: 50px; 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .container {
+        max-width: 600px;
+        padding: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+      }
+      .code-display {
+        background: white;
+        color: #333;
+        padding: 20px;
+        border-radius: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 20px 0;
+        letter-spacing: 2px;
+      }
+      .button {
+        display: inline-block;
+        margin: 20px;
+        padding: 15px 30px;
+        background: white;
+        color: #667eea;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: transform 0.3s;
+      }
+      .button:hover {
+        transform: translateY(-5px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="redirecting">
+        <h1>🎯 KoFund</h1>
+        <p>Opening KoFund app...</p>
+        <p>Invite Code: <strong>${inviteCode}</strong></p>
+      </div>
+      <div id="fallback" style="display: none;">
+        <h1>Join KoFund Community</h1>
+        <p>Copy this invite code:</p>
+        <div class="code-display">${inviteCode}</div>
+        <p>Open the KoFund app and enter this code</p>
+        
+        <div style="margin: 30px 0;">
+          <button onclick="copyCode('${inviteCode}')" class="button">📋 Copy Code</button>
+          <a href="kofund:///join-community?code=${inviteCode}" class="button">📱 Open App</a>
+          <a href="https://kofund-153ba.web.app" class="button" style="background: transparent; color: white; border: 2px solid white;">🌐 Visit Website</a>
+        </div>
+        
+        <p style="font-size: 0.9rem; opacity: 0.8;">
+          Having trouble? Contact support@kofund.app
+        </p>
+      </div>
+    </div>
+    
+    <script>
+      function copyCode(code) {
+        navigator.clipboard.writeText(code);
+        alert('Code copied: ' + code);
+      }
+      
+      // Show fallback after 3 seconds
+      setTimeout(() => {
+        document.getElementById('redirecting').style.display = 'none';
+        document.getElementById('fallback').style.display = 'block';
+      }, 3000);
+    </script>
+  </body>
+  </html>
+  `;
+  
+  res.status(200).send(html);
+});
+
+// Remove duplicate 'api' function (you have two declarations)
+exports.api = functions.https.onRequest((req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'KoFund API',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ===== ADD THIS NEW FUNCTION =====
+exports.join = functions.https.onRequest((req, res) => {
+  // Handle CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Methods', 'GET');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.status(204).send('');
+    return;
+  }
+
+  // Extract parameters from URL: /join/g5lik7kq4w2Tabza6Uwp?code=GH56F38H
+  const pathParts = req.path.split('/');
+  const inviteCode = pathParts[2]; // Gets "g5lik7kq4w2Tabza6Uwp"
+  const verificationCode = req.query.code; // Gets "GH56F38H"
+  
+  // Log for debugging
+  console.log('Join request:', { inviteCode, verificationCode });
+  
+  // Your business logic here
+  // Example: Check Firestore for valid invite
+  
+  res.json({
+    success: true,
+    message: 'Join endpoint working',
+    data: {
+      invite_code: inviteCode,
+      verification_code: verificationCode
+    }
+  });
+});
 /**
  * Unregister FCM token when user logs out
  */

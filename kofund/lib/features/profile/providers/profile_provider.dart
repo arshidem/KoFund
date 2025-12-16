@@ -5,6 +5,7 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
+import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ class ProfileProvider with ChangeNotifier {
   final ContributionProvider _contributionProvider;
   final UserService _userService;
   final ParticipantService _participantService;
+  final AppAuthProvider _authProvider;
 
   bool _isLoading = false;
   String? _error;
@@ -29,10 +31,12 @@ class ProfileProvider with ChangeNotifier {
     required ProgramProvider programProvider,
     required ContributionProvider contributionProvider,
     required ParticipantService participantService,
+    required AppAuthProvider authProvider,
     required UserService userService,
   })  : _programProvider = programProvider,
         _contributionProvider = contributionProvider,
         _participantService = participantService,
+        _authProvider = authProvider,
         _userService = userService;
 
   // Public getters
@@ -192,26 +196,42 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  // ✅ LEAVE COMMUNITY - FIXED VERSION
-  Future<bool> leaveCommunity() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return false;
+Future<bool> leaveCommunity() async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return false;
 
-    _setLoading(true);
-    try {
-      await _userService.leaveCommunity(currentUser.uid);
-      
-      // Clear local data since user left community
-      clearAllUserData();
-      
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setError('Failed to leave community: $e');
+  _setLoading(true);
+  try {
+    // Get communityId from user document directly
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+
+    final communityId = userDoc.data()?['communityId'] as String?;
+
+    if (communityId == null || communityId.isEmpty) {
+      _setError('You are not in any community');
       _setLoading(false);
       return false;
     }
+
+    // ---- FIXED: pass actual uid and communityId ----
+    final uid = currentUser.uid;
+    await _userService.leaveCommunity(uid, communityId);
+    // ------------------------------------------------
+
+    // Clear local data since user left community
+    clearAllUserData();
+
+    _setLoading(false);
+    return true;
+  } catch (e) {
+    _setError('Failed to leave community: $e');
+    _setLoading(false);
+    return false;
   }
+}
 
   Future<void> loadUserStatistics({String? userId}) async {
     final currentUser = FirebaseAuth.instance.currentUser;

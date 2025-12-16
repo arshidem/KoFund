@@ -42,7 +42,7 @@ class PendingApprovalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Your request to join ${authProvider.user?.communityCode ?? 'the community'} has been sent to the admin.',
+              'Your request to join the community has been sent to the admin.',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16),
             ),

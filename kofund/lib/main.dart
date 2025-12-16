@@ -1,4 +1,4 @@
-// main.dart - UPDATED VERSION with proper Firebase initialization
+// main.dart - UPDATED VERSION with proper Firebase initialization and deep linking
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,7 +11,7 @@ import 'core/constants/app_colors.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
+import 'package:app_links/app_links.dart';    
 // 🧩 Services
 import 'core/services/firebase_auth_service.dart';
 import 'core/services/community_firestore_service.dart';
@@ -39,16 +39,19 @@ import 'features/history/providers/history_provider.dart';
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
 
-// Screens
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
 
+import 'dart:async';
+import 'routing/route_names.dart'; // Or wherever your RouteNames class is
+
 // 🏁 Screens
 import 'features/auth/screens/splash_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // =============================
 // 🚀 MAIN() - FIXED VERSION
 // =============================
@@ -335,15 +338,15 @@ class _AppProvidersState extends State<AppProviders> {
   @override
   Widget build(BuildContext context) {
     // Show loading screen while auth provider initializes
-if (!_isAuthInitialized) {
-  return MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Scaffold(
-      backgroundColor: AppColors.primary(context),
-      body: Container(),
-    ),
-  );
-}
+    if (!_isAuthInitialized) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: AppColors.primary(context),
+          body: Container(),
+        ),
+      );
+    }
     
     return MultiProvider(
       providers: [
@@ -451,6 +454,7 @@ if (!_isAuthInitialized) {
             ),
             contributionProvider: ContributionProvider(),
             participantService: participantService,
+            authProvider: _authProvider,
             userService: userService,
           ),
           update: (_, authProvider, programProvider, contributionProvider, 
@@ -459,6 +463,7 @@ if (!_isAuthInitialized) {
               programProvider: programProvider,
               contributionProvider: contributionProvider,
               participantService: participantService,
+              authProvider: authProvider,
               userService: userService,
             );
           },
@@ -492,7 +497,8 @@ if (!_isAuthInitialized) {
             expenseService: expenseService,
           ),
         ),
-        // In your main.dart or app providers
+        
+        // 📊 Poll Provider
         ChangeNotifierProvider(
           create: (context) => PollProvider(),
         ),
@@ -506,9 +512,117 @@ if (!_isAuthInitialized) {
     );
   }
 }
-class MyApp extends StatelessWidget {
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late AppLinks _appLinks;
+  StreamSubscription<Uri?>? _linkSubscription; // ✅ CORRECT: StreamSubscription<Uri?>
+ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();  @override
+  void initState() {
+    super.initState();
+    _initAppLinks();
+  }
+  
+  Future<void> _initAppLinks() async {
+    _appLinks = AppLinks();
+    
+    // ✅ CORRECT: Returns Uri?
+    final Uri? initialUri = await _appLinks.getInitialLink();
+    if (initialUri != null) {
+      _handleDeepLink(initialUri);
+    }
+    
+    // ✅ CORRECT: uriLinkStream returns Stream<Uri?>
+    _linkSubscription = _appLinks.uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    });
+  }
+  
+void _handleDeepLink(Uri uri) {
+  debugPrint('📱 Deep link received: $uri');
+  debugPrint('Full URI parse - Scheme: ${uri.scheme}, Host: "${uri.host}", Path: "${uri.path}", Query: ${uri.queryParameters}');
+  
+  String? inviteCode;
+  
+  // Handle ANY kofund:// URL with a code parameter
+  // Supports both: kofund:///join-community?code=... and kofund://join?code=...
+  if (uri.scheme == 'kofund') {
+    inviteCode = uri.queryParameters['code'];
+    if (inviteCode != null && inviteCode.isNotEmpty) {
+      debugPrint('✅ Found invite code from kofund:// URL: $inviteCode');
+      _navigateToSplashWithInvite(inviteCode);
+      return;
+    }
+  }
+  
+  // Handle web links
+  if (uri.scheme == 'https' && uri.host.contains('kofund')) {
+    // Format 1: https://kofund-153ba.web.app/join/CUOVUA3H
+    if (uri.path.startsWith('/join/')) {
+      final segments = uri.path.split('/');
+      if (segments.length >= 3) {
+        inviteCode = segments[2];
+      }
+    }
+    
+    // Format 2: https://kofund-153ba.web.app/?code=CUOVUA3H
+    if (inviteCode == null || inviteCode.isEmpty) {
+      inviteCode = uri.queryParameters['code'];
+    }
+    
+    if (inviteCode != null && inviteCode.isNotEmpty) {
+      debugPrint('✅ Found invite code from web URL: $inviteCode');
+      _navigateToSplashWithInvite(inviteCode);
+      return;
+    }
+  }
+  
+  debugPrint('❌ Could not handle deep link: $uri');
+}
+
+void _navigateToSplashWithInvite(String? inviteCode) async {
+  if (inviteCode == null || inviteCode.isEmpty) return;
+  
+  debugPrint('📍 Navigating to splash screen with invite code: $inviteCode');
+  
+  // Save to storage as backup
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('pending_invite_code', inviteCode);
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (navigatorKey.currentState == null) {
+      debugPrint('❌ Navigator not ready yet');
+      return;
+    }
+    
+    // Use '/' as the route name (or RouteNames.splash)
+    navigatorKey.currentState!.pushNamedAndRemoveUntil(
+      '/',  // Changed to root route
+      (route) => false,
+      arguments: {'inviteCode': inviteCode},
+    );
+  });
+}
+
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+  
+
+  
+
+  
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -516,9 +630,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'KoFund',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       onGenerateRoute: AppRouter.onGenerateRoute,
-      home: const SplashScreen(),
       themeMode: themeProvider.themeMode,
+      
 
       // 🌤 LIGHT THEME
       theme: ThemeData(

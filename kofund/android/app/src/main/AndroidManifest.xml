@@ -33,6 +33,11 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="default_channel" />
 
+        <!-- Disable Flutter's default deep linking when using app_links -->
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="false" />
+
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
@@ -43,16 +48,64 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- ==================== CUSTOM URL SCHEME DEEP LINKING ==================== -->
+            
+            <!-- 1. MAIN CUSTOM SCHEME: kofund:// -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kofund" />
+            </intent-filter>
+
+            <!-- 2. SPECIFIC JOIN PATH: kofund://join -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="kofund"
+                    android:host="join"
+                    android:pathPrefix="/" />
+            </intent-filter>
+
+            <!-- 3. ALTERNATIVE: kofund://invite -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="kofund"
+                    android:host="invite"
+                    android:pathPrefix="/" />
+            </intent-filter>
+
+            <!-- 4. HTTPS FALLBACK (Optional - looks like web link but uses custom scheme) -->
+            <!-- This makes links look like https://kofund.app/join but actually use custom scheme -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="kofund.app"
+                    android:pathPrefix="/join" />
+            </intent-filter>
+
+            <!-- ==================== END DEEP LINKING ==================== -->
+
             <!-- Deep link handling for notifications -->
             <intent-filter>
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+            <!-- Flutter theme -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
+            <!-- App launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -69,7 +69,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         // ✅ UPDATE USER DOCUMENT with community info
         await authProvider.setUserAsCommunityAdmin(
           communityId: community.communityId,
-          communityCode: community.inviteCode,
           communityName: community.name,
         );
 

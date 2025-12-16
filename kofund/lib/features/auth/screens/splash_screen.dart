@@ -1,4 +1,4 @@
-// lib/features/auth/screens/splash_screen.dart 
+// lib/features/auth/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,16 +14,15 @@ import '../../../features/community/screens/pending_approval_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../core/constants/app_colors.dart';
-
 import '../../../core/services/fcm_token_service.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
-// Import your animated logo
 import '../../../core/widgets/animated_logo.dart';
 
 void unawaited(Future<void> future) {}
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final String? deepLinkInviteCode;
+  const SplashScreen({super.key, this.deepLinkInviteCode});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -32,21 +31,56 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   bool _isInitializing = true;
   String _status = 'Starting app...';
+  String? _pendingInviteCode;
 
   @override
   void initState() {
     super.initState();
+    _handleInviteCode();
     _startSplashTimer();
   }
-  /// ⭐ NEW: Ensure splash shows for at least 2 seconds
-void _startSplashTimer() {
-  Future.delayed(const Duration(seconds: 3), () {
-    if (!mounted) return;
-    _initializeAppWithTimeout(); // your existing logic
-  });
-}
 
-  /// ⭐ NEW: Initialize notification system ASYNCHRONOUSLY
+  /// Handle invite code - just save it, don't navigate based on it
+  Future<void> _handleInviteCode() async {
+    debugPrint('🔄 Handling invite code...');
+    
+    // 1. Check if deep link provided invite code
+    if (widget.deepLinkInviteCode != null && 
+        widget.deepLinkInviteCode!.isNotEmpty) {
+      _pendingInviteCode = widget.deepLinkInviteCode;
+      debugPrint('📱 Received invite code from deep link: $_pendingInviteCode');
+      
+      // Save to persistent storage for later use
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pending_invite_code', _pendingInviteCode!);
+      debugPrint('💾 Saved invite code to storage for later use');
+    } else {
+      // 2. Check storage for existing pending invite (from previous sessions)
+      final prefs = await SharedPreferences.getInstance();
+      _pendingInviteCode = prefs.getString('pending_invite_code');
+      if (_pendingInviteCode != null) {
+        debugPrint('📋 Found pending invite in storage from previous session: $_pendingInviteCode');
+      }
+    }
+  }
+
+  /// Clear pending invite code from storage
+  Future<void> _clearPendingInviteCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pending_invite_code');
+    _pendingInviteCode = null;
+    debugPrint('🗑️ Cleared pending invite code from storage');
+  }
+
+  /// Ensure splash shows for at least 2 seconds
+  void _startSplashTimer() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      _initializeAppWithTimeout();
+    });
+  }
+
+  /// Initialize notification system ASYNCHRONOUSLY
   Future<void> _initializeNotificationSystemInBackground() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -54,7 +88,6 @@ void _startSplashTimer() {
       
       debugPrint("🔄 Background: Initializing notification system...");
       
-      // Get services from context
       final tokenService = Provider.of<FCMTokenService>(context, listen: false);
       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
       
@@ -124,16 +157,35 @@ void _startSplashTimer() {
       
     } catch (e, stackTrace) {
       debugPrint("❌ Background notification init error: $e");
-      // Don't throw - notification system should not block app
     }
   }
 
-  /// ⭐ NEW: Main initialization with timeout
+  /// ⭐ NEW: Check if user email is verified
+  Future<bool> _isUserEmailVerified(UserModel? user) async {
+    if (user == null) return false;
+    
+    try {
+      // Reload user to get latest email verification status
+      await FirebaseAuth.instance.currentUser?.reload();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        final isVerified = currentUser.emailVerified;
+        debugPrint('📧 Email verification status: $isVerified');
+        return isVerified;
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking email verification: $e');
+    }
+    
+    return user.emailVerified ?? false;
+  }
+
+  /// Main initialization with timeout
   Future<void> _initializeAppWithTimeout() async {
     try {
       _updateStatus('Starting app...');
       
-      // Get auth provider
       final authProvider = Provider.of<app_auth.AppAuthProvider>(context, listen: false);
       
       // Wait MAX 3 seconds total
@@ -144,7 +196,6 @@ void _startSplashTimer() {
       
     } catch (e) {
       debugPrint("❌ Splash initialization error: $e");
-      // Still navigate even on error
       _navigateToLogin();
     } finally {
       setState(() => _isInitializing = false);
@@ -152,7 +203,6 @@ void _startSplashTimer() {
   }
 
   Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async {
-    // Short delay for smooth UX
     await Future.delayed(const Duration(milliseconds: 800));
     
     debugPrint("=== SPLASH SCREEN ===");
@@ -160,8 +210,9 @@ void _startSplashTimer() {
     debugPrint("  - isLoading: ${authProvider.isLoading}");
     debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
     debugPrint("  - user exists: ${authProvider.user != null}");
+    debugPrint("  - pending invite code: $_pendingInviteCode");
     
-    // ⭐ NEW: Start notification system in BACKGROUND (non-blocking)
+    // Start notification system in BACKGROUND (non-blocking)
     unawaited(_initializeNotificationSystemInBackground());
     
     // Check if user can access app (online OR offline)
@@ -185,8 +236,17 @@ void _startSplashTimer() {
       
       _updateStatus('Checking account...');
       
-      // Quick navigation logic (non-blocking)
-      await _quickNavigationLogic(user);
+      // ⭐ NEW: Check email verification first
+      final emailVerified = await _isUserEmailVerified(user);
+      
+      if (!emailVerified) {
+        debugPrint("❌ Email not verified - navigate to verification screen");
+        _navigateToVerificationPending(user.email ?? '');
+        return;
+      }
+      
+      // Email is verified, continue with normal flow
+      await _normalNavigationLogic(user);
       
     } else {
       debugPrint("❌ Cannot access app - go to login");
@@ -194,7 +254,8 @@ void _startSplashTimer() {
     }
   }
 
-  Future<void> _quickNavigationLogic(UserModel? user) async {
+  /// Normal navigation logic - ignore pending invites
+  Future<void> _normalNavigationLogic(UserModel? user) async {
     if (user == null) {
       _navigateToLogin();
       return;
@@ -215,29 +276,60 @@ void _startSplashTimer() {
     }
     
     // All good - go to dashboard
-    debugPrint("➡️ All good - go to dashboard");
+    debugPrint("➡️ User has community and is approved - go to dashboard");
+    debugPrint("   Pending invite code saved for later: $_pendingInviteCode");
     _navigateToDashboard();
+  }
+
+  // ⭐ NEW: Navigate to verification pending screen
+  void _navigateToVerificationPending(String email) {
+    if (!mounted) return;
+    
+    debugPrint('🚀 Navigating to VerificationPendingScreen');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VerificationPendingScreen(
+          email: email,
+          pendingInviteCode: _pendingInviteCode,
+        ),
+      ),
+    );
   }
 
   // Navigation helpers
   void _navigateToLogin() {
     if (!mounted) return;
+    
+    debugPrint('🚀 Navigating to LoginScreen');
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(
+          pendingInviteCode: _pendingInviteCode,
+        ),
+      ),
     );
   }
 
   void _navigateToJoinCommunity() {
     if (!mounted) return;
+    
+    debugPrint('🚀 Navigating to JoinCommunityScreen');
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const JoinCommunityScreen()),
+      MaterialPageRoute(
+        builder: (_) => JoinCommunityScreen(
+          inviteCode: _pendingInviteCode, // Pass invite code if exists
+        ),
+      ),
     );
   }
 
   void _navigateToPendingApproval() {
     if (!mounted) return;
+    
+    debugPrint('🚀 Navigating to PendingApprovalScreen');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
@@ -246,6 +338,15 @@ void _startSplashTimer() {
 
   void _navigateToDashboard() {
     if (!mounted) return;
+    
+    debugPrint('🚀 Navigating to CommunityDashboard');
+    
+    // Don't clear the invite code when going to dashboard
+    // Keep it saved for when user manually navigates to JoinCommunityScreen
+    if (_pendingInviteCode != null) {
+      debugPrint('💾 Keeping invite code in storage for future use');
+    }
+    
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const CommunityDashboard()),
@@ -258,34 +359,82 @@ void _startSplashTimer() {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  final authProvider = Provider.of<app_auth.AppAuthProvider>(context);
-  
-return Scaffold(
-  body: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-    ),
-    child: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animated Logo only (transparent background)
-          const AnimatedLogo(
-            size: 200,
-            showBackground: false,
-            loopAnimation: true,
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<app_auth.AppAuthProvider>(context);
+    
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient(context),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated Logo only (transparent background)
+              const AnimatedLogo(
+                size: 200,
+                showBackground: false,
+                loopAnimation: true,
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Status text only when loading
+              if (_isInitializing)
+                Column(
+                  children: [
+                    CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _status,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              
+              // Show invite code indicator if exists
+              if (_pendingInviteCode != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 30),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.link,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Invite code saved',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          
-          const SizedBox(height: 20),
-          
-          // Status text only when loading
-      
-        ],
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 }

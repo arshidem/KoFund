@@ -17,6 +17,7 @@ class CommunityModel {
   final Map<String, dynamic>? settings;
   final Timestamp? lastActivityAt;
   final String? logoUrl;
+  final String? inviteLink; // 🆕 ADD THIS FIELD IF NEEDED
 
   CommunityModel({
     required this.communityId,
@@ -34,6 +35,7 @@ class CommunityModel {
     this.settings,
     this.lastActivityAt,
     this.logoUrl,
+    this.inviteLink, // 🆕 ADD THIS
   });
 
   factory CommunityModel.fromMap(Map<String, dynamic> data, String docId) {
@@ -53,6 +55,7 @@ class CommunityModel {
       settings: data['settings'] != null ? Map<String, dynamic>.from(data['settings']) : null,
       lastActivityAt: data['lastActivityAt'],
       logoUrl: data['logoUrl'],
+      inviteLink: data['inviteLink'], // 🆕 ADD THIS
     );
   }
 
@@ -72,6 +75,7 @@ class CommunityModel {
       'settings': settings,
       'lastActivityAt': lastActivityAt ?? Timestamp.now(),
       'logoUrl': logoUrl,
+      'inviteLink': inviteLink, // 🆕 ADD THIS
     };
   }
 }

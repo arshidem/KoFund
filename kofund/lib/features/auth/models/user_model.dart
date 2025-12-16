@@ -6,7 +6,6 @@ class UserModel {
   final String? displayName;
   final String? phoneNumber;
   final String? communityId;
-  final String? communityCode;
   final String? communityName; // 🆕 ADD THIS FIELD
   final String role;
   final bool isApproved;
@@ -23,7 +22,6 @@ class UserModel {
     this.displayName,
     this.phoneNumber,
     this.communityId,
-    this.communityCode,
     this.communityName, // 🆕 ADD THIS
     this.role = 'member',
     this.isApproved = false,
@@ -42,7 +40,6 @@ class UserModel {
       'displayName': displayName,
       'phoneNumber': phoneNumber,
       'communityId': communityId,
-      'communityCode': communityCode,
       'communityName': communityName, // 🆕 ADD THIS
       'role': role,
       'isApproved': isApproved,
@@ -77,7 +74,6 @@ class UserModel {
       displayName: map['displayName'] ?? map['name'],
       phoneNumber: map['phoneNumber'],
       communityId: map['communityId'],
-      communityCode: map['communityCode'],
       communityName: map['communityName'], // 🆕 ADD THIS
       role: map['role'] ?? 'member',
       isApproved: map['isApproved'] ?? false,
@@ -97,7 +93,6 @@ class UserModel {
     String? displayName,
     String? phoneNumber,
     String? communityId,
-    String? communityCode,
     String? communityName, // 🆕 ADD THIS
     String? role,
     bool? isApproved,
@@ -114,7 +109,6 @@ class UserModel {
       displayName: displayName ?? this.displayName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       communityId: communityId ?? this.communityId,
-      communityCode: communityCode ?? this.communityCode,
       communityName: communityName ?? this.communityName, // 🆕 ADD THIS
       role: role ?? this.role,
       isApproved: isApproved ?? this.isApproved,

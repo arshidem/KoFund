@@ -444,31 +444,38 @@ Future<void> loadMemberHistoryData(String memberId) async {
     }
   }
 
-  // ✅ REMOVE FROM COMMUNITY
-  Future<bool> removeFromCommunity(String uid) async {
-    final currentUser = _authProvider.user; // ✅ Direct access
-    if (currentUser == null || !currentUser.isAdmin) {
-      _setError('Only admins can remove users from community');
-      return false;
-    }
-
-    _setLoading(true);
-    try {
-      await _userService.removeFromCommunity(uid);
-      
-      // Remove from local list
-      _members.removeWhere((member) => member.uid == uid);
-      
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _setError('Failed to remove user from community: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+Future<bool> removeFromCommunity(String uid) async {
+  final currentUser = _authProvider.user;
+  if (currentUser == null || !currentUser.isAdmin) {
+    _setError('Only admins can remove users from community');
+    return false;
   }
 
+  _setLoading(true);
+  try {
+    // ✅ FIXED: Add communityId parameter
+final communityId = currentUser.communityId;
+if (communityId == null || communityId.isEmpty) {
+  _setError('No community found');
+  _setLoading(false);
+  return false;
+}
+
+await _userService.removeFromCommunity(uid, communityId);
+
+    
+    // Remove from local list
+    _members.removeWhere((member) => member.uid == uid);
+    
+    notifyListeners();
+    return true;
+  } catch (e) {
+    _setError('Failed to remove user from community: $e');
+    return false;
+  } finally {
+    _setLoading(false);
+  }
+}
   // ✅ BULK UPDATE MEMBER ROLES
   Future<bool> bulkUpdateMemberRoles(List<String> uids, bool makeAdmin) async {
     final currentUser = _authProvider.user; // ✅ Direct access
@@ -545,7 +552,14 @@ Future<void> loadMemberHistoryData(String memberId) async {
     try {
       // Remove each user individually
       for (final uid in uids) {
-        await _userService.removeFromCommunity(uid);
+final communityId = _authProvider.user?.communityId;
+if (communityId == null || communityId.isEmpty) {
+  _setError('No community found');
+  _setLoading(false);
+  return false;
+}
+await _userService.removeFromCommunity(uid, communityId);
+
       }
       
       // Remove from local list

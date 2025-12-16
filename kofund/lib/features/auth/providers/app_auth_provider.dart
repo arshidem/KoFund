@@ -878,7 +878,6 @@ class AppAuthProvider with ChangeNotifier {
 
   Future<bool> updateUserCommunity({
     required String communityId,
-    required String communityCode,
     required String communityName,
     required String role,
     bool isApproved = false,
@@ -891,7 +890,6 @@ class AppAuthProvider with ChangeNotifier {
     try {
       await _firestore.collection('users').doc(_user!.uid).update({
         'communityId': communityId,
-        'communityCode': communityCode,
         'communityName': communityName,
         'role': role,
         'isApproved': isApproved,
@@ -900,7 +898,6 @@ class AppAuthProvider with ChangeNotifier {
 
       _user = _user!.copyWith(
         communityId: communityId,
-        communityCode: communityCode,
         communityName: communityName,
         role: role,
         isApproved: isApproved,
@@ -917,12 +914,10 @@ class AppAuthProvider with ChangeNotifier {
 
   Future<bool> setUserAsCommunityAdmin({
     required String communityId,
-    required String communityCode,
     required String communityName,
   }) async {
     return await updateUserCommunity(
       communityId: communityId,
-      communityCode: communityCode,
       communityName: communityName,
       role: 'admin',
       isApproved: true,
@@ -945,7 +940,6 @@ class AppAuthProvider with ChangeNotifier {
 
       await _firestore.collection('users').doc(_user!.uid).update({
         'communityId': FieldValue.delete(),
-        'communityCode': FieldValue.delete(),
         'communityName': FieldValue.delete(),
         'role': FieldValue.delete(),
         'isApproved': false,
@@ -953,7 +947,6 @@ class AppAuthProvider with ChangeNotifier {
 
       _user = _user!.copyWith(
         communityId: null,
-        communityCode: null,
         communityName: null,
         role: 'member',
         isApproved: false,

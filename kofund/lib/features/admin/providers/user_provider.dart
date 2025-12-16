@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import '../../../../core/services/user_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProvider with ChangeNotifier {
   final UserService _userService;
@@ -165,25 +166,38 @@ Future<void> approveUser(String uid, String communityId) async {
 Future<void> rejectUser(String uid) async {
   _setLoading(true);
   try {
-    await _userService.rejectUser(uid);
-    
-    // 🔹 Create NEW pending list (don't modify in-place)
-    final newPending = List<UserModel>.from(_pendingMembers);
-    newPending.removeWhere((u) => u.uid == uid);
-    
-    // 🔹 Assign new list
-    _pendingMembers = newPending;
-    
-    print('DEBUG: After reject - Pending: ${_pendingMembers.length}');
-    
+    // 🔹 1. Get user's communityId
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    final communityId = userDoc.data()?['communityId'] as String?;
+
+    if (communityId == null || communityId.isEmpty) {
+      _setMessage('User is not in any community');
+      return;
+    }
+
+    // 🔹 2. Call UserService with POSITIONAL parameters
+    await _userService.rejectUser(uid, communityId);
+
+    // 🔹 3. Remove user from local pending list (immutable update)
+    _pendingMembers = _pendingMembers
+        .where((user) => user.uid != uid)
+        .toList();
+
+    print('✅ DEBUG: User $uid rejected. Pending count: ${_pendingMembers.length}');
+
     _setMessage('User rejected successfully');
   } catch (e) {
-    print('ERROR rejecting user: $e');
+    print('❌ ERROR rejecting user: $e');
     _setMessage('Error rejecting user: $e');
   } finally {
     _setLoading(false);
   }
 }
+
 
 // --------------------------------------------------------------------------
 // 👑 UPDATE USER ROLE (Admin/Non-Admin) - FIXED VERSION

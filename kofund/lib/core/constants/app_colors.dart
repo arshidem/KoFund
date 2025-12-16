@@ -46,6 +46,13 @@ class AppColors {
   static const darkProgressBackground = Color(0xFF1A2E2A);
   static const darkProgressFill = Color(0xFF00E3C3);
 
+  /// 🆕 ADDED: Missing methods
+  static Color cardBackground(BuildContext context) => 
+      Theme.of(context).brightness == Brightness.dark ? darkCard : lightCard;
+  
+  static Color secondary(BuildContext context) => 
+      Theme.of(context).brightness == Brightness.dark ? darkPrimary : lightPrimary;
+
   /// Theme-aware color getters
   static Color primary(BuildContext context) => 
       Theme.of(context).brightness == Brightness.dark ? darkPrimary : lightPrimary;
@@ -68,7 +75,7 @@ class AppColors {
   static Color textTertiary(BuildContext context) => 
       Theme.of(context).brightness == Brightness.dark ? darkTextTertiary : lightTextTertiary;
 
-    static Color textCards(BuildContext context) => 
+  static Color textCards(BuildContext context) => 
       Theme.of(context).brightness == Brightness.dark ? darkTextCards : lightTextCards;
   
   static Color revenue(BuildContext context) => 

@@ -1,16 +1,22 @@
 // lib/features/auth/screens/verification_pending_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
 import 'splash_screen.dart';
-
+import 'package:flutter/services.dart';
 class VerificationPendingScreen extends StatefulWidget {
   final String email;
+  final String? pendingInviteCode;
   
-  const VerificationPendingScreen({super.key, required this.email});
+  const VerificationPendingScreen({
+    super.key, 
+    required this.email,
+    this.pendingInviteCode,
+  });
 
   @override
   State<VerificationPendingScreen> createState() => _VerificationPendingScreenState();
@@ -25,12 +31,19 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
   void initState() {
     super.initState();
     _startAutoVerificationCheck();
+    _checkForPendingInvite();
   }
 
   @override
   void dispose() {
     _verificationTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _checkForPendingInvite() async {
+    if (widget.pendingInviteCode != null && widget.pendingInviteCode!.isNotEmpty) {
+      debugPrint('🎯 Verification screen has pending invite: ${widget.pendingInviteCode}');
+    }
   }
 
   // Auto-check verification status every 5 seconds
@@ -54,7 +67,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
       final currentUser = FirebaseAuth.instance.currentUser;
       
       if (currentUser != null && currentUser.emailVerified && mounted) {
-        // Email verified - stop timer and navigate to app
+        // Email verified - stop timer
         _verificationTimer?.cancel();
         
         // Show success message
@@ -65,14 +78,51 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
           ),
         );
         
-        // Navigate to splash screen to continue normal flow
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SplashScreen()),
-        );
+        // ⭐ NEW: Check if we have a pending invite code
+        if (widget.pendingInviteCode != null) {
+          debugPrint('✅ Email verified with invite code, saving to storage');
+          
+          // Save invite code for after splash screen
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+          
+          // Navigate to splash screen which will handle the invite
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SplashScreen(
+                deepLinkInviteCode: widget.pendingInviteCode,
+              ),
+            ),
+          );
+        } else {
+          // Check storage for any pending invites
+          final prefs = await SharedPreferences.getInstance();
+          final storedInviteCode = prefs.getString('pending_invite_code');
+          
+          if (storedInviteCode != null && storedInviteCode.isNotEmpty) {
+            debugPrint('📋 Found stored invite code after verification: $storedInviteCode');
+            
+            // Navigate to splash screen with stored invite
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SplashScreen(
+                  deepLinkInviteCode: storedInviteCode,
+                ),
+              ),
+            );
+          } else {
+            // Normal flow - no invite
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SplashScreen()),
+            );
+          }
+        }
       }
     } catch (e) {
-      print('Error checking verification: $e');
+      debugPrint('Error checking verification: $e');
     } finally {
       if (mounted) {
         setState(() => _isChecking = false);
@@ -117,6 +167,51 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
     }
   }
 
+Widget _buildInviteBanner() {
+  if (widget.pendingInviteCode == null) return const SizedBox.shrink();
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.blue.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.link, size: 16, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(
+          'Invite: ',
+          style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
+        ),
+        Text(
+          widget.pendingInviteCode!,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+            fontSize: 13,
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: Icon(Icons.copy, size: 16, color: Colors.blue),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Copied'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,7 +223,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView( // Added SingleChildScrollView to prevent overflow
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -146,6 +241,9 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                   color: Colors.orange[700],
                 ),
                 const SizedBox(height: 32),
+                
+                // ⭐ ADD: Invite Banner
+                
                 const Text(
                   'Verify Your Email',
                   style: TextStyle(
@@ -174,18 +272,24 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Please check your email and click the verification link to activate your account. '
-                  'This screen will automatically update once your email is verified.',
-                  style: TextStyle(fontSize: 16),
+                Text(
+                  widget.pendingInviteCode != null
+                      ? 'Please verify your email to join the community. '
+                        'This screen will automatically update once your email is verified.'
+                      : 'Please check your email and click the verification link to activate your account. '
+                        'This screen will automatically update once your email is verified.',
+                  style: const TextStyle(fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
                 
                 const SizedBox(height: 32),
+                                _buildInviteBanner(),
+
+                const SizedBox(height: 32),
                 
-                // Auto-check status indicator - Fixed layout
+                // Auto-check status indicator
                 Container(
-                  height: 80, // Fixed height to prevent layout shifts
+                  height: 80,
                   child: _isChecking 
                       ? const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -248,7 +352,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32), // Reduced space
+                const SizedBox(height: 32),
                 const Column(
                   children: [
                     Icon(Icons.info_outline, size: 40, color: Colors.grey),

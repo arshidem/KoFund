@@ -45,5 +45,23 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	  <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>kofund</string>
+            </array>
+            <key>CFBundleURLName</key>
+            <string>com.kofund.app</string>
+        </dict>
+    </array>
+    
+    <!-- For Universal Links (if you get a domain later) -->
+    <key>FlutterDeepLinkingEnabled</key>
+    <false/>
 </dict>
 </plist>

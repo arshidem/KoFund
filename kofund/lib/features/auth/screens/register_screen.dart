@@ -1,16 +1,19 @@
 // lib/features/auth/screens/register_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Add this import
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../core/constants/app_colors.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/constants/app_colors.dart';
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
 import 'verification_pending_screen.dart';
 import 'splash_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? pendingInviteCode;
+  const RegisterScreen({super.key, this.pendingInviteCode});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -25,6 +28,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;
+  bool _showInviteNotification = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Check if we have a pending invite
+    if (widget.pendingInviteCode != null && widget.pendingInviteCode!.isNotEmpty) {
+      _showInviteNotification = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showInviteSnackbar();
+      });
+    }
+  }
+
+  void _showInviteSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.link, color: Colors.white, size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'You have a pending community invite!',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+Widget _buildInviteBanner() {
+  if (widget.pendingInviteCode == null) return const SizedBox.shrink();
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.blue.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.link, size: 16, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(
+          'Invite: ',
+          style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
+        ),
+        Text(
+          widget.pendingInviteCode!,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+            fontSize: 13,
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: Icon(Icons.copy, size: 16, color: Colors.blue),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Copied'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   void dispose() {
@@ -100,11 +184,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
         name: name,
-        phone: phoneDigits, // Use cleaned digits
+        phone: phoneDigits,
       );
 
       if (success && mounted) {
         _showSuccess('Account created successfully! Please verify your email.');
+        
+        // Store invite code for after verification
+        if (widget.pendingInviteCode != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+          debugPrint('💾 Saved invite code for after verification: ${widget.pendingInviteCode}');
+        }
         
         // Navigate to verification screen
         Navigator.pushReplacement(
@@ -112,6 +203,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           MaterialPageRoute(
             builder: (context) => VerificationPendingScreen(
               email: email,
+              pendingInviteCode: widget.pendingInviteCode,
             ),
           ),
         );
@@ -122,6 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             MaterialPageRoute(
               builder: (context) => VerificationPendingScreen(
                 email: authProvider.currentUserEmail ?? email,
+                pendingInviteCode: widget.pendingInviteCode,
               ),
             ),
           );
@@ -150,11 +243,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success && mounted) {
         _showSuccess('Welcome to KoFund!');
-        await Future.delayed(const Duration(seconds: 1));
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => SplashScreen()),
-        );
+        
+        // Check if we have pending invite
+        if (widget.pendingInviteCode != null) {
+          debugPrint('✅ Google registration successful with invite code');
+          
+          // Store invite code
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+          
+          // Navigate to SplashScreen which will handle the invite
+          await Future.delayed(const Duration(seconds: 1));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SplashScreen(
+                deepLinkInviteCode: widget.pendingInviteCode,
+              ),
+            ),
+          );
+        } else {
+          // Normal flow
+          await Future.delayed(const Duration(seconds: 1));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+          );
+        }
       } else {
         _showError(authProvider.error ?? 'Google sign-up was cancelled');
       }
@@ -228,105 +343,100 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _clearError() => setState(() => _errorMessage = null);
 
-Widget _buildInputField({
-  required TextEditingController controller,
-  required String label,
-  required String hint,
-  required IconData icon,
-  bool obscureText = false,
-  bool? showObscureToggle,
-  TextInputType keyboardType = TextInputType.text,
-  int maxLength = 100,
-  String? Function(String?)? validator,
-  List<TextInputFormatter>? inputFormatters,
-  String? counterSuffix,
-}) {
-  // Combine custom formatters with length limiting formatter
-  List<TextInputFormatter> combinedFormatters = [];
-  
-  if (inputFormatters != null) {
-    combinedFormatters.addAll(inputFormatters);
-  }
-  
-  // Add length limiting formatter (this won't show counter)
-  combinedFormatters.add(LengthLimitingTextInputFormatter(maxLength));
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    bool? showObscureToggle,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLength = 100,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    List<TextInputFormatter> combinedFormatters = [];
+    
+    if (inputFormatters != null) {
+      combinedFormatters.addAll(inputFormatters);
+    }
+    
+    combinedFormatters.add(LengthLimitingTextInputFormatter(maxLength));
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
+          ),
         ),
-      ),
-      const SizedBox(height: 6),
-      TextFormField(
-        controller: controller,
-        obscureText: obscureText && _obscurePassword,
-        keyboardType: keyboardType,
-        // DON'T use maxLength here - it shows counter
-        inputFormatters: combinedFormatters,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 16,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: AppColors.primary(context),
-            size: 20,
-          ),
-          suffixIcon: showObscureToggle == true
-              ? IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.textSecondary(context),
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText && _obscurePassword,
+          keyboardType: keyboardType,
+          inputFormatters: combinedFormatters,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 16,
+            ),
+            prefixIcon: Icon(
+              icon,
               color: AppColors.primary(context),
-              width: 2,
+              size: 20,
+            ),
+            suffixIcon: showObscureToggle == true
+                ? IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: AppColors.textSecondary(context),
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.primary(context),
+                width: 2,
+              ),
+            ),
+            filled: true,
+            fillColor: AppColors.surface(context),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 20,
             ),
           ),
-          filled: true,
-          fillColor: AppColors.surface(context),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 20,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
           ),
-          // Remove any counter-related properties
+          onChanged: (_) => _clearError(),
         ),
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
-        ),
-        onChanged: (_) => _clearError(),
-      ),
-      const SizedBox(height: 6),
-    ],
-  );
-}
+        const SizedBox(height: 6),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -341,65 +451,66 @@ Widget _buildInputField({
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          // Logo and Header
-Center(
-  child: Column(
-    children: [
-      // Logo with rounded background
-      Container(
-        width: 90,
-        height: 90,
-        decoration: BoxDecoration(
-          color: AppColors.primary(context),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary(context).withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: Image.asset(
-              'assets/logos/KoFund.png',
-              height: 80,
-              width: 80,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(height: 12),
-      Text(
-        'KoFund',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary(context),
-          letterSpacing: -0.5,
-        ),
-      ),
- 
-    ],
-  ),
-),
+              // Logo and Header
+              Center(
+                child: Column(
+                  children: [
+                    // Logo with rounded background
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary(context),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary(context).withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: Image.asset(
+                            'assets/logos/KoFund.png',
+                            height: 80,
+                            width: 80,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'KoFund',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary(context),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 22),
 
               // Form Title
-          Center(
-  child: Text(
-    'Create Account',
-    style: TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-      color: AppColors.textPrimary(context),
-    ),
-  ),
-),
+              Center(
+                child: Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+              
+              // Invite banner
        
               const SizedBox(height: 18),
 
@@ -506,7 +617,6 @@ Center(
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 maxLength: 10,
-                counterSuffix: ' digits',
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                 ],
@@ -543,7 +653,6 @@ Center(
                 },
               ),
 
-    
               const SizedBox(height: 20),
 
               // Register Button
@@ -570,9 +679,11 @@ Center(
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Create Account',
-                          style: TextStyle(
+                      : Text(
+                          widget.pendingInviteCode != null
+                              ? 'Create Account & Join Community'
+                              : 'Create Account',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -624,7 +735,9 @@ Center(
                     width: 20,
                   ),
                   label: Text(
-                    'Sign up with Google',
+                    widget.pendingInviteCode != null
+                        ? 'Join with Google'
+                        : 'Sign up with Google',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -663,7 +776,9 @@ Center(
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
+                                  builder: (context) => LoginScreen(
+                                    pendingInviteCode: widget.pendingInviteCode,
+                                  ),
                                 ),
                               );
                             },
@@ -689,16 +804,18 @@ Center(
               const SizedBox(height: 20),
 
               // Terms and Privacy
-              Center(
-                child: Text(
-                  'By creating an account, you agree to our Terms and Privacy Policy',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.textTertiary(context),
-                    fontSize: 11,
-                  ),
-                ),
-              ),
+              // Center(
+              //   child: Text(
+              //     'By creating an account, you agree to our Terms and Privacy Policy',
+              //     textAlign: TextAlign.center,
+              //     style: TextStyle(
+              //       color: AppColors.textTertiary(context),
+              //       fontSize: 11,
+              //     ),
+              //   ),
+              // ),
+                            _buildInviteBanner(),
+
             ],
           ),
         ),

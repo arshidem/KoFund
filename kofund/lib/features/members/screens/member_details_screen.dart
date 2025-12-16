@@ -628,7 +628,6 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
             const SizedBox(height: 8),
             _buildInfoItem('User ID', member.uid.substring(0, 8) + '...', Icons.fingerprint_outlined),
             _buildInfoItem('Privacy', member.showDetailedProfile ? 'Detailed Profile' : 'Basic Profile', Icons.visibility_outlined),
-            _buildInfoItem('Community Code', member.communityCode ?? 'Not set', Icons.code_outlined),
           ],
         ],
       ),

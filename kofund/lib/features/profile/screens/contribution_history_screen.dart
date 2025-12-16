@@ -564,7 +564,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     final amount = (contribution['amount'] ?? 0).toDouble();
     final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
     final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final communityLabel = authProvider.user?.communityCode ?? authProvider.user?.communityId ?? '';
+    final communityLabel = authProvider.user?.communityId ?? '';
 
     // ✅ FIXED: Create HistoryItem with proper user ID
     final historyItem = _convertToHistoryItem(contribution, authProvider.user?.uid ?? '');

@@ -9,7 +9,12 @@ import '../providers/community_provider.dart';
 import 'create_community_screen.dart';
 
 class JoinCommunityScreen extends StatefulWidget {
-  const JoinCommunityScreen({super.key});
+  final String? inviteCode;
+  
+  const JoinCommunityScreen({
+    super.key,
+    this.inviteCode,
+  });
 
   @override
   State<JoinCommunityScreen> createState() => _JoinCommunityScreenState();
@@ -18,6 +23,23 @@ class JoinCommunityScreen extends StatefulWidget {
 class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
+  bool _autoJoining = false;
+  bool _showAutoJoinPrompt = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    if (widget.inviteCode != null && widget.inviteCode!.isNotEmpty) {
+      _codeController.text = widget.inviteCode!.toUpperCase().trim();
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_isValidInviteCode(_codeController.text)) {
+          _showAutoJoinDialog();
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -25,8 +47,112 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     super.dispose();
   }
 
+  bool _isValidInviteCode(String code) {
+    final trimmedCode = code.trim();
+    return trimmedCode.length == 8 && 
+           RegExp(r'^[A-Z0-9]{8}$').hasMatch(trimmedCode);
+  }
+
+  void _showAutoJoinDialog() {
+    if (!mounted || _showAutoJoinPrompt) return;
+    
+    _showAutoJoinPrompt = true;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.link, color: Colors.blue),
+            SizedBox(width: 10),
+            Text('Join Invitation'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'You\'ve received an invitation to join a community.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.code, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Invite Code:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                        Text(
+                          _codeController.text,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              'Would you like to join this community?',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _showAutoJoinPrompt = false;
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _showAutoJoinPrompt = false;
+              Navigator.pop(context);
+              _joinCommunity();
+            },
+            child: const Text('Join Now'),
+          ),
+        ],
+      ),
+    ).then((_) {
+      _showAutoJoinPrompt = false;
+    });
+  }
+
   Future<void> _joinCommunity() async {
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _autoJoining = true;
+    });
 
     final authProvider = context.read<AppAuthProvider>();
     final communityProvider = context.read<CommunityProvider>();
@@ -34,6 +160,9 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     final user = authProvider.user;
     if (user == null) {
       SnackbarHelper.showError(context, 'User not authenticated');
+      setState(() {
+        _autoJoining = false;
+      });
       return;
     }
 
@@ -41,7 +170,6 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
         user.email?.split('@').first ??
         'User';
 
-    // Attempt to join community
     final success = await communityProvider.joinCommunityByCode(
       code: _codeController.text.trim().toUpperCase(),
       userId: user.uid,
@@ -49,16 +177,19 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
       userName: userName,
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      setState(() {
+        _autoJoining = false;
+      });
+      return;
+    }
 
     if (success) {
       final community = communityProvider.currentCommunity;
 
       if (community?.type == 'Private') {
-        // Private: Wait for admin approval
         Navigator.pushReplacementNamed(context, RouteNames.pendingApproval);
       } else {
-        // Public: Direct access - refresh user data
         await authProvider.refreshUserData();
         Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
       }
@@ -68,26 +199,28 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
         communityProvider.error ?? 'Failed to join community',
       );
     }
+
+    setState(() {
+      _autoJoining = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-   appBar: AppBar(
-  title: const Text('Join Community'),
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () {
-      // Navigate to /login and clear any previous routes
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.login,
-        (route) => false,
-      );
-    },
-  ),
-),
-
+      appBar: AppBar(
+        title: const Text('Join Community'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              RouteNames.login,
+              (route) => false,
+            );
+          },
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -95,6 +228,47 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
             key: _formKey,
             child: Column(
               children: [
+                // Deep link indicator
+                if (widget.inviteCode != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.link, color: Colors.green),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Invitation Received',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Code pre-filled from invitation link',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 const Icon(Icons.group_add, size: 64, color: Colors.green),
                 const SizedBox(height: 16),
                 Text(
@@ -136,12 +310,12 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
                 const SizedBox(height: 16),
 
                 Card(
-                  color: Colors.blue[50],
+                  color: Colors.blue.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Icon(Icons.info, color: Colors.blue[700]),
+                        Icon(Icons.info, color: Colors.blue.shade700),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -149,7 +323,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
                             'Public communities will add you immediately, while '
                             'private communities require admin approval.',
                             style: TextStyle(
-                              color: Colors.blue[800],
+                              color: Colors.blue.shade800,
                               fontSize: 12,
                             ),
                           ),
@@ -163,10 +337,12 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
 
                 Consumer<CommunityProvider>(
                   builder: (context, provider, _) {
+                    final isLoading = provider.isLoading || _autoJoining;
+                    
                     return CustomButton(
-                      onPressed: provider.isLoading ? null : _joinCommunity,
-                      text: provider.isLoading
-                          ? 'Processing...'
+                      onPressed: isLoading ? null : _joinCommunity,
+                      text: isLoading
+                          ? 'Joining...'
                           : 'Join Community',
                     );
                   },
@@ -202,8 +378,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
                       ),
                     );
                   },
-                  icon:
-                      const Icon(Icons.add_circle_outline, color: Colors.blue),
+                  icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
                   label: const Text(
                     'Create New Community',
                     style: TextStyle(color: Colors.blue),
@@ -217,6 +392,64 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                ),
+
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Having trouble?',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              SnackbarHelper.showInfo(
+                                context,
+                                'Make sure the code is exactly 8 characters long',
+                              );
+                            },
+                            icon: Icon(Icons.help_outline, 
+                                color: Colors.blue.shade600, size: 20),
+                            tooltip: 'Help',
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('How to Get a Code'),
+                                  content: const Text(
+                                    '1. Ask a community admin for the 8-digit code\n'
+                                    '2. Make sure the code is in uppercase\n'
+                                    '3. Codes contain only letters (A-Z) and numbers (0-9)\n'
+                                    '4. Click "Join Community" to send request',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: Icon(Icons.question_mark, 
+                                color: Colors.blue.shade600, size: 20),
+                            tooltip: 'Instructions',
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],

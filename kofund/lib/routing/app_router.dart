@@ -56,21 +56,79 @@ import 'route_names.dart';
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case RouteNames.splash:
+      case '/':
         return MaterialPageRoute(builder: (_) => const SplashScreen());
-      case RouteNames.login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
-      case RouteNames.register:
-        return MaterialPageRoute(builder: (_) => const RegisterScreen());
-        // Add this case to your route generator
-      case RouteNames.forgotPassword:
-        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
-      case RouteNames.dashboard:
-        return MaterialPageRoute(builder: (_) => const DashboardScreen());
-      case RouteNames.createCommunity:
-        return MaterialPageRoute(builder: (_) => const CreateCommunityScreen());
-      case RouteNames.joinCommunity:
-        return MaterialPageRoute(builder: (_) => const JoinCommunityScreen());
+      case RouteNames.splash:
+  // Check if arguments contain invite code (from deep link)
+  if (settings.arguments != null && settings.arguments is Map) {
+    final args = settings.arguments as Map<String, dynamic>;
+    final inviteCode = args['inviteCode'] as String?;
+    
+    if (inviteCode != null) {
+      // Create a SplashScreen with invite code
+      return MaterialPageRoute(
+        builder: (_) => SplashScreen(deepLinkInviteCode: inviteCode),
+      );
+    }
+  }
+  
+  // Default: show SplashScreen without invite code
+  return MaterialPageRoute(builder: (_) => const SplashScreen());
+
+case RouteNames.login:
+  // Optional: Pass invite code to LoginScreen if needed
+  if (settings.arguments != null && settings.arguments is Map) {
+    final args = settings.arguments as Map<String, dynamic>;
+    final inviteCode = args['inviteCode'] as String?;
+    
+    if (inviteCode != null) {
+      return MaterialPageRoute(
+        builder: (_) => LoginScreen(pendingInviteCode: inviteCode),
+      );
+    }
+  }
+  return MaterialPageRoute(builder: (_) => const LoginScreen());
+
+case RouteNames.register:
+  // Optional: Pass invite code to RegisterScreen if needed
+  if (settings.arguments != null && settings.arguments is Map) {
+    final args = settings.arguments as Map<String, dynamic>;
+    final inviteCode = args['inviteCode'] as String?;
+    
+    if (inviteCode != null) {
+      return MaterialPageRoute(
+        builder: (_) => RegisterScreen(pendingInviteCode: inviteCode),
+      );
+    }
+  }
+  return MaterialPageRoute(builder: (_) => const RegisterScreen());
+
+case RouteNames.forgotPassword:
+  return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+
+case RouteNames.dashboard:
+  return MaterialPageRoute(builder: (_) => const DashboardScreen());
+
+case RouteNames.createCommunity:
+  return MaterialPageRoute(builder: (_) => const CreateCommunityScreen());
+
+// Keep your existing joinCommunity route as is:
+case RouteNames.joinCommunity:
+  // Check if arguments contain invite code (from deep link)
+  if (settings.arguments != null && settings.arguments is Map) {
+    final args = settings.arguments as Map<String, dynamic>;
+    final inviteCode = args['inviteCode'] as String?;
+    
+    if (inviteCode != null) {
+      // Create a JoinCommunityScreen with invite code pre-filled
+      return MaterialPageRoute(
+        builder: (_) => JoinCommunityScreen(inviteCode: inviteCode),
+      );
+    }
+  }
+  
+  // Default: show empty JoinCommunityScreen
+  return MaterialPageRoute(builder: (_) => const JoinCommunityScreen());
       case RouteNames.communityDashboard:
         return MaterialPageRoute(builder: (_) => const CommunityDashboard());
       case RouteNames.pendingApproval:

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Add this import
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kofund/core/constants/app_colors.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kofund/core/constants/app_colors.dart';
 import '../providers/app_auth_provider.dart';
 import 'register_screen.dart';
 import 'splash_screen.dart';
 import 'verification_pending_screen.dart';
 import 'forgot_password_screen.dart';
 import 'package:kofund/routing/route_names.dart';
+import 'package:kofund/features/community/screens/join_community_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? pendingInviteCode;
+  const LoginScreen({super.key, this.pendingInviteCode});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -24,6 +27,66 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;
+  bool _showInviteNotification = false;
+  String? _cachedInviteCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForPendingInvite();
+  }
+
+  /// ⭐ NEW: Check for pending invite code
+  Future<void> _checkForPendingInvite() async {
+    // First check if invite code was passed directly
+    if (widget.pendingInviteCode != null) {
+      _cachedInviteCode = widget.pendingInviteCode;
+      _showInviteNotification = true;
+      debugPrint('🎯 LoginScreen received invite code: $_cachedInviteCode');
+      return;
+    }
+
+    // Then check storage for any pending invites
+    final prefs = await SharedPreferences.getInstance();
+    final storedInviteCode = prefs.getString('pending_invite_code');
+    
+    if (storedInviteCode != null && storedInviteCode.isNotEmpty) {
+      _cachedInviteCode = storedInviteCode;
+      _showInviteNotification = true;
+      debugPrint('📋 LoginScreen found stored invite code: $_cachedInviteCode');
+    }
+  }
+
+  /// ⭐ NEW: Clear pending invite code
+  Future<void> _clearPendingInviteCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pending_invite_code');
+    _cachedInviteCode = null;
+    _showInviteNotification = false;
+    debugPrint('🗑️ LoginScreen cleared pending invite code');
+  }
+
+  /// ⭐ NEW: Navigate to join community with invite
+  void _navigateToJoinCommunityWithInvite() {
+    if (_cachedInviteCode == null) {
+      debugPrint('❌ No invite code to navigate with');
+      return;
+    }
+
+    debugPrint('🚀 Navigating to join community with invite: $_cachedInviteCode');
+    
+    // Clear the invite from storage
+    unawaited(_clearPendingInviteCode());
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => JoinCommunityScreen(
+          inviteCode: _cachedInviteCode,
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -70,7 +133,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success && mounted) {
         _showSuccess('Login successful!');
-        Navigator.pushReplacementNamed(context, RouteNames.splash);
+        
+        // ⭐ UPDATED: Check if we have pending invite
+        if (_cachedInviteCode != null) {
+          debugPrint('✅ Login successful, navigating to join community with invite');
+          await Future.delayed(const Duration(milliseconds: 500));
+          _navigateToJoinCommunityWithInvite();
+        } else {
+          // Normal flow - go to splash screen
+          debugPrint('✅ Login successful, normal flow to splash');
+          Navigator.pushReplacementNamed(context, RouteNames.splash);
+        }
       } else if (mounted) {
         if (authProvider.shouldNavigateToVerification) {
           _showError('Please verify your email to continue.');
@@ -107,11 +180,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success && mounted) {
         _showSuccess('Welcome to KoFund!');
-        await Future.delayed(const Duration(seconds: 1));
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => SplashScreen()),
-        );
+        
+        // ⭐ UPDATED: Check if we have pending invite
+        if (_cachedInviteCode != null) {
+          debugPrint('✅ Google login successful, navigating to join community with invite');
+          await Future.delayed(const Duration(seconds: 1));
+          _navigateToJoinCommunityWithInvite();
+        } else {
+          // Normal flow
+          debugPrint('✅ Google login successful, normal flow to splash');
+          await Future.delayed(const Duration(seconds: 1));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SplashScreen()),
+          );
+        }
       } else {
         _showError(authProvider.error ?? 'Google sign-in was cancelled');
       }
@@ -192,100 +275,156 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _clearError() => setState(() => _errorMessage = null);
 
-Widget _buildInputField({
-  required TextEditingController controller,
-  required String label,
-  required String hint,
-  required IconData icon,
-  bool obscureText = false,
-  bool? showObscureToggle,
-  TextInputType keyboardType = TextInputType.text,
-  int maxLength = 100,
-  String? Function(String?)? validator,
-  List<TextInputFormatter>? inputFormatters,
-}) {
-  // Combine custom formatters with length limiting formatter
-  List<TextInputFormatter> combinedFormatters = [];
-  
-  if (inputFormatters != null) {
-    combinedFormatters.addAll(inputFormatters);
-  }
-  
-  // Add length limiting formatter (this won't show counter)
-  combinedFormatters.add(LengthLimitingTextInputFormatter(maxLength));
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    bool? showObscureToggle,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLength = 100,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    // Combine custom formatters with length limiting formatter
+    List<TextInputFormatter> combinedFormatters = [];
+    
+    if (inputFormatters != null) {
+      combinedFormatters.addAll(inputFormatters);
+    }
+    
+    // Add length limiting formatter (this won't show counter)
+    combinedFormatters.add(LengthLimitingTextInputFormatter(maxLength));
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
+          ),
         ),
-      ),
-      const SizedBox(height: 6),
-      TextFormField(
-        controller: controller,
-        obscureText: obscureText && _obscurePassword,
-        keyboardType: keyboardType,
-        inputFormatters: combinedFormatters,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 16,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: AppColors.primary(context),
-            size: 20,
-          ),
-          suffixIcon: showObscureToggle == true
-              ? IconButton(
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.textSecondary(context),
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText && _obscurePassword,
+          keyboardType: keyboardType,
+          inputFormatters: combinedFormatters,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 16,
+            ),
+            prefixIcon: Icon(
+              icon,
               color: AppColors.primary(context),
-              width: 2,
+              size: 20,
+            ),
+            suffixIcon: showObscureToggle == true
+                ? IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: AppColors.textSecondary(context),
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.primary(context),
+                width: 2,
+              ),
+            ),
+            filled: true,
+            fillColor: AppColors.surface(context),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 20,
             ),
           ),
-          filled: true,
-          fillColor: AppColors.surface(context),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 20,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
+          ),
+          onChanged: (_) => _clearError(),
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+
+// ⭐ MINIMAL: Build invite notification banner
+Widget _buildInviteBanner() {
+  if (_cachedInviteCode == null) return const SizedBox.shrink();
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.blue.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.link, size: 16, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(
+          'Invite code: ',
+          style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
+        ),
+        Text(
+          _cachedInviteCode!,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+            fontSize: 13,
           ),
         ),
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
+        const Spacer(),
+        IconButton(
+          icon: Icon(Icons.copy, size: 16, color: Colors.blue),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: _cachedInviteCode!));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Copied'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
-        onChanged: (_) => _clearError(),
-      ),
-      const SizedBox(height: 6),
-    ],
+        IconButton(
+          icon: Icon(Icons.close, size: 16, color: Colors.grey),
+          onPressed: () {
+            unawaited(_clearPendingInviteCode());
+            setState(() => _cachedInviteCode = null);
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+      ],
+    ),
   );
 }
 
@@ -349,6 +488,8 @@ Widget _buildInputField({
 
               const SizedBox(height: 22),
 
+              // ⭐ NEW: Invite Notification Banner
+
               // Form Title
               Center(
                 child: Text(
@@ -365,7 +506,9 @@ Widget _buildInputField({
               
               Center(
                 child: Text(
-                  'Sign in to your account',
+                  _cachedInviteCode != null
+                      ? 'Sign in to join the community'
+                      : 'Sign in to your account',
                   style: TextStyle(
                     color: AppColors.textSecondary(context),
                     fontSize: 14,
@@ -518,9 +661,11 @@ Widget _buildInputField({
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Sign In',
-                          style: TextStyle(
+                      : Text(
+                          _cachedInviteCode != null
+                              ? 'Sign In & Join Community'
+                              : 'Sign In',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -572,7 +717,9 @@ Widget _buildInputField({
                     width: 20,
                   ),
                   label: Text(
-                    'Continue with Google',
+                    _cachedInviteCode != null
+                        ? 'Join with Google'
+                        : 'Continue with Google',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -611,7 +758,9 @@ Widget _buildInputField({
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
+                                  builder: (context) => RegisterScreen(
+                                    pendingInviteCode: _cachedInviteCode,
+                                  ),
                                 ),
                               );
                             },
@@ -635,6 +784,7 @@ Widget _buildInputField({
               ),
 
               const SizedBox(height: 20),
+                            _buildInviteBanner(),
             ],
           ),
         ),
@@ -642,3 +792,6 @@ Widget _buildInputField({
     );
   }
 }
+
+// ⭐ NEW: Add unawaited helper function
+void unawaited(Future<void> future) {}

@@ -988,8 +988,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                 _buildInfoRow('Member Since', _formatDate(user.createdAt)),
                 _buildInfoRow('Role', user.role.toUpperCase()),
                 _buildInfoRow('Status', user.isApproved ? 'Approved' : 'Pending Approval'),
-                if (user.communityCode != null) 
-                  _buildInfoRow('Community Code', user.communityCode!),
+
               ],
             ),
           ),

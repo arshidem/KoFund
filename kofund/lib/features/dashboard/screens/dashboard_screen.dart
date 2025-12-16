@@ -6,6 +6,7 @@ import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:clipboard/clipboard.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/members_widget.dart';
 import '../widgets/history_widget.dart';
@@ -38,6 +39,11 @@ import 'package:kofund/core/services/expense_service.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/program_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
+import 'package:kofund/core/services/community_firestore_service.dart';
+
+// 🆕 ADD INVITE IMPORTS
+import 'package:kofund/features/community/providers/community_provider.dart';
+import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToMembers;
@@ -57,6 +63,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Track previous user/community to detect changes
   String? _previousUserId;
   String? _previousCommunityId;
+  
+  // 🆕 Invite functionality fields
+  bool _isAdmin = false;
+  bool _canInvite = false;
+  String _inviteCode = '';
+  String _inviteLink = '';
+  bool _inviteLoading = false;
 
   void _onRefresh() async {
     print('🔄 DEBUG: Pull to refresh triggered in Dashboard');
@@ -72,6 +85,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         
         // ✅ RESET PROVIDERS FOR FRESH DATA
         _resetWidgetProviders(user.uid, cid);
+        
+        // 🆕 Refresh invite info
+        await _refreshInviteInfo(cid, user.uid);
       }
       
       _refreshController.refreshCompleted();
@@ -144,6 +160,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _hasLoadedData = false;
         _isInitializing = false;
+        _isAdmin = false;
+        _canInvite = false;
+        _inviteCode = '';
+        _inviteLink = '';
       });
     }
     
@@ -192,6 +212,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // ✅ Initialize widget providers
         _initializeWidgetProviders(user.uid, communityId!);
         
+        // 🆕 Check admin permissions and load invite info
+        _checkAdminPermissions(user.uid, communityId!);
+        
         _hasLoadedData = true;
       } else {
         print('⚠️ DEBUG: No community ID found for user');
@@ -219,67 +242,204 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Test personal notification function
-  void _testNotification() async {
+  // 🆕 Check admin permissions and load invite info
+  void _checkAdminPermissions(String userId, String communityId) async {
     try {
-      final notificationService = context.read<NotificationService>();
-      final notificationProvider = context.read<NotificationProvider>();
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final communityProvider = context.read<CommunityProvider>();
+      final user = context.read<AppAuthProvider>().user;
       
-      if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login first'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
+      // Check if user is admin from user data
+      _isAdmin = user?.isAdmin ?? false;
+      
+      // Get invite info if admin
+      if (_isAdmin && communityId.isNotEmpty) {
+        await _loadInviteInfo(communityId);
       }
       
-      // Create test notification
-      final testNotification = AppNotification(
-        id: 'test_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Test Notification ✅',
-        body: 'This is a test notification from KoFund. Time: ${DateTime.now().toLocal()}',
-        type: NotificationType.announcement,
-        priority: NotificationPriority.normal,
-        timestamp: DateTime.now(),
-        senderName: 'Test System',
-      );
+      setState(() {});
+    } catch (e) {
+      print('❌ Error checking admin permissions: $e');
+    }
+  }
+
+  // 🆕 Load invite information
+  Future<void> _loadInviteInfo(String communityId) async {
+    try {
+      final communityProvider = context.read<CommunityProvider>();
       
-      // Save to Firestore using sendUserNotification
-      await notificationService.sendUserNotification(
-        userId: currentUser.uid,
-        title: 'Test Personal Notification ✅',
-        body: 'This is a test notification sent ONLY to you',
-        type: NotificationType.announcement,
-        senderName: 'Test System',
-      );
+      // Load current community to get invite info
+      await communityProvider.loadCurrentCommunity(communityId);
       
-      // Also add locally for immediate UI update
-      notificationProvider.addLocalNotification(testNotification);
-      
+      // Get invite code and link
+      final community = communityProvider.currentCommunity;
+      if (community != null) {
+        _inviteCode = community.inviteCode;
+        _inviteLink = community.inviteLink ?? '';
+        
+        // If no invite link, generate one
+        if (_inviteLink.isEmpty) {
+          _inviteLink = await communityProvider.getInviteLink(communityId);
+        }
+        
+        // Check invite permissions
+        await communityProvider.checkInvitePermission(communityId);
+        _canInvite = communityProvider.canInvite;
+        
+        setState(() {});
+      }
+    } catch (e) {
+      print('❌ Error loading invite info: $e');
+    }
+  }
+
+  // 🆕 Refresh invite information
+  Future<void> _refreshInviteInfo(String communityId, String userId) async {
+    try {
+      if (_isAdmin) {
+        await _loadInviteInfo(communityId);
+      }
+    } catch (e) {
+      print('❌ Error refreshing invite info: $e');
+    }
+  }
+
+  // 🆕 Show invite dialog
+  void _showInviteDialog() async {
+    final user = context.read<AppAuthProvider>().user;
+    final cid = user?.communityId;
+    
+    if (cid == null || cid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Personal test notification sent! Check notifications screen.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          content: Text('No community found'),
+          backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
+    
+    if (!_isAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only admins can invite members'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _inviteLoading = true;
+    });
+    
+    try {
+      final communityProvider = context.read<CommunityProvider>();
+      final dashboardProvider = context.read<DashboardProvider>();
       
-      print('✅ Personal test notification sent successfully to user: ${currentUser.uid}');
+      // Ensure we have the latest invite info
+      if (_inviteCode.isEmpty || _inviteLink.isEmpty) {
+        await _loadInviteInfo(cid);
+      }
+      
+      // Get community name from dashboard stats
+      final stats = dashboardProvider.getDashboardStats();
+      final communityName = stats['clubName'] ?? user?.communityName ?? 'Community';
+      
+      // Show invite dialog
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => InviteMembersDialog(
+          communityId: cid,
+          communityName: communityName,
+          inviteCode: _inviteCode,
+          inviteLink: _inviteLink,
+          onRegenerateCode: () async {
+            await _regenerateInviteCode(cid);
+            Navigator.pop(context);
+            _showInviteDialog(); // Reopen dialog with new code
+          },
+        ),
+      );
     } catch (e) {
-      print('❌ Error sending test notification: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      setState(() {
+        _inviteLoading = false;
+      });
     }
   }
 
-  // Test community notification function
+  // 🆕 Regenerate invite code
+  Future<void> _regenerateInviteCode(String communityId) async {
+    try {
+      setState(() {
+        _inviteLoading = true;
+      });
+      
+      final communityProvider = context.read<CommunityProvider>();
+      await communityProvider.regenerateInviteCode(communityId);
+      
+      // Refresh invite info
+      await _loadInviteInfo(communityId);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invite code regenerated successfully!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error regenerating code: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _inviteLoading = false;
+      });
+    }
+  }
+
+  // 🆕 Copy invite code to clipboard
+  void _copyInviteCode() async {
+    if (_inviteCode.isEmpty) return;
+    
+    await FlutterClipboard.copy(_inviteCode);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Invite code copied to clipboard!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // 🆕 Copy invite link to clipboard
+  void _copyInviteLink() async {
+    if (_inviteLink.isEmpty) return;
+    
+    await FlutterClipboard.copy(_inviteLink);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Invite link copied to clipboard!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Test community notification function (KEEPING THIS)
   void _testCommunityNotification() async {
     try {
       final notificationService = context.read<NotificationService>();
@@ -315,58 +475,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print('✅ Community test notification sent to community: ${authProvider.user!.communityId!}');
     } catch (e) {
       print('❌ Error sending community notification: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // Add a third test for ALL community members including program ID
-  void _testProgramNotification() async {
-    try {
-      final notificationService = context.read<NotificationService>();
-      final authProvider = context.read<AppAuthProvider>();
-      final currentUser = FirebaseAuth.instance.currentUser;
-      
-      if (currentUser == null || authProvider.user?.communityId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login and join a community first'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      
-      await notificationService.sendCommunityNotification(
-        communityId: authProvider.user!.communityId!,
-        title: 'New Program Created 🎯',
-        body: 'Test Program has been added to your community',
-        type: NotificationType.programUpdate,
-        data: {
-          'programId': 'test_program_${DateTime.now().millisecondsSinceEpoch}',
-          'programName': 'Test Program',
-          'amount': '1000',
-          'duration': '12',
-        },
-        programId: 'test_program_${DateTime.now().millisecondsSinceEpoch}',
-        senderName: 'Test Admin',
-      );
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Program notification sent to ALL community members!'),
-          backgroundColor: Colors.blue,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      print('✅ Program test notification sent to all community members');
-    } catch (e) {
-      print('❌ Error sending program notification: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
@@ -412,11 +520,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             contributionService: ContributionService(),
           ),
         ),
-      
+        // Fresh CommunityProvider for invite functionality
+        ChangeNotifierProvider(
+          create: (_) => CommunityProvider(
+            CommunityFirestoreService(),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (_) => PollProvider(),
         ),
-      
       ],
       child: Consumer<DashboardProvider>(
         builder: (context, provider, child) {
@@ -502,38 +614,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 
-                // Add Floating Action Button for testing notifications
+                // 🆕 ADD INVITE FLOATING ACTION BUTTON
+                if (_isAdmin && !_inviteLoading)
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: FloatingActionButton(
+                      onPressed: _showInviteDialog,
+                      child: const Icon(Icons.person_add),
+                      tooltip: 'Invite Members',
+                      heroTag: 'invite_members',
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                
+                // 🆕 SHOW LOADING INDICATOR WHEN INVITE LOADING
+                if (_inviteLoading)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ),
+                
+                // 🆕 KEEP COMMUNITY NOTIFICATION TEST BUTTON (SMALLER)
                 Positioned(
-                  bottom: 20,
+                  bottom: 90,
                   right: 20,
-                  child: Column(
-                    children: [
-                      // Test Program Notification Button (NEW)
-                      FloatingActionButton.small(
-                        onPressed: _testProgramNotification,
-                        child: const Icon(Icons.event),
-                        tooltip: 'Test Program Notification',
-                        backgroundColor: Colors.blue,
-                        heroTag: 'program_test',
-                      ),
-                      const SizedBox(height: 10),
-                      // Test Community Notification Button
-                      FloatingActionButton.small(
-                        onPressed: _testCommunityNotification,
-                        child: const Icon(Icons.group),
-                        tooltip: 'Test Community Notification',
-                        backgroundColor: Colors.purple,
-                        heroTag: 'community_test',
-                      ),
-                      const SizedBox(height: 10),
-                      // Test Personal Notification Button
-                      FloatingActionButton(
-                        onPressed: _testNotification,
-                        child: const Icon(Icons.notifications_active),
-                        tooltip: 'Test Personal Notification',
-                        heroTag: 'personal_test',
-                      ),
-                    ],
+                  child: FloatingActionButton.small(
+                    onPressed: _testCommunityNotification,
+                    child: const Icon(Icons.notifications),
+                    tooltip: 'Test Community Notification',
+                    backgroundColor: Colors.purple,
+                    heroTag: 'community_test',
                   ),
                 ),
               ],
@@ -607,32 +723,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              // Notification Badge
-              ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 1.2,
+              // 🆕 SHOW INVITE ICON FOR ADMIN INSTEAD OF ALWAYS SHOWING NOTIFICATION BADGE
+              if (_isAdmin)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: _showInviteDialog,
+                        icon: const Icon(
+                          Icons.person_add,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        tooltip: 'Invite Members',
                       ),
                     ),
-                    child: const Center(
-                      child: NotificationBadge(
-                        badgeColor: Colors.redAccent,
-                        textColor: Colors.white,
-                        iconSize: 22,
+                  ),
+                )
+              else
+                // Show notification badge for non-admins
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: NotificationBadge(
+                          badgeColor: Colors.redAccent,
+                          textColor: Colors.white,
+                          iconSize: 22,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ],

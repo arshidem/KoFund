@@ -129,7 +129,7 @@ class _HistoryScreenBodyState extends State<_HistoryScreenBody> {
   Widget build(BuildContext context) {
     final provider = Provider.of<HistoryProvider>(context);
     final auth = Provider.of<AppAuthProvider>(context, listen: false);
-    final communityLabel = auth.user?.communityCode ?? auth.user?.communityId ?? '';
+    final communityLabel = auth.user?.communityId ?? '';
 
     // 🏢 ENTERPRISE-GRADE BACK BUTTON DETECTION
     final bool showBackButton;

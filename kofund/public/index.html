@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KoFund - Community Fund Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .button {
+            display: inline-block;
+            margin: 20px;
+            padding: 15px 30px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+        .button:hover {
+            transform: translateY(-5px);
+        }
+        .code-display {
+            background: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="redirecting">
+            <h1>🎯 KoFund</h1>
+            <p>Opening KoFund app...</p>
+            <p id="invite-code-display"></p>
+        </div>
+        when i click this showing no route defined for /?code={invitecode}
+        <div id="manual-fallback" style="display: none;">
+            <h1>Join KoFund Community</h1>
+            <p>Copy this invite code:</p>
+            <div class="code-display" id="code-display"></div>
+            <p>Open the KoFund app and enter this code</p>
+            
+            <div style="margin: 30px 0;">
+                <button onclick="copyCode()" class="button">📋 Copy Code</button>
+                <a href="kofund://join" class="button">📱 Open App</a>
+            </div>
+            
+            <p style="font-size: 0.9rem; opacity: 0.8;">
+                Having trouble? Contact support@kofund.app
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Extract invite code from URL
+        function extractInviteCode() {
+            const path = window.location.pathname; // e.g., "/join/CUOVUA3H"
+            const segments = path.split('/').filter(s => s);
+            
+            // Format 1: /join/CUOVUA3H
+            if (segments.length >= 2 && segments[0] === 'join') {
+                return segments[1];
+            }
+            
+            // Format 2: /?code=CUOVUA3H (query parameter)
+            const urlParams = new URLSearchParams(window.location.search);
+            const codeFromQuery = urlParams.get('code');
+            if (codeFromQuery) {
+                return codeFromQuery;
+            }
+            
+            return null;
+        }
+        
+        // Copy code to clipboard
+        function copyCode() {
+            const code = extractInviteCode();
+            if (code) {
+                navigator.clipboard.writeText(code);
+                alert('Code copied: ' + code);
+            }
+        }
+        
+        // Main function
+        function handleInviteLink() {
+            const inviteCode = extractInviteCode();
+            
+            if (!inviteCode) {
+                // No code found, show generic page
+                document.getElementById('redirecting').innerHTML = `
+                    <h1>🎯 KoFund</h1>
+                    <p>Community Fund Management App</p>
+                    <p>Download the app from your app store.</p>
+                `;
+                return;
+            }
+            
+            // Show the code while redirecting
+            document.getElementById('invite-code-display').textContent = 
+                `Invite Code: ${inviteCode}`;
+            document.getElementById('code-display').textContent = inviteCode;
+            
+            // 1. Try to open app with deep link
+            const appDeepLink = `kofund://join?code=${inviteCode}`;
+            console.log('Redirecting to app:', appDeepLink);
+            window.location.href = appDeepLink;
+            
+            // 2. If app doesn't open, show manual option after 2 seconds
+            setTimeout(() => {
+                document.getElementById('redirecting').style.display = 'none';
+                document.getElementById('manual-fallback').style.display = 'block';
+            }, 2000);
+        }
+        
+        // Run on page load
+        window.onload = handleInviteLink;
+    </script>
+</body>
+</html>
