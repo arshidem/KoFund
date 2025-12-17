@@ -624,7 +624,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     right: 20,
                     child: FloatingActionButton(
                       onPressed: _showInviteDialog,
-                      child: const Icon(Icons.person_add),
+                      child: const Icon(Icons.share),
                       tooltip: 'Invite Members',
                       heroTag: 'invite_members',
                       backgroundColor: AppColors.primary(context),
@@ -726,36 +726,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              // 🆕 SHOW INVITE ICON FOR ADMIN INSTEAD OF ALWAYS SHOWING NOTIFICATION BADGE
-              if (_isAdmin)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: IconButton(
-                        onPressed: _showInviteDialog,
-                        icon: const Icon(
-                          Icons.person_add,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        tooltip: 'Invite Members',
-                      ),
-                    ),
-                  ),
-                )
-              else
+            
+      
                 // Show notification badge for non-admins
                 ClipRRect(
                   borderRadius: BorderRadius.circular(28),

@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               children: [
                 // Show warning if user mismatch
@@ -330,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                   ),
                 
                 _buildProfileHeader(user),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _buildStatisticsCards(
                   totalParticipations,
                   totalContributions,
@@ -339,17 +339,17 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                 
                 // Recent Programs List
                 if (recentPrograms.isNotEmpty) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   _buildRecentProgramsList(recentPrograms),
                 ],
                 
                 // Recent Contributions List
                 if (recentContributions.isNotEmpty) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   _buildRecentContributionsList(recentContributions),
                 ],
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _buildAccountInfo(user),
               ],
             ),
@@ -406,261 +406,305 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildProfileHeader(UserModel user) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
+Widget _buildProfileHeader(UserModel user) {
+  final primary = AppColors.primary(context);
+  
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(20),
+    child: Container(
+      width: double.infinity,
+decoration: BoxDecoration(
+  borderRadius: BorderRadius.circular(24),
+
+  // ✅ Unified soft gradient
+  gradient: LinearGradient(
+    colors: [
+      primary.withOpacity(0.15),
+      primary.withOpacity(0.05),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
+
+  // ✅ Unified border
+  border: Border.all(
+    color: primary.withOpacity(0.25),
+  ),
+
+  // ✅ Unified soft shadow (same as Invite Link & Stats)
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.06),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ],
+),
+
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        children: [
+          /// Avatar + Edit
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient( // 👈 Avatar gradient
+                    colors: [primary.withOpacity(0.3), primary.withOpacity(0.1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: primary.withOpacity(0.4), width: 2),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  size: 54,
+                  color: Colors.white,
+                ),
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
+
+              /// Edit button
+              Positioned(
+                bottom: -4,
+                right: -4,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
+                    onTap: () => _navigateToEditProfile(user),
+                    child: Container(
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient(context),
+                        gradient: LinearGradient( // 👈 Button gradient
+                          colors: [primary, primary.withOpacity(0.8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary(context).withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 4),
+                            color: primary.withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: Icon(
-                        Icons.person,
-                        size: 50,
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        size: 18,
                         color: Colors.white,
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary(context).withOpacity(0.8),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.edit, size: 16, color: Colors.white),
-                              padding: EdgeInsets.zero,
-                              onPressed: () => _navigateToEditProfile(user),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  user.displayName ?? 'No Name',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(context),
                   ),
-                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          /// Name and other text elements remain the same
+          Text(
+            user.displayName ?? 'No Name',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          /// Email
+          Text(
+            user.email,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+
+          if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              user.phoneNumber!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          /// Status badge with gradient
+          if (user.communityId != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient( // 👈 Status badge gradient
+                  colors: [
+                    Colors.green.withOpacity(0.15),
+                    Colors.green.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.green.withOpacity(0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.group_rounded, size: 16, color: Colors.green),
+                  SizedBox(width: 6),
+                  Text(
+                    'Community Member',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.green,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildStatisticsCards(int participations, int contributions, double totalAmount) {
+  return Row(
+    children: [
+      Expanded(
+        child: _buildStatCard(
+          title: 'Participations',
+          value: participations.toString(),
+          icon: Icons.event,
+          color: Colors.blue,
+          onTap: _navigateToParticipationHistory,
+        ),
+      ),
+      const SizedBox(width: 18),
+      Expanded(
+        child: _buildStatCard(
+          title: 'Contributions',
+          value: contributions.toString(),
+          icon: Icons.attach_money,
+          color: Colors.green,
+          onTap: _navigateToContributionHistory,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildStatCard({
+  required String title,
+  required String value,
+  required IconData icon,
+  required Color color,
+  required VoidCallback onTap,
+}) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(24),
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+
+        // ✅ SAME gradient as Invite Link
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+
+        // ✅ SAME border weight
+        border: Border.all(
+          color: color.withOpacity(0.25),
+        ),
+
+        // ✅ SAME shadow strength
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon container — softened to match Invite Link feel
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: color.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user.email,
+                  title,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary(context),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    user.phoneNumber!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary(context),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 12),
-                if (user.communityId != null) 
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.group, size: 16, color: Colors.green),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Community Member',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildStatisticsCards(int participations, int contributions, double totalAmount) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            title: 'Participations',
-            value: participations.toString(),
-            icon: Icons.event,
-            color: Colors.blue,
-            onTap: _navigateToParticipationHistory,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            title: 'Contributions',
-            value: contributions.toString(),
-            // subtitle: '₹${totalAmount.toStringAsFixed(2)}',
-            icon: Icons.attach_money,
-            color: Colors.green,
-            onTap: _navigateToContributionHistory,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    String? subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, size: 24, color: color),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary(context),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: color,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // Recent Programs List
   Widget _buildRecentProgramsList(List<Map<String, dynamic>> programs) {

@@ -66,23 +66,31 @@ Future<String?> _getTokenWithRetry({int maxAttempts = 5}) async {
   return null;
 }
   // ⭐ UPDATED: Store token with community context
-  Future<void> storeCurrentUserToken({
-    required List<String> communityIds,
-    String? deviceId,
-  }) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-      
-      final token = await _messaging.getToken();
-      if (token == null) return;
-      
-      debugPrint("📱 Storing token for user: ${user.uid}");
-      debugPrint("   Communities: ${communityIds.join(', ')}");
-      
-      // ⭐ CRITICAL: Store current user ID for validation
-      await _storeUserId(user.uid);
-      
+// ⭐ UPDATED: Store token with community context
+Future<void> storeCurrentUserToken({
+  required List<String> communityIds,
+  String? deviceId,
+}) async {
+  try {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    
+    // ⭐ CHANGE THIS: Use retry method instead of direct getToken()
+    // final token = await _messaging.getToken(); // OLD
+    final token = await _getTokenWithRetry(maxAttempts: 3); // NEW
+    
+    if (token == null) {
+      debugPrint("⚠️ No FCM token available after retries");
+      return;
+    }
+    
+    debugPrint("📱 Storing token for user: ${user.uid}");
+    debugPrint("   Communities: ${communityIds.join(', ')}");
+    
+    // ⭐ CRITICAL: Store current user ID for validation
+    await _storeUserId(user.uid);
+    
+    // Rest of your method stays the same...
       // ⭐ CRITICAL: Clean token from other users FIRST
       await _cleanTokenFromOtherUsers(token, user.uid);
       
