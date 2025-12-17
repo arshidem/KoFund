@@ -467,88 +467,78 @@ class AppAuthProvider with ChangeNotifier {
       _setLoading(false);
       return false;
     }
-  }
-
-  // ✅ FIXED: Register FCM token after successful login (without firebase_functions)
-  Future<void> _registerFCMTokenAfterLogin(String userId) async {
+  }Future<String?> getFCMTokenWithRetry() async {
+  const maxAttempts = 3;
+  
+  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      debugPrint('📱 Registering FCM token for user: $userId');
-      
-      // Get FCM token
+      debugPrint("🔄 [FCM] Attempt $attempt to get token...");
       final token = await FirebaseMessaging.instance.getToken();
-      if (token == null) {
-        debugPrint('⚠️ No FCM token available');
-        return;
+      
+      if (token != null && token.isNotEmpty) {
+        debugPrint("✅ [FCM] Got token: ${token.substring(0, 20)}...");
+        return token;
       }
       
-      debugPrint('📱 FCM Token obtained: ${token.substring(0, 20)}...');
-      
-      // Get user's communities from Firestore
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      
-      if (!userDoc.exists) {
-        debugPrint('❌ User document not found');
-        return;
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: attempt));
       }
-      
-      final userData = userDoc.data();
-      final communityId = userData?['communityId'] as String?;
-      final List<dynamic> rawCommunities = communityId != null ? [communityId] : [];
-      final List<String> communities = rawCommunities.cast<String>().toList();
-      
-      debugPrint('🏘️ User communities: ${communities.join(', ')}');
-      
-      // ✅ OPTION 1: Use your existing FCMTokenService
-      try {
-        final tokenService = FCMTokenService();
-        await tokenService.storeCurrentUserToken(communityIds: communities);
-        debugPrint('✅ Token stored via FCMTokenService');
-      } catch (e) {
-        debugPrint('⚠️ Error with FCMTokenService: $e');
-      }
-      
-      // ✅ OPTION 2: Direct Firestore update (removed Cloud Function call)
-      try {
-        // Update in users collection
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .update({
-              'fcmTokens': FieldValue.arrayUnion([token]),
-              'notificationCommunities': communities,
-              'lastTokenUpdate': FieldValue.serverTimestamp(),
-            });
-        
-        // Also store in new token collection
-        await FirebaseFirestore.instance
-            .collection('user_notification_tokens')
-            .doc(token)
-            .set({
-              'token': token,
-              'userId': userId,
-              'communityIds': communities,
-              'deviceId': 'android_${DateTime.now().millisecondsSinceEpoch}',
-              'isActive': true,
-              'createdAt': FieldValue.serverTimestamp(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
-        
-        debugPrint('✅ Token manually saved to Firestore');
-      } catch (e) {
-        debugPrint('⚠️ Error saving to Firestore: $e');
-      }
-      
-      debugPrint('✅ FCM token registration completed');
-      
     } catch (e) {
-      debugPrint('❌ Error in FCM token registration: $e');
-      // Don't throw - notifications are important but shouldn't block login
+      debugPrint("❌ [FCM] Attempt $attempt failed: $e");
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: attempt));
+      }
     }
   }
+  
+  return null;
+}
 
+Future<void> _registerFCMTokenAfterLogin(String userId) async {
+  try {
+    debugPrint('📱 [FCM DEBUG] Starting FCM token registration for user: $userId');
+    
+    // ⭐ USE RETRY MECHANISM
+    debugPrint('📱 [FCM DEBUG] Getting FCM token with retry...');
+    final token = await getFCMTokenWithRetry();
+    
+    if (token == null) {
+      debugPrint('⚠️ [FCM DEBUG] Could not get FCM token after retries');
+      return;
+    }
+    
+    debugPrint('✅ [FCM DEBUG] FCM Token obtained: ${token.substring(0, 20)}...');
+    
+    // ⭐ SKIP COMMUNITY CHECK - Save token anyway
+    final List<String> communities = [];
+    
+    debugPrint('🏘️ [FCM DEBUG] User has no communities yet - saving token anyway');
+    
+    // ✅ Direct Firestore update (simplified)
+    try {
+      debugPrint('📱 [FCM DEBUG] Saving to Firestore...');
+      
+      // Save to users collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+            'fcmTokens': FieldValue.arrayUnion([token]),
+            'lastTokenUpdate': FieldValue.serverTimestamp(),
+          });
+      
+      debugPrint('✅ [FCM DEBUG] Updated user document');
+      
+    } catch (e) {
+      debugPrint('⚠️ [FCM DEBUG] Error saving to Firestore: $e');
+    }
+    
+    debugPrint('✅ [FCM DEBUG] FCM token registration attempt completed');
+    
+  } catch (e) {
+    debugPrint('❌ [FCM DEBUG] Error in FCM token registration: $e');
+  }
+}
   // ✅ Check if current user needs verification
   bool get needsEmailVerification {
     return _user != null && 

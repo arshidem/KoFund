@@ -1348,107 +1348,108 @@ exports.sendProgramContributionReminders = onCall(
         }
         
         // 7. Get tokens for participants
-        const userIds = participantsToRemind.map(p => p.userId);
-        const tokensSnapshot = await db
-          .collection('user_notification_tokens')
-          .where('userId', 'in', userIds.slice(0, 10)) // Firestore 'in' query limit is 10
-          .where('isActive', '==', true)
-          .where('communityIds', 'array-contains', communityId)
-          .get();
+// 7. Get tokens directly from users collection (SIMPLER!)
+let pushNotificationsSent = 0;
+const pushPromises = [];
+
+for (const participant of participantsToRemind) {
+  const { userId, personalizedBody } = participant;
+  
+  try {
+    // Get user document
+    const userDoc = await db.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) continue;
+    
+    const userData = userDoc.data();
+    const fcmTokens = userData.fcmTokens || [];
+    
+    if (fcmTokens.length === 0) {
+      console.log(`⚠️ No FCM tokens found for user ${userId}`);
+      continue;
+    }
+    
+    console.log(`📱 User ${userId} has ${fcmTokens.length} token(s)`);
+    
+    // Send to all tokens for this user
+    const message = {
+      notification: {
+        title: reminderTitle,
+        body: personalizedBody,
+      },
+      data: {
+        communityId,
+        programId: program.id,
+        type: 'reminder',
+        subtype: 'contribution',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        senderName: 'KoFund Reminder',
+        sentFromApp: 'true',
+        notificationId: baseNotificationId,
+      },
+      tokens: fcmTokens,
+      android: {
+        priority: 'high',
+      },
+      apns: {
+        payload: {
+          aps: {
+            contentAvailable: true,
+            badge: 1,
+            sound: 'default',
+          },
+        },
+      },
+    };
+    
+    // Send push notification
+    const pushPromise = messaging.sendEachForMulticast(message)
+      .then(response => {
+        console.log(`✅ Sent to ${userId}: ${response.successCount} successful, ${response.failureCount} failed`);
+        pushNotificationsSent += response.successCount;
+        totalRemindersSent += response.successCount;
         
-        // Map userId to their personalized message
-        const userMessages = {};
-        participantsToRemind.forEach(participant => {
-          userMessages[participant.userId] = participant.personalizedBody;
-        });
-        
-        // Group tokens by userId for personalized messages
-        const tokensByUserId = {};
-        for (const tokenDoc of tokensSnapshot.docs) {
-          const tokenData = tokenDoc.data();
-          if (tokenData.token && typeof tokenData.token === 'string' && tokenData.userId) {
-            if (!tokensByUserId[tokenData.userId]) {
-              tokensByUserId[tokenData.userId] = [];
-            }
-            tokensByUserId[tokenData.userId].push(tokenData.token);
-          }
-        }
-        
-        let pushNotificationsSent = 0;
-        
-        // 8. Send PUSH notifications with PERSONALIZED messages
-        if (!sendTest && Object.keys(tokensByUserId).length > 0) {
-          console.log(`📤 Sending personalized push reminders for ${Object.keys(tokensByUserId).length} users...`);
-          
-          // Process each user individually for personalized messages
-          for (const [userId, tokens] of Object.entries(tokensByUserId)) {
-            const personalizedBody = userMessages[userId] || `Complete your contribution for ${program.title}`;
-            
-            // Chunk tokens for this user (max 500 per request)
-            const chunkSize = 500;
-            for (let i = 0; i < tokens.length; i += chunkSize) {
-              const tokenChunk = tokens.slice(i, i + chunkSize);
+        // Clean invalid tokens
+        if (response.failureCount > 0) {
+          const invalidTokens = [];
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              const failedToken = fcmTokens[idx];
+              console.log(`❌ Failed token ${failedToken.substring(0, 20)}...: ${resp.error?.message}`);
               
-              const message = {
-                notification: {
-                  title: reminderTitle,
-                  body: personalizedBody, // ✅ SAME personalized body for push
-                },
-                data: {
-                  communityId,
-                  programId: program.id,
-                  type: 'reminder',
-                  subtype: 'contribution',
-                  click_action: 'FLUTTER_NOTIFICATION_CLICK',
-                  senderName: 'KoFund Reminder',
-                  sentFromApp: 'true',
-                  notificationId: baseNotificationId,
-                },
-                tokens: tokenChunk,
-                android: {
-                  priority: 'high',
-                },
-                apns: {
-                  payload: {
-                    aps: {
-                      contentAvailable: true,
-                      badge: 1,
-                      sound: 'default',
-                    },
-                  },
-                },
-              };
-              
-              try {
-                const response = await messaging.sendEachForMulticast(message);
-                pushNotificationsSent += response.successCount;
-                totalRemindersSent += response.successCount;
-                
-                // Clean invalid tokens
-                if (response.failureCount > 0) {
-                  response.responses.forEach((resp, idx) => {
-                    if (!resp.success && resp.error?.code === 'messaging/registration-token-not-registered') {
-                      const failedToken = tokenChunk[idx];
-                      
-                      db.collection('user_notification_tokens')
-                        .doc(failedToken)
-                        .update({
-                          isActive: false,
-                          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                          deactivatedReason: 'invalid_token',
-                        })
-                        .catch(err => console.log(`⚠️ Error removing token: ${err.message}`));
-                    }
-                  });
-                }
-              } catch (error) {
-                console.error(`❌ Error sending push chunk for user ${userId}:`, error.message);
+              if (resp.error?.code === 'messaging/registration-token-not-registered' ||
+                  resp.error?.code === 'messaging/invalid-registration-token') {
+                invalidTokens.push(failedToken);
               }
             }
-          }
+          });
           
-          console.log(`✅ Sent ${pushNotificationsSent} push notifications`);
+          // Remove invalid tokens from user's document
+          if (invalidTokens.length > 0) {
+            return db.collection('users').doc(userId).update({
+              fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens)
+            }).then(() => {
+              console.log(`🗑️ Removed ${invalidTokens.length} invalid tokens from ${userId}`);
+            });
+          }
         }
+      })
+      .catch(error => {
+        console.error(`❌ Error sending to ${userId}:`, error.message);
+      });
+    
+    pushPromises.push(pushPromise);
+    
+  } catch (userError) {
+    console.error(`❌ Error processing user ${userId}:`, userError.message);
+  }
+}
+
+// Wait for all push notifications to be sent
+if (pushPromises.length > 0) {
+  await Promise.all(pushPromises);
+  console.log(`✅ Total push notifications sent: ${pushNotificationsSent}`);
+}
         
         // 9. Record result for this program
         results.push({

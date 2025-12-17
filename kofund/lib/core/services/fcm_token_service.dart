@@ -29,7 +29,42 @@ class FCMTokenService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_currentUserIdKey);
   }
-
+// ✅ ADD THIS AT THE TOP OF YOUR CLASS
+Future<String?> _getTokenWithRetry({int maxAttempts = 5}) async {
+  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      debugPrint("🔄 [FCM] Token attempt $attempt/$maxAttempts...");
+      
+      // First check if FCM is ready by getting notification settings
+      try {
+        await _messaging.getNotificationSettings();
+      } catch (e) {
+        debugPrint("⏳ FCM not ready yet...");
+        if (attempt < maxAttempts) {
+          await Future.delayed(Duration(seconds: attempt));
+          continue;
+        }
+      }
+      
+      final token = await _messaging.getToken();
+      
+      if (token != null && token.isNotEmpty) {
+        debugPrint("✅ [FCM] Got token on attempt $attempt");
+        return token;
+      }
+      
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: attempt)); // Exponential backoff
+      }
+    } catch (e) {
+      debugPrint("❌ [FCM] Attempt $attempt failed: $e");
+      if (attempt < maxAttempts) {
+        await Future.delayed(Duration(seconds: attempt));
+      }
+    }
+  }
+  return null;
+}
   // ⭐ UPDATED: Store token with community context
   Future<void> storeCurrentUserToken({
     required List<String> communityIds,
@@ -314,43 +349,85 @@ class FCMTokenService {
     }
   }
 
-  // ⭐ NEW: Validate if notification is for current user
-  Future<bool> isNotificationForCurrentUser(Map<String, dynamic> notificationData) async {
-    try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) return false;
-      
-      final storedUserId = await _getStoredUserId();
-      if (storedUserId != currentUser.uid) {
-        debugPrint("⚠️ User ID mismatch: Stored $storedUserId, Current ${currentUser.uid}");
-        return false;
-      }
-      
-      // Check if notification has community ID
-      final notificationCommunityId = notificationData['communityId'];
-      if (notificationCommunityId == null) return true; // Global notification
-      
-      // Get current user's communities
-      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-      final userCommunities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toList() ?? [];
-      
-      final isForCurrentCommunity = userCommunities.contains(notificationCommunityId);
-      
-      if (!isForCurrentCommunity) {
-        debugPrint("⚠️ Notification filtered: Not for current user's communities");
-        debugPrint("   Notification community: $notificationCommunityId");
-        debugPrint("   User communities: ${userCommunities.join(', ')}");
-      }
-      
-      return isForCurrentCommunity;
-      
-    } catch (e) {
-      debugPrint("❌ Error validating notification: $e");
-      return false; // When in doubt, don't show
+// ⭐ UPDATED: Validate if notification is for current user
+Future<bool> isNotificationForCurrentUser(Map<String, dynamic> notificationData) async {
+  try {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      debugPrint("👤 No current user - filtering notification");
+      return false;
     }
+    
+    // ✅ OPTIONAL: Check stored user ID (for multi-user device protection)
+    final storedUserId = await _getStoredUserId();
+    if (storedUserId != null && storedUserId != currentUser.uid) {
+      debugPrint("⚠️ User ID mismatch: Stored $storedUserId, Current ${currentUser.uid}");
+      // Don't return false here - still check community
+    }
+    
+    // Check if notification has community ID
+    final notificationCommunityId = notificationData['communityId'];
+    
+    // If notification doesn't have communityId, it's a global notification
+    if (notificationCommunityId == null) {
+      debugPrint("🌍 Global notification - showing");
+      return true;
+    }
+    
+    // Get current user's document
+    final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    
+    if (!userDoc.exists) {
+      debugPrint("❌ User document not found - filtering notification");
+      return false;
+    }
+    
+    final userData = userDoc.data()!;
+    
+    // ✅ FIX: Get user's actual community from main field
+    final userCommunityId = userData['communityId'] as String?;
+    
+    // ✅ FIX: Also check notificationCommunities array
+    final userNotificationCommunities = (userData['notificationCommunities'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList() ?? [];
+    
+    debugPrint("🔍 Notification validation:");
+    debugPrint("   Notification community: $notificationCommunityId");
+    debugPrint("   User's communityId: $userCommunityId");
+    debugPrint("   User's notificationCommunities: $userNotificationCommunities");
+    
+    // ✅ FIX: Check THREE possible matches:
+    // 1. User's main communityId matches
+    // 2. User's notificationCommunities contains it
+    // 3. If user has no communities, show ALL notifications (they might be new)
+    
+    final isForCurrentCommunity = 
+        userCommunityId == notificationCommunityId ||
+        userNotificationCommunities.contains(notificationCommunityId);
+    
+    if (isForCurrentCommunity) {
+      debugPrint("✅ Notification is for current user's community");
+      return true;
+    }
+    
+    // ✅ NEW: If user has NO communities set yet, show ALL notifications
+    // (This happens for new users or when notificationCommunities wasn't set)
+    if (userCommunityId == null && userNotificationCommunities.isEmpty) {
+      debugPrint("📭 User has no communities set - showing notification anyway");
+      debugPrint("   (User might be new or notificationCommunities wasn't set)");
+      return true;
+    }
+    
+    debugPrint("⚠️ Notification filtered: Not for current user's communities");
+    return false;
+    
+  } catch (e) {
+    debugPrint("❌ Error validating notification: $e");
+    // When in doubt, show the notification (better user experience)
+    return true;
   }
+}
 
   // ⭐ UPDATED: Remove invalid token
   Future<void> removeInvalidToken(String invalidToken) async {

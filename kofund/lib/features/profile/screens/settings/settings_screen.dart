@@ -8,6 +8,7 @@ import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -278,56 +279,202 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
   );
 }
 
-  void _showDeleteAccountDialog(AppAuthProvider authProvider) {
-final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+void _showDeleteAccountDialog(AppAuthProvider authProvider) {
+  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account?'),
-        content: const Text(
-          'This action cannot be undone.\n\n'
-          'Your account and personal data will be permanently deleted from our system.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Delete Account?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'This action cannot be undone.\n\n'
+            'All your data will be permanently deleted from:',
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-            onPressed: () async {
-              Navigator.pop(context); // close the dialog
-
-              // show loading feedback
-              SnackbarHelper.showInfo(context, 'Deleting your account...');
-
-              final success = await profileProvider.deleteUserAccount();
-
-              if (!context.mounted) return;
-
-              if (success) {
-                SnackbarHelper.showSuccess(context, 'Your account was deleted successfully.');
-
-                // ✅ Navigate to login screen & clear all previous routes
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  RouteNames.login,
-                  (route) => false,
-                );
-              } else {
-                SnackbarHelper.showError(
-                  context,
-                  profileProvider.error ?? 'Failed to delete your account. Please try again.',
-                );
-              }
-            },
+          const SizedBox(height: 10),
+  
+      Container(
+  padding: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: Colors.orange[50],
+    borderRadius: BorderRadius.circular(8),
+    border: Border.all(color: Colors.orange),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Icon and heading in same row
+      Row(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'If deletion fails:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.orange[800],
+            ),
           ),
         ],
       ),
+      const SizedBox(height: 8),
+      // Left-aligned numbered list
+      Padding(
+        padding: const EdgeInsets.only(left: 26), // Align with text
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '1. Sign out',
+              style: const TextStyle(fontSize: 12),
+            ),
+            Text(
+              '2. Sign in again',
+              style: const TextStyle(fontSize: 12),
+            ),
+            Text(
+              '3. Delete immediately',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () async {
+            Navigator.pop(context);
+            await _attemptAccountDeletion(profileProvider);
+          },
+          child: const Text('Delete Account'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildDeletionItem(String text) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        const Icon(Icons.delete_forever, color: Colors.red, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 14),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _attemptAccountDeletion(ProfileProvider profileProvider) async {
+  // Show loading
+  SnackbarHelper.showInfo(context, 'Deleting your account...');
+  
+  final success = await profileProvider.deleteUserAccount();
+  
+  if (!context.mounted) return;
+  
+  if (success) {
+    SnackbarHelper.showSuccess(
+      context, 
+      'Account deleted successfully!'
     );
+    
+    // Navigate to login
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      RouteNames.login,
+      (route) => false,
+    );
+  } else {
+    // Check if it's the requires-recent-login error
+    final error = profileProvider.error ?? '';
+    if (error.contains('requires-recent-login') || 
+        error.contains('sign out and sign in again')) {
+      // Show special dialog for this case
+      _showReauthenticationRequiredDialog();
+    } else {
+      SnackbarHelper.showError(context, error);
+    }
   }
+}
+
+void _showReauthenticationRequiredDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Security Required'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.security, color: Colors.orange[700], size: 24),
+              const SizedBox(width: 8),
+              const Text(
+                'Recent Sign-in Needed',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Google requires recent authentication to delete your account.',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 12),
+          const Text('Please:'),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('1. Sign out', style: const TextStyle(fontSize: 14)),
+                Text('2. Sign in again', style: const TextStyle(fontSize: 14)),
+                Text('3. Delete immediately', style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            await FirebaseAuth.instance.signOut();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              RouteNames.login,
+              (route) => false,
+            );
+          },
+          child: const Text('Sign Out'),
+        ),
+      ],
+    ),
+  );
+}
 
   void _showLogoutDialog(AppAuthProvider authProvider) {
   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);

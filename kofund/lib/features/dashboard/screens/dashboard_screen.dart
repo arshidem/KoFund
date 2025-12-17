@@ -599,9 +599,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             
                             const SizedBox(height: 24),
-                            PendingRequestsWidget(),
-                            const SizedBox(height: 24),
-                            
+                         if (user?.isAdmin ?? false) ...[
+                        const SizedBox(height: 24),
+                        PendingRequestsWidget(),
+                      ],
+                      
+                      const SizedBox(height: 24),
                             // ✅ USE WIDGETS WITH USER-SPECIFIC KEYS
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
                             const SizedBox(height: 24),

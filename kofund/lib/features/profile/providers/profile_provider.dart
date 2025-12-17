@@ -158,43 +158,97 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  // ✅ DELETE USER ACCOUNT
-  Future<bool> deleteUserAccount() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _setError('No authenticated user found.');
-      return false;
-    }
-
-    _setLoading(true);
-
-    try {
-      final userId = user.uid;
-
-      // 🔹 Step 1: Delete from Firestore
-      await FirebaseFirestore.instance.collection('users').doc(userId).delete();
-
-      // 🔹 Step 2: Try to delete from Firebase Auth
-      await user.delete();
-
-      _setLoading(false);
-      return true;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        _setError(
-          'You must re-login before deleting your account.\nPlease log in again and try.',
-        );
-      } else {
-        _setError('Auth Error: ${e.message}');
-      }
-      _setLoading(false);
-      return false;
-    } catch (e) {
-      _setError('Failed to delete account: $e');
-      _setLoading(false);
-      return false;
-    }
+Future<bool> deleteUserAccount() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    print('❌ No authenticated user found');
+    _setError('No authenticated user found.');
+    return false;
   }
+
+  print('🚀 Starting account deletion for user: ${user.uid}');
+  _setLoading(true);
+
+  try {
+    final userId = user.uid;
+
+    // 🔹 Step 1: Delete from Firestore 'users' collection
+    print('🗑️ Deleting from Firestore users collection...');
+    await FirebaseFirestore.instance.collection('users').doc(userId).delete();
+    print('✅ Firestore users deleted');
+
+    // 🔹 Step 2: Delete from community members subcollection (if exists)
+    print('🗑️ Deleting from communities...');
+    await _deleteUserFromCommunities(userId);
+    print('✅ Communities cleaned up');
+
+    // 🔹 Step 3: Delete from Firebase Authentication
+    print('🗑️ Deleting from Firebase Auth...');
+    await user.delete();
+    print('✅ Firebase Auth user deleted');
+
+    // 🔹 Step 4: Sign out
+    print('👋 Signing out...');
+    await FirebaseAuth.instance.signOut();
+    print('✅ Signed out');
+
+    _setLoading(false);
+    print('🎉 Account deletion COMPLETE');
+    return true;
+    
+  } on FirebaseAuthException catch (e) {
+    print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
+    _setLoading(false);
+    
+    if (e.code == 'requires-recent-login') {
+      _setError(
+        'For security, please sign out and sign in again, then delete your account immediately.',
+      );
+    } else {
+      _setError('Auth Error: ${e.message}');
+    }
+    return false;
+  } catch (e) {
+    print('❌ General error: $e');
+    _setError('Failed to delete account: $e');
+    _setLoading(false);
+    return false;
+  }
+}
+// Helper method to delete user from community members subcollection
+Future<void> _deleteUserFromCommunities(String userId) async {
+  try {
+    // Assuming your structure is: communities/{communityId}/members/{userId}
+    // We need to find all communities where this user is a member
+    
+    // Method 1: If you have a collection of communities
+    final communitiesSnapshot = await FirebaseFirestore.instance
+        .collection('communities')
+        .where('members.$userId', isNotEqualTo: null)
+        .get();
+
+    // Delete user from each community's members subcollection
+    final batch = FirebaseFirestore.instance.batch();
+    
+    for (final doc in communitiesSnapshot.docs) {
+      final memberRef = FirebaseFirestore.instance
+          .collection('communities')
+          .doc(doc.id)
+          .collection('members')
+          .doc(userId);
+      
+      batch.delete(memberRef);
+    }
+    
+    if (communitiesSnapshot.docs.isNotEmpty) {
+      await batch.commit();
+    }
+    
+  } catch (e) {
+    print('Error deleting user from communities: $e');
+    // Don't throw error here, continue with account deletion
+  }
+}
 
 Future<bool> leaveCommunity() async {
   final currentUser = FirebaseAuth.instance.currentUser;
