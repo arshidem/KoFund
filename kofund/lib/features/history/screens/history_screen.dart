@@ -148,7 +148,14 @@ class _HistoryScreenBodyState extends State<_HistoryScreenBody> {
       // 🎯 SMART APP BAR WITH BACK BUTTON DETECTION
     // 🎯 SMART APP BAR WITH BACK BUTTON DETECTION
 appBar: AppBar(
-  title: const Text('Transaction History'),
+    title: const Text(
+    'Transaction History',
+    style: TextStyle(
+      color: Colors.white, // Moved style here
+      fontSize: 18, // Add font size if needed
+      fontWeight: FontWeight.w600, // Add font weight if needed
+    ),
+  ),
   centerTitle: true,
   leading: showBackButton 
       ? IconButton(
@@ -330,7 +337,7 @@ Widget _buildModernSearchBar() {
                       ),
                       border: Border.all(
                         color: Colors.white.withOpacity(0.5),
-                        width: 1.5,
+                        width: 0,
                       ),
                     ),
                     child: const Icon(
@@ -365,18 +372,11 @@ Widget _buildModernSearchBar() {
                         filled: false,
                         suffixIcon: _searchController.text.isNotEmpty
                             ? Padding(
-                                padding: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.only(right: 0),
                                 child: Container(
                                   width: 32,
                                   height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.4),
-                                      width: 1,
-                                    ),
-                                  ),
+                               
                                   child: IconButton(
                                     padding: EdgeInsets.zero,
                                     icon: const Icon(

@@ -53,6 +53,8 @@ class _ParticipationHistoryScreenState
     return Scaffold(
       backgroundColor: AppColors.background(context),
      appBar: AppBar(
+        toolbarHeight: 80, // Set your desired height here (default is 56)
+
   title: Text(
     'My Programs',
     style: TextStyle(color: AppColors.textPrimary(context)), // Use textPrimary

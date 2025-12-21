@@ -166,6 +166,8 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text('My Contributions'),
         centerTitle: true,
         leading: IconButton(

@@ -199,7 +199,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
 appBar: AppBar(
   title: Text(
     'Programs',
-    style: TextStyle(color: Colors.white70), // Explicit text style
+    style: TextStyle(color: Colors.white), // Explicit text style
   ),
   centerTitle: true,
   backgroundColor: Colors.transparent,
@@ -316,7 +316,7 @@ Widget _buildModernSearchBar() {
                         ),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.5),
-                          width: 1.5, // Same border width
+                          width: 0, // Same border width
                         ),
                       ),
                       child: Icon(
@@ -351,18 +351,11 @@ Widget _buildModernSearchBar() {
                           filled: false,
                           suffixIcon: _searchController.text.isNotEmpty
                               ? Padding(
-                                  padding: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.only(right: 0),
                                   child: Container(
                                     width: 32,
                                     height: 32,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2), // Light white bg
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.4),
-                                        width: 1,
-                                      ),
-                                    ),
+                                
                                     child: IconButton(
                                       padding: EdgeInsets.zero,
                                       icon: const Icon(

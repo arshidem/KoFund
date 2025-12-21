@@ -733,7 +733,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       backgroundColor: AppColors.background(context),
       // 🎯 SMART APP BAR WITH SEARCH BAR
       appBar: AppBar(
-        title: const Text('Members'),
+         title: const Text(
+    'Members',
+    style: TextStyle(
+      color: Colors.white, // Moved style here
+      fontSize: 18, // Add font size if needed
+      fontWeight: FontWeight.w600, // Add font weight if needed
+    ),
+  ),
         centerTitle: true,
         leading: showBackButton 
             ? IconButton(
@@ -897,107 +904,100 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   }
 
 Widget _buildModernSearchBar() {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.5),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        color: Colors.transparent,
+  return Container(
+    height: 56,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: Colors.white.withOpacity(0.5),
+        width: 1.5,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+      color: Colors.transparent,
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: TextField(
+          controller: _searchController,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+          cursorColor: Colors.white,
+          cursorWidth: 2,
+          cursorHeight: 20,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.fromLTRB(10, 18, 6, 2), // Changed: Increased left padding to 60
+            hintText: 'Search members...',
+            hintStyle: const TextStyle(
+              color: Colors.white70,
               fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.5,
+              fontWeight: FontWeight.w500,
             ),
-            cursorColor: Colors.white,
-            cursorWidth: 2,
-            cursorHeight: 20,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              hintText: 'Search members...',
-              hintStyle: const TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              filled: false,
-              prefixIcon: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    bottomLeft: Radius.circular(18),
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
-                    width: 1.5,
-                  ),
+            border: InputBorder.none,
+            filled: false,
+            prefixIcon: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
                 ),
-                child: const Icon(
-                  Icons.search,
-                  color: Colors.white,
-                  size: 22,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.5),
+                  width: 0,
                 ),
               ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 1,
-                          ),
+              child: const Icon(
+                Icons.search,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 0),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                   
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Colors.white,
                         ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                            FocusScope.of(context).unfocus();
-                          },
-                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
-                    )
-                  : null,
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
+                    ),
+                  )
+                : null,
           ),
+          onChanged: (value) {
+            setState(() => _searchQuery = value);
+          },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ✅ SEARCH HEADER
   Widget _buildSearchHeader(int resultCount) {

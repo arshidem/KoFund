@@ -169,6 +169,8 @@ Future<void> _submitIssue() async {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text(
           'Report Issue',
           style: TextStyle(
@@ -207,7 +209,7 @@ Future<void> _submitIssue() async {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Form(
             key: _formKey,
             child: Column(

@@ -336,6 +336,8 @@ Future<void> _loadDevelopers() async {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text('Manage Developers'),
         centerTitle: true,
         leading: IconButton(
@@ -370,7 +372,7 @@ Future<void> _loadDevelopers() async {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

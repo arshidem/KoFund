@@ -241,6 +241,8 @@ class ContactSupportScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: Text(
           'Contact Support',
           style: TextStyle(
@@ -282,7 +284,7 @@ class ContactSupportScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

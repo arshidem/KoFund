@@ -385,6 +385,8 @@ Map<String, Color> _statusColors = {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text('Issue Reports'),
         centerTitle: true,
         leading: IconButton(

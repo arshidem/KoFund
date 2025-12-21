@@ -502,7 +502,7 @@ String _getTimeAgo(Timestamp timestamp) {
         children: [
           // Stats Card
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Card(
               color: AppColors.card(context),
               shape: RoundedRectangleBorder(
@@ -535,17 +535,20 @@ String _getTimeAgo(Timestamp timestamp) {
           ),
 
           // Filter Chips
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['all', 'pending', 'in-progress', 'resolved', 'closed']
-                    .map(_buildFilterChip)
-                    .toList(),
-              ),
-            ),
-          ),
+      Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 16),
+  child: SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: ['all', 'pending', 'in-progress', 'resolved', 'closed']
+          .map((filter) => Padding(
+                padding: const EdgeInsets.only(right: 8.0), // Add right padding
+                child: _buildFilterChip(filter),
+              ))
+          .toList(),
+    ),
+  ),
+),
 
           const SizedBox(height: 16),
 

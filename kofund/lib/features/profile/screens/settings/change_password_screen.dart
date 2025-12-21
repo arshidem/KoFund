@@ -76,6 +76,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: Text(
           'Change Password',
           style: TextStyle(
@@ -137,7 +139,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(12.0),
           child: _passwordChanged ? _buildSuccessUI() : _buildFormUI(),
         ),
       ),

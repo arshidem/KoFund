@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             child: Column(
               children: [
                 // Show warning if user mismatch
@@ -361,6 +361,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
   AppBar _buildAppBar(bool showBackButton) {
     return AppBar(
+        toolbarHeight: 80, // Set your desired height here (default is 56)
+
       title: const Text('Profile'),
       centerTitle: true,
       leading: showBackButton 

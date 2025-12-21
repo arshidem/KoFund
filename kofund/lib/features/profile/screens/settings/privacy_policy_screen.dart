@@ -8,6 +8,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text('Privacy Policy'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
