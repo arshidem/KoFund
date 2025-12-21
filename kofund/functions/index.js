@@ -483,7 +483,6 @@ exports.sendCommunityNotification = onCall(
           
           // Check if user is still eligible (email verified, approved, in community)
           const isEligible = 
-            userData.emailVerified === true &&
             userData.isApproved === true &&
             (userData.communityId === communityId || 
              (userData.notificationCommunities && userData.notificationCommunities.includes(communityId)));
@@ -783,7 +782,6 @@ exports.sendUserNotification = onCall(
       
       // Check if user is eligible for notifications
       const isEligible = 
-        userData.emailVerified === true &&
         userData.isApproved === true;
       
       if (!isEligible) {
@@ -1225,7 +1223,7 @@ exports.sendProgramContributionReminders = onCall(
           const userData = userDoc.data();
           
           // Check eligibility
-          if (!userData.emailVerified || !userData.isApproved) {
+          if ( !userData.isApproved) {
             continue;
           }
           

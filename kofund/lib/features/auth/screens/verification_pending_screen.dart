@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/constants/app_colors.dart'; // Add AppColors
+import '../../../core/utils/snackbar_helper.dart'; // Consistent with other screens
+import '../../../routing/route_names.dart'; // Use route names
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
 import 'splash_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+
 class VerificationPendingScreen extends StatefulWidget {
   final String email;
   final String? pendingInviteCode;
@@ -22,30 +27,40 @@ class VerificationPendingScreen extends StatefulWidget {
   State<VerificationPendingScreen> createState() => _VerificationPendingScreenState();
 }
 
-class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
+class _VerificationPendingScreenState extends State<VerificationPendingScreen> 
+    with SingleTickerProviderStateMixin { // ⭐ ADD THIS MIXIN
   bool _isResending = false;
   bool _isChecking = false;
   Timer? _verificationTimer;
+  late AnimationController _rotationController; // ⭐ Rename to match usage
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize rotation animation
+    _rotationController = AnimationController( // ⭐ Use consistent name
+      duration: const Duration(seconds: 1),
+      vsync: this, // ⭐ Now 'this' works because we added the mixin
+    )..repeat(); // Auto-repeat
+    
     _startAutoVerificationCheck();
     _checkForPendingInvite();
   }
 
-  @override
-  void dispose() {
-    _verificationTimer?.cancel();
-    super.dispose();
-  }
+@override
+void dispose() {
+  _rotationController.dispose();
+  _verificationTimer?.cancel();
+  super.dispose();
+}
 
-  Future<void> _checkForPendingInvite() async {
-    if (widget.pendingInviteCode != null && widget.pendingInviteCode!.isNotEmpty) {
-      debugPrint('🎯 Verification screen has pending invite: ${widget.pendingInviteCode}');
-    }
+// ⭐ ADD THIS METHOD (missing from your code)
+Future<void> _checkForPendingInvite() async {
+  if (widget.pendingInviteCode != null && widget.pendingInviteCode!.isNotEmpty) {
+    debugPrint('🎯 Verification screen has pending invite: ${widget.pendingInviteCode}');
   }
-
+}
   // Auto-check verification status every 5 seconds
   void _startAutoVerificationCheck() {
     _verificationTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -67,14 +82,19 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
       final currentUser = FirebaseAuth.instance.currentUser;
       
       if (currentUser != null && currentUser.emailVerified && mounted) {
-        // Email verified - stop timer
+        // Email verified - stop timer AND rotation
         _verificationTimer?.cancel();
+        _rotationController.stop(); // Stop the rotation
         
-        // Show success message
+        // Show success message using AppColors
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email verified successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Email verified successfully!'),
+            backgroundColor: AppColors.success(context),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
         
@@ -87,13 +107,10 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
           await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
           
           // Navigate to splash screen which will handle the invite
-          Navigator.pushReplacement(
+          Navigator.pushReplacementNamed(
             context,
-            MaterialPageRoute(
-              builder: (context) => SplashScreen(
-                deepLinkInviteCode: widget.pendingInviteCode,
-              ),
-            ),
+            RouteNames.splash,
+            arguments: {'inviteCode': widget.pendingInviteCode},
           );
         } else {
           // Check storage for any pending invites
@@ -104,25 +121,22 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
             debugPrint('📋 Found stored invite code after verification: $storedInviteCode');
             
             // Navigate to splash screen with stored invite
-            Navigator.pushReplacement(
+            Navigator.pushReplacementNamed(
               context,
-              MaterialPageRoute(
-                builder: (context) => SplashScreen(
-                  deepLinkInviteCode: storedInviteCode,
-                ),
-              ),
+              RouteNames.splash,
+              arguments: {'inviteCode': storedInviteCode},
             );
           } else {
             // Normal flow - no invite
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const SplashScreen()),
-            );
+            Navigator.pushReplacementNamed(context, RouteNames.splash);
           }
         }
       }
     } catch (e) {
       debugPrint('Error checking verification: $e');
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to check verification status');
+      }
     } finally {
       if (mounted) {
         setState(() => _isChecking = false);
@@ -138,17 +152,16 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
     
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Verification email sent!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text('Verification email sent!'),
+          backgroundColor: AppColors.success(context),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Failed to resend email'),
-          backgroundColor: Colors.red,
-        ),
+      SnackbarHelper.showError(
+        context, 
+        authProvider.error ?? 'Failed to resend email'
       );
     }
     
@@ -158,227 +171,478 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
   }
 
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    await authProvider.signOut(context);
+    
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      Navigator.pushReplacementNamed(context, RouteNames.login);
     }
   }
 
-Widget _buildInviteBanner() {
-  if (widget.pendingInviteCode == null) return const SizedBox.shrink();
+  Widget _buildInviteBanner() {
+    if (widget.pendingInviteCode == null) return const SizedBox.shrink();
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.blue.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      children: [
-        Icon(Icons.link, size: 16, color: Colors.blue),
-        const SizedBox(width: 8),
-        Text(
-          'Invite: ',
-          style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.withOpacity(0.15),
+            Colors.blue.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        Text(
-          widget.pendingInviteCode!,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-            fontSize: 13,
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const Spacer(),
-        IconButton(
-          icon: Icon(Icons.copy, size: 16, color: Colors.blue),
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Copied'),
-                duration: Duration(seconds: 1),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.link_rounded,
+            size: 20,
+            color: Colors.blue.shade700,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Community Invite',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.pendingInviteCode!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.copy_rounded,
+              size: 20,
+              color: Colors.blue.shade700,
+            ),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invite code copied to clipboard'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            padding: const EdgeInsets.all(4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String text, Color color, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 14,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: color,
               ),
-            );
-          },
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-        ),
-      ],
-    ),
-  );
-}
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verify Your Email'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _signOut,
+          tooltip: 'Sign Out',
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - 
-                        MediaQuery.of(context).padding.top - 
-                        kToolbarHeight,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 100,
-                  color: Colors.orange[700],
-                ),
-                const SizedBox(height: 32),
-                
-                // ⭐ ADD: Invite Banner
-                
-                const Text(
-                  'Verify Your Email',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'We sent a verification link to:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[700],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.email,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  widget.pendingInviteCode != null
-                      ? 'Please verify your email to join the community. '
-                        'This screen will automatically update once your email is verified.'
-                      : 'Please check your email and click the verification link to activate your account. '
-                        'This screen will automatically update once your email is verified.',
-                  style: const TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                
-                const SizedBox(height: 32),
-                                _buildInviteBanner(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              // ✅ Consistent with PendingApprovalScreen layout
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 20),
+                      
+                      // Status Icon (similar to PendingApprovalScreen)
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.mark_email_unread_outlined,
+                          size: 60,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
 
-                const SizedBox(height: 32),
-                
-                // Auto-check status indicator
-                Container(
-                  height: 80,
-                  child: _isChecking 
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      // Status Title
+                      Text(
+                        'Verify Your Email Address',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email Address Display
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          
+                            horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.border(context),
+                          ),
+                        ),
+                        child: Column(
                           children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
                             Text(
-                              'Checking verification status...',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              'Verification link sent to:',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: AppColors.textSecondary(context),
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          ],
-                        )
-                      : const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
+                            const SizedBox(height: 8),
                             Text(
-                              '⏳ Automatically checking for verification...',
-                              style: TextStyle(fontSize: 14, color: Colors.green),
+                              widget.email,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary(context),
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
-                ),
-                
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isResending ? null : _resendVerification,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange[700],
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _isResending
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Resend Verification Email',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Invite Banner (if exists)
+                      if (widget.pendingInviteCode != null) ...[
+                        _buildInviteBanner(),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Info Card (similar to PendingApprovalScreen)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.withOpacity(0.15),
+                              Colors.blue.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.25),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 20,
+                                  color: Colors.blue.shade700,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'What happens next?',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.blue.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Feature list
+                            Column(
+                              children: [
+                                _buildFeatureItem(
+                                  'Check your email inbox (and spam folder)',
+                                  Colors.blue.shade800,
+                                  Icons.email_rounded,
+                                ),
+                                _buildFeatureItem(
+                                  'Click the verification link in the email',
+                                  Colors.blue.shade800,
+                                  Icons.link_rounded,
+                                ),
+                                _buildFeatureItem(
+                                  'Return to app - it will update automatically',
+                                  Colors.blue.shade800,
+                                  Icons.autorenew_rounded,
+                                ),
+                                if (widget.pendingInviteCode != null)
+                                  _buildFeatureItem(
+                                    'After verification, you\'ll join the invited community',
+                                    Colors.blue.shade800,
+                                    Icons.group_add_rounded,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Auto-check status indicator
+               // Auto-check status indicator with rotating icon
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: AppColors.surface(context),
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(
+      color: AppColors.border(context),
+    ),
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // Rotating icon using AnimationController
+      RotationTransition(
+        turns: Tween(begin: 0.0, end: 1.0).animate(_rotationController),
+        child: Icon(
+          Icons.autorenew_rounded,
+          size: 20,
+          color: _verificationTimer != null 
+              ? AppColors.primary(context) 
+              : Colors.green.shade600,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Text(
+        _verificationTimer != null 
+            ? '🔄 Auto-checking every 5 seconds...'
+            : '✅ Email verification complete!',
+        style: TextStyle(
+          fontSize: 14,
+          color: _verificationTimer != null 
+              ? AppColors.primary(context)
+              : Colors.green.shade700,
+        ),
+      ),
+    ],
+  ),
+),
+
+                      const SizedBox(height: 12),
+
+                      // Action Buttons (consistent styling)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _isResending ? null : _resendVerification,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary(context),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ),
+                          child: _isResending
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.send_rounded, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Resend Verification Email',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton(
+                          onPressed: _signOut,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppColors.border(context)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: AppColors.surface(context),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.exit_to_app_rounded, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Sign Out & Try Different Account',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Help Text
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.border(context).withOpacity(0.5),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.help_outline_rounded,
+                              size: 24,
+                              color: AppColors.textSecondary(context),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Need help with verification?',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '• Check spam/junk folder\n• Ensure email is correct\n• Wait 2-3 minutes for delivery\n• Try resend if not received',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary(context),
+                                height: 1.6,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton(
-                    onPressed: _signOut,
-                    child: const Text(
-                      'Sign Out',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Column(
-                  children: [
-                    Icon(Icons.info_outline, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text(
-                      "Didn't receive the email?",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      "• Check your spam folder\n• Make sure you entered the correct email\n• Wait a few minutes and try again",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

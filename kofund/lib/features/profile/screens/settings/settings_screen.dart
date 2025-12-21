@@ -6,7 +6,6 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/routing/route_names.dart';
-import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -18,13 +17,30 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+
+
+  String? _getUserProvider(User user) {
+    if (user.providerData.isEmpty) return null;
+    
+    final hasGoogleProvider = user.providerData
+        .any((userInfo) => userInfo.providerId == 'google.com');
+    
+    if (hasGoogleProvider) return 'google';
+    
+    final hasEmailProvider = user.providerData
+        .any((userInfo) => userInfo.providerId == 'password');
+    
+    if (hasEmailProvider) return 'email';
+    
+    return 'other';
+  }
   bool _notificationsEnabled = true;
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.read<AppAuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
-  final profileProvider = context.read<ProfileProvider>(); // ✅ ADD THIS
+    final profileProvider = context.read<ProfileProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -104,11 +120,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icons.security,
               () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
             ),
-                          _buildSettingsItem(
-                'Community Guidelines',
-                Icons.groups,
-                () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
-              ),
+            _buildSettingsItem(
+              'Community Guidelines',
+              Icons.groups,
+              () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
+            ),
             _buildSettingsItem(
               'App Version',
               Icons.info,
@@ -126,12 +142,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Colors.red[50],
             child: Column(
               children: [
-              _buildSettingsItem(
-  'Leave Community',
-  Icons.exit_to_app,
-  () => _showLeaveCommunityDialog(context, authProvider, profileProvider), // ✅ Use profileProvider variable
-  color: Colors.red,
-),
+                _buildSettingsItem(
+                  'Leave Community',
+                  Icons.exit_to_app,
+                  () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
+                  color: Colors.red,
+                ),
                 _buildSettingsItem(
                   'Delete Account',
                   Icons.delete_forever,
@@ -279,72 +295,153 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
   );
 }
 
-void _showDeleteAccountDialog(AppAuthProvider authProvider) {
-  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+ void _showDeleteAccountDialog(AppAuthProvider authProvider) {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (user == null) {
+      SnackbarHelper.showError(context, 'No user found');
+      return;
+    }
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Delete Account?'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'This action cannot be undone.\n\n'
-            'All your data will be permanently deleted from:',
-          ),
-          const SizedBox(height: 10),
-  
-      Container(
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.orange[50],
-    borderRadius: BorderRadius.circular(8),
-    border: Border.all(color: Colors.orange),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Icon and heading in same row
-      Row(
-        children: [
-          const Icon(Icons.info_outline, color: Colors.orange, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            'If deletion fails:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.orange[800],
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      // Left-aligned numbered list
-      Padding(
-        padding: const EdgeInsets.only(left: 26), // Align with text
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '1. Sign out',
-              style: const TextStyle(fontSize: 12),
+            const Text(
+              'This action cannot be undone.\n\n'
+              'All your data will be permanently deleted.',
             ),
-            Text(
-              '2. Sign in again',
-              style: const TextStyle(fontSize: 12),
-            ),
-            Text(
-              '3. Delete immediately',
-              style: const TextStyle(fontSize: 12),
+            const SizedBox(height: 10),
+            
+            if (_getUserProvider(user) == 'google') ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_circle, color: Colors.blue, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Google Account User',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                          Text(
+                            'You will need to sign in again with Google',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'If deletion fails:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 26),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('1. Sign out', style: const TextStyle(fontSize: 12)),
+                        Text('2. Sign in again', style: const TextStyle(fontSize: 12)),
+                        Text('3. Delete immediately', style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+              final providerType = _getUserProvider(user);
+              
+              if (providerType == 'google') {
+                await _attemptAccountDeletion(profileProvider);
+              } else if (providerType == 'email') {
+                _showPasswordDialog(profileProvider);
+              } else {
+                await _attemptAccountDeletion(profileProvider);
+              }
+            },
+            child: const Text('Delete Account'),
+          ),
+        ],
       ),
-    ],
-  ),
-),
+    );
+  }
+
+// New method to show password dialog for email users
+void _showPasswordDialog(ProfileProvider profileProvider) {
+  TextEditingController passwordController = TextEditingController();
+  
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirm Password'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Please enter your password to confirm account deletion:'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              border: OutlineInputBorder(),
+            ),
+          ),
         ],
       ),
       actions: [
@@ -355,10 +452,19 @@ void _showDeleteAccountDialog(AppAuthProvider authProvider) {
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () async {
-            Navigator.pop(context);
-            await _attemptAccountDeletion(profileProvider);
+            if (passwordController.text.isNotEmpty) {
+              Navigator.pop(context);
+              await _attemptAccountDeletion(
+                profileProvider,
+                password: passwordController.text,
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter your password')),
+              );
+            }
           },
-          child: const Text('Delete Account'),
+          child: const Text('Confirm Delete'),
         ),
       ],
     ),
@@ -381,36 +487,63 @@ Widget _buildDeletionItem(String text) {
   );
 }
 
-Future<void> _attemptAccountDeletion(ProfileProvider profileProvider) async {
-  // Show loading
-  SnackbarHelper.showInfo(context, 'Deleting your account...');
-  
-  final success = await profileProvider.deleteUserAccount();
-  
-  if (!context.mounted) return;
-  
-  if (success) {
-    SnackbarHelper.showSuccess(
-      context, 
-      'Account deleted successfully!'
-    );
+Future<void> _attemptAccountDeletion(
+  ProfileProvider profileProvider, {
+  String? password,
+}) async {
+  try {
+    final success = await profileProvider.deleteUserAccount(password: password);
     
-    // Navigate to login
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      RouteNames.login,
-      (route) => false,
-    );
-  } else {
-    // Check if it's the requires-recent-login error
-    final error = profileProvider.error ?? '';
-    if (error.contains('requires-recent-login') || 
-        error.contains('sign out and sign in again')) {
-      // Show special dialog for this case
-      _showReauthenticationRequiredDialog();
-    } else {
-      SnackbarHelper.showError(context, error);
+    if (success) {
+      // Account deleted successfully
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Navigate to login screen
+      Navigator.pushNamedAndRemoveUntil(
+        context, 
+        RouteNames.login, // Make sure this is defined in your RouteNames
+        (route) => false,
+      );
     }
+  } on Exception catch (e) {
+    if (e.toString().contains('password_required')) {
+      // Show password dialog if password is required
+      _showPasswordDialog(profileProvider);
+    } else if (e.toString().contains('wrong_password')) {
+      // Show wrong password snackbar and reopen password dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wrong password. Please try again.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Reopen password dialog after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showPasswordDialog(profileProvider);
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }
 

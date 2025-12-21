@@ -63,6 +63,21 @@ class ProfileProvider with ChangeNotifier {
     return result;
   }
 
+// In ProfileProvider class
+String? getUserProviderType() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null || user.providerData.isEmpty) return null;
+  
+  if (user.providerData.any((info) => info.providerId == 'google.com')) {
+    return 'google';
+  }
+  
+  if (user.providerData.any((info) => info.providerId == 'password')) {
+    return 'email';
+  }
+  
+  return 'other';
+}
   // Safe notify listeners
   void _safeNotifyListeners() {
     if (!_isDisposed && hasListeners) {
@@ -158,7 +173,7 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-Future<bool> deleteUserAccount() async {
+Future<bool> deleteUserAccount({String? password}) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     print('❌ No authenticated user found');
@@ -171,6 +186,37 @@ Future<bool> deleteUserAccount() async {
 
   try {
     final userId = user.uid;
+    final providerType = getUserProviderType();
+    
+    print('👤 Provider type: $providerType');
+
+    // For email/password users, reauthenticate if password is provided
+    if (providerType == 'email' && password != null && password.isNotEmpty) {
+      print('🔐 Reauthenticating email/password user...');
+      try {
+        final credential = EmailAuthProvider.credential(
+          email: user.email!,
+          password: password,
+        );
+        await user.reauthenticateWithCredential(credential);
+        print('✅ Reauthentication successful');
+      } on FirebaseAuthException catch (authError) {
+        _setLoading(false);
+        
+        // Handle wrong password error
+        if (authError.code == 'wrong-password' || 
+            authError.code == 'invalid-credential') {
+          throw Exception('wrong_password'); // Special exception for wrong password
+        }
+        
+        // Re-throw for other auth errors
+        rethrow;
+      }
+    }
+    // For Google users, we'll handle reauthentication differently
+    else if (providerType == 'google') {
+      print('🔗 Google user detected - will require reauthentication');
+    }
 
     // 🔹 Step 1: Delete from Firestore 'users' collection
     print('🗑️ Deleting from Firestore users collection...');
@@ -201,15 +247,47 @@ Future<bool> deleteUserAccount() async {
     _setLoading(false);
     
     if (e.code == 'requires-recent-login') {
-      _setError(
-        'For security, please sign out and sign in again, then delete your account immediately.',
-      );
+      final providerType = getUserProviderType();
+      
+      if (providerType == 'google') {
+        _setError(
+          'For security, please sign out and sign in again with Google, '
+          'then delete your account immediately.',
+        );
+      } else if (providerType == 'email') {
+        _setError(
+          'Please re-enter your password to confirm account deletion.',
+        );
+        // Return special code to indicate password is needed
+        throw Exception('password_required');
+      }
     } else {
       _setError('Auth Error: ${e.message}');
     }
     return false;
+  } on Exception catch (e) {
+    // Handle wrong password exception
+    if (e.toString().contains('wrong_password')) {
+      _setLoading(false);
+      throw Exception('wrong_password'); // Re-throw to handle in UI
+    }
+    
+    // Handle password required exception
+    if (e.toString().contains('password_required')) {
+      _setLoading(false);
+      throw Exception('password_required');
+    }
+    
+    print('❌ General error: $e');
+    _setError('Failed to delete account: $e');
+    _setLoading(false);
+    return false;
   } catch (e) {
     print('❌ General error: $e');
+    if (e.toString().contains('password_required') || 
+        e.toString().contains('wrong_password')) {
+      rethrow; // Re-throw to handle in UI
+    }
     _setError('Failed to delete account: $e');
     _setLoading(false);
     return false;

@@ -14,7 +14,8 @@ import 'program_reminder_screen.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/skeleton/all_program_skeleton.dart';
-// 🆕 SIMPLIFIED FILTER ENUMS
+import '../../participants/models/participant_model.dart';
+import '../../participants/providers/participant_provider.dart';
 enum ProgramStatusFilter {
   all,
   ongoing,
@@ -22,7 +23,6 @@ enum ProgramStatusFilter {
   cancelled,
 }
 
-// 🆕 SIMPLE FILTER MODEL
 class ProgramFilters {
   ProgramStatusFilter statusFilter;
   String? programType;
@@ -82,14 +82,16 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     _refreshController.dispose();
     super.dispose();
   }
-void _navigateToRemindersScreen(ProgramModel program) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ProgramRemindersScreen(program: program),
-    ),
-  );
-}
+
+  void _navigateToRemindersScreen(ProgramModel program) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProgramRemindersScreen(program: program),
+      ),
+    );
+  }
+
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text;
@@ -122,10 +124,8 @@ void _navigateToRemindersScreen(ProgramModel program) {
     }
   }
 
-  // 🆕 SIMPLIFIED FILTER APPLY LOGIC
   List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
     return programs.where((program) {
-      // Status Filter
       if (_filters.statusFilter != ProgramStatusFilter.all) {
         switch (_filters.statusFilter) {
           case ProgramStatusFilter.ongoing:
@@ -142,17 +142,14 @@ void _navigateToRemindersScreen(ProgramModel program) {
         }
       }
 
-      // Program Type Filter
       if (_filters.programType != null && _filters.programType != 'all') {
         if (program.programType != _filters.programType) return false;
       }
 
-      // Monthly Program Filter
       if (_filters.monthlyOnly == true) {
         if (!program.isMonthlyPaymentProgram) return false;
       }
 
-      // Availability Filter
       if (_filters.availableOnly == true) {
         if (!program.canJoin) return false;
       }
@@ -161,7 +158,6 @@ void _navigateToRemindersScreen(ProgramModel program) {
     }).toList();
   }
 
-  // 🆕 OPEN FILTER SHEET
   void _openFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -186,10 +182,8 @@ void _navigateToRemindersScreen(ProgramModel program) {
     final programProvider = context.watch<ProgramProvider>();
     final isAdmin = widget.isAdmin;
 
-    // Apply search and filters
     List<ProgramModel> filteredPrograms = programProvider.programs;
     
-    // Apply search
     if (_searchQuery.isNotEmpty) {
       filteredPrograms = filteredPrograms.where((program) {
         return program.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -198,42 +192,43 @@ void _navigateToRemindersScreen(ProgramModel program) {
       }).toList();
     }
     
-    // Apply filters
     filteredPrograms = _applyFilters(filteredPrograms);
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      // 🎯 SMART APP BAR WITH SEARCH BAR
-      appBar: AppBar(
-        title: const Text('Programs'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: _buildModernSearchBar(),
-          ),
-        ),
+appBar: AppBar(
+  title: Text(
+    'Programs',
+    style: TextStyle(color: Colors.white70), // Explicit text style
+  ),
+  centerTitle: true,
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white, // Change this to white70
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
+    ),
+  ),
+  bottom: PreferredSize(
+    preferredSize: const Size.fromHeight(50),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: _buildModernSearchBar(),
+    ),
+  ),
+),
 
       body: SmartRefresher(
         controller: _refreshController,
@@ -263,13 +258,8 @@ void _navigateToRemindersScreen(ProgramModel program) {
         child: SafeArea(
           child: Column(
             children: [
-              // FILTER TABS
               _buildFilterTabs(),
-
-              // SEARCH HEADER
               if (_searchQuery.isNotEmpty) _buildSearchHeader(filteredPrograms.length),
-
-              // MAIN CONTENT
               Expanded(
                 child: _buildBodyContent(programProvider, filteredPrograms),
               ),
@@ -278,7 +268,6 @@ void _navigateToRemindersScreen(ProgramModel program) {
         ),
       ),
 
-      // FLOATING ACTION BUTTON ONLY FOR ADMINS
       floatingActionButton: isAdmin
           ? FloatingActionButton(
               onPressed: () => _navigateToCreateProgram(context),
@@ -288,147 +277,17 @@ void _navigateToRemindersScreen(ProgramModel program) {
           : null,
     );
   }
-
- Widget _buildModernSearchBar() {
-  return Row(
-    children: [
-      // Search Bar
-      Expanded(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.card(context).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.4),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Search Icon with Glass Morphism
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      bottomLeft: Radius.circular(28),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.3),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(28),
-                            bottomLeft: Radius.circular(28),
-                          ),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.6),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary(context).withOpacity(0.3),
-                              blurRadius: 15,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.search,
-                          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Text Field
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                        letterSpacing: 0.5,
-                      ),
-                      cursorColor: AppColors.primary(context),
-                      cursorWidth: 2,
-                      cursorHeight: 18,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
-                        hintText: 'Search programs...',
-                        hintStyle: TextStyle(
-                          color: AppColors.textSecondary(context).withOpacity(0.7),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        border: InputBorder.none,
-                        filled: false,
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: Icon(
-                                    Icons.close, 
-                                    size: 18, 
-                                    color: Theme.of(context).appBarTheme.foregroundColor ?? AppColors.textPrimary(context)
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                ),
-                              )
-                            : null,
-                      ),
-                      onChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      
-      // Filter Icon with Glass Morphism
-      const SizedBox(width: 8),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+Widget _buildModernSearchBar() {
+    return Row(
+      children: [
+        Expanded(
           child: Container(
-            width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.card(context).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withOpacity(0.4),
-                width: 1.2,
+                color: Colors.white.withOpacity(0.5),
+                width: 1.5, // Increased border width
               ),
               boxShadow: [
                 BoxShadow(
@@ -437,21 +296,149 @@ void _navigateToRemindersScreen(ProgramModel program) {
                   offset: const Offset(0, 4),
                 ),
               ],
+              color: Colors.transparent, // Transparent background
             ),
-            child: IconButton(
-              icon: Icon(
-                Icons.tune, 
-                color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white, 
-                size: 22
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Row(
+                  children: [
+                    // 🔍 SEARCH ICON - Transparent with white border
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent, // Transparent background
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          bottomLeft: Radius.circular(18),
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.5),
+                          width: 1.5, // Same border width
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.white, // White icon
+                        size: 22,
+                      ),
+                    ),
+                    
+                    // 📝 SEARCH FIELD
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white, // Always white text
+                          letterSpacing: 0.5,
+                        ),
+                        cursorColor: Colors.white, // White cursor
+                        cursorWidth: 2,
+                        cursorHeight: 20,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          hintText: 'Search programs...',
+                          hintStyle: const TextStyle(
+                            color: Colors.white70, // White hint with 70% opacity
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          filled: false,
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2), // Light white bg
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.4),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                        FocusScope.of(context).unfocus();
+                                      },
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              onPressed: () => _openFilterSheet(context),
             ),
           ),
         ),
-      ),
-    ],
-  );
-}
+        
+        const SizedBox(width: 8),
+        
+        // ⚙️ FILTER ICON - Transparent with white border
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.5),
+              width: 1.5, // Same border width
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            color: Colors.transparent, // Transparent background
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => _openFilterSheet(context),
+                  child: const Center(
+                    child: Icon(
+                      Icons.tune,
+                      color: Colors.white, // White icon
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSearchHeader(int resultCount) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -492,7 +479,6 @@ void _navigateToRemindersScreen(ProgramModel program) {
   }
 
 Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> displayedPrograms) {
-  // Show skeleton when loading and no programs to display
   if (programProvider.isLoading && displayedPrograms.isEmpty) {
     return ProgramListSkeleton(
       isDarkMode: Theme.of(context).brightness == Brightness.dark,
@@ -612,10 +598,9 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
     );
   }
 
-  // 🆕 SIMPLE FILTER TABS
   Widget _buildFilterTabs() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(right: 16, left: 16, top: 16),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.card(context),
@@ -665,108 +650,509 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
     });
   }
 
-  Widget _buildProgramCard(ProgramModel program, ProgramProvider programProvider, AppAuthProvider authProvider) {
-    final hasJoined = programProvider.hasUserJoined(program.programId, authProvider.user!.uid);
-    final canJoin = program.canJoin && !hasJoined;
+// Replace the _buildProgramCard method with this corrected version
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: AppColors.card(context),
-        elevation: 2,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _viewProgramDetails(program),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // HEADER WITH TITLE AND THREE-DOT MENU (ADMIN ONLY)
-                Row(
-                  children: [
-                    _buildProgramIcon(program.programType),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        program.title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                    ),
-                    _buildProgramStatus(program),
-                    if (widget.isAdmin) ...[
-                      const SizedBox(width: 8),
-                      _buildAdminMenu(program, programProvider),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-// Add this after the title row (optional)
-if (program.enableAutoReminders)
-  Container(
-    margin: EdgeInsets.only(top: 4),
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(
-      color: Colors.orange.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+Widget _buildProgramCard(
+  ProgramModel program,
+  ProgramProvider programProvider,
+  AppAuthProvider authProvider,
+) {
+  final hasJoined =
+      programProvider.hasUserJoined(program.programId, authProvider.user!.uid);
+  final canJoin = program.canJoin && !hasJoined;
+
+  return Consumer<ParticipantProvider>(
+    builder: (context, participantProvider, _) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Material(
+          color: AppColors.card(context),
+          elevation: 3,
+          shadowColor: Colors.black.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => _viewProgramDetails(program),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: StreamBuilder<double>(
+                stream: programProvider
+                    .streamProgramTotalContributions(program.programId),
+                builder: (context, contribSnap) {
+                  final collectedAmount = contribSnap.data ?? 0.0;
+
+                  final suggestedAmount = program.suggestedContribution ?? 0.0;
+                  
+                  // Get participant count from ParticipantProvider stream
+                  return StreamBuilder<List<ParticipantModel>>(
+                    stream: participantProvider.streamProgramParticipants(program.programId),
+                    builder: (context, participantSnapshot) {
+                      final participants = participantSnapshot.data ?? [];
+                      final totalParticipants = participants.length;
+                      final maxParticipants = program.maxParticipants ?? 0;
+
+                      final participantCount = program.isFixedParticipants
+                          ? maxParticipants
+                          : totalParticipants;
+
+                      final programAmount = suggestedAmount > 0
+                          ? suggestedAmount * participantCount
+                          : 0.0;
+
+                      final progress =
+                          programAmount > 0 ? collectedAmount / programAmount : 0.0;
+
+                      final daysLeft =
+                          program.programDate.difference(DateTime.now()).inDays;
+
+                      final isUrgent = daysLeft <= 3 && daysLeft >= 0;
+                      final programColor =
+                          _getProgramColor(program.programType);
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ───────── HEADER ─────────
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: programColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  _getProgramIcon(program.programType),
+                                  color: programColor,
+                                  size: 26,
+                                ),
+                              ),
+
+                              const SizedBox(width: 14),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            program.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w700,
+                                              color:
+                                                  AppColors.textPrimary(context),
+                                            ),
+                                          ),
+                                        ),
+                                        if (widget.isAdmin)
+                                          _buildAdminMenu(
+                                              program, programProvider),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    Row(
+                                      children: [
+                                        _buildProgramStatus(program),
+
+                                        if (program.enableAutoReminders) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.blue.withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: Colors.blue
+                                                    .withOpacity(0.3),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Reminders',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // ───────── DESCRIPTION ─────────
+                          Text(
+                            program.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.4,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // ───────── PROGRESS ─────────
+                     // ───────── PROGRESS ─────────
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    const Text(
+      'Progress',
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.notifications_active, size: 12, color: Colors.orange),
-        SizedBox(width: 4),
-        Text(
-          'Reminders ON',
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.orange,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+    Text(
+      '${(progress * 100).toStringAsFixed(1)}%',
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: programColor,
+      ),
+    ),
+  ],
+),
+
+const SizedBox(height: 8),
+
+// 🔧 UPDATED PROGRESS BAR WITH GRAY 300 BACKGROUND
+Container(
+  height: 7,
+  width: double.infinity,
+  decoration: BoxDecoration(
+    color: Colors.grey[300], // ← CHANGED TO GRAY 300
+    borderRadius: BorderRadius.circular(4),
+  ),
+  child: FractionallySizedBox(
+    alignment: Alignment.centerLeft,
+    widthFactor: progress.clamp(0.0, 1.0),
+    child: Container(
+      decoration: BoxDecoration(
+        color: programColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
     ),
   ),
-                // DESCRIPTION
-                Text(
-                  program.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 14,
-                  ),
-                ),
+),
 
-                const SizedBox(height: 12),
+                          const SizedBox(height: 18),
 
-                // PROGRAM DETAILS
-                _buildProgramDetails(program),
+                          // ───────── STATS ─────────
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildStatItem(
+                                icon: Icons.currency_rupee,
+                                value:
+                                    '₹${collectedAmount.toStringAsFixed(0)}',
+                                label: 'Collected',
+                                color: Colors.green,
+                              ),
+                              _buildStatItem(
+                                icon: Icons.track_changes,
+                                value:
+                                    '₹${programAmount.toStringAsFixed(0)}',
+                                label: 'Target',
+                                color: AppColors.primary(context),
+                              ),
+                              _buildStatItem(
+                                icon: Icons.people,
+                                value: '$totalParticipants',
+                                label: 'Members',
+                                color: Colors.blue,
+                              ),
+                              _buildStatItem(
+                                icon: Icons.schedule,
+                                value: '$daysLeft',
+                                label: 'Days',
+                                color:
+                                    isUrgent ? Colors.red : Colors.orange,
+                              ),
+                            ],
+                          ),
 
-                const SizedBox(height: 16),
+                          const SizedBox(height: 20),
 
-                // FINANCIAL PROGRESS
-                _buildFinancialProgress(program, programProvider),
+                          // ───────── ACTIONS ─────────
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () =>
+                                      _viewProgramDetails(program),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('View Details'),
+                                ),
+                              ),
 
-                const SizedBox(height: 16),
+                              const SizedBox(width: 10),
 
-                // ACTION BUTTONS
-                _buildActionButtons(program, hasJoined, canJoin, programProvider, authProvider),
-              ],
+                              if (hasJoined)
+                                IconButton(
+                                  icon: const Icon(Icons.exit_to_app,
+                                      color: Colors.red),
+                                  onPressed: () => _leaveProgram(
+                                      program,
+                                      programProvider,
+                                      authProvider),
+                                )
+                              else
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: canJoin
+                                        ? () => _joinProgram(
+                                            program,
+                                            programProvider,
+                                            authProvider)
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      !canJoin &&
+                                              program.isFixedParticipants &&
+                                              totalParticipants >=
+                                                  maxParticipants
+                                          ? 'Full'
+                                          : 'Join Now',
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ),
+      );
+    },
+  );
+}
+Widget _buildProgramStatus(ProgramModel program) {
+  Color color;
+  String text;
+
+  if (!program.canJoin) {
+    color = Colors.red;
+    text = 'Closed';
+  } else if (program.isFixedParticipants &&
+      program.currentParticipants >= program.maxParticipants) {
+    color = Colors.orange;
+    text = 'Full';
+  } else {
+    color = Colors.green;
+    text = 'Open';
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: color,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
+
+  Color _getProgramColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'savings':
+        return Colors.green;
+      case 'investment':
+        return Colors.blue;
+      case 'loan':
+        return Colors.purple;
+      case 'emergency':
+        return Colors.red;
+      default:
+        return AppColors.primary(context);
+    }
+  }
+
+  IconData _getProgramIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'savings':
+        return Icons.account_balance_wallet;
+      case 'investment':
+        return Icons.trending_up;
+      case 'loan':
+        return Icons.currency_exchange;
+      case 'emergency':
+        return Icons.medical_services;
+      default:
+        return Icons.assignment;
+    }
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String text,
+    required IconData icon,
+    required bool isPrimary,
+    required VoidCallback onPressed,
+    required Color programColor,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isPrimary ? programColor : AppColors.surface(context),
+        foregroundColor: isPrimary ? Colors.white : AppColors.textPrimary(context),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isPrimary 
+              ? BorderSide.none 
+              : BorderSide(color: AppColors.border(context)),
+        ),
+        elevation: isPrimary ? 2 : 0,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-// THREE-DOT MENU FOR ADMIN
+  Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
+    String statusText;
+    Color statusColor;
+    
+    if (progress >= 1.0) {
+      statusText = 'Completed';
+      statusColor = Colors.green;
+    } else if (daysLeft < 0) {
+      statusText = 'Expired';
+      statusColor = Colors.grey;
+    } else if (daysLeft <= 3) {
+      statusText = 'Urgent';
+      statusColor = Colors.red;
+    } else if (progress >= 0.8) {
+      statusText = 'Almost There';
+      statusColor = Colors.orange;
+    } else {
+      statusText = 'Active';
+      statusColor = Colors.blue;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            statusText,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: statusColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
   return PopupMenuButton<String>(
     icon: Icon(Icons.more_vert, color: AppColors.textSecondary(context)),
@@ -775,7 +1161,7 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
         _editProgram(program);
       } else if (value == 'delete') {
         _showDeleteConfirmation(program, programProvider);
-      } else if (value == 'reminders') {  // 🆕 ADD THIS
+      } else if (value == 'reminders') {
         _navigateToRemindersScreen(program);
       }
     },
@@ -790,7 +1176,7 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
           ],
         ),
       ),
-      PopupMenuItem<String>(  // 🆕 ADD THIS NEW ITEM
+      PopupMenuItem<String>(
         value: 'reminders',
         child: Row(
           children: [
@@ -814,191 +1200,6 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
   );
 }
 
-  Widget _buildProgramIcon(String programType) {
-    final iconData = ProgramTypes.getIconData(programType);
-    
-    return CircleAvatar(
-      backgroundColor: AppColors.primary(context).withOpacity(0.12),
-      child: Icon(iconData, color: AppColors.primary(context), size: 20),
-    );
-  }
-
-  Widget _buildProgramStatus(ProgramModel program) {
-    Color color;
-    String text;
-
-    if (program.isCompleted) {
-      color = Colors.grey;
-      text = 'Completed';
-    } else if (program.isOngoing) {
-      color = Colors.green;
-      text = 'Ongoing';
-    } else if (program.isCancelled) {
-      color = Colors.red;
-      text = 'Cancelled';
-    } else {
-      color = AppColors.primary(context);
-      text = 'Active';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildProgramDetails(ProgramModel program) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildDetailRow(Icons.calendar_today, 'Date: ${_formatDate(program.programDate)}'),
-        _buildDetailRow(Icons.location_on, 'Location: ${program.location}'),
-        if (program.suggestedContribution != null && program.suggestedContribution! > 0)
-          _buildDetailRow(Icons.attach_money, 'Contribution: ₹${program.suggestedContribution!.toStringAsFixed(2)}'),
-        _buildDetailRow(Icons.people,
-            'Participants: ${program.currentParticipants}${program.isFixedParticipants ? '/${program.maxParticipants}' : ''}'),
-        _buildDetailRow(Icons.category, 'Type: ${ProgramTypes.getDisplayName(program.programType)}'),
-      ],
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: AppColors.textSecondary(context)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text, 
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // DASHBOARD-STYLE FINANCIAL PROGRESS
-  Widget _buildFinancialProgress(ProgramModel program, ProgramProvider programProvider) {
-    final target = program.totalProgramAmount ?? 0.0;
-    
-    return StreamBuilder<double>(
-      stream: programProvider.streamProgramTotalContributions(program.programId),
-      builder: (context, contribSnap) {
-        final collected = contribSnap.data ?? 0.0;
-        final rawProgress = target > 0 ? (collected / target) : 0.0;
-        final progress = (rawProgress.clamp(0.0, 1.0) as double);
-
-        return Column(
-          children: [
-            // Progress Bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: AppColors.progressBackground(context),
-                color: AppColors.progressFill(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            
-            // Progress Text
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "₹${collected.toStringAsFixed(2)} / ₹${target.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-                Text(
-                  "${(progress * 100).toStringAsFixed(1)}%",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary(context),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildActionButtons(ProgramModel program, bool hasJoined, bool canJoin,
-      ProgramProvider programProvider, AppAuthProvider authProvider) {
-    return Row(
-      children: [
-        // View Details Button
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () => _viewProgramDetails(program),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.card(context),
-              foregroundColor: AppColors.textPrimary(context),
-              side: BorderSide(
-                color: AppColors.border(context),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text("View Details"),
-          ),
-        ),
-
-        const SizedBox(width: 8),
-
-        // Join/Leave Button
-        if (hasJoined) ...[
-          IconButton(
-            icon: const Icon(Icons.exit_to_app, color: Colors.red),
-            onPressed: () => _leaveProgram(program, programProvider, authProvider),
-          ),
-        ] else ...[
-          Expanded(
-            child: ElevatedButton(
-              onPressed: canJoin ? () => _joinProgram(program, programProvider, authProvider) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                !canJoin && program.isFixedParticipants && program.currentParticipants >= program.maxParticipants
-                    ? 'Full'
-                    : 'Join Now'
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // ADMIN FUNCTIONS
   void _editProgram(ProgramModel program) {
     Navigator.push(
       context,
@@ -1110,7 +1311,6 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
   }
 }
 
-// 🆕 FIXED FILTER SHEET - NO OVERFLOW
 class FilterSheet extends StatefulWidget {
   final ProgramFilters filters;
   final Function(ProgramFilters) onFiltersChanged;
@@ -1146,7 +1346,6 @@ class _FilterSheetState extends State<FilterSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // DRAG HANDLE
               Container(
                 width: 40,
                 height: 4,
@@ -1157,7 +1356,6 @@ class _FilterSheetState extends State<FilterSheet> {
                 ),
               ),
               
-              // TITLE
               Text(
                 'Quick Filters',
                 style: TextStyle(
@@ -1168,7 +1366,6 @@ class _FilterSheetState extends State<FilterSheet> {
               ),
               const SizedBox(height: 20),
 
-              // Program Type Filter - COMPACT VERSION
               _buildSection(
                 'Program Type',
                 _buildProgramTypeFilter(),
@@ -1176,7 +1373,6 @@ class _FilterSheetState extends State<FilterSheet> {
 
               const SizedBox(height: 16),
 
-              // Quick Toggles - COMPACT VERSION
               _buildSection(
                 'Filters',
                 Column(
@@ -1202,7 +1398,6 @@ class _FilterSheetState extends State<FilterSheet> {
 
               const SizedBox(height: 20),
 
-              // Action Buttons
               Row(
                 children: [
                   Expanded(
@@ -1242,7 +1437,7 @@ class _FilterSheetState extends State<FilterSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10), // BOTTOM PADDING FOR SAFE AREA
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -1269,12 +1464,11 @@ class _FilterSheetState extends State<FilterSheet> {
   }
 
   Widget _buildProgramTypeFilter() {
-    // COMPACT PROGRAM TYPE FILTER - FEWER ITEMS PER ROW
     final programTypes = ['all', ...ProgramTypes.allTypes];
     
     return Wrap(
-      spacing: 6, // REDUCED SPACING
-      runSpacing: 6, // REDUCED RUN SPACING
+      spacing: 6,
+      runSpacing: 6,
       children: programTypes.map((type) {
         final isSelected = _currentFilters.programType == type || 
                           (type == 'all' && _currentFilters.programType == null);
@@ -1282,7 +1476,7 @@ class _FilterSheetState extends State<FilterSheet> {
           label: Text(
             type == 'all' ? 'All Types' : ProgramTypes.getDisplayName(type),
             style: TextStyle(
-              fontSize: 12, // SMALLER FONT
+              fontSize: 12,
               color: isSelected ? Colors.white : AppColors.textPrimary(context),
             ),
           ),
@@ -1303,7 +1497,6 @@ class _FilterSheetState extends State<FilterSheet> {
     );
   }
 
-  // COMPACT TOGGLE VERSION
   Widget _buildCompactToggle(String title, bool value, Function(bool) onChanged) {
     return Container(
       decoration: BoxDecoration(
@@ -1312,7 +1505,7 @@ class _FilterSheetState extends State<FilterSheet> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        dense: true, // MAKES IT MORE COMPACT
+        dense: true,
         title: Text(
           title,
           style: TextStyle(

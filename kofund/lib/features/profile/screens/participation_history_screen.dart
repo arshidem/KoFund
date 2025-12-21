@@ -2,9 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/widgets/loading_indicator.dart';
-import 'package:kofund/features/programs/constants/program_types.dart'; // ✅ ADD IMPORT
+import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/features/programs/constants/program_types.dart';
+import 'package:flutter/services.dart';
 
 class ParticipationHistoryScreen extends StatefulWidget {
   const ParticipationHistoryScreen({super.key});
@@ -16,6 +19,8 @@ class ParticipationHistoryScreen extends StatefulWidget {
 
 class _ParticipationHistoryScreenState
     extends State<ParticipationHistoryScreen> {
+  final RefreshController _refreshController = RefreshController();
+  
   @override
   void initState() {
     super.initState();
@@ -27,21 +32,84 @@ class _ParticipationHistoryScreenState
     await profileProvider.getUserParticipationHistory();
   }
 
+  void _onRefresh() async {
+    print('🔄 Pull to refresh triggered in Participation History');
+    
+    try {
+      await _loadParticipationHistory();
+      _refreshController.refreshCompleted();
+      print('✅ Participation History refresh completed');
+    } catch (e) {
+      _refreshController.refreshFailed();
+      print('❌ Participation History refresh failed: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
     final participationHistory = profileProvider.participationHistory;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Programs'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+      backgroundColor: AppColors.background(context),
+     appBar: AppBar(
+  title: Text(
+    'My Programs',
+    style: TextStyle(color: AppColors.textPrimary(context)), // Use textPrimary
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: Icon(
+      Icons.arrow_back,
+      color: AppColors.textPrimary(context), // Use textPrimary for icon
+    ),
+    onPressed: () => Navigator.pop(context),
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white, // Keep this for other icons if any
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadParticipationHistory,
+    ),
+  ),
+),
+      body: SmartRefresher(
+        controller: _refreshController,
+        onRefresh: _onRefresh,
+        enablePullDown: true,
+        enablePullUp: false,
+        physics: const BouncingScrollPhysics(),
+        header: ClassicHeader(
+          idleText: 'Pull down to refresh',
+          releaseText: 'Release to refresh',
+          refreshingText: 'Refreshing programs...',
+          completeText: 'Refresh complete',
+          failedText: 'Refresh failed',
+          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+          refreshingIcon: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+            ),
+          ),
+          completeIcon: Icon(Icons.check, color: Colors.green),
+          failedIcon: Icon(Icons.error, color: Colors.red),
+        ),
         child: _buildContent(profileProvider, participationHistory),
       ),
     );
@@ -52,7 +120,7 @@ class _ParticipationHistoryScreenState
     List<Map<String, dynamic>> participationHistory,
   ) {
     if (profileProvider.isLoading) {
-      return const LoadingIndicator();
+      return const Center(child: LoadingIndicator());
     }
 
     if (profileProvider.error != null) {
@@ -64,7 +132,7 @@ class _ParticipationHistoryScreenState
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8), // ✅ Padding 8px only
       itemCount: participationHistory.length,
       itemBuilder: (context, index) {
         final participation = participationHistory[index];
@@ -75,7 +143,7 @@ class _ParticipationHistoryScreenState
 
   Widget _buildParticipationCard(Map<String, dynamic> participation) {
     final programTitle = participation['programTitle'] ?? 'Unnamed Program';
-    final programType = participation['programType'] ?? ProgramTypes.general; // ✅ USE CONSTANT
+    final programType = participation['programType'] ?? ProgramTypes.general;
     final joinedAt = _parseDate(participation['joinedAt']);
     final hasPaid = participation['hasPaidContribution'] ?? false;
     final contributionPaid = (participation['contributionPaid'] ?? 0).toDouble();
@@ -102,9 +170,10 @@ class _ParticipationHistoryScreenState
                     children: [
                       Text(
                         programTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -114,7 +183,7 @@ class _ParticipationHistoryScreenState
                         _formatDate(joinedAt),
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: AppColors.textSecondary(context),
                         ),
                       ),
                     ],
@@ -123,10 +192,14 @@ class _ParticipationHistoryScreenState
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: hasPaid ? Colors.green[50] : Colors.orange[50],
+                    color: hasPaid 
+                        ? AppColors.primary(context).withOpacity(0.1) // ✅ Use primary color
+                        : Colors.orange[50],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: hasPaid ? Colors.green : Colors.orange,
+                      color: hasPaid 
+                          ? AppColors.primary(context) // ✅ Use primary color
+                          : Colors.orange,
                     ),
                   ),
                   child: Text(
@@ -134,7 +207,9 @@ class _ParticipationHistoryScreenState
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: hasPaid ? Colors.green : Colors.orange,
+                      color: hasPaid 
+                          ? AppColors.primary(context) // ✅ Use primary color
+                          : Colors.orange,
                     ),
                   ),
                 ),
@@ -143,7 +218,7 @@ class _ParticipationHistoryScreenState
             const SizedBox(height: 12),
 
             // Program Type
-            _buildDetailRow('Type', ProgramTypes.getDisplayName(programType)), // ✅ USE getDisplayName
+            _buildDetailRow('Type', ProgramTypes.getDisplayName(programType)),
 
             // Contribution info
             if (suggestedContribution > 0) ...[
@@ -165,13 +240,12 @@ class _ParticipationHistoryScreenState
   }
 
   Widget _buildProgramIcon(String programType) {
-    // ✅ USE ProgramTypes.getIconData INSTEAD OF HARCODED MAPPING
     final iconData = ProgramTypes.getIconData(programType);
 
     return CircleAvatar(
       radius: 20,
-      backgroundColor: Colors.blue[100],
-      child: Icon(iconData, color: Colors.blue, size: 20),
+      backgroundColor: AppColors.primary(context).withOpacity(0.1),
+      child: Icon(iconData, color: AppColors.primary(context), size: 20),
     );
   }
 
@@ -186,14 +260,17 @@ class _ParticipationHistoryScreenState
               '$label:',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
+                color: AppColors.textSecondary(context),
                 fontSize: 12,
               ),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ],
       ),
@@ -206,6 +283,8 @@ class _ParticipationHistoryScreenState
     bool hasPaid,
     double progressPercentage,
   ) {
+    final primaryColor = AppColors.primary(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -217,7 +296,7 @@ class _ParticipationHistoryScreenState
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
+                color: AppColors.textSecondary(context),
               ),
             ),
             Text(
@@ -225,7 +304,7 @@ class _ParticipationHistoryScreenState
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: hasPaid ? Colors.green : Colors.orange,
+                color: hasPaid ? primaryColor : Colors.orange,
               ),
             ),
           ],
@@ -236,14 +315,14 @@ class _ParticipationHistoryScreenState
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: hasPaid ? Colors.green : Colors.orange,
+            color: hasPaid ? primaryColor : Colors.orange,
           ),
         ),
         const SizedBox(height: 4),
         LinearProgressIndicator(
           value: progressPercentage / 100,
-          backgroundColor: Colors.grey[200],
-          color: hasPaid ? Colors.green : Colors.orange,
+          backgroundColor: AppColors.border(context),
+          color: hasPaid ? primaryColor : Colors.orange, // ✅ Primary color for completed
           minHeight: 6,
           borderRadius: BorderRadius.circular(3),
         ),
@@ -255,7 +334,7 @@ class _ParticipationHistoryScreenState
               hasPaid ? 'Fully Paid' : 'Payment Pending',
               style: TextStyle(
                 fontSize: 10,
-                color: hasPaid ? Colors.green : Colors.orange,
+                color: hasPaid ? primaryColor : Colors.orange, // ✅ Primary color for paid
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -264,7 +343,7 @@ class _ParticipationHistoryScreenState
                 '₹${(suggested - paid).toStringAsFixed(2)} remaining',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.grey[600],
+                  color: AppColors.textSecondary(context),
                 ),
               ),
           ],
@@ -277,20 +356,20 @@ class _ParticipationHistoryScreenState
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: AppColors.card(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         children: [
-          Icon(Icons.info, size: 16, color: Colors.grey[600]),
+          Icon(Icons.info, size: 16, color: AppColors.textSecondary(context)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'No contribution required for this program',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: AppColors.textSecondary(context),
               ),
             ),
           ),
@@ -308,23 +387,23 @@ class _ParticipationHistoryScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.event_note, size: 80, color: Colors.grey[400]),
+              Icon(Icons.event_note, size: 80, color: AppColors.textSecondary(context)),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'No Program Participations',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+                  color: AppColors.textSecondary(context),
                 ),
               ),
               const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
                   'You haven\'t joined any programs yet. Start participating in community programs to see them here!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -351,12 +430,12 @@ class _ParticipationHistoryScreenState
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Unable to Load Data',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: AppColors.textSecondary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -365,7 +444,7 @@ class _ParticipationHistoryScreenState
             child: Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppColors.textSecondary(context)),
             ),
           ),
           const SizedBox(height: 20),
@@ -392,6 +471,4 @@ class _ParticipationHistoryScreenState
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
-
-  // ✅ REMOVED: _capitalize method since we're using ProgramTypes.getDisplayName
 }

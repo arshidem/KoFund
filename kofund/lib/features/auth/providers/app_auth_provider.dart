@@ -383,7 +383,6 @@ class AppAuthProvider with ChangeNotifier {
         'email': email,
         'displayName': name,
         'phone': phone,
-        'emailVerified': false,
         'isApproved': false,
         'isAdmin': false,
         'role': 'member',
@@ -629,7 +628,6 @@ Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
             displayName: user.displayName ?? 'Google User',
             phoneNumber: user.phoneNumber ?? '',
             role: 'member',
-            emailVerified: true, // Google accounts are verified
             isApproved: false,
             createdAt: Timestamp.now(),
           );

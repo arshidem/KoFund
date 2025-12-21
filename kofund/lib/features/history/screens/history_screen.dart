@@ -171,8 +171,8 @@ appBar: AppBar(
     decoration: BoxDecoration(
       gradient: AppColors.primaryGradient(context),
       borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(30),
-        bottomRight: Radius.circular(30),
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
     ),
   ),
@@ -294,67 +294,49 @@ Expanded(
 Widget _buildModernSearchBar() {
   return Row(
     children: [
-      // Search Bar
       Expanded(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.card(context).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.4),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
+            ],
+            color: Colors.transparent,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Row(
                 children: [
-                  // Search Icon with DIFFERENT glass morphism style
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      bottomLeft: Radius.circular(28),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // More blur for contrast
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.3), // Different color
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(28),
-                            bottomLeft: Radius.circular(28),
-                          ),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.6), // Brighter border
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary(context).withOpacity(0.3),
-                              blurRadius: 15,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.search,
-                          color: Colors.white,
-                          size: 22,
-                        ),
+                  // Search Icon
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        bottomLeft: Radius.circular(18),
                       ),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.search,
+                      color: Colors.white,
+                      size: 22,
                     ),
                   ),
                   
@@ -362,41 +344,53 @@ Widget _buildModernSearchBar() {
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      style: TextStyle(
-                        fontSize: 15,
+                      style: const TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
+                        color: Colors.white,
                         letterSpacing: 0.5,
                       ),
-                      cursorColor: AppColors.primary(context),
+                      cursorColor: Colors.white,
                       cursorWidth: 2,
-                      cursorHeight: 18,
+                      cursorHeight: 20,
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
+                        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                         hintText: 'Search transactions...',
-                        hintStyle: TextStyle(
-                          color: AppColors.textSecondary(context).withOpacity(0.7),
-                          fontSize: 15,
+                        hintStyle: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 18,
                           fontWeight: FontWeight.w500,
                         ),
                         border: InputBorder.none,
                         filled: false,
                         suffixIcon: _searchController.text.isNotEmpty
-                            ? Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: Icon(Icons.close, size: 18, color: AppColors.textPrimary(context)),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    Provider.of<HistoryProvider>(context, listen: false)
-                                        .setSearchQuery('');
-                                    FocusScope.of(context).unfocus();
-                                  },
+                            ? Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(
+                                      Icons.close,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      Provider.of<HistoryProvider>(context, listen: false)
+                                          .setSearchQuery('');
+                                      FocusScope.of(context).unfocus();
+                                    },
+                                  ),
                                 ),
                               )
                             : null,
@@ -414,33 +408,45 @@ Widget _buildModernSearchBar() {
         ),
       ),
       
-      // Filter Icon with Glass Morphism
       const SizedBox(width: 8),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.card(context).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.4),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      
+      // Filter Icon
+      Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: IconButton(
-              icon: const Icon(Icons.tune, color: Colors.white, size: 22),
-              onPressed: () => _openFilterSheet(context),
+          ],
+          color: Colors.transparent,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => _openFilterSheet(context),
+                child: const Center(
+                  child: Icon(
+                    Icons.tune,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -594,7 +600,7 @@ class _FilterTabs extends StatelessWidget {
     final p = Provider.of<HistoryProvider>(context);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(right: 12, left: 12, top: 12),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.card(context),
@@ -636,7 +642,6 @@ class _FilterTabs extends StatelessWidget {
     );
   }
 }
-
 // =================== DATE GROUP ===================
 class _DateGroup extends StatelessWidget {
   final String dateLabel;
@@ -662,27 +667,49 @@ class _DateGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Date header - flat style like screenshot
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primary(context).withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: AppColors.background(context).withOpacity(0.7),
+          child: Text(
+            dateLabel,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: AppColors.textSecondary(context),
+            ),
           ),
-          child: Text(dateLabel,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.textPrimary(context),
-              )),
         ),
-        ...items.map((it) => _HistoryTile(
-              item: it,
-              formatTime: formatTime,
-              formatAmount: formatAmount,
-              currentUid: currentUid,
-              communityLabel: communityLabel,
-            ))
+        
+        // List of transactions for this date
+        Column(
+          children: List.generate(items.length, (index) {
+            final item = items[index];
+            final isLastItem = index == items.length - 1;
+            
+            return Column(
+              children: [
+                _HistoryTile(
+                  item: item,
+                  formatTime: formatTime,
+                  formatAmount: formatAmount,
+                  currentUid: currentUid,
+                  communityLabel: communityLabel,
+                ),
+                // Horizontal divider between transactions (except last one)
+                if (!isLastItem) 
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.border(context),
+                    indent: 16,
+                    endIndent: 16,
+                  ),
+              ],
+            );
+          }),
+        ),
       ],
     );
   }
@@ -711,100 +738,98 @@ class _HistoryTile extends StatelessWidget {
     final iconColor = isContribution ? AppColors.revenue(context) : AppColors.expense(context);
     final amountText = (isContribution ? '+ ' : '- ') + formatAmount(item.amount);
 
-    // build avatar with initial
-    final avatar = CircleAvatar(
-      radius: 22,
-      backgroundColor: AppColors.primary(context).withOpacity(0.12),
-      child: Text(
-        (item.title.isNotEmpty ? item.title[0].toUpperCase() : 'A'),
-        style: TextStyle(
-          color: AppColors.primary(context), 
-          fontWeight: FontWeight.bold
-        ),
-      ),
-    );
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: AppColors.card(context),
-        elevation: 0,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            showModalBottomSheet(
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              context: context,
-              builder: (_) {
-                return _BottomDetails(
-                  item: item,
-                  currentUid: currentUid,
-                  communityLabel: communityLabel,
-                );
-              },
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              children: [
-                avatar,
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700, 
-                          fontSize: 15,
-                          color: AppColors.textPrimary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.subtitle,
-                        style: TextStyle(
-                          fontSize: 13, 
-                          color: AppColors.textSecondary(context)
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        formatTime(item.date),
-                        style: TextStyle(
-                          fontSize: 12, 
-                          color: AppColors.textTertiary(context)
-                        ),
-                      ),
-                    ],
-                  ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          showModalBottomSheet(
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            context: context,
+            builder: (_) {
+              return _BottomDetails(
+                item: item,
+                currentUid: currentUid,
+                communityLabel: communityLabel,
+              );
+            },
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              // Leading icon (circular)
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isContribution 
+                    ? AppColors.revenue(context).withOpacity(0.1)
+                    : AppColors.expense(context).withOpacity(0.1),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Icon(
+                  isContribution ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 20,
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Main content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      amountText,
+                      item.title,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: iconColor,
-                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: AppColors.textPrimary(context),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                )
-              ],
-            ),
+                ),
+              ),
+              
+              // Time and amount (stacked vertically on right)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatTime(item.date),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    amountText,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: iconColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

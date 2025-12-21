@@ -343,7 +343,6 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 padding: const EdgeInsets.all(16),
                 child: _buildProfileHeaderCard(member, isAdmin),
               ),
-              const SizedBox(height: 8),
 
               // Member Information
               Padding(
@@ -391,9 +390,9 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary(context).withOpacity(0.3),
+            color: AppColors.primary(context).withOpacity(0.2),
             blurRadius: 12,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 1),
           ),
         ],
       ),

@@ -7,16 +7,15 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/core/widgets/loading_indicator.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
-  final VoidCallback? onProfileUpdated; // ✅ ADD CALLBACK
+  final VoidCallback? onProfileUpdated;
 
   const EditProfileScreen({
     super.key, 
     required this.user,
-    this.onProfileUpdated, // ✅ ADD CALLBACK PARAMETER
+    this.onProfileUpdated,
   });
 
   @override
@@ -43,77 +42,111 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-Future<void> _updateProfile() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  final authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
 
-  try {
-    // ✅ Show loading in ProfileScreen via callback
-    if (widget.onProfileUpdated != null) {
-      widget.onProfileUpdated!(); // This can trigger loading state in ProfileScreen
+    try {
+      // ✅ Show loading in ProfileScreen via callback
+      if (widget.onProfileUpdated != null) {
+        widget.onProfileUpdated!();
+      }
+
+      // ✅ NAVIGATE IMMEDIATELY
+      Navigator.pop(context);
+      
+      // Show loading snackbar
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SnackbarHelper.showInfo(context, 'Updating profile...');
+      });
+
+      // ✅ UPDATE IN BACKGROUND
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .update({
+        'displayName': _nameController.text.trim(),
+        if (_phoneController.text.trim().isNotEmpty) 
+          'phoneNumber': _phoneController.text.trim(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      // Refresh auth data in background
+      await authProvider.refreshUserData();
+
+      // ✅ SHOW SUCCESS AFTER UPDATE COMPLETES
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SnackbarHelper.showSuccess(context, 'Profile updated successfully!');
+      });
+
+    } catch (e) {
+      print('Error updating profile: $e');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SnackbarHelper.showError(context, 'Failed to update profile.');
+      });
     }
-
-    // ✅ NAVIGATE IMMEDIATELY
-    Navigator.pop(context);
-    
-    // Show loading snackbar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      SnackbarHelper.showInfo(context, 'Updating profile...');
-    });
-
-    // ✅ UPDATE IN BACKGROUND
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.user.uid)
-        .update({
-      'displayName': _nameController.text.trim(),
-      if (_phoneController.text.trim().isNotEmpty) 
-        'phoneNumber': _phoneController.text.trim(),
-      'updatedAt': Timestamp.now(),
-    });
-
-    // Refresh auth data in background
-    await authProvider.refreshUserData();
-
-    // ✅ SHOW SUCCESS AFTER UPDATE COMPLETES
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      SnackbarHelper.showSuccess(context, 'Profile updated successfully!');
-    });
-
-  } catch (e) {
-    print('Error updating profile: $e');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      SnackbarHelper.showError(context, 'Failed to update profile.');
-    });
   }
-}
+
+  // Helper method to get avatar initials
+  String _getAvatarInitials() {
+    final name = widget.user.displayName ?? widget.user.email ?? '?';
+    if (name.isNotEmpty) {
+      return name[0].toUpperCase();
+    }
+    return '?';
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (profileProvider.isLoading)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ),
-        ],
+      backgroundColor: AppColors.background(context),
+     appBar: AppBar(
+  title: Text(
+    'Edit Profile',
+    style: TextStyle(color: Colors.white), // White text
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: Icon(
+      Icons.arrow_back,
+      color: Colors.white, // White back icon
+    ),
+    onPressed: () => Navigator.pop(context),
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white, // This sets all icons to white
+  elevation: 0,
+  systemOverlayStyle: const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
+    ),
+  ),
+  actions: [
+    if (profileProvider.isLoading)
+      Container(
+        margin: const EdgeInsets.only(right: 16),
+        child: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white, // White loading indicator
+          ),
+        ),
+      ),
+  ],
+),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -140,52 +173,31 @@ Future<void> _updateProfile() async {
   Widget _buildProfilePictureSection() {
     return Column(
       children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.blue[100],
-              child: Icon(
-                Icons.person,
-                size: 60,
-                color: Colors.blue[600],
-              ),
+        CircleAvatar(
+          radius: 60,
+          backgroundColor: AppColors.primary(context).withOpacity(0.2),
+          child: Text(
+            _getAvatarInitials(),
+            style: const TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                  padding: EdgeInsets.zero,
-                  onPressed: () {
-                    SnackbarHelper.showInfo(context, 'Photo upload feature coming soon!');
-                  },
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: 12),
         Text(
-          'Tap camera icon to update photo',
+          'Avatar based on your name initials',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: AppColors.textSecondary(context),
           ),
         ),
       ],
     );
   }
 
-Widget _buildFormFields() {
+  Widget _buildFormFields() {
     return Column(
       children: [
         // Display Name Field
@@ -195,18 +207,40 @@ Widget _buildFormFields() {
             labelText: 'Display Name *',
             hintText: 'Enter your display name',
             prefixIcon: const Icon(Icons.person),
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: AppColors.card(context),
             counterText: '${_nameController.text.length}/25',
             suffixIcon: _nameController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
+                    icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
                     onPressed: () {
                       _nameController.clear();
                       if (mounted) setState(() {});
                     },
                   )
                 : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
+          style: TextStyle(color: AppColors.textPrimary(context)),
           maxLength: 25,
           onChanged: (value) {
             if (mounted) setState(() {});
@@ -236,11 +270,23 @@ Widget _buildFormFields() {
           decoration: InputDecoration(
             labelText: 'Email Address',
             prefixIcon: const Icon(Icons.email),
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+            ),
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: AppColors.card(context).withOpacity(0.5),
             counterText: '${widget.user.email?.length ?? 0}/100',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
+          style: TextStyle(color: AppColors.textSecondary(context)),
           readOnly: true,
           enabled: false,
           maxLength: 100,
@@ -254,18 +300,40 @@ Widget _buildFormFields() {
             labelText: 'Phone Number',
             hintText: 'Enter your phone number',
             prefixIcon: const Icon(Icons.phone),
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: AppColors.card(context),
             counterText: '${_phoneController.text.length}/10',
             suffixIcon: _phoneController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
+                    icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
                     onPressed: () {
                       _phoneController.clear();
                       if (mounted) setState(() {});
                     },
                   )
                 : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
+          style: TextStyle(color: AppColors.textPrimary(context)),
           maxLength: 10,
           keyboardType: TextInputType.phone,
           onChanged: (value) {
@@ -295,22 +363,25 @@ Widget _buildFormFields() {
 
         // Info Card
         Card(
-          color: Colors.blue[50],
+          color: AppColors.card(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue),
-                    SizedBox(width: 12),
+                    Icon(Icons.info, color: AppColors.primary(context)),
+                    const SizedBox(width: 12),
                     Text(
                       'Input Limits',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
+                        color: AppColors.primary(context),
                       ),
                     ),
                   ],
@@ -322,16 +393,12 @@ Widget _buildFormFields() {
                   '• Phone: 10 digits only\n\n'
                   'Your display name will be visible to other community members. '
                   'Email cannot be changed.',
-                  style: const TextStyle(fontSize: 12, color: Colors.blue),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               ],
             ),
           ),
         ),
-        
-        // Character limit summary
-        const SizedBox(height: 16),
-   
       ],
     );
   }
@@ -346,7 +413,7 @@ Widget _buildFormFields() {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12), // Rounded button corners
           ),
         ),
         child: profileProvider.isLoading

@@ -756,8 +756,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
           ),
         ),
@@ -896,101 +896,96 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     );
   }
 
-  Widget _buildModernSearchBar() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.5),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.4),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+Widget _buildModernSearchBar() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
+        ],
+        color: Colors.transparent,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: TextField(
             controller: _searchController,
-            style: TextStyle(
-              fontSize: 15,
+            style: const TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(context),
+              color: Colors.white,
               letterSpacing: 0.5,
             ),
-            cursorColor: AppColors.primary(context),
+            cursorColor: Colors.white,
             cursorWidth: 2,
-            cursorHeight: 18,
+            cursorHeight: 20,
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
+              contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               hintText: 'Search members...',
-              hintStyle: TextStyle(
-                color: AppColors.textSecondary(context).withOpacity(0.7),
-                fontSize: 15,
+              hintStyle: const TextStyle(
+                color: Colors.white70,
+                fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
               border: InputBorder.none,
               filled: false,
-              prefixIcon: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  bottomLeft: Radius.circular(28),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary(context).withOpacity(0.3),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(28),
-                        bottomLeft: Radius.circular(28),
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.6),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary(context).withOpacity(0.3),
-                          blurRadius: 15,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+              prefixIcon: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    bottomLeft: Radius.circular(18),
                   ),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.search,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
               suffixIcon: _searchController.text.isNotEmpty
-                  ? Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: Icon(Icons.close, size: 18, color: AppColors.textPrimary(context)),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          FocusScope.of(context).unfocus();
-                        },
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4),
+                            width: 1,
+                          ),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            FocusScope.of(context).unfocus();
+                          },
+                        ),
                       ),
                     )
                   : null,
@@ -1051,14 +1046,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   // ✅ SELECTION CONTROLS WIDGET
   Widget _buildSelectionControls(List<UserModel> displayedMembers, bool isAdmin) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           height: 56,
           decoration: BoxDecoration(
             color: AppColors.card(context).withOpacity(0.5),
-            borderRadius: BorderRadius.circular(50),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: Colors.white.withOpacity(0.4),
               width: 1.2,
@@ -1194,147 +1189,168 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     );
   }
 
-  Widget _buildMemberCard(UserModel member, UserModel? currentUser) {
+ Widget _buildMemberCard(UserModel member, UserModel? currentUser) {
     final isSelected = _selectedMemberIds.contains(member.uid);
     final isAdmin = currentUser?.isAdmin == true;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Material(
-        color: isSelected ? AppColors.primary(context).withOpacity(0.12) : AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            if (_isSelectionMode && isAdmin) {
+    // Determine which contact info to display
+    final String contactInfo;
+    if (member.phoneNumber != null && member.phoneNumber!.isNotEmpty) {
+      contactInfo = member.phoneNumber!;
+    } else if (member.email != null && member.email!.isNotEmpty) {
+      contactInfo = member.email!;
+    } else {
+      contactInfo = 'No contact info';
+    }
+
+    return Column(
+      children: [
+        Material(
+          color: isSelected 
+              ? AppColors.primary(context).withOpacity(0.12) 
+              : Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (_isSelectionMode && isAdmin) {
+                setState(() {
+                  _toggleMemberSelection(member.uid);
+                });
+              } else {
+                _navigateToMemberDetails(member);
+              }
+            },
+            onLongPress: isAdmin ? () {
               setState(() {
+                if (!_isSelectionMode) {
+                  _isSelectionMode = true;
+                }
                 _toggleMemberSelection(member.uid);
               });
-            } else {
-              _navigateToMemberDetails(member);
-            }
-          },
-          onLongPress: isAdmin ? () {
-            setState(() {
-              if (!_isSelectionMode) {
-                _isSelectionMode = true;
-              }
-              _toggleMemberSelection(member.uid);
-            });
-          } : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              children: [
-                // Avatar with selection indicator
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.primary(context).withOpacity(0.12),
-                      child: Text(
-                        (member.displayName?.isNotEmpty == true 
-                            ? member.displayName![0].toUpperCase() 
-                            : '?'),
-                        style: TextStyle(
-                          color: AppColors.primary(context), 
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    if (_isSelectionMode)
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary(context) : Colors.grey[400],
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.card(context), width: 2),
-                          ),
-                          child: Icon(
-                            isSelected ? Icons.check : Icons.circle_outlined,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            } : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // Avatar with selection indicator
+                  Stack(
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            member.displayName ?? 'No Name',
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary(context).withOpacity(0.12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            (member.displayName?.isNotEmpty == true 
+                                ? member.displayName![0].toUpperCase() 
+                                : '?'),
                             style: TextStyle(
-                              fontWeight: FontWeight.w700, 
-                              fontSize: 15,
-                              color: AppColors.textPrimary(context),
+                              color: AppColors.primary(context), 
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 8),
-                          if (member.isAdmin) 
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange[100],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Admin',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        ),
+                      ),
+                      if (_isSelectionMode)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primary(context) : Colors.grey[400],
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.card(context), width: 2),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        member.email ?? 'No email',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context)
+                            child: Icon(
+                              isSelected ? Icons.check : Icons.circle_outlined,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Joined: ${_formatDate(member.createdAt)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textTertiary(context)
-                        ),
-                      ),
                     ],
                   ),
-                ),
-                if (!_isSelectionMode) 
-                  Icon(
-                    Icons.chevron_right,
-                    color: AppColors.textSecondary(context),
-                    size: 20,
+                  const SizedBox(width: 12),
+                  
+                  // Main content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              member.displayName ?? 'No Name',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: AppColors.textPrimary(context),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 8),
+                            if (member.isAdmin) 
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Admin',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          contactInfo, // Shows phone number if available, otherwise email
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(context)
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-              ],
+                  
+                  // Chevron only
+                  if (!_isSelectionMode) 
+                    Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textSecondary(context),
+                      size: 20,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
+        
+        // Horizontal divider
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.border(context),
+          indent: 16,
+          endIndent: 16,
+        ),
+      ],
     );
   }
-
   String _formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'Unknown';
     final date = timestamp.toDate();

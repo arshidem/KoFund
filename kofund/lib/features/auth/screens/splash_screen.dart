@@ -160,126 +160,172 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  /// ⭐ NEW: Check if user email is verified
-  Future<bool> _isUserEmailVerified(UserModel? user) async {
-    if (user == null) return false;
+/// Main initialization with timeout
+Future<void> _initializeAppWithTimeout() async {
+  try {
+    _updateStatus('Starting app...');
     
-    try {
-      // Reload user to get latest email verification status
-      await FirebaseAuth.instance.currentUser?.reload();
-      final currentUser = FirebaseAuth.instance.currentUser;
+    final authProvider = Provider.of<app_auth.AppAuthProvider>(context, listen: false);
+    
+    // Wait MAX 3 seconds total
+    await Future.any([
+      _performInitialization(authProvider),
+      Future.delayed(const Duration(seconds: 3)),
+    ]);
+    
+  } catch (e) {
+    debugPrint("❌ Splash initialization error: $e");
+    _navigateToLogin();
+  } finally {
+    setState(() => _isInitializing = false);
+  }
+}
+
+Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async {
+  await Future.delayed(const Duration(milliseconds: 800));
+  
+  debugPrint("=== SPLASH SCREEN ===");
+  debugPrint("Auth Provider Status:");
+  debugPrint("  - isLoading: ${authProvider.isLoading}");
+  debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
+  debugPrint("  - user exists: ${authProvider.user != null}");
+  debugPrint("  - pending invite code: $_pendingInviteCode");
+  
+  // Start notification system in BACKGROUND (non-blocking)
+  unawaited(_initializeNotificationSystemInBackground());
+  
+  // Check if user can access app (online OR offline)
+  if (authProvider.canAccessApp) {
+    final user = authProvider.user;
+    
+    if (authProvider.isOfflineMode) {
+      debugPrint("📱 OFFLINE MODE: Using cached data");
+      _updateStatus('Loading offline data...');
+      await Future.delayed(const Duration(milliseconds: 500));
       
-      if (currentUser != null) {
-        final isVerified = currentUser.emailVerified;
-        debugPrint('📧 Email verification status: $isVerified');
-        return isVerified;
-      }
-    } catch (e) {
-      debugPrint('❌ Error checking email verification: $e');
+      // ⭐ Offline mode: Skip email verification check entirely
+      await _offlineNavigationLogic(user);
+      return;
     }
     
-    return user.emailVerified ?? false;
-  }
-
-  /// Main initialization with timeout
-  Future<void> _initializeAppWithTimeout() async {
-    try {
-      _updateStatus('Starting app...');
-      
-      final authProvider = Provider.of<app_auth.AppAuthProvider>(context, listen: false);
-      
-      // Wait MAX 3 seconds total
-      await Future.any([
-        _performInitialization(authProvider),
-        Future.delayed(const Duration(seconds: 3)),
-      ]);
-      
-    } catch (e) {
-      debugPrint("❌ Splash initialization error: $e");
+    // ONLINE MODE: Do quick checks
+    if (user == null) {
+      debugPrint("❌ User is null despite canAccessApp=true");
       _navigateToLogin();
-    } finally {
-      setState(() => _isInitializing = false);
+      return;
     }
-  }
-
-  Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async {
-    await Future.delayed(const Duration(milliseconds: 800));
     
-    debugPrint("=== SPLASH SCREEN ===");
-    debugPrint("Auth Provider Status:");
-    debugPrint("  - isLoading: ${authProvider.isLoading}");
-    debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
-    debugPrint("  - user exists: ${authProvider.user != null}");
-    debugPrint("  - pending invite code: $_pendingInviteCode");
+    _updateStatus('Checking account...');
     
-    // Start notification system in BACKGROUND (non-blocking)
-    unawaited(_initializeNotificationSystemInBackground());
-    
-    // Check if user can access app (online OR offline)
-    if (authProvider.canAccessApp) {
-      final user = authProvider.user;
-      
-      if (authProvider.isOfflineMode) {
-        debugPrint("📱 OFFLINE MODE: Using cached data");
-        _updateStatus('Loading offline data...');
-        await Future.delayed(const Duration(milliseconds: 500));
-        _navigateToDashboard();
-        return;
-      }
-      
-      // ONLINE MODE: Do quick checks
-      if (user == null) {
-        debugPrint("❌ User is null despite canAccessApp=true");
-        _navigateToLogin();
-        return;
-      }
-      
-      _updateStatus('Checking account...');
-      
-      // ⭐ NEW: Check email verification first
-      final emailVerified = await _isUserEmailVerified(user);
+    // ⭐ NEW LOGIC: Only check email verification if user has no community
+    if (user.communityId == null || user.communityId!.isEmpty) {
+      // New user - need to check email verification
+      debugPrint("👤 New user (no community) - checking email verification");
+      final emailVerified = await _isUserEmailVerified();
       
       if (!emailVerified) {
         debugPrint("❌ Email not verified - navigate to verification screen");
         _navigateToVerificationPending(user.email ?? '');
         return;
       }
-      
-      // Email is verified, continue with normal flow
-      await _normalNavigationLogic(user);
-      
     } else {
-      debugPrint("❌ Cannot access app - go to login");
-      _navigateToLogin();
+      // User has community - assume they were verified at signup
+      debugPrint("✅ User has community, skipping email verification check");
     }
+    
+    // Continue with normal flow
+    await _normalNavigationLogic(user);
+    
+  } else {
+    debugPrint("❌ Cannot access app - go to login");
+    _navigateToLogin();
   }
+}
+
+Future<void> _offlineNavigationLogic(UserModel? user) async {
+  if (user == null) {
+    debugPrint("❌ No cached user in offline mode");
+    _navigateToLogin();
+    return;
+  }
+  
+  // ⭐ CRITICAL: In offline mode, skip ALL verification checks
+  // Just check if user has basic data
+  
+  debugPrint("📱 Offline user data:");
+  debugPrint("   - Email: ${user.email}");
+  debugPrint("   - Has community: ${user.communityId != null && user.communityId!.isNotEmpty}");
+  debugPrint("   - Is approved: ${user.isApproved}");
+  
+  // Check if user has cached community data
+  if (user.communityId == null || user.communityId!.isEmpty) {
+    debugPrint("📱 OFFLINE: No cached community - go to join community screen");
+    _navigateToJoinCommunity();
+    return;
+  }
+  
+  // Check if user is approved (from cached data)
+  if (!user.isApproved) {
+    debugPrint("📱 OFFLINE: Cached user not approved - go to pending approval");
+    _navigateToPendingApproval();
+    return;
+  }
+  
+  // All good - go to dashboard with cached data
+  debugPrint("📱 OFFLINE: User has cached community and approval - go to dashboard");
+  _navigateToDashboard();
+}
+
+// ⭐ UPDATED: Remove UserModel parameter
+Future<bool> _isUserEmailVerified() async {
+  try {
+    // Reload user to get latest email verification status FROM FIREBASE AUTH
+    await FirebaseAuth.instance.currentUser?.reload();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    if (currentUser != null) {
+      final isVerified = currentUser.emailVerified;
+      debugPrint('📧 Firebase Auth email verification status: $isVerified');
+      return isVerified;
+    }
+    
+    debugPrint('❌ No Firebase user found');
+    return false;
+    
+  } catch (e) {
+    debugPrint('❌ Error checking email verification: $e');
+    return false;
+  }
+}
 
   /// Normal navigation logic - ignore pending invites
-  Future<void> _normalNavigationLogic(UserModel? user) async {
-    if (user == null) {
-      _navigateToLogin();
-      return;
-    }
-    
-    // Check community (no network calls needed)
-    if (user.communityId == null || user.communityId!.isEmpty) {
-      debugPrint("➡️ No community - go to join");
-      _navigateToJoinCommunity();
-      return;
-    }
-    
-    // Check approval (no network calls needed)
-    if (!user.isApproved) {
-      debugPrint("➡️ Not approved - go to pending");
-      _navigateToPendingApproval();
-      return;
-    }
-    
-    // All good - go to dashboard
-    debugPrint("➡️ User has community and is approved - go to dashboard");
-    debugPrint("   Pending invite code saved for later: $_pendingInviteCode");
-    _navigateToDashboard();
+/// Normal navigation logic - ignore pending invites
+Future<void> _normalNavigationLogic(UserModel? user) async {
+  if (user == null) {
+    debugPrint("❌ User is null in normal navigation");
+    _navigateToLogin();
+    return;
   }
+  
+  // Check community (no network calls needed)
+  if (user.communityId == null || user.communityId!.isEmpty) {
+    debugPrint("➡️ No community - go to join");
+    _navigateToJoinCommunity();
+    return;
+  }
+  
+  // Check approval (no network calls needed)
+  if (!user.isApproved) {
+    debugPrint("➡️ Not approved - go to pending");
+    _navigateToPendingApproval();
+    return;
+  }
+  
+  // All good - go to dashboard
+  debugPrint("➡️ User has community and is approved - go to dashboard");
+  debugPrint("   Pending invite code saved for later: $_pendingInviteCode");
+  _navigateToDashboard();
+}
 
   // ⭐ NEW: Navigate to verification pending screen
   void _navigateToVerificationPending(String email) {

@@ -11,6 +11,8 @@ import '../providers/dashboard_provider.dart';
 import '../widgets/members_widget.dart';
 import '../widgets/history_widget.dart';
 import '../widgets/pending_requests_widget.dart';
+import 'package:kofund/routing/route_names.dart';
+
 import '../../../features/programs/providers/program_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -318,15 +320,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
     
-    if (!_isAdmin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Only admins can invite members'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+
     
     setState(() {
       _inviteLoading = true;
@@ -439,49 +433,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Test community notification function (KEEPING THIS)
-  void _testCommunityNotification() async {
-    try {
-      final notificationService = context.read<NotificationService>();
-      final authProvider = context.read<AppAuthProvider>();
-      final currentUser = FirebaseAuth.instance.currentUser;
-      
-      if (currentUser == null || authProvider.user?.communityId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please login and join a community first'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      
-      await notificationService.sendCommunityNotification(
-        communityId: authProvider.user!.communityId!,
-        title: 'Community Test 👥',
-        body: 'Test notification sent to ALL community members',
-        type: NotificationType.announcement,
-        senderName: 'Test System',
-      );
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Community notification sent to ALL members!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      print('✅ Community test notification sent to community: ${authProvider.user!.communityId!}');
-    } catch (e) {
-      print('❌ Error sending community notification: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  // 🆕 Navigate to edit community screen
+  void _navigateToEditCommunity() {
+    Navigator.pushNamed(context, RouteNames.editCommunity);
   }
 
   @override
@@ -498,10 +452,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildNoCommunity(isDarkMode);
     }
 
-    // ✅ WRAP DASHBOARD WITH FRESH PROVIDERS FOR WIDGETS
     return MultiProvider(
       providers: [
-        // Fresh HistoryProvider for current user session
         ChangeNotifierProvider(
           create: (_) => HistoryProvider(
             contributionService: ContributionService(),
@@ -511,7 +463,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             authProvider: auth,
           ),
         ),
-        // Fresh MemberProvider for current user session
         ChangeNotifierProvider(
           create: (_) => MemberProvider(
             userService: UserService(),
@@ -520,7 +471,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             contributionService: ContributionService(),
           ),
         ),
-        // Fresh CommunityProvider for invite functionality
         ChangeNotifierProvider(
           create: (_) => CommunityProvider(
             CommunityFirestoreService(),
@@ -532,7 +482,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
       child: Consumer<DashboardProvider>(
         builder: (context, provider, child) {
-          // ✅ Use skeleton while loading
           if (provider.isLoading && !_hasLoadedData) {
             return DashboardSkeleton(isDarkMode: isDarkMode);
           }
@@ -549,7 +498,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Column(
                   children: [
-                    // 🔒 FIXED APP BAR - Outside SmartRefresher
+                    // 🔒 FIXED APP BAR - SIMPLE STYLE
                     _buildFixedAppBar(stats, isDarkMode),
                     
                     // 🔄 REFRESHABLE AREA STARTS FROM STATS CARD
@@ -586,30 +535,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 16),
                             _buildStatsCard(stats, isDarkMode),
                             const SizedBox(height: 24),
-                            // ✅ ADDED: Poll Dashboard Widget
-                            PollDashboardWidget(
-                              communityId: cid!,
-                              isAdmin: user?.isAdmin ?? false,
-                            ),
+                         
                             
-                            // ✅ REPLACED: Use ProgramCarouselWidget instead of _buildProgramsSection
                             ProgramCarouselWidget(
                               communityId: cid!,
                               isAdmin: user?.isAdmin ?? false,
                             ),
-                            
+                               PollDashboardWidget(
+                              communityId: cid!,
+                              isAdmin: user?.isAdmin ?? false,
+                            ),
                             const SizedBox(height: 24),
                          if (user?.isAdmin ?? false) ...[
-                        const SizedBox(height: 24),
                         PendingRequestsWidget(),
                       ],
                       
-                      const SizedBox(height: 24),
-                            // ✅ USE WIDGETS WITH USER-SPECIFIC KEYS
+                      // const SizedBox(height: 24),
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
                             const SizedBox(height: 24),
                             HistoryWidget(key: ValueKey('history-$userId-$cid')),
-                            const SizedBox(height: 20), // Bottom padding
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
@@ -618,7 +563,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 
                 // 🆕 ADD INVITE FLOATING ACTION BUTTON
-                if (_isAdmin && !_inviteLoading)
+                if (!_inviteLoading)
                   Positioned(
                     bottom: 20,
                     right: 20,
@@ -642,19 +587,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                
-                // 🆕 KEEP COMMUNITY NOTIFICATION TEST BUTTON (SMALLER)
-                Positioned(
-                  bottom: 90,
-                  right: 20,
-                  child: FloatingActionButton.small(
-                    onPressed: _testCommunityNotification,
-                    child: const Icon(Icons.notifications),
-                    tooltip: 'Test Community Notification',
-                    backgroundColor: Colors.purple,
-                    heroTag: 'community_test',
-                  ),
-                ),
               ],
             ),
           );
@@ -663,103 +595,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🔒 FIXED APP BAR - Not refreshable
-  Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
-    return Container(
-      height: 140,
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient(context),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+// 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
+Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
+  return Container(
+    height: 160, // ⬅ Reduced to avoid overflow
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(32),
+        bottomRight: Radius.circular(32),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.15),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
         ),
-      ),
-      child: SafeArea(
-        child: _buildGradientAppBarContent(stats, isDarkMode),
-      ),
-    );
-  }
-
-  // ================================================================
-  // GRADIENT APP BAR CONTENT
-  // ================================================================
-  Widget _buildGradientAppBarContent(Map<String, dynamic> stats, bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stats['clubName'] ?? "Your Club Name",
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+      ],
+    ),
+    child: SafeArea(
+      bottom: false, // ⬅ CRITICAL to fix overflow
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // LEFT CONTENT
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // CLUB NAME + INLINE EDIT (LIKE HTML SPAN)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          stats['clubName'] ?? "Your Club Name",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
+
+                      if (_isAdmin) ...[
+                        const SizedBox(width: 6),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: _navigateToEditCommunity,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.edit_rounded,
+                              size: 18,
+                              color: Colors.white.withOpacity(0.85),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  const SizedBox(height: 0),
+
+                  // MEMBERS COUNT CHIP
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
                     ),
-                    const SizedBox(height: 8),
-                    Row(
+                
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.people_outline,
                           size: 16,
                           color: Colors.white70,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
                           "${stats['membersCount'] ?? 0} Members",
                           style: const TextStyle(
                             fontSize: 14,
+                            fontWeight: FontWeight.w500,
                             color: Colors.white70,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            
-      
-                // Show notification badge for non-admins
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: const Center(
-                        child: NotificationBadge(
-                          badgeColor: Colors.redAccent,
-                          textColor: Colors.white,
-                          iconSize: 22,
-                        ),
-                      ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // RIGHT ACTION – GLASS NOTIFICATION
+            ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.35),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Center(
+                    child: NotificationBadge(
+                      iconSize: 22,
+                      badgeColor: Colors.redAccent,
+                      textColor: Colors.white,
                     ),
                   ),
                 ),
-            ],
-          ),
-        ],
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   // ================================================================
   // COMMUNITY NOT FOUND

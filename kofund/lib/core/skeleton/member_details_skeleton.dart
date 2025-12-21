@@ -158,7 +158,6 @@ class MemberDetailsSkeleton extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
 
             // Member Information Card
             Padding(

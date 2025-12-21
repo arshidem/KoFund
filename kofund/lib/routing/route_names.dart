@@ -3,12 +3,14 @@ class RouteNames {
   static const String splash = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String verificationPending = '/verification-pending';
   // Add this to your RouteNames class
   static const String forgotPassword = '/forgot-password';
   static const String dashboard = '/dashboard';
   static const String createCommunity = '/create-community';
   static const String joinCommunity = '/join-community';
   static const String communityDashboard = '/community-dashboard';
+  static const String editCommunity = '/edit-community';
   static const String pendingApproval = '/pending-approval';
   static const String approvalRequests = '/approval-requests';
   static const String createProgram = '/create-program';

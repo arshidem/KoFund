@@ -4,7 +4,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import '../screens/join_community_screen.dart';
 class PendingApprovalScreen extends StatefulWidget {
   const PendingApprovalScreen({super.key});
 
@@ -14,6 +16,78 @@ class PendingApprovalScreen extends StatefulWidget {
 
 class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   bool _isLeavingCommunity = false;
+  bool _isCheckingStatus = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Cancel any existing listener
+    _checkUserApprovalOnLoad();
+  }
+
+  // Check approval status when screen loads
+  void _checkUserApprovalOnLoad() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (mounted) {
+      final authProvider = context.read<AppAuthProvider>();
+      if (authProvider.user?.isApproved == true) {
+        _navigateToDashboard();
+      }
+    }
+  }
+
+  // Navigate to dashboard
+  void _navigateToDashboard() {
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
+    }
+  }
+
+  // Check status manually (when button is pressed)
+  Future<void> _checkStatus() async {
+    if (!mounted) return;
+    
+    setState(() => _isCheckingStatus = true);
+    
+    try {
+      final authProvider = context.read<AppAuthProvider>();
+      
+      // 1. Force refresh user data from Firestore
+      await authProvider.refreshUserData();
+      
+      // 2. Check if user is now approved
+      if (authProvider.user?.isApproved == true) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 You have been approved!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Navigate after delay
+        await Future.delayed(const Duration(seconds: 1));
+        _navigateToDashboard();
+      } else {
+        // Still not approved
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Still waiting for admin approval...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      SnackbarHelper.showError(context, 'Failed to check status: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingStatus = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,16 +96,12 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pending Approval'),
-
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              // ✅ Logo Header (consistent with other screens)
-      
-
               // Main Content Card
               Expanded(
                 child: SingleChildScrollView(
@@ -187,7 +257,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () => authProvider.refreshUserData(),
+                          onPressed: _isCheckingStatus ? null : _checkStatus,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary(context),
                             foregroundColor: Colors.white,
@@ -197,20 +267,29 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                             elevation: 0,
                             shadowColor: Colors.transparent,
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.refresh, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Check Status',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                          child: _isCheckingStatus
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.refresh, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Check Status',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
 
@@ -310,7 +389,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     );
   }
 
-void _showLeaveCommunityDialog(
+  void _showLeaveCommunityDialog(
       BuildContext context, AppAuthProvider authProvider) {
     showDialog(
       context: context,
@@ -334,7 +413,7 @@ void _showLeaveCommunityDialog(
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, RouteNames.joinCommunity);
+              await _leaveCommunity(context, authProvider);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -346,36 +425,27 @@ void _showLeaveCommunityDialog(
     );
   }
 
-  Future<void> _leaveCommunity(
-      BuildContext context, AppAuthProvider authProvider) async {
-    if (!mounted) return;
-
-    setState(() {
-      _isLeavingCommunity = true;
-    });
-
+Future<void> _leaveCommunity(
+    BuildContext context, AppAuthProvider authProvider) async {
+  
+  // Show loading state
+  setState(() => _isLeavingCommunity = true);
+  
+  // Fire and forget - leave community in background
+  Future.microtask(() async {
     try {
-      final success = await authProvider.removeUserFromCommunity();
-
-      if (!mounted) return;
-
-      if (success) {
-        SnackbarHelper.showSuccess(context, 'Left community successfully');
-        Navigator.pushReplacementNamed(context, RouteNames.joinCommunity);
-      } else {
-        SnackbarHelper.showError(
-            context, authProvider.error ?? 'Failed to leave community');
-      }
+      await authProvider.removeUserFromCommunity();
     } catch (e) {
-      if (mounted) {
-        SnackbarHelper.showError(context, 'Failed to leave community: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLeavingCommunity = false;
-        });
-      }
+      debugPrint('Leave community background error: $e');
     }
-  }
+  });
+  
+  // Navigate immediately
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const JoinCommunityScreen()),
+      (route) => false,
+    );
+  });
+}
 }

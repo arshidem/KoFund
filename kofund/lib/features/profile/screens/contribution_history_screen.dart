@@ -183,8 +183,8 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
           ),
         ),
@@ -425,139 +425,117 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     );
   }
 
-  Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
-    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-    final amount = (contribution['amount'] ?? 0).toDouble();
-    final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
-    final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final programType = contribution['programType'] ?? ProgramTypes.general;
+ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
+  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+  final amount = (contribution['amount'] ?? 0).toDouble();
+  final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
+  final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+  final programType = contribution['programType'] ?? ProgramTypes.general;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+  return Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _showContributionDetails(contribution, authProvider);
+          },
           child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.card(context).withOpacity(0.7),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // Circular icon
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.green.withOpacity(0.1),
+                  ),
+                  child: Icon(
+                    Icons.payments,
+                    size: 20,
+                    color: Colors.green,
+                  ),
                 ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  _showContributionDetails(contribution, authProvider);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+                const SizedBox(width: 12),
+                
+                // Main content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                      Text(
+                        programTitle,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.textPrimary(context),
                         ),
-                        child: Icon(
-                          Icons.payments,
-                          size: 24,
-                          color: Colors.green,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              programTitle,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary(context),
-                                fontSize: 16,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_today,
-                                  size: 12,
-                                  color: AppColors.textSecondary(context),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _formatRelativeDate(createdAt),
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(context),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Paid via ${_formatPaymentMethod(paymentMethod)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '₹${amount.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getPaymentMethodColor(paymentMethod).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _getPaymentMethodColor(paymentMethod).withOpacity(0.3),
-                              ),
-                            ),
-                            child: Text(
-                              _formatPaymentMethod(paymentMethod),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: _getPaymentMethodColor(paymentMethod),
-                              ),
-                            ),
-                          ),
-                        ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-              ),
+                
+                // Time and amount
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatTime(createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '₹${amount.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
+      
+      // Horizontal divider
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+        indent: 16,
+        endIndent: 16,
+      ),
+    ],
+  );
+}
 
+// Add this helper method if not already present
+String _formatTime(DateTime dt) {
+  final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final minute = dt.minute.toString().padLeft(2, '0');
+  final amPm = dt.hour < 12 ? 'AM' : 'PM';
+  return '$hour:$minute $amPm';
+}
   // ✅ UPDATE: Show contribution details method
   void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
     final programTitle = contribution['programTitle'] ?? 'Unknown Program';

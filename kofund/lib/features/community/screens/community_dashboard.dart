@@ -1,11 +1,17 @@
+// lib/features/community/screens/community_dashboard.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/loading_indicator.dart';
+import 'package:kofund/ads/simple_banner_ad.dart';
+import 'package:kofund/routing/route_names.dart';
 import './tabs/dashboard_tab.dart';
 import './tabs/programs_tab.dart';
 import './tabs/history_tab.dart';
 import './tabs/members_tab.dart';
 import './tabs/profile_tab.dart';
-import 'package:kofund/ads/simple_banner_ad.dart'; // Add this import
+
 class CommunityDashboard extends StatefulWidget {
   const CommunityDashboard({super.key});
 
@@ -15,6 +21,7 @@ class CommunityDashboard extends StatefulWidget {
 
 class _CommunityDashboardState extends State<CommunityDashboard> {
   int _currentIndex = 0;
+  bool _isCheckingAuth = true;
 
   final List<Widget> _tabs = [
     const DashboardTab(),
@@ -25,18 +32,92 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    // Add a small delay to ensure context is available
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (mounted) {
+      setState(() {
+        _isCheckingAuth = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AppAuthProvider>();
+
+    // Show loading while checking initial auth status
+    if (_isCheckingAuth) {
+      return const Scaffold(
+        body: LoadingIndicator(message: 'Loading dashboard...'),
+      );
+    }
+
+    // 🧩 1️⃣ If the user is logged out
+    if (authProvider.user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context, 
+            RouteNames.login, 
+            (route) => false
+          );
+        }
+      });
+      return const Scaffold(
+        body: LoadingIndicator(message: 'Redirecting to login...'),
+      );
+    }
+
+    // 🧩 2️⃣ If the user hasn't joined a community
+    if (authProvider.user?.communityId == null || 
+        authProvider.user!.communityId!.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context, 
+            RouteNames.joinCommunity
+          );
+        }
+      });
+      return const Scaffold(
+        body: LoadingIndicator(message: 'Redirecting to community...'),
+      );
+    }
+
+    // 🧩 3️⃣ If user is not yet approved
+    if (authProvider.user?.isApproved == false) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context, 
+            RouteNames.pendingApproval
+          );
+        }
+      });
+      return const Scaffold(
+        body: LoadingIndicator(message: 'Waiting for admin approval...'),
+      );
+    }
+
+    // 🧩 4️⃣ User is authenticated and approved - show dashboard
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Column(
         children: [
-          // Main content - takes most of the space
+          // Main content
           Expanded(
             child: _tabs[_currentIndex],
           ),
           
-          // Banner ad at the bottom
+          // Banner ad
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 2),

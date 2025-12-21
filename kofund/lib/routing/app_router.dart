@@ -8,12 +8,16 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
+import '../features/auth/screens/verification_pending_screen.dart';
 import '../features/community/screens/create_community_screen.dart';
 import '../features/community/screens/join_community_screen.dart';
 import '../features/community/screens/community_dashboard.dart';
+import '../core/widgets/community_guard.dart';
 import '../features/community/screens/pending_approval_screen.dart';
 import '../features/admin/screens/approval_requests_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
+import '../features/dashboard/screens/edit_community_screen.dart';
+
 
 import '../features/members/screens/all_members_screen.dart';
 import '../features/members/screens/member_details_screen.dart';
@@ -105,7 +109,27 @@ case RouteNames.register:
 
 case RouteNames.forgotPassword:
   return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
-
+case RouteNames.verificationPending:
+  // This can be used if needed by other parts of app
+  if (settings.arguments != null && settings.arguments is Map) {
+    final args = settings.arguments as Map<String, dynamic>;
+    final email = args['email'] as String?;
+    final inviteCode = args['inviteCode'] as String?;
+    
+    if (email != null) {
+      return MaterialPageRoute(
+        builder: (_) => VerificationPendingScreen(
+          email: email,
+          pendingInviteCode: inviteCode,
+        ),
+      );
+    }
+  }
+  
+  // Fallback - go to login
+  return MaterialPageRoute(
+    builder: (_) => const LoginScreen(),
+  );
 case RouteNames.dashboard:
   return MaterialPageRoute(builder: (_) => const DashboardScreen());
 
@@ -130,7 +154,11 @@ case RouteNames.joinCommunity:
   // Default: show empty JoinCommunityScreen
   return MaterialPageRoute(builder: (_) => const JoinCommunityScreen());
       case RouteNames.communityDashboard:
-        return MaterialPageRoute(builder: (_) => const CommunityDashboard());
+        return MaterialPageRoute(builder: (_) => CommunityGuard(
+          child: const CommunityDashboard(),
+        ));
+      case RouteNames.editCommunity:
+        return MaterialPageRoute(builder: (_) => const EditCommunityScreen());
       case RouteNames.pendingApproval:
         return MaterialPageRoute(builder: (_) => const PendingApprovalScreen());
       case RouteNames.approvalRequests:

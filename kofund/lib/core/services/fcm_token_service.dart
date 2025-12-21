@@ -482,7 +482,6 @@ Future<bool> isNotificationForCurrentUser(Map<String, dynamic> notificationData)
       Query query = _firestore
           .collection('users')
           .where('role', isEqualTo: 'admin')
-          .where('emailVerified', isEqualTo: true)
           .where('isApproved', isEqualTo: true);
       
       // If communityId provided, filter admins for that community
@@ -515,16 +514,14 @@ Future<bool> isUserEligibleForNotifications() async {
     if (!userDoc.exists) return false;
     
     final userData = userDoc.data();
-    final isEmailVerified = userData?['emailVerified'] ?? false;
     final isApproved = userData?['isApproved'] ?? false;
     final hasCommunity = userData?['communityId'] != null && (userData?['communityId'] as String).isNotEmpty;
     
     debugPrint("📋 User eligibility check:");
-    debugPrint("   emailVerified: $isEmailVerified");
     debugPrint("   isApproved: $isApproved");
     debugPrint("   hasCommunity: $hasCommunity");
-    
-    return isEmailVerified && isApproved && hasCommunity;
+
+    return isApproved && hasCommunity;
   } catch (e) {
     debugPrint("❌ Error checking user eligibility: $e");
     return false;

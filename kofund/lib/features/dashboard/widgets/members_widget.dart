@@ -22,15 +22,18 @@ class _MembersWidgetState extends State<MembersWidget> {
   bool _isLoading = true;
   bool _hasError = false;
   String? _errorMessage;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     print('🔄 DEBUG: MembersWidget initState called');
     
-    // Initial load after a short delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAuthAndLoadData();
+      if (!_isInitialized) {
+        _isInitialized = true;
+        _checkAuthAndLoadData();
+      }
     });
   }
 
@@ -38,31 +41,54 @@ class _MembersWidgetState extends State<MembersWidget> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     
-    // Listen for auth changes
+    if (!_isInitialized) return;
+    
+    // Listen for auth changes - but only when actually different
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
     
-    // Check if user has changed OR community has changed
-    if (user?.uid != _currentUserId || user?.communityId != _currentCommunityId) {
-      print('👤 DEBUG: User/Community changed in MembersWidget');
+    final newUserId = user?.uid;
+    final newCommunityId = user?.communityId;
+    
+    // Check if user or community has ACTUALLY changed
+    if (newUserId != _currentUserId || newCommunityId != _currentCommunityId) {
+      print('👤 DEBUG: User/Community actually changed in MembersWidget');
       print('   Previous user: $_currentUserId, community: $_currentCommunityId');
-      print('   New user: ${user?.uid}, community: ${user?.communityId}');
+      print('   New user: $newUserId, community: $newCommunityId');
       
-      _currentUserId = user?.uid;
-      _currentCommunityId = user?.communityId;
+      _currentUserId = newUserId;
+      _currentCommunityId = newCommunityId;
       
-      // Reset state for new user/community
-      _resetForNewUser();
+      // Only reset if we have a new valid user/community
+      if (newUserId != null || newCommunityId != null) {
+        _resetForNewUser();
+      } else if (newUserId == null && _currentUserId != null) {
+        // User logged out
+        _handleUserLogout();
+      }
+    }
+  }
+
+  void _handleUserLogout() {
+    print('👤 DEBUG: User logged out, clearing MembersWidget');
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Please sign in to view members';
+        _currentUserId = null;
+        _currentCommunityId = null;
+      });
     }
   }
 
   void _resetForNewUser() {
+    if (!mounted) return;
+    
     print('🔄 DEBUG: Resetting MembersWidget for new user/community');
     
-    // Reset the MemberProvider data
-    final memberProvider = context.read<MemberProvider>();
-    memberProvider.clearDataForUserChange();
-    
+    // Reset state
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -80,7 +106,6 @@ class _MembersWidgetState extends State<MembersWidget> {
     
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
-    final memberProvider = context.read<MemberProvider>();
     
     if (user == null) {
       print('❌ DEBUG: No user found in MembersWidget');
@@ -91,9 +116,6 @@ class _MembersWidgetState extends State<MembersWidget> {
           _errorMessage = 'Please sign in to view members';
         });
       }
-      
-      // Clear provider data when no user
-      memberProvider.clearDataForUserChange();
       return;
     }
     
@@ -114,40 +136,44 @@ class _MembersWidgetState extends State<MembersWidget> {
     _loadMembersData(user.communityId!);
   }
 
-  void _loadMembersData(String communityId) async {
-    if (!mounted) return;
+void _loadMembersData(String communityId) async {
+  if (!mounted) return;
+  
+  setState(() {
+    _isLoading = true;
+    _hasError = false;
+    _errorMessage = null;
+  });
+  
+  try {
+    final memberProvider = context.read<MemberProvider>();
     
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
-    });
+    // Call the method without await (since it returns void)
+    memberProvider.refreshForUser(communityId);
     
-    try {
-      final memberProvider = context.read<MemberProvider>();
-      
-      // Refresh provider for the new community
-      memberProvider.refreshForUser(communityId);
-      
-      // Wait a moment for the provider to start loading
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (error) {
-      print('❌ DEBUG: Error loading members data: $error');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-          _errorMessage = 'Failed to load members: $error';
-        });
-      }
+    // If you need to wait for it to complete, check if there's a different method
+    // For example, if there's a loadMembers or fetchMembers method:
+    // await memberProvider.loadMembers(communityId);
+    
+    // Or use a small delay to allow the provider to update
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  } catch (error) {
+    print('❌ DEBUG: Error loading members data: $error');
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to load members: $error';
+      });
     }
   }
+}
 
   void _retryLoading() {
     _checkAuthAndLoadData();
@@ -163,7 +189,7 @@ class _MembersWidgetState extends State<MembersWidget> {
       children: [
         // Header with "Members" and "See all"
         _buildHeaderSection(context, user),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
         
         // Members list with proper user context
         _buildMembersContent(user),
@@ -245,7 +271,7 @@ class _MembersWidgetState extends State<MembersWidget> {
         final displayMembers = members.take(4).toList();
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: AppColors.card(context),
             borderRadius: BorderRadius.circular(12),
@@ -335,92 +361,126 @@ class _MembersWidgetState extends State<MembersWidget> {
     );
   }
 
-  Widget _buildMemberItem({
-    required UserModel member,
-    required BuildContext context,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          // Avatar/Initials
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary(context),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                _getInitials(member.displayName ?? member.email ?? '?'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          
-          // Member details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+Widget _buildMemberItem({
+  required UserModel member,
+  required BuildContext context,
+}) {
+  // Determine which contact info to display
+  final String contactInfo;
+  if (member.phoneNumber != null && member.phoneNumber!.isNotEmpty) {
+    contactInfo = member.phoneNumber!;
+  } else if (member.email != null && member.email!.isNotEmpty) {
+    contactInfo = member.email!;
+  } else {
+    contactInfo = 'No contact info';
+  }
+
+  return Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Add onTap functionality if needed
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
               children: [
-                Text(
-                  member.displayName ?? 'Unnamed Member',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(context),
+                // Avatar/Initials
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary(context).withOpacity(0.12),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  member.email ?? 'No email',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-                if (member.phoneNumber != null && member.phoneNumber!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    member.phoneNumber!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary(context),
+                  child: Center(
+                    child: Text(
+                      _getInitials(member.displayName ?? member.email ?? '?'),
+                      style: TextStyle(
+                        color: AppColors.primary(context),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                
+                // Member details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            member.displayName ?? 'Unnamed Member',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              color: AppColors.textPrimary(context),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: 8),
+                          if (member.isAdmin)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Admin',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange[800],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        contactInfo,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Chevron icon
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textSecondary(context),
+                  size: 20,
+                ),
               ],
             ),
           ),
-          
-          // Admin badge (optional)
-          if (member.isAdmin) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.warning(context).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Admin',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.warning(context),
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
-    );
-  }
+      
+      // Horizontal divider
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+        indent: 16,
+        endIndent: 16,
+      ),
+    ],
+  );
+}
 
   Widget _buildLoadingState(BuildContext context) {
     return Container(

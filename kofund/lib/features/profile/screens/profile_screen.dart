@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             child: Column(
               children: [
                 // Show warning if user mismatch
@@ -330,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                   ),
                 
                 _buildProfileHeader(user),
-                const SizedBox(height: 18),
+                const SizedBox(height: 8),
                 _buildStatisticsCards(
                   totalParticipations,
                   totalContributions,
@@ -384,8 +384,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
           borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
           ),
         ),
       ),
@@ -407,40 +407,30 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
 Widget _buildProfileHeader(UserModel user) {
-  final primary = AppColors.primary(context);
+  // Get the same gradient from AppBar
+  final gradient = AppColors.primaryGradient(context);
   
   return ClipRRect(
     borderRadius: BorderRadius.circular(20),
     child: Container(
       width: double.infinity,
-decoration: BoxDecoration(
-  borderRadius: BorderRadius.circular(24),
-
-  // ✅ Unified soft gradient
-  gradient: LinearGradient(
-    colors: [
-      primary.withOpacity(0.15),
-      primary.withOpacity(0.05),
-    ],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  ),
-
-  // ✅ Unified border
-  border: Border.all(
-    color: primary.withOpacity(0.25),
-  ),
-
-  // ✅ Unified soft shadow (same as Invite Link & Stats)
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.06),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
-    ),
-  ],
-),
-
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        // ✅ Exact same gradient as AppBar
+        gradient: gradient,
+        // ✅ Unified border
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3), // Lighter border to match gradient
+        ),
+        // ✅ Unified soft shadow (same as Invite Link & Stats)
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1), // Slightly stronger for gradient
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
         children: [
@@ -453,13 +443,17 @@ decoration: BoxDecoration(
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient( // 👈 Avatar gradient
-                    colors: [primary.withOpacity(0.3), primary.withOpacity(0.1)],
+                  // Avatar with gradient overlay
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.3),
+                      Colors.white.withOpacity(0.1),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
-                  border: Border.all(color: primary.withOpacity(0.4), width: 2),
+                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                 ),
                 child: const Icon(
                   Icons.person_rounded,
@@ -481,16 +475,13 @@ decoration: BoxDecoration(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient( // 👈 Button gradient
-                          colors: [primary, primary.withOpacity(0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        // Edit button with gradient
+                        gradient: gradient,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: primary.withOpacity(0.35),
+                            color: Colors.black.withOpacity(0.25),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -514,10 +505,10 @@ decoration: BoxDecoration(
           Text(
             user.displayName ?? 'No Name',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary(context),
+              color: Colors.white, // White text on gradient background
             ),
           ),
 
@@ -527,9 +518,9 @@ decoration: BoxDecoration(
           Text(
             user.email,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
-              color: AppColors.textSecondary(context),
+              color: Colors.white70, // Slightly transparent white
             ),
           ),
 
@@ -538,48 +529,51 @@ decoration: BoxDecoration(
             Text(
               user.phoneNumber!,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary(context),
+                color: Colors.white70,
               ),
             ),
           ],
 
           const SizedBox(height: 16),
 
-          /// Status badge with gradient
-          if (user.communityId != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient( // 👈 Status badge gradient
-                  colors: [
-                    Colors.green.withOpacity(0.15),
-                    Colors.green.withOpacity(0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.green.withOpacity(0.35)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.group_rounded, size: 16, color: Colors.green),
-                  SizedBox(width: 6),
-                  Text(
-                    'Community Member',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.green,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          /// Status badge with gradient overlay
+   if (user.communityId != null)
+  Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    decoration: BoxDecoration(
+      color: user.isAdmin 
+          ? Colors.orange.withOpacity(0.25)  // Orange for admin
+          : Colors.white.withOpacity(0.25),  // White for member
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: user.isAdmin 
+            ? Colors.orange.withOpacity(0.5) 
+            : Colors.white.withOpacity(0.5),
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          user.isAdmin ? Icons.admin_panel_settings : Icons.group_rounded,
+          size: 16,
+          color: user.isAdmin ? Colors.orange : Colors.white,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          user.isAdmin ? 'Community Admin' : 'Community Member',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: user.isAdmin ? Colors.orange : Colors.white,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    ),
+  ),
         ],
       ),
     ),
@@ -587,6 +581,9 @@ decoration: BoxDecoration(
 }
 
 Widget _buildStatisticsCards(int participations, int contributions, double totalAmount) {
+  // Get the same gradient
+  final gradient = AppColors.primaryGradient(context);
+  
   return Row(
     children: [
       Expanded(
@@ -594,17 +591,17 @@ Widget _buildStatisticsCards(int participations, int contributions, double total
           title: 'Participations',
           value: participations.toString(),
           icon: Icons.event,
-          color: Colors.blue,
+          gradient: gradient, // Pass gradient here
           onTap: _navigateToParticipationHistory,
         ),
       ),
-      const SizedBox(width: 18),
+      const SizedBox(width: 8),
       Expanded(
         child: _buildStatCard(
           title: 'Contributions',
           value: contributions.toString(),
           icon: Icons.attach_money,
-          color: Colors.green,
+          gradient: gradient, // Pass gradient here
           onTap: _navigateToContributionHistory,
         ),
       ),
@@ -616,7 +613,7 @@ Widget _buildStatCard({
   required String title,
   required String value,
   required IconData icon,
-  required Color color,
+  required Gradient gradient,
   required VoidCallback onTap,
 }) {
   return ClipRRect(
@@ -624,26 +621,16 @@ Widget _buildStatCard({
     child: Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-
-        // ✅ SAME gradient as Invite Link
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-
+        // ✅ SAME gradient as AppBar
+        gradient: gradient,
         // ✅ SAME border weight
         border: Border.all(
-          color: color.withOpacity(0.25),
+          color: Colors.white.withOpacity(0.3),
         ),
-
         // ✅ SAME shadow strength
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -659,41 +646,41 @@ Widget _buildStatCard({
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon container — softened to match Invite Link feel
+                // Icon container — white overlay
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withOpacity(0.25),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: color.withOpacity(0.3),
+                      color: Colors.white.withOpacity(0.5),
                     ),
                   ),
                   child: Icon(
                     icon,
                     size: 22,
-                    color: color,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 Text(
                   value,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: color,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary(context),
+                    color: Colors.white70,
                   ),
                 ),
               ],
@@ -1030,8 +1017,7 @@ Widget _buildStatCard({
                 const SizedBox(height: 16),
                 _buildInfoRow('User ID', user.uid),
                 _buildInfoRow('Member Since', _formatDate(user.createdAt)),
-                _buildInfoRow('Role', user.role.toUpperCase()),
-                _buildInfoRow('Status', user.isApproved ? 'Approved' : 'Pending Approval'),
+_buildInfoRow('Role', user.isAdmin ? 'ADMIN' : 'MEMBER'),                _buildInfoRow('Status', user.isApproved ? 'Approved' : 'Pending Approval'),
 
               ],
             ),

@@ -158,7 +158,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       children: [
         // Header with "Recent Transactions" and "See all"
         _buildHeaderSection(context, user),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         
         // History list with proper user context
         _buildHistoryContent(user),
@@ -239,7 +239,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         final displayItems = items.take(4).toList();
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.card(context),
             borderRadius: BorderRadius.circular(12),
@@ -331,93 +331,166 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     );
   }
 
-  Widget _buildHistoryItem({
-    required HistoryItem item,
-    required BuildContext context,
-  }) {
-    final bool isContribution = item.type == HistoryItemType.contribution;
-    final iconColor = isContribution ? AppColors.revenue(context) : AppColors.expense(context);
-    final amountText = (isContribution ? '+ ' : '- ') + _formatAmount(item.amount);
+Widget _buildHistoryItem({
+  required HistoryItem item,
+  required BuildContext context,
+}) {
+  final bool isContribution = item.type == HistoryItemType.contribution;
+  final iconColor = isContribution ? AppColors.revenue(context) : AppColors.expense(context);
+  final amountText = (isContribution ? '+ ' : '- ') + _formatAmount(item.amount);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          // Transaction Type Icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
+  return Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Add onTap functionality if needed
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            child: Row(
+              children: [
+                // Circular icon with wallet + arrow
+Container(
+  width: 40,
+  height: 40,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    color: iconColor.withOpacity(0.1),
+  ),
+  child: isContribution
+      ? Stack(
+          children: [
+            // Wallet icon (centered)
+            Center(
               child: Icon(
-                isContribution ? Icons.arrow_upward : Icons.arrow_downward,
+                Icons.account_balance_wallet,
                 color: iconColor,
                 size: 20,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          
-          // Transaction details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(context),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+            // Arrow DOWN at top center for contribution (money coming in from above)
+            Positioned(
+              top: 4,  // Position at top center
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary(context),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Icon(
+                  Icons.arrow_downward, // Arrow DOWN for contribution
+                  color: iconColor,
+                  size: 10,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _formatDate(item.date),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary(context),
+              ),
+            ),
+          ],
+        )
+      : Stack(
+          children: [
+            // Wallet icon (centered)
+            Center(
+              child: Icon(
+                Icons.account_balance_wallet,
+                color: iconColor,
+                size: 20,
+              ),
+            ),
+            // Arrow UP at top center for expense (money going out to above)
+            Positioned(
+              top: 4,  // Position at top center
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_upward, // Arrow UP for expense
+                  color: iconColor,
+                  size: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+),
+                const SizedBox(width: 12),
+                
+                // Main content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.textPrimary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
+                ),
+                
+                // Time and amount
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatTime(item.date),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textTertiary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      amountText,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: iconColor,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          
-          // Amount with color coding
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              amountText,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: iconColor,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
-    );
-  }
+      
+      // Horizontal divider
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+        indent: 16,
+        endIndent: 16,
+      ),
+    ],
+  );
+}
 
   Widget _buildLoadingState(BuildContext context) {
     return Container(
@@ -518,6 +591,13 @@ class _HistoryWidgetState extends State<HistoryWidget> {
 
   String _formatAmount(double amount) {
     return '₹${amount.toStringAsFixed(0)}';
+  }
+
+  String _formatTime(DateTime dt) {
+    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final amPm = dt.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $amPm';
   }
 
   String _formatDate(DateTime date) {

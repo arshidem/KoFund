@@ -52,7 +52,6 @@ class FirebaseAuthService {
         'displayName': user.displayName,
         'phoneNumber': user.phoneNumber,
         'photoURL': user.photoURL,
-        'emailVerified': user.emailVerified,
         'isAnonymous': user.isAnonymous,
         'metadata': {
           'creationTime': user.metadata.creationTime?.millisecondsSinceEpoch,
@@ -175,7 +174,6 @@ class FirebaseAuthService {
         displayName: name,
         phoneNumber: phone,
         role: 'member',
-        emailVerified: false, // ✅ ADD email verification status
         isApproved: false,
         createdAt: Timestamp.now(),
       );
@@ -235,7 +233,6 @@ class FirebaseAuthService {
     }
   }
 
-  // ✅ UPDATED: Include emailVerified and other required fields
   Future<void> _createOrUpdateUserInFirestore(User user) async {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
     
@@ -246,7 +243,6 @@ class FirebaseAuthService {
         displayName: user.displayName ?? 'Google User',
         phoneNumber: user.phoneNumber ?? '',
         role: 'member',
-        emailVerified: true, // ✅ Google accounts are verified
         isApproved: false,
         createdAt: Timestamp.now(),
       );
@@ -257,7 +253,6 @@ class FirebaseAuthService {
       // Update last login for existing user
       await _firestore.collection('users').doc(user.uid).update({
         'lastLogin': FieldValue.serverTimestamp(),
-        'emailVerified': true, // ✅ Ensure Google users are marked as verified
       });
       print('✅ Existing Google user updated: ${user.uid}');
     }
