@@ -58,6 +58,7 @@ dependencies:
   clipboard: ^3.0.8
   url_launcher: ^6.1.10
   app_links: ^6.4.1
+  package_info_plus: ^4.0.2
 
 dev_dependencies:
   flutter_test:

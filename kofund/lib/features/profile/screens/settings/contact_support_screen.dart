@@ -282,7 +282,7 @@ class ContactSupportScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -372,7 +372,7 @@ class ContactSupportScreen extends StatelessWidget {
                 onTap: () => _launchPhone(context),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 18),
 
               // Support Information
               Card(

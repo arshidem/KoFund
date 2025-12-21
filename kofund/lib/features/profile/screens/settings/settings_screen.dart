@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -8,6 +9,10 @@ import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kofund/features/developer/screens/developer_dashboard_screen.dart';
+import 'package:kofund/features/developer/screens/add_developer_screen.dart';
+import 'package:kofund/core/constants/app_colors.dart';
+import 'dart:ui';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,8 +22,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-
-
   String? _getUserProvider(User user) {
     if (user.providerData.isEmpty) return null;
     
@@ -34,6 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     return 'other';
   }
+  
   bool _notificationsEnabled = true;
 
   @override
@@ -43,176 +47,394 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final profileProvider = context.read<ProfileProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // App Settings Section
-          _buildSectionHeader('App Settings'),
-          _buildSettingsCard([
-            _buildSettingsSwitch(
-              'Push Notifications',
-              'Receive program updates and reminders',
-              _notificationsEnabled,
-              (value) => setState(() => _notificationsEnabled = value),
-              icon: Icons.notifications_active,
-            ),
-            _buildSettingsSwitch(
-              'Dark Mode',
-              'Switch to dark theme',
-              themeProvider.isDarkMode,
-              (value) => themeProvider.toggleTheme(value),
-              icon: Icons.dark_mode,
-            ),
-          ]),
-
-          // Account Section
-          _buildSectionHeader('Account'),
-          _buildSettingsCard([
-            _buildSettingsItem(
-              'Change Password',
-              Icons.lock,
-              () => Navigator.pushNamed(context, RouteNames.changePassword),
-            ),
-            _buildSettingsItem(
-              'Privacy Settings',
-              Icons.privacy_tip,
-              () => Navigator.pushNamed(context, RouteNames.privacySettings),
-            ),
-          ]),
-
-          // Support Section
-          _buildSectionHeader('Support'),
-          _buildSettingsCard([
-            _buildSettingsItem(
-              'Help & FAQ',
-              Icons.help,
-              () => Navigator.pushNamed(context, RouteNames.helpFAQ),
-            ),
-            _buildSettingsItem(
-              'Contact Support',
-              Icons.support_agent,
-              () => Navigator.pushNamed(context, RouteNames.contactSupport),
-            ),
-            _buildSettingsItem(
-              'Report Issue',
-              Icons.bug_report,
-              () => Navigator.pushNamed(context, RouteNames.reportIssue),
-            ),
-          ]),
-
-          // About Section
-          _buildSectionHeader('About'),
-          _buildSettingsCard([
-            _buildSettingsItem(
-              'Terms of Service',
-              Icons.description,
-              () => Navigator.pushNamed(context, RouteNames.termsOfService),
-            ),
-            _buildSettingsItem(
-              'Privacy Policy',
-              Icons.security,
-              () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
-            ),
-            _buildSettingsItem(
-              'Community Guidelines',
-              Icons.groups,
-              () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
-            ),
-            _buildSettingsItem(
-              'App Version',
-              Icons.info,
-              () => _showAppInfo(),
-              trailing: Text(
-                'v1.0.0',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-          ]),
-
-          // Danger Zone
-          _buildSectionHeader('Danger Zone'),
-          Card(
-            color: Colors.red[50],
-            child: Column(
-              children: [
-                _buildSettingsItem(
-                  'Leave Community',
-                  Icons.exit_to_app,
-                  () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
-                  color: Colors.red,
-                ),
-                _buildSettingsItem(
-                  'Delete Account',
-                  Icons.delete_forever,
-                  () => _showDeleteAccountDialog(authProvider),
-                  color: Colors.red,
-                ),
-                _buildSettingsItem(
-                  'Logout',
-                  Icons.logout,
-                  () => _showLogoutDialog(authProvider),
-                  color: Colors.red,
-                ),
-              ],
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: AppColors.background(context),
+          systemNavigationBarIconBrightness:
+              Theme.of(context).brightness == Brightness.dark
+                  ? Brightness.light
+                  : Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
           ),
-
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12, left: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
         ),
       ),
-    );
-  }
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome Card
+ 
 
-  Widget _buildSettingsCard(List<Widget> children) {
-    return Card(
-      elevation: 1,
-      child: Column(children: children),
-    );
-  }
+            // App Settings Section
+            _buildSectionHeader('App Preferences'),
+            Card(
+              color: AppColors.card(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildSettingsSwitch(
+                    context: context,
+                    title: 'Push Notifications',
+                    subtitle: 'Receive program updates and reminders',
+                    value: _notificationsEnabled,
+                    onChanged: (value) => setState(() => _notificationsEnabled = value),
+                    icon: Icons.notifications_active,
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsSwitch(
+                    context: context,
+                    title: 'Dark Mode',
+                    subtitle: 'Switch to dark theme',
+                    value: themeProvider.isDarkMode,
+                    onChanged: (value) => themeProvider.toggleTheme(value),
+                    icon: Icons.dark_mode,
+                  ),
+                ],
+              ),
+            ),
 
-  Widget _buildSettingsSwitch(
-    String title,
-    String subtitle,
-    bool value,
-    Function(bool) onChanged, {
-    IconData icon = Icons.settings,
+            const SizedBox(height: 24),
+
+            // Account Section
+            _buildSectionHeader('Account'),
+            Card(
+              color: AppColors.card(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Change Password',
+                    icon: Icons.lock,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Privacy Settings',
+                    icon: Icons.privacy_tip,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Support Section
+            _buildSectionHeader('Support'),
+            Card(
+              color: AppColors.card(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Help & FAQ',
+                    icon: Icons.help,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Contact Support',
+                    icon: Icons.support_agent,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Report Issue',
+                    icon: Icons.bug_report,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Developer Tools Section
+            Consumer<AppAuthProvider>(
+              builder: (context, auth, child) {
+                if (auth.isDeveloper) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader('Developer Tools'),
+                      Card(
+                        color: AppColors.card(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: _buildSettingsItem(
+                          context: context,
+                          title: 'Developer Dashboard',
+                          icon: Icons.developer_mode,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DeveloperDashboardScreen(),
+                            ),
+                          ),
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+
+            // About Section
+            _buildSectionHeader('About'),
+            Card(
+              color: AppColors.card(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Terms of Service',
+                    icon: Icons.description,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Privacy Policy',
+                    icon: Icons.security,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Community Guidelines',
+                    icon: Icons.groups,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
+                  ),
+                  Divider(height: 1, color: AppColors.border(context)),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'App Version',
+                    icon: Icons.info,
+                    onTap: _showAppInfo,
+                    trailing: Text(
+                      'v1.0.0',
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Danger Zone
+_buildSectionHeader('Danger Zone', isDangerZone: true), // Add isDangerZone parameter
+Card(
+  color: Colors.transparent,
+  elevation: 0,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Column(
+    children: [
+      // Removed the warning banner container
+      
+      // Actions only
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(12), // Changed to all corners
+        ),
+        child: Column(
+          children: [
+            _buildDangerTile(
+              context: context,
+              icon: Icons.exit_to_app,
+              title: 'Leave Community',
+              onTap: () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
+            ),
+            Divider(height: 1, color: AppColors.border(context)),
+            _buildDangerTile(
+              context: context,
+              icon: Icons.delete_forever,
+              title: 'Delete Account',
+              onTap: () => _showDeleteAccountDialog(authProvider),
+            ),
+            Divider(height: 1, color: AppColors.border(context)),
+            _buildDangerTile(
+              context: context,
+              icon: Icons.logout,
+              title: 'Logout',
+              onTap: () => _showLogoutDialog(authProvider),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+
+const SizedBox(height: 32),
+],
+),
+),
+);
+}
+Widget _buildDangerTile({
+  required BuildContext context,
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+}) {
+  return Material(
+    color: Colors.transparent, // Important for ripple to show
+    child: InkWell(
+      onTap: onTap,
+      splashColor: AppColors.error(context).withOpacity(0.2), // Custom splash color
+      highlightColor: AppColors.error(context).withOpacity(0.1), // Custom highlight color
+      borderRadius: BorderRadius.circular(0), // Match card corners
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Good height
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: AppColors.error(context),
+              size: 22,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.error(context),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.error(context).withOpacity(0.6),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: isDangerZone ? AppColors.error(context) : AppColors.textPrimary(context), // Red for danger zone
+      ),
+    ),
+  );
+}
+
+  Widget _buildSettingsSwitch({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required Function(bool) onChanged,
+    required IconData icon,
   }) {
     return SwitchListTile(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600])),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: AppColors.textSecondary(context),
+        ),
+      ),
       value: value,
       onChanged: onChanged,
-      secondary: Icon(icon, color: Colors.blue[600]),
+      secondary: Icon(
+        icon,
+        color: AppColors.primary(context),
+      ),
+      activeColor: AppColors.primary(context),
     );
   }
 
-  Widget _buildSettingsItem(String title, IconData icon, VoidCallback onTap,
-      {Color? color, Widget? trailing}) {
+  Widget _buildSettingsItem({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? color,
+    Widget? trailing,
+  }) {
     return ListTile(
-      leading: Icon(icon, color: color ?? Colors.blue[600]),
-      title: Text(title, style: TextStyle(color: color)),
-      trailing: trailing ?? Icon(Icons.chevron_right, color: color ?? Colors.grey),
+      leading: Icon(
+        icon,
+        color: color ?? AppColors.primary(context),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: color ?? AppColors.textPrimary(context),
+        ),
+      ),
+      trailing: trailing ?? Icon(
+        Icons.chevron_right,
+        color: color ?? AppColors.textSecondary(context),
+        size: 18,
+      ),
       onTap: onTap,
     );
   }
@@ -221,81 +443,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('App Information'),
-        content: const Column(
+        title: Text(
+          'App Information',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        backgroundColor: AppColors.card(context),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Fund App Community Manager'),
-            SizedBox(height: 8),
-            Text('Version: 1.0.0'),
-            Text('Build: 2024.01.01'),
-            SizedBox(height: 8),
-            Text('A community fund management app for organizing programs and tracking contributions.'),
+            Text(
+              'Fund App Community Manager',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Version: 1.0.0',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+            Text(
+              'Build: 2024.01.01',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'A community fund management app for organizing programs and tracking contributions.',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(
+              'Close',
+              style: TextStyle(color: AppColors.primary(context)),
+            ),
           ),
         ],
       ),
     );
   }
 
-void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Leave Community?'),
-      content: const Text(
-        'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+  void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Leave Community?',
+          style: TextStyle(color: AppColors.textPrimary(context)),
         ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context); // Close dialog first
-            
-            // Show loading
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(content: Text('Leaving community...')),
-            );
-
-            // ✅ ACTUALLY LEAVE THE COMMUNITY
-            final success = await profileProvider.leaveCommunity();
-            
-            if (success) {
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('Successfully left community')),
-              );
+        backgroundColor: AppColors.card(context),
+        content: Text(
+          'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
               
-              // Navigate to login and clear all previous routes
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                RouteNames.login,
-                (route) => false,
-              );
-            } else {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               scaffoldMessenger.showSnackBar(
-                SnackBar(content: Text('Failed to leave community: ${profileProvider.error}')),
+                const SnackBar(
+                  content: Text('Leaving community...'),
+                  backgroundColor: Colors.orange,
+                ),
               );
-            }
-          },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Leave'),
-        ),
-      ],
-    ),
-  );
-}
 
- void _showDeleteAccountDialog(AppAuthProvider authProvider) {
+              final success = await profileProvider.leaveCommunity();
+              
+              if (success) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Successfully left community'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  RouteNames.login,
+                  (route) => false,
+                );
+              } else {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to leave community: ${profileProvider.error}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error(context),
+            ),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(AppAuthProvider authProvider) {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final user = FirebaseAuth.instance.currentUser;
     
@@ -307,13 +569,18 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account?'),
+        title: Text(
+          'Delete Account?',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+        backgroundColor: AppColors.card(context),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'This action cannot be undone.\n\n'
               'All your data will be permanently deleted.',
+              style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
             
@@ -321,13 +588,13 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.account_circle, color: Colors.blue, size: 24),
+                    Icon(Icons.account_circle, color: Colors.blue, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -337,12 +604,15 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
                             'Google Account User',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
+                              color: Colors.blue,
                             ),
                           ),
                           Text(
                             'You will need to sign in again with Google',
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(context),
+                            ),
                           ),
                         ],
                       ),
@@ -356,7 +626,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.orange),
               ),
@@ -365,14 +635,14 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                      Icon(Icons.info_outline, color: Colors.orange, size: 18),
                       const SizedBox(width: 8),
                       Text(
                         'If deletion fails:',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.orange[800],
+                          color: Colors.orange,
                         ),
                       ),
                     ],
@@ -383,9 +653,27 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('1. Sign out', style: const TextStyle(fontSize: 12)),
-                        Text('2. Sign in again', style: const TextStyle(fontSize: 12)),
-                        Text('3. Delete immediately', style: const TextStyle(fontSize: 12)),
+                        Text(
+                          '1. Sign out',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                        Text(
+                          '2. Sign in again',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                        Text(
+                          '3. Delete immediately',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -397,10 +685,15 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error(context),
+            ),
             onPressed: () async {
               Navigator.pop(context);
               final providerType = _getUserProvider(user);
@@ -419,6 +712,8 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
       ),
     );
   }
+
+
 
 // New method to show password dialog for email users
 void _showPasswordDialog(ProfileProvider profileProvider) {

@@ -40,7 +40,11 @@ class AppAuthProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   UserModel? _user;
-  bool _isLoading = false;
+bool get isDeveloper {
+  if (_user == null) return false;
+  // Make sure isDeveloper field exists and is not null
+  return _user!.isDeveloper ?? false;
+}bool _isLoading = false;
   String? _error;
   StreamSubscription<User?>? _userSubscription;
   bool _isOfflineMode = false;
@@ -1002,6 +1006,25 @@ Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
       }
     } else {
       // Online mode - refresh from server
+      await refreshUserData();
+    }
+  }
+
+    Future<void> makeDeveloper(String userId, bool isDeveloper) async {
+    if (!this.isDeveloper) {
+      throw Exception('Only developers can modify developer status');
+    }
+    
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .update({
+          'isDeveloper': isDeveloper,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+    
+    // Refresh current user if modifying self
+    if (userId == _user?.uid) {
       await refreshUserData();
     }
   }

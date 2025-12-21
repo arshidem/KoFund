@@ -146,36 +146,36 @@ class HelpFAQScreen extends StatelessWidget {
               // FAQ List
               ...faqItems.map((faq) => _buildFAQItem(faq, context)).toList(),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 12),
 
               // Contact Support Button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ContactSupportScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Row(
-                  width
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.support_agent),
-                    SizedBox(width: 8),
-                    Text('Contact Support Team'),
-                  ],
-                ),
-              ),
+        ElevatedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ContactSupportScreen(),
+      ),
+    );
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: AppColors.primary(context),
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    minimumSize: const Size(double.infinity, 50), // ← Add this line
+  ),
+  child: const Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.support_agent),
+      SizedBox(width: 8),
+      Text('Contact Support Team'),
+    ],
+  ),
+),
 
               const SizedBox(height: 20),
 
@@ -186,7 +186,7 @@ class HelpFAQScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

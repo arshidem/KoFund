@@ -21,6 +21,7 @@ import 'core/services/contribution_service.dart';
 import 'core/services/expense_service.dart';
 import 'core/services/user_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/issue_service.dart';
 import 'core/services/notification_storage_service.dart';
 import 'core/services/fcm_token_service.dart';
 
@@ -38,6 +39,7 @@ import 'features/dashboard/providers/dashboard_provider.dart';
 import 'features/history/providers/history_provider.dart';
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
+import 'features/issues/providers/issue_provider.dart';
 
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
@@ -254,6 +256,7 @@ class _AppProvidersState extends State<AppProviders> {
   late final ContributionService contributionService;
   late final ExpenseService expenseService;
   late final UserService userService;
+  late final IssueService issueService;
   late final NotificationStorageService notificationStorageService;
   late final FCMTokenService fcmTokenService;
   late final NotificationService notificationService;
@@ -272,6 +275,7 @@ class _AppProvidersState extends State<AppProviders> {
     participantService = ParticipantService();
     contributionService = ContributionService();
     expenseService = ExpenseService();
+    issueService = IssueService();
     userService = UserService();
     notificationStorageService = NotificationStorageService();
     fcmTokenService = FCMTokenService();
@@ -358,6 +362,7 @@ class _AppProvidersState extends State<AppProviders> {
         Provider<ContributionService>.value(value: contributionService),
         Provider<ExpenseService>.value(value: expenseService),
         Provider<UserService>.value(value: userService),
+        Provider<IssueService>.value(value: issueService),
         
         // 🔔 Notification Services
         Provider<NotificationStorageService>.value(value: notificationStorageService),
@@ -501,6 +506,9 @@ class _AppProvidersState extends State<AppProviders> {
         // 📊 Poll Provider
         ChangeNotifierProvider(
           create: (context) => PollProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => IssueProvider(),
         ),
 
         // 🌗 Theme Provider
