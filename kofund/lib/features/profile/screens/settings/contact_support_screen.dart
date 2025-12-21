@@ -7,24 +7,35 @@ import 'package:url_launcher/url_launcher.dart';
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
 
-  Future<void> _launchEmail(BuildContext context) async {
-    final email = 'kofundapp@gmail.com';
-    final subject = 'Kofund App Support';
-    final body = 'Hello Kofund Support,\n\nI need help with:';
+Future<void> _launchEmail(BuildContext context) async {
+  final email = 'kofundapp@gmail.com';
+  final subject = 'Kofund App Support';
+  final body = 'Hello Kofund Support,\n\nI need help with:';
+  
+  final nativeUrl = Uri.parse('mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
+  
+  print('Launching email URL: $nativeUrl');
+  
+  try {
+    // Try to launch directly
+    final result = await launchUrl(
+      nativeUrl,
+      mode: LaunchMode.externalApplication,
+    );
     
-    final nativeUrl = Uri.parse('mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
+    print('Launch result: $result');
     
-    try {
-      if (await canLaunchUrl(nativeUrl)) {
-        await launchUrl(nativeUrl);
-      } else {
-        // Show options dialog
-        _showEmailOptionsDialog(context, email, subject, body);
-      }
-    } catch (e) {
+    if (!result) {
+      print('LaunchUrl returned false, showing options');
+      await Future.delayed(Duration(milliseconds: 300));
       _showEmailOptionsDialog(context, email, subject, body);
     }
+  } catch (e) {
+    print('LaunchUrl error: $e');
+    await Future.delayed(Duration(milliseconds: 300));
+    _showEmailOptionsDialog(context, email, subject, body);
   }
+}
 
   void _showEmailOptionsDialog(BuildContext context, String email, String subject, String body) {
     showDialog(

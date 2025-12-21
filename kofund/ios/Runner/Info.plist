@@ -63,5 +63,28 @@
     <!-- For Universal Links (if you get a domain later) -->
     <key>FlutterDeepLinkingEnabled</key>
     <false/>
+	   <!-- ==================== ADD THIS SECTION FOR GMAIL SUPPORT ==================== -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <!-- For mailto: links -->
+        <string>mailto</string>
+        
+        <!-- For Gmail app -->
+        <string>googlegmail</string>
+        
+        <!-- For other email apps (optional but recommended) -->
+        <string>readdle-spark</string>  <!-- Spark -->
+        <string>ms-outlook</string>     <!-- Outlook -->
+        <string>ymail</string>          <!-- Yahoo Mail -->
+        
+        <!-- For WhatsApp support -->
+        <string>whatsapp</string>
+        
+        <!-- For phone calls -->
+        <string>tel</string>
+    </array>
+    <!-- ==================== END OF GMAIL SUPPORT SECTION ==================== -->
+    
+</dict>
 </dict>
 </plist>
