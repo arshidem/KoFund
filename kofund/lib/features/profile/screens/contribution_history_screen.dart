@@ -165,40 +165,47 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-          toolbarHeight: 80, // Set your desired height here (default is 56)
-
-        title: const Text('My Contributions'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        actions: [
-          if (currentUser != null)
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              onPressed: _refreshData,
-              tooltip: 'Refresh',
-            ),
-        ],
+   appBar: AppBar(
+  toolbarHeight: 80,
+  title: const Text(
+    'My Contributions', // Added TextStyle here
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () => Navigator.pop(context),
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  systemOverlayStyle: const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark, // Added this for consistency
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
+    ),
+  ),
+  actions: [
+    if (currentUser != null)
+      IconButton(
+        icon: const Icon(Icons.refresh, color: Colors.white),
+        onPressed: _refreshData,
+        tooltip: 'Refresh',
+      ),
+  ],
+),
       body: RefreshIndicator(
         onRefresh: _refreshData,
         child: _buildContent(profileProvider, authProvider, currentUser),

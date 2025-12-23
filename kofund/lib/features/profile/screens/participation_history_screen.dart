@@ -52,23 +52,26 @@ class _ParticipationHistoryScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-     appBar: AppBar(
-        toolbarHeight: 80, // Set your desired height here (default is 56)
-
-  title: Text(
-    'My Programs',
-    style: TextStyle(color: AppColors.textPrimary(context)), // Use textPrimary
+appBar: AppBar(
+  toolbarHeight: 80,
+  title: const Text(
+    'My Programs', // Updated with TextStyle
+    style: TextStyle(
+      color: Colors.white, // Changed to white
+      fontSize: 18, // Added from Members app bar
+      fontWeight: FontWeight.w600, // Added from Members app bar
+    ),
   ),
   centerTitle: true,
   leading: IconButton(
-    icon: Icon(
+    icon: const Icon(
       Icons.arrow_back,
-      color: AppColors.textPrimary(context), // Use textPrimary for icon
+      color: Colors.white, // Changed to white
     ),
     onPressed: () => Navigator.pop(context),
   ),
   backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white, // Keep this for other icons if any
+  foregroundColor: Colors.white,
   elevation: 0,
   systemOverlayStyle: SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

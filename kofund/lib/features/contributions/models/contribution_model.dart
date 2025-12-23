@@ -9,6 +9,9 @@ class ContributionModel {
   String paymentMethod;
   String status;
   Timestamp createdAt;
+  
+  // ✅ ADD: Note field
+  String? note;
 
   // ✅ ADD: Monthly fields
   bool isMonthlyContribution;
@@ -21,7 +24,9 @@ class ContributionModel {
     required this.communityId,
     required this.amount,
     required this.paymentMethod,
-    // ✅ ADD: Monthly parameters (make isMonthlyContribution optional)
+    // ✅ ADD: Note parameter
+    this.note,
+    // ✅ ADD: Monthly parameters
     this.isMonthlyContribution = false,
     this.monthId,
     Timestamp? createdAt,
@@ -29,7 +34,7 @@ class ContributionModel {
     status = 'completed',
     createdAt = createdAt ?? Timestamp.now();
 
-  // ✅ UPDATE: Factory constructor
+  // ✅ UPDATE: Factory constructor with note
   factory ContributionModel.fromMap(Map<String, dynamic> map, String id) {
     return ContributionModel(
       contributionId: id,
@@ -38,13 +43,14 @@ class ContributionModel {
       communityId: map['communityId'] ?? '',
       amount: (map['amount'] ?? 0).toDouble(),
       paymentMethod: map['paymentMethod'] ?? '',
-      isMonthlyContribution: map['isMonthlyContribution'] ?? false, // ✅ Add this
-      monthId: map['monthId'], // ✅ Add this
+      note: map['note'], // ✅ Add this
+      isMonthlyContribution: map['isMonthlyContribution'] ?? false,
+      monthId: map['monthId'],
       createdAt: map['createdAt'] ?? Timestamp.now(),
     );
   }
 
-  // ✅ UPDATE: toMap method
+  // ✅ UPDATE: toMap method with note
   Map<String, dynamic> toMap() {
     return {
       'programId': programId,
@@ -54,13 +60,15 @@ class ContributionModel {
       'paymentMethod': paymentMethod,
       'status': 'completed',
       'createdAt': createdAt,
+      // ✅ ADD: Note field
+      'note': note,
       // ✅ ADD: Monthly fields
       'isMonthlyContribution': isMonthlyContribution,
       'monthId': monthId,
     };
   }
 
-  // ✅ UPDATE: copyWith method
+  // ✅ UPDATE: copyWith method with note
   ContributionModel copyWith({
     String? contributionId,
     String? programId,
@@ -68,6 +76,7 @@ class ContributionModel {
     String? communityId,
     double? amount,
     String? paymentMethod,
+    String? note,
     bool? isMonthlyContribution,
     String? monthId,
     Timestamp? createdAt,
@@ -79,6 +88,7 @@ class ContributionModel {
       communityId: communityId ?? this.communityId,
       amount: amount ?? this.amount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      note: note ?? this.note, // ✅ Add this
       isMonthlyContribution: isMonthlyContribution ?? this.isMonthlyContribution,
       monthId: monthId ?? this.monthId,
       createdAt: createdAt ?? this.createdAt,

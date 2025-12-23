@@ -13,7 +13,8 @@ import 'package:kofund/features/developer/screens/developer_dashboard_screen.dar
 import 'package:kofund/features/developer/screens/add_developer_screen.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'dart:ui';
-
+import 'package:kofund/core/utils/app_info.dart';
+ 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -22,6 +23,31 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+
+    String appVersion = '1.0.0';
+  String buildNumber = '1';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+Future<void> _loadAppInfo() async {
+  print('Loading app info...');
+  final version = await AppInfo.appVersion;
+  final build = await AppInfo.buildNumber;
+  print('Got version: $version, build: $build');
+  
+  if (mounted) {
+    setState(() {
+      appVersion = version;
+      buildNumber = build;
+    });
+    print('State updated to version: $appVersion');
+  }
+}
+
   String? _getUserProvider(User user) {
     if (user.providerData.isEmpty) return null;
     
@@ -259,7 +285,7 @@ appBar: AppBar(
                     icon: Icons.info,
                     onTap: _showAppInfo,
                     trailing: Text(
-                      'v1.0.0',
+                      'v$appVersion',
                       style: TextStyle(color: AppColors.textSecondary(context)),
                     ),
                   ),
@@ -464,11 +490,11 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
             ),
             const SizedBox(height: 8),
             Text(
-              'Version: 1.0.0',
+              'Version: $appVersion',
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             Text(
-              'Build: 2024.01.01',
+              'Build: $buildNumber',
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 8),

@@ -229,7 +229,7 @@ void _showAddContributionModal(BuildContext context) {
 
             return Container(
               width: double.infinity,
-              margin: const EdgeInsets.all(8),
+              margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient(context),
@@ -355,7 +355,7 @@ void _showAddContributionModal(BuildContext context) {
 
   Widget _buildSearchFilterBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       child: Row(
         children: [
           // Search Field - Takes most of the space
@@ -471,81 +471,98 @@ void _showAddContributionModal(BuildContext context) {
     );
   }
 
-  Widget _buildContributionCard(ContributionModel contribution, BuildContext context, bool isAdmin) {
-    return Card(
-      color: AppColors.card(context),
-      elevation: 0.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: AppColors.border(context),
-          width: 0.5,
+ Widget _buildContributionCard(ContributionModel contribution, BuildContext context, bool isAdmin) {
+  return Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isAdmin ? () {
+            _showContributionActions(contribution, context);
+          } : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                // Leading icon/avatar
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.success(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.payments,
+                    color: AppColors.success(context),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Main content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FutureBuilder<String>(
+                        future: _getUserName(contribution.userId, context),
+                        builder: (context, snapshot) {
+                          final userName = snapshot.data ?? 'User';
+                          return Row(
+                            children: [
+                              Text(
+                                userName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary(context),
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_formatPaymentMethod(contribution.paymentMethod)} • ${DateFormat('dd/MM/yyyy').format(contribution.createdAt.toDate())}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Trailing amount
+                Text(
+                  '₹${contribution.amount.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.success(context).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            Icons.check_circle,
-            color: AppColors.success(context),
-            size: 20,
-          ),
-        ),
-        title: FutureBuilder<String>(
-          future: _getUserName(contribution.userId, context),
-          builder: (context, snapshot) {
-            final userName = snapshot.data ?? 'User';
-            return Text(
-              userName,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary(context),
-                fontSize: 15,
-              ),
-            );
-          },
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 2),
-            Text(
-              '${_formatPaymentMethod(contribution.paymentMethod)} • ${DateFormat('dd/MM/yyyy').format(contribution.createdAt.toDate())}',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '₹${contribution.amount.toStringAsFixed(0)}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-          ],
-        ),
-        onTap: isAdmin ? () {
-          _showContributionActions(contribution, context);
-        } : null,
+      
+      // Horizontal divider - Exactly like All Members screen
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
       ),
-    );
-  }
-
+    ],
+  );
+}
   Widget _buildEmptyState(bool noContributions, BuildContext context) {
     return Center(
       child: Column(
@@ -614,123 +631,131 @@ void _showAddContributionModal(BuildContext context) {
     return filtered;
   }
 
-  void _showContributionActions(ContributionModel contribution, BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.35,
-          minChildSize: 0.25,
-          maxChildSize: 0.6,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
+ void _showContributionActions(ContributionModel contribution, BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Container(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {}, // Empty onTap to prevent inner taps from closing
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.65,
+              minChildSize: 0.6,
+              maxChildSize: 0.65,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-              child: SingleChildScrollView(
-                controller: scrollController,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Handle bar
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: AppColors.border(context),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-
-                    // Title
-                    Text(
-                      'Contribution Actions',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textPrimary(context),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // View Details
-                    _buildActionTile(
-                      context: context,
-                      icon: Icons.visibility_outlined,
-                      title: 'View Details',
-                      color: AppColors.primary(context),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showContributionDetails(contribution, context);
-                      },
-                    ),
-
-                    // Delete Contribution
-                    _buildActionTile(
-                      context: context,
-                      icon: Icons.delete_outline,
-                      title: 'Delete Contribution',
-                      color: AppColors.error(context),
-                      isDestructive: true,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showDeleteConfirmation(contribution, context);
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Cancel Button
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: SizedBox(
-                        height: 55,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.card(context),
-                            foregroundColor: AppColors.textPrimary(context),
-                            side: BorderSide(color: AppColors.border(context)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: AppColors.border(context),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
+                        // Title
+                        Text(
+                          'Contribution Actions',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // View Details
+                        _buildActionTile(
+                          context: context,
+                          icon: Icons.visibility_outlined,
+                          title: 'View Details',
+                          color: AppColors.primary(context),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showContributionDetails(contribution, context);
+                          },
+                        ),
+
+                        // Delete Contribution
+                        _buildActionTile(
+                          context: context,
+                          icon: Icons.delete_outline,
+                          title: 'Delete Contribution',
+                          color: AppColors.error(context),
+                          isDestructive: true,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showDeleteConfirmation(contribution, context);
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Cancel Button
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: SizedBox(
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.card(context),
+                                foregroundColor: AppColors.textPrimary(context),
+                                side: BorderSide(color: AppColors.border(context)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
   Widget _buildActionTile({
     required BuildContext context,
     required IconData icon,

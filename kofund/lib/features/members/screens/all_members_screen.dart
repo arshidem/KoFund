@@ -859,7 +859,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
         // Provider Error Message
         if (memberProvider.error != null) ...[
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Card(
               color: Colors.red[50],
               child: Padding(
@@ -1341,13 +1341,12 @@ Widget _buildModernSearchBar() {
         ),
         
         // Horizontal divider
-        Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.border(context),
-          indent: 16,
-          endIndent: 16,
-        ),
+     Divider(
+  height: 1,
+  thickness: 1,
+  color: AppColors.border(context),
+  indent: 0, // aligns with avatar + spacing
+),
       ],
     );
   }

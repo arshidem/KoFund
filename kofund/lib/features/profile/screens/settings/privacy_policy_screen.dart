@@ -3,9 +3,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:kofund/core/utils/app_info.dart';
 
-class PrivacyPolicyScreen extends StatelessWidget {
+
+class PrivacyPolicyScreen extends StatefulWidget {
   const PrivacyPolicyScreen({super.key});
+
+  @override
+  State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+}
+
+class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
+
+    String appVersion = '1.0.0';
+  String buildNumber = '1';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+Future<void> _loadAppInfo() async {
+  print('Loading app info...');
+  final version = await AppInfo.appVersion;
+  final build = await AppInfo.buildNumber;
+  print('Got version: $version, build: $build');
+  
+  if (mounted) {
+    setState(() {
+      appVersion = version;
+      buildNumber = build;
+    });
+    print('State updated to version: $appVersion');
+  }
+}
 
   Future<void> _launchPrivacyEmail(BuildContext context) async {
     final email = 'kofundapp@gmail.com';
@@ -439,7 +471,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 1.0.0 • Last updated: December 2025',
+                      'Version $appVersion • Last updated: December 2025',
                       style: TextStyle(
                         color: AppColors.textTertiary(context),
                         fontSize: 11,

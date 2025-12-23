@@ -598,12 +598,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
 Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
   return Container(
-    height: 160, // ⬅ Reduced to avoid overflow
+    height: 150, // ⬅ Reduced to avoid overflow
     decoration: BoxDecoration(
       gradient: AppColors.primaryGradient(context),
       borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(32),
-        bottomRight: Radius.circular(32),
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
       boxShadow: [
         BoxShadow(
@@ -665,9 +665,7 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
 
                   // MEMBERS COUNT CHIP
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                    ),
+                 
                 
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

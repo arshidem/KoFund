@@ -3,8 +3,42 @@ import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
-class CommunityGuidelinesScreen extends StatelessWidget {
+import 'package:kofund/core/utils/app_info.dart';
+
+
+class CommunityGuidelinesScreen extends StatefulWidget {
   const CommunityGuidelinesScreen({super.key});
+
+  @override
+  State<CommunityGuidelinesScreen> createState() => CommunityGuidelinesScreenState();
+}
+
+class CommunityGuidelinesScreenState extends State<CommunityGuidelinesScreen> {
+
+
+  String appVersion = '1.0.0';
+  String buildNumber = '1';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+Future<void> _loadAppInfo() async {
+  print('Loading app info...');
+  final version = await AppInfo.appVersion;
+  final build = await AppInfo.buildNumber;
+  print('Got version: $version, build: $build');
+  
+  if (mounted) {
+    setState(() {
+      appVersion = version;
+      buildNumber = build;
+    });
+    print('State updated to version: $appVersion');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +120,7 @@ class CommunityGuidelinesScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          'Last updated: December 2023',
+                          'Last updated: December 2025',
                           style: TextStyle(
                             color: AppColors.primary(context),
                             fontSize: 13,
@@ -416,7 +450,7 @@ class CommunityGuidelinesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version 1.0.0 • Building better communities together',
+                      'Version $appVersion • Building better communities together',
                       style: TextStyle(
                         color: AppColors.textTertiary(context),
                         fontSize: 11,

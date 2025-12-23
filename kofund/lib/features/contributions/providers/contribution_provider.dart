@@ -2,10 +2,21 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/contribution_service.dart';
 import '../models/contribution_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+
+  // Cache entry class
+  class CacheEntry {
+    final List<ContributionModel> data;
+    final DateTime timestamp;
+    
+    CacheEntry({required this.data, required this.timestamp});
+  }
 
 class ContributionProvider with ChangeNotifier {
   final ContributionService _contributionService = ContributionService();
-
+ final Map<String, CacheEntry> _cache = {}; // Simplified cache structure
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Add this
   List<ContributionModel> _contributions = [];
   List<ContributionModel> _userContributions = [];
   List<ContributionModel> _communityContributions = [];
@@ -14,7 +25,6 @@ class ContributionProvider with ChangeNotifier {
   double _totalContributions = 0;
   Map<String, dynamic> _paymentStats = {};
   List<Map<String, dynamic>> _topContributors = [];
-
   List<ContributionModel> get contributions => _contributions;
   List<ContributionModel> get userContributions => _userContributions;
   List<ContributionModel> get communityContributions => _communityContributions;
@@ -32,6 +42,10 @@ class ContributionProvider with ChangeNotifier {
   Future<void> addContribution(ContributionModel contribution) async {
     try {
       await _contributionService.addContribution(contribution);
+      
+      // Clear relevant cache
+      clearCacheForUser(contribution.programId, contribution.userId);
+      
       // Reload contributions after adding new one
       if (contribution.programId.isNotEmpty) {
         await loadProgramContributions(contribution.programId);
@@ -42,13 +56,14 @@ class ContributionProvider with ChangeNotifier {
       rethrow;
     }
   }
-
   // ✅ REMOVED: updateContributionStatus (not needed - all contributions are completed)
 
-  // Update contribution
   Future<void> updateContribution(ContributionModel contribution) async {
     try {
       await _contributionService.updateContribution(contribution);
+      
+      // Clear relevant cache
+      clearCacheForUser(contribution.programId, contribution.userId);
       
       // Update in local lists
       _updateContributionInLists(contribution);
@@ -87,7 +102,16 @@ class ContributionProvider with ChangeNotifier {
   // Delete contribution
   Future<void> deleteContribution(String contributionId) async {
     try {
+      // Get contribution details before deletion to clear correct cache
+      final contribution = await getContributionById(contributionId);
+      
       await _contributionService.deleteContribution(contributionId);
+      
+      // Clear relevant cache if we have contribution details
+      if (contribution != null) {
+        clearCacheForUser(contribution.programId, contribution.userId);
+      }
+      
       notifyListeners();
     } catch (e) {
       rethrow;
@@ -276,16 +300,27 @@ class ContributionProvider with ChangeNotifier {
   // 🔹 Filtering & Query Methods (SIMPLIFIED)
   // -------------------------------
 
-  // Get contribution by ID
+ // Get contribution by ID
   Future<ContributionModel?> getContributionById(String contributionId) async {
     try {
-      // Search in all loaded contributions
+      // First check in cache by searching all loaded contributions
       final allContributions = [..._contributions, ..._userContributions, ..._communityContributions];
-      return allContributions.firstWhere(
+      final localResult = allContributions.firstWhere(
         (contribution) => contribution.contributionId == contributionId,
+        orElse: () => null as ContributionModel,
       );
+      
+      if (localResult != null) return localResult;
+      
+      // If not found locally, try to fetch from Firestore
+      final doc = await _firestore.collection('contributions').doc(contributionId).get();
+      if (doc.exists) {
+        return ContributionModel.fromMap(doc.data()!, doc.id);
+      }
+      
+      return null;
     } catch (e) {
-      print('Contribution not found: $e');
+      print('❌ Error getting contribution by ID: $e');
       return null;
     }
   }
@@ -328,14 +363,74 @@ class ContributionProvider with ChangeNotifier {
       contribution.userId == userId
     );
   }
-
-  // Get contributions for a specific user in a program
-  List<ContributionModel> getUserContributionsForProgram(String programId, String userId) {
-    return _contributions.where((contribution) =>
-      contribution.programId == programId &&
-      contribution.userId == userId
-    ).toList();
+  Future<List<ContributionModel>> getUserContributionsForProgram(
+    String programId, 
+    String userId,
+    {bool forceRefresh = false}
+  ) async {
+    final cacheKey = '$programId-$userId';
+    final now = DateTime.now();
+    
+    // Check cache (valid for 30 seconds)
+    if (!forceRefresh && 
+        _cache.containsKey(cacheKey) && 
+        now.difference(_cache[cacheKey]!.timestamp) < Duration(seconds: 30)) {
+      print('📦 Using cached contributions for $cacheKey');
+      return _cache[cacheKey]!.data;
+    }
+    
+    try {
+      print('🌐 Fetching fresh contributions from Firestore for $cacheKey');
+      
+      final querySnapshot = await _firestore
+          .collection('contributions')
+          .where('programId', isEqualTo: programId)
+          .where('userId', isEqualTo: userId)
+          .limit(50) // Add reasonable limit
+          .get(const GetOptions(source: Source.serverAndCache)); // Use cache when possible
+      
+      final contributions = querySnapshot.docs
+          .map((doc) => ContributionModel.fromMap(doc.data(), doc.id))
+          .toList();
+      
+      print('✅ Fetched ${contributions.length} contributions from Firestore');
+      
+      // Update cache
+      _cache[cacheKey] = CacheEntry(
+        data: contributions,
+        timestamp: now,
+      );
+      
+      return contributions;
+    } catch (e) {
+      print('❌ Error fetching contributions from Firestore: $e');
+      
+      // Return cached data if available (even if stale)
+      if (_cache.containsKey(cacheKey)) {
+        print('⚠️ Returning stale cached data due to error');
+        return _cache[cacheKey]!.data;
+      }
+      
+      return [];
+    }
   }
+  
+  // Clear specific cache entry
+  void clearCacheForUser(String programId, String userId) {
+    final cacheKey = '$programId-$userId';
+    if (_cache.containsKey(cacheKey)) {
+      _cache.remove(cacheKey);
+      print('🗑️ Cleared cache for $cacheKey');
+    }
+  }
+
+  // Clear all cache
+  void clearAllCache() {
+    _cache.clear();
+    print('🗑️ Cleared all cache entries');
+  }
+
+
 
   // Get users who haven't paid for a program
   List<String> getUsersWithNoContributions(String programId, List<String> allUserIds) {

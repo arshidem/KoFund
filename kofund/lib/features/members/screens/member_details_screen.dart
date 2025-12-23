@@ -289,26 +289,37 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Member Details'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 24),
-          onPressed: () => Navigator.pop(context),
-        ),
+  appBar: AppBar(
+  title: const Text(
+    'Member Details', // Added TextStyle here
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true,
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
+    ),
+  ),
+  leading: IconButton(
+    icon: const Icon(
+      Icons.arrow_back,
+      size: 24,
+      color: Colors.white, // Added explicit white color
+    ),
+    onPressed: () => Navigator.pop(context),
+  ),
+),
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,

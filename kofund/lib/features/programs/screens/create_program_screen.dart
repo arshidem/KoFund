@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -22,11 +23,12 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _contributionController = TextEditingController(text: '0');
+  final TextEditingController _totalProgramAmountController = TextEditingController(text: '0');
   final TextEditingController _maxParticipantsController = TextEditingController(text: '50');
 
   DateTime _selectedDate = DateTime.now();
   String _participantType = 'fixed';
-  String _programType = ProgramTypes.general; // ✅ Use constant
+  String _programType = ProgramTypes.general;
   bool _isLoading = false;
   bool _isMonthlyPaymentProgram = false;
 
@@ -34,9 +36,43 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create New Program'),
-        backgroundColor: AppColors.primary(context),
+        toolbarHeight: 80,
+        title: const Text(
+          'Create New Program',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: AppColors.background(context),
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        automaticallyImplyLeading: true,
       ),
       body: Container(
         color: AppColors.background(context),
@@ -56,7 +92,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                       controller: _titleController,
                       style: TextStyle(color: AppColors.textPrimary(context)),
                       decoration: InputDecoration(
-                        labelText: 'Program Title',
+                        labelText: 'Program Title *',
                         labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                         border: InputBorder.none,
                         filled: true,
@@ -69,7 +105,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
                 const SizedBox(height: 12),
 
-                // Description
+                // Description (Optional)
                 Card(
                   elevation: 2,
                   color: AppColors.card(context),
@@ -79,21 +115,20 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                       controller: _descriptionController,
                       style: TextStyle(color: AppColors.textPrimary(context)),
                       decoration: InputDecoration(
-                        labelText: 'Description',
+                        labelText: 'Description (Optional)',
                         labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                         border: InputBorder.none,
                         filled: true,
                         fillColor: AppColors.surface(context),
                       ),
                       maxLines: 3,
-                      validator: (value) => value!.isEmpty ? 'Enter description' : null,
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 12),
 
-                // Program Type Dropdown - ✅ UPDATED to use ProgramTypes
+                // Program Type Dropdown
                 Card(
                   elevation: 2,
                   color: AppColors.card(context),
@@ -136,7 +171,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
                 const SizedBox(height: 12),
 
-                // ✅ MOVED: Monthly Program Toggle under Program Type
+                // Monthly Program Toggle
                 Card(
                   elevation: 2,
                   color: AppColors.card(context),
@@ -165,27 +200,28 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
                 const SizedBox(height: 12),
 
-                // Date Picker
-                Card(
-                  elevation: 2,
-                  color: AppColors.card(context),
-                  child: ListTile(
-                    title: Text(
-                      'Program Date',
-                      style: TextStyle(color: AppColors.textPrimary(context)),
+                // Program Date (Only show for non-monthly programs)
+                if (!_isMonthlyPaymentProgram)
+                  Card(
+                    elevation: 2,
+                    color: AppColors.card(context),
+                    child: ListTile(
+                      title: Text(
+                        'Program Date *',
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                      ),
+                      subtitle: Text(
+                        DateFormat('MMM dd, yyyy').format(_selectedDate),
+                        style: TextStyle(color: AppColors.textSecondary(context)),
+                      ),
+                      trailing: Icon(Icons.calendar_today, color: AppColors.primary(context)),
+                      onTap: () => _selectDate(context),
                     ),
-                    subtitle: Text(
-                      DateFormat('MMM dd, yyyy').format(_selectedDate),
-                      style: TextStyle(color: AppColors.textSecondary(context)),
-                    ),
-                    trailing: Icon(Icons.calendar_today, color: AppColors.primary(context)),
-                    onTap: () => _selectDate(context),
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                if (!_isMonthlyPaymentProgram) const SizedBox(height: 12),
 
-                // Location
+                // Location (Optional)
                 Card(
                   elevation: 2,
                   color: AppColors.card(context),
@@ -195,13 +231,12 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                       controller: _locationController,
                       style: TextStyle(color: AppColors.textPrimary(context)),
                       decoration: InputDecoration(
-                        labelText: 'Location',
+                        labelText: 'Location (Optional)',
                         labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                         border: InputBorder.none,
                         filled: true,
                         fillColor: AppColors.surface(context),
                       ),
-                      validator: (value) => value!.isEmpty ? 'Enter location' : null,
                     ),
                   ),
                 ),
@@ -233,6 +268,32 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 ),
 
                 const SizedBox(height: 12),
+
+                // Total Program Amount (Only show for non-monthly programs)
+                if (!_isMonthlyPaymentProgram)
+                  Card(
+                    elevation: 2,
+                    color: AppColors.card(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: TextFormField(
+                        controller: _totalProgramAmountController,
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                        decoration: InputDecoration(
+                          labelText: 'Total Program Amount',
+                          labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                          prefixText: '₹ ',
+                          prefixStyle: TextStyle(color: AppColors.textPrimary(context)),
+                          border: InputBorder.none,
+                          filled: true,
+                          fillColor: AppColors.surface(context),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ),
+
+                if (!_isMonthlyPaymentProgram) const SizedBox(height: 12),
 
                 // Participant Type
                 Card(
@@ -298,14 +359,19 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                         controller: _maxParticipantsController,
                         style: TextStyle(color: AppColors.textPrimary(context)),
                         decoration: InputDecoration(
-                          labelText: 'Maximum Participants',
+                          labelText: 'Maximum Participants *',
                           labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                           border: InputBorder.none,
                           filled: true,
                           fillColor: AppColors.surface(context),
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (value) => value!.isEmpty ? 'Enter max participants' : null,
+                        validator: (value) {
+                          if (_participantType == 'fixed' && (value == null || value.isEmpty)) {
+                            return 'Enter max participants';
+                          }
+                          return null;
+                        },
                       ),
                     ),
                   ),
@@ -383,6 +449,20 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   Future<void> _createProgram() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Additional validation for non-monthly programs
+    if (!_isMonthlyPaymentProgram) {
+      // For non-monthly programs, check if date is valid
+      if (_selectedDate.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please select a future date for the program'),
+            backgroundColor: AppColors.error(context),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -393,10 +473,15 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
         programId: '', // Will be set by Firestore
         communityId: authProvider.user!.communityId!,
         title: _titleController.text,
-        description: _descriptionController.text,
-        programDate: _selectedDate,
-        location: _locationController.text,
+        description: _descriptionController.text.trim(),
+        programDate: _isMonthlyPaymentProgram ? DateTime.now() : _selectedDate,
+        location: _locationController.text.trim(),
         suggestedContribution: double.parse(_contributionController.text),
+        totalProgramAmount: _isMonthlyPaymentProgram 
+            ? null 
+            : (_totalProgramAmountController.text.isNotEmpty 
+                ? double.tryParse(_totalProgramAmountController.text)
+                : null),
         maxParticipants: _participantType == 'fixed' 
             ? int.parse(_maxParticipantsController.text)
             : 0,
@@ -404,7 +489,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
         status: 'active',
         createdBy: authProvider.user!.uid,
         createdAt: Timestamp.now(),
-        programType: _programType, // ✅ Uses the constant
+        programType: _programType,
         isMonthlyPaymentProgram: _isMonthlyPaymentProgram,
       );
 

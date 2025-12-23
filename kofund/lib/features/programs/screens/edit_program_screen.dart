@@ -1,5 +1,6 @@
 // lib/features/programs/screens/edit_program_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -191,25 +192,59 @@ Widget build(BuildContext context) {
 
   return Scaffold(
     backgroundColor: AppColors.background(context),
-    appBar: AppBar(
-      title: const Text('Edit Program'),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      actions: [
-        if (_isLoading)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-              ),
-            ),
-          ),
-      ],
+appBar: AppBar(
+  toolbarHeight: 80, // Added from Members app bar
+  title: const Text(
+    'Edit Program', // Added TextStyle
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
     ),
+  ),
+  centerTitle: true, // Added from Members app bar
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white, // Added for white icons
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle( // Added from Members app bar
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ),
+  flexibleSpace: Container( // Added from Members app bar
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+    ),
+  ),
+  leading: IconButton( // Added from Members app bar
+    icon: const Icon(
+      Icons.arrow_back,
+      color: Colors.white, // Explicit white color
+    ),
+    onPressed: () => Navigator.pop(context),
+  ),
+  automaticallyImplyLeading: true, // Added for consistency
+  actions: [
+    if (_isLoading)
+      Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(Colors.white), // Changed to white to match theme
+          ),
+        ),
+      ),
+  ],
+),
     body: SafeArea(
       child: Form(
         key: _formKey,
@@ -337,12 +372,12 @@ Widget _buildProgramStatusWarning(bool isCompleted) {
 
             const SizedBox(height: 16),
 
-            // Description
+            // Description (Optional)
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
               decoration: InputDecoration(
-                labelText: 'Description *',
+                labelText: 'Description (Optional)',
                 labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -352,21 +387,15 @@ Widget _buildProgramStatusWarning(bool isCompleted) {
                   borderSide: BorderSide(color: AppColors.primary(context), width: 2),
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a program description';
-                }
-                return null;
-              },
             ),
 
             const SizedBox(height: 16),
 
-            // Location
+            // Location (Optional)
             TextFormField(
               controller: _locationController,
               decoration: InputDecoration(
-                labelText: 'Location *',
+                labelText: 'Location (Optional)',
                 labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -376,16 +405,12 @@ Widget _buildProgramStatusWarning(bool isCompleted) {
                   borderSide: BorderSide(color: AppColors.primary(context), width: 2),
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a location';
-                }
-                return null;
-              },
             ),
 
             const SizedBox(height: 16),
 
+            // Program Date (Only show for non-monthly programs)
+            if (!_isMonthlyPaymentProgram)
         // Alternative simple solution
 GestureDetector(
   onTap: _selectDate,
@@ -402,7 +427,7 @@ GestureDetector(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Program Date',
+              'Program Date *',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary(context),
@@ -471,82 +496,36 @@ GestureDetector(
 
             const SizedBox(height: 16),
 
-            // Total Program Amount
-            TextFormField(
-              controller: _totalProgramAmountController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Total Program Amount (₹)',
-                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Total Program Amount (Only show for non-monthly programs)
+            if (!_isMonthlyPaymentProgram)
+              TextFormField(
+                controller: _totalProgramAmountController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Total Program Amount (₹)',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                  ),
+                  prefixText: '₹ ',
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-                ),
-                prefixText: '₹ ',
-              ),
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final amount = double.tryParse(value);
-                  if (amount == null || amount < 0) {
-                    return 'Please enter a valid amount';
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final amount = double.tryParse(value);
+                    if (amount == null || amount < 0) {
+                      return 'Please enter a valid amount';
+                    }
                   }
-                }
-                return null;
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Monthly Payment Program Toggle
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border(context)),
-                borderRadius: BorderRadius.circular(12),
+                  return null;
+                },
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.payments,
-                    color: _isMonthlyPaymentProgram 
-                        ? AppColors.primary(context) 
-                        : AppColors.textSecondary(context),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Monthly Payment Program',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary(context),
-                          ),
-                        ),
-                        Text(
-                          'Use this program for monthly community payments',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isMonthlyPaymentProgram,
-                    onChanged: (value) {
-                      setState(() => _isMonthlyPaymentProgram = value);
-                    },
-                    activeColor: AppColors.primary(context),
-                  ),
-                ],
-              ),
-            ),
+
+
+         
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/program_model.dart';
@@ -225,114 +226,137 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
     final currentUserId = authProvider.user?.uid;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Program Details'),
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-                color: Colors.black.withOpacity(0.06),
-              ),
-            ],
-          ),
-        ),
-        iconTheme: IconThemeData(
-          color: AppColors.textCards(context),
-        ),
-        titleTextStyle: TextStyle(
-          color: AppColors.textCards(context),
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        // Add actions for join/leave functionality
-actions: currentUserId == null
-    ? null // Don't show join/leave if user is not logged in
-    : [
-        StreamBuilder<List<ParticipantModel>>(
-          stream: Provider.of<ParticipantProvider>(context, listen: false)
-              .streamProgramParticipants(widget.programId),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const SizedBox.shrink();
-            }
+   appBar: AppBar(
+  toolbarHeight: 60, // Added from Members app bar
+  title: const Text(
+    'Program Details',
+    style: TextStyle(
+      color: Colors.white, // Changed to white
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true, // Added from Members app bar
+  backgroundColor: Colors.transparent, // Added for consistency
+  foregroundColor: Colors.white, // Changed from iconTheme for consistency
+  elevation: 0,
 
-            final participants = snapshot.data!;
-            final hasUserJoined = participants.any(
-              (p) => p.userId == currentUserId && p.status == 'joined',
-            );
-
-            return hasUserJoined
-                ? // Leave icon only
-                Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: IconButton(
-                      onPressed: () => _leaveProgram(context),
-                      icon: Icon(
-                        Icons.exit_to_app_rounded,
-                        color: AppColors.textCards(context),
-                      ),
-                      tooltip: 'Leave Program',
-                    ),
-                  )
-                : // Join Program button with background
-                Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ElevatedButton(
-                      onPressed: () => _joinProgram(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.15), // Semi-transparent white background
-                        foregroundColor: AppColors.textCards(context),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                        shadowColor: Colors.black.withOpacity(0.5),
-                      ),
-                      child: Text(
-                        'Join',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textCards(context),
-                        ),
-                      ),
-                    ),
-                  );
-          },
+  systemOverlayStyle: SystemUiOverlayStyle( // Added from Members app bar
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only( // Added rounded corners
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
+      ),
+      boxShadow: [
+        BoxShadow(
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+          color: Colors.black.withOpacity(0.3),
         ),
       ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: AppColors.textCards(context),
-          unselectedLabelColor:
-              AppColors.textCards(context).withOpacity(0.7),
-          indicatorColor: AppColors.textCards(context),
-          indicatorWeight: 3,
-          indicatorPadding: const EdgeInsets.symmetric(horizontal: 0),
-          labelPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          labelStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
+    ),
+  ),
+  leading: IconButton( // Added explicit back button
+    icon: const Icon(
+      Icons.arrow_back,
+      color: Colors.white, // Changed to white
+    ),
+    onPressed: () => Navigator.pop(context),
+  ),
+  automaticallyImplyLeading: true, // Added for consistency
+  // Add actions for join/leave functionality
+  actions: currentUserId == null
+      ? null // Don't show join/leave if user is not logged in
+      : [
+          StreamBuilder<List<ParticipantModel>>(
+            stream: Provider.of<ParticipantProvider>(context, listen: false)
+                .streamProgramParticipants(widget.programId),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+
+              final participants = snapshot.data!;
+              final hasUserJoined = participants.any(
+                (p) => p.userId == currentUserId && p.status == 'joined',
+              );
+
+              return hasUserJoined
+                  ? // Leave icon only
+                  Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: IconButton(
+                        onPressed: () => _leaveProgram(context),
+                        icon: const Icon(
+                          Icons.exit_to_app_rounded,
+                          color: Colors.white, // Changed to white
+                        ),
+                        tooltip: 'Leave Program',
+                      ),
+                    )
+                  : // Join Program button with background
+                  Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ElevatedButton(
+                        onPressed: () => _joinProgram(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.15), // Semi-transparent white background
+                          foregroundColor: Colors.white, // Changed to white
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
+                          shadowColor: Colors.black.withOpacity(0.5),
+                        ),
+                        child: const Text( // Made const since color is fixed now
+                          'Join',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white, // Changed to white
+                          ),
+                        ),
+                      ),
+                    );
+            },
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
-          ),
-          tabs: _tabTitles.map((title) => Tab(text: title)).toList(),
-        ),
-      ),
+        ],
+  bottom: TabBar(
+    controller: _tabController,
+      dividerColor: Colors.transparent, // 🔥 THIS FIXES IT
+  dividerHeight: 0,   
+    isScrollable: true,
+    labelColor: Colors.white, // Changed to white
+    unselectedLabelColor: Colors.white.withOpacity(0.7), // Changed to white with opacity
+    indicatorColor: Colors.white, // Changed to white
+    indicatorWeight: 3,
+    indicatorPadding: const EdgeInsets.symmetric(horizontal: 0),
+    labelPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+    labelStyle: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.3,
+    ),
+    unselectedLabelStyle: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.3,
+    ),
+    tabs: _tabTitles.map((title) => Tab(text: title)).toList(),
+  ),
+),
       body: StreamBuilder<ProgramModel?>(
         stream: programProvider.getProgramById(widget.programId),
         builder: (context, snapshot) {

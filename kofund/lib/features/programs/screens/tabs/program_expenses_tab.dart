@@ -136,12 +136,11 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0), // 8px padding
                 itemCount: filteredExpenses.length,
                 itemBuilder: (context, index) {
                   final expense = filteredExpenses[index];
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 0), // 8px gap between cards
+                    padding: const EdgeInsets.symmetric(horizontal: 0), // 8px gap between cards
                     child: _buildExpenseCard(expense, context, isAdmin),
                   );
                 },
@@ -152,7 +151,7 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
 
         // Add Expense Button (Admin Only) or Not Approved Message
         Padding(
-          padding: const EdgeInsets.all(8), // 8px padding
+          padding: const EdgeInsets.symmetric(horizontal:8, vertical: 16), // 8px padding
           child: Column(
             children: [
               if (currentUser != null && !currentUser.isApproved) 
@@ -167,222 +166,263 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
     );
   }
 
-  Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmin) {
-    return Card(
-      color: AppColors.card(context),
-      elevation: 0.5,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: AppColors.border(context),
-          width: 0.5,
-        ),
-      ),
-   child: ListTile(
-  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  leading: Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      color: _getCategoryColor(expense.category).withOpacity(0.1),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Icon(
-      _getCategoryIcon(expense.category),
-      color: _getCategoryColor(expense.category),
-      size: 20,
-    ),
-  ),
-  title: Text(
-    expense.title,
-    style: TextStyle(
-      fontWeight: FontWeight.w600,
-      color: AppColors.textPrimary(context),
-      fontSize: 15,
-    ),
-  ),
-  subtitle: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmin) {
+  return Column(
     children: [
-      // Only show description if it exists and is not empty
-      if (expense.description != null && expense.description!.isNotEmpty) ...[
-        Text(
-          expense.description!,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-        const SizedBox(height: 2),
-      ],
-      Text(
-        '${DateFormat('dd/MM/yyyy').format(expense.expenseDate)} • ${expense.category.toUpperCase()}',
-        style: TextStyle(
-          fontSize: 11,
-          color: AppColors.textSecondary(context),
-        ),
-      ),
-      if (!isAdmin) ...[
-        const SizedBox(height: 2),
-        Text(
-          'Paid by: ${expense.paidBy}',
-          style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textTertiary(context),
-          ),
-        ),
-      ],
-    ],
-  ),
-  trailing: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      Text(
-        '₹${expense.amount.toStringAsFixed(0)}',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-          color: AppColors.textPrimary(context),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: _getStatusColor(expense.status),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          expense.status.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    ],
-  ),
-  onTap: () {
-    if (isAdmin) {
-      _showExpenseActions(expense, context);
-    } else {
-      _showExpenseDetails(expense, context);
-    }
-  },
-),
-    );
-  }
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (isAdmin) {
+              _showExpenseActions(expense, context);
+            } else {
+              _showExpenseDetails(expense, context);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              
+              children: [
+                
+                // Leading icon
+                Container(
 
-  Widget _buildExpenseSummary(BuildContext context) {
-    return StreamBuilder<List<ExpenseModel>>(
-      stream: Provider.of<ExpenseProvider>(context, listen: false)
-          .streamProgramExpenses(widget.program.programId),
-      builder: (context, snapshot) {
-        final expenses = snapshot.data ?? [];
-        final totalExpenses = expenses.fold(0.0, (sum, expense) => sum + expense.amount);
-        final approvedExpenses = expenses.where((e) => e.status == 'approved').fold(0.0, (sum, expense) => sum + expense.amount);
-        final pendingExpenses = expenses.where((e) => e.status == 'pending').fold(0.0, (sum, expense) => sum + expense.amount);
-
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(8), // 8px margin
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-                color: Colors.black.withOpacity(0.06),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// ───────────────── Header ─────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _getCategoryColor(expense.category).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _getCategoryIcon(expense.category),
+                    color: _getCategoryColor(expense.category),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Main content
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Expenses Overview",
+                        expense.title,
                         style: TextStyle(
-                          color: AppColors.textCards(context).withOpacity(0.9),
-                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context),
+                          fontSize: 15,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.receipt_long,
-                            color: AppColors.textCards(context),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${expenses.length} expenses',
+                      const SizedBox(height: 4),
+                      
+                      // Description (if exists)
+                      if (expense.description != null && expense.description!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            expense.description!,
                             style: TextStyle(
-                              color: AppColors.textCards(context),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
+                              color: AppColors.textSecondary(context),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
+                        ),
+                      
+                      Text(
+                        '${DateFormat('dd/MM/yyyy').format(expense.expenseDate)} • ${expense.category.toUpperCase()}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      
+                      if (!isAdmin)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Paid by: ${expense.paidBy}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textTertiary(context),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                     ],
                   ),
-           
-                ],
+                ),
+                
+                // Trailing amount and status
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '₹${expense.amount.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(expense.status),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        expense.status.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      
+      // Horizontal divider - Exactly like All Members screen
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+      ),
+    ],
+  );
+}
+
+Widget _buildExpenseSummary(BuildContext context) {
+  return StreamBuilder<List<ExpenseModel>>(
+    stream: Provider.of<ExpenseProvider>(context, listen: false)
+        .streamProgramExpenses(widget.program.programId),
+    builder: (context, snapshot) {
+      final expenses = snapshot.data ?? [];
+      final totalExpenses = expenses.fold(0.0, (sum, expense) => sum + expense.amount);
+      final approvedExpenses = expenses.where((e) => e.status == 'approved').fold(0.0, (sum, expense) => sum + expense.amount);
+      final pendingExpenses = expenses.where((e) => e.status == 'pending').fold(0.0, (sum, expense) => sum + expense.amount);
+
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient(context),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.06),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// ───────────────── Header ─────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Expenses Overview",
+                      style: TextStyle(
+                        color: AppColors.textCards(context).withOpacity(0.9),
+                        fontSize: 11,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          color: AppColors.textCards(context),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${expenses.length} expenses',
+                          style: TextStyle(
+                            color: AppColors.textCards(context),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            /// ───────────────── APPROVED EXPENSES (Big Text) ─────────────────
+            Text(
+              "₹${approvedExpenses.toStringAsFixed(0)}",
+              style: TextStyle(
+                color: AppColors.textCards(context),
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
               ),
-
-              const SizedBox(height: 16),
-
-              /// ───────────────── Amount ─────────────────
-              Text(
-                "₹${totalExpenses.toStringAsFixed(0)}",
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                "Approved Expenses",
                 style: TextStyle(
-                  color: AppColors.textCards(context),
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.textCards(context).withOpacity(0.85),
+                  fontSize: 11,
                 ),
               ),
-              
-              const SizedBox(height: 12),
+            ),
 
-              /// ───────────────── Stats Row ─────────────────
-              Row(
-                children: [
-                  _buildStatChip(
-                    context,
-                    icon: Icons.check_circle,
-                    label: "Approved",
-                    value: "₹${approvedExpenses.toStringAsFixed(0)}",
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatChip(
-                    context,
-                    icon: Icons.pending,
-                    label: "Pending",
-                    value: "₹${pendingExpenses.toStringAsFixed(0)}",
-                    color: Colors.orange,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            const SizedBox(height: 12),
+
+            /// ───────────────── Stats Row ─────────────────
+            Row(
+              children: [
+                _buildStatChip(
+                  context,
+                  icon: Icons.receipt,
+                  label: "Total",
+                  value: "₹${totalExpenses.toStringAsFixed(0)}",
+                  color: AppColors.textCards(context),
+                ),
+                const SizedBox(width: 8),
+                _buildStatChip(
+                  context,
+                  icon: Icons.pending,
+                  label: "Pending",
+                  value: "₹${pendingExpenses.toStringAsFixed(0)}",
+                  color: Colors.orange,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildSearchFilterBar(BuildContext context) {
     return Padding(
@@ -688,181 +728,190 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
     return filtered;
   }
 
-  void _showExpenseActions(ExpenseModel expense, BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.45,
-          minChildSize: 0.25,
-          maxChildSize: 0.8,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
+void _showExpenseActions(ExpenseModel expense, BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Container(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {}, // Empty onTap to prevent inner taps from closing
+            child: DraggableScrollableSheet(
+              initialChildSize: .9,
+              minChildSize: 0.25,
+              maxChildSize: 0.9,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-              child: SingleChildScrollView(
-                controller: scrollController,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Handle bar
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: AppColors.border(context),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-
-                    // Title
-                    Text(
-                      'Expense Actions',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textPrimary(context),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // View Details
-                    _buildActionTile(
-                      context: context,
-                      icon: Icons.visibility_outlined,
-                      title: 'View Details',
-                      color: AppColors.primary(context),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showExpenseDetails(expense, context);
-                      },
-                    ),
-
-                    // Status update options
-                    if (expense.status == 'pending') ...[
-                      _buildActionTile(
-                        context: context,
-                        icon: Icons.check_circle,
-                        title: 'Approve Expense',
-                        color: Colors.green,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _updateExpenseStatus(expense, 'approved', context);
-                        },
-                      ),
-                      _buildActionTile(
-                        context: context,
-                        icon: Icons.cancel,
-                        title: 'Reject Expense',
-                        color: Colors.red,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _updateExpenseStatus(expense, 'rejected', context);
-                        },
-                      ),
-                    ],
-
-                    if (expense.status != 'pending') ...[
-                      if (expense.status == 'approved')
-                        _buildActionTile(
-                          context: context,
-                          icon: Icons.cancel,
-                          title: 'Mark as Rejected',
-                          color: Colors.red,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _updateExpenseStatus(expense, 'rejected', context);
-                          },
-                        ),
-                      if (expense.status == 'rejected')
-                        _buildActionTile(
-                          context: context,
-                          icon: Icons.check_circle,
-                          title: 'Mark as Approved',
-                          color: Colors.green,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _updateExpenseStatus(expense, 'approved', context);
-                          },
-                        ),
-                      _buildActionTile(
-                        context: context,
-                        icon: Icons.pending,
-                        title: 'Mark as Pending',
-                        color: Colors.orange,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _updateExpenseStatus(expense, 'pending', context);
-                        },
-                      ),
-                    ],
-
-                    // Delete Expense
-                    _buildActionTile(
-                      context: context,
-                      icon: Icons.delete_outline,
-                      title: 'Delete Expense',
-                      color: AppColors.error(context),
-                      isDestructive: true,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showDeleteConfirmation(expense, context);
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Cancel Button
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: SizedBox(
-                        height: 55,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.card(context),
-                            foregroundColor: AppColors.textPrimary(context),
-                            side: BorderSide(color: AppColors.border(context)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: AppColors.border(context),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),
-                      ),
+
+                        // Title
+                        Text(
+                          'Expense Actions',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // View Details
+                        _buildActionTile(
+                          context: context,
+                          icon: Icons.visibility_outlined,
+                          title: 'View Details',
+                          color: AppColors.primary(context),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showExpenseDetails(expense, context);
+                          },
+                        ),
+
+                        // Status update options
+                        if (expense.status == 'pending') ...[
+                          _buildActionTile(
+                            context: context,
+                            icon: Icons.check_circle,
+                            title: 'Approve Expense',
+                            color: Colors.green,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _updateExpenseStatus(expense, 'approved', context);
+                            },
+                          ),
+                          _buildActionTile(
+                            context: context,
+                            icon: Icons.cancel,
+                            title: 'Reject Expense',
+                            color: Colors.red,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _updateExpenseStatus(expense, 'rejected', context);
+                            },
+                          ),
+                        ],
+
+                        if (expense.status != 'pending') ...[
+                          if (expense.status == 'approved')
+                            _buildActionTile(
+                              context: context,
+                              icon: Icons.cancel,
+                              title: 'Mark as Rejected',
+                              color: Colors.red,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _updateExpenseStatus(expense, 'rejected', context);
+                              },
+                            ),
+                          if (expense.status == 'rejected')
+                            _buildActionTile(
+                              context: context,
+                              icon: Icons.check_circle,
+                              title: 'Mark as Approved',
+                              color: Colors.green,
+                              onTap: () {
+                                Navigator.pop(context);
+                                _updateExpenseStatus(expense, 'approved', context);
+                              },
+                            ),
+                          _buildActionTile(
+                            context: context,
+                            icon: Icons.pending,
+                            title: 'Mark as Pending',
+                            color: Colors.orange,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _updateExpenseStatus(expense, 'pending', context);
+                            },
+                          ),
+                        ],
+
+                        // Delete Expense
+                        _buildActionTile(
+                          context: context,
+                          icon: Icons.delete_outline,
+                          title: 'Delete Expense',
+                          color: AppColors.error(context),
+                          isDestructive: true,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showDeleteConfirmation(expense, context);
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Cancel Button
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: SizedBox(
+                            height: 55,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.card(context),
+                                foregroundColor: AppColors.textPrimary(context),
+                                side: BorderSide(color: AppColors.border(context)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildActionTile({
     required BuildContext context,

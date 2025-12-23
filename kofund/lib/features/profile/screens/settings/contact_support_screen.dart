@@ -428,33 +428,6 @@ Future<void> _launchEmail(BuildContext context) async {
 
               const SizedBox(height: 24),
 
-              // Additional Information
-              Card(
-                color: AppColors.surface(context),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'App Information',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildInfoItem('App Version', '1.0.0'),
-                      _buildInfoItem('Last Updated', 'December 2023'),
-                      _buildInfoItem('Developer', 'Kofund Team'),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),

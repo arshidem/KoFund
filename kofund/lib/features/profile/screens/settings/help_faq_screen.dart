@@ -3,8 +3,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/profile/screens/settings/contact_support_screen.dart';
-class HelpFAQScreen extends StatelessWidget {
+import 'package:kofund/core/utils/app_info.dart';
+
+
+class HelpFAQScreen extends StatefulWidget {
   const HelpFAQScreen({super.key});
+
+  @override
+  State<HelpFAQScreen> createState() => _HelpFAQScreenSate();
+}
+
+class _HelpFAQScreenSate extends State<HelpFAQScreen> {
+
+    String appVersion = '1.0.0';
+  String buildNumber = '1';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+Future<void> _loadAppInfo() async {
+  print('Loading app info...');
+  final version = await AppInfo.appVersion;
+  final build = await AppInfo.buildNumber;
+  print('Got version: $version, build: $build');
+  
+  if (mounted) {
+    setState(() {
+      appVersion = version;
+      buildNumber = build;
+    });
+    print('State updated to version: $appVersion');
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -201,8 +234,8 @@ class HelpFAQScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildAppInfoItem('App Version', '1.0.0'),
-                      _buildAppInfoItem('Last Updated', 'December 2023'),
+                      _buildAppInfoItem('App Version', '$appVersion'),
+                      _buildAppInfoItem('Last Updated', 'December 2025'),
                       _buildAppInfoItem('Developer', 'Kofund Team'),
                       _buildAppInfoItem('Support Hours', 'Mon-Fri, 9 AM - 6 PM'),
                     ],

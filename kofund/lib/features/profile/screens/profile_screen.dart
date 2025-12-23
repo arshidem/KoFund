@@ -359,54 +359,63 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     );
   }
 
-  AppBar _buildAppBar(bool showBackButton) {
-    return AppBar(
-        toolbarHeight: 80, // Set your desired height here (default is 56)
-
-      title: const Text('Profile'),
-      centerTitle: true,
-      leading: showBackButton 
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            )
-          : null,
-      automaticallyImplyLeading: showBackButton,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: AppColors.background(context),
-        systemNavigationBarIconBrightness: Brightness.dark,
+AppBar _buildAppBar(bool showBackButton) {
+  return AppBar(
+    toolbarHeight: 80, // Set your desired height here (default is 56)
+    title: const Text(
+      'Profile',
+      style: TextStyle(
+        color: Colors.white, // White text like Members app bar
+        fontSize: 18, // Same as Members app bar
+        fontWeight: FontWeight.w600, // Same as Members app bar
       ),
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-          ),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 6),
-          child: IconButton(
-            icon: Icon(
-              Icons.settings,
-              color: Theme.of(context).appBarTheme.foregroundColor,
-              size: 22,
+    ),
+    centerTitle: true,
+    leading: showBackButton 
+        ? IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white, // Explicitly set white color for back icon
             ),
-            onPressed: _navigateToSettings,
-            splashRadius: 22,
-          ),
+            onPressed: () => Navigator.pop(context),
+          )
+        : null,
+    automaticallyImplyLeading: showBackButton,
+    backgroundColor: Colors.transparent,
+    foregroundColor: Colors.white, // This sets all icons to white
+    elevation: 0,
+    systemOverlayStyle: SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: AppColors.background(context),
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+    flexibleSpace: Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient(context),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
         ),
-      ],
-    );
-  }
+      ),
+    ),
+    actions: [
+      Container(
+        margin: const EdgeInsets.only(right: 6),
+        child: IconButton(
+          icon: const Icon(
+            Icons.settings,
+            color: Colors.white, // Explicitly set white color for settings icon
+            size: 22,
+          ),
+          onPressed: _navigateToSettings,
+          splashRadius: 22,
+        ),
+      ),
+    ],
+  );
+}
 
 Widget _buildProfileHeader(UserModel user) {
   // Get the same gradient from AppBar
