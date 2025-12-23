@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:math'; // Add this import
 import '../../models/program_model.dart';
 import '../../providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
@@ -1365,186 +1366,195 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     return filtered;
   }
 
-  void _showParticipantActions(ParticipantModel participant, BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
-          child: Container(
-            color: Colors.transparent,
-            child: GestureDetector(
-              onTap: () {},
-              child: DraggableScrollableSheet(
-                initialChildSize: 0.4,
-                minChildSize: 0.25,
-                maxChildSize: 0.4,
-                builder: (context, scrollController) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.card(context),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 10,
-                          offset: const Offset(0, -4),
+void _showParticipantActions(ParticipantModel participant, BuildContext context) async {
+  // Get payment status BEFORE showing bottom sheet
+  final hasPaid = await _checkParticipantPaidStatus(
+    participant.userId,
+    widget.program.programId,
+  );
+  
+  final subtitle = await _getPaymentSubtitleWithRealData(participant);
+  
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Container(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {},
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.4,
+              minChildSize: 0.25,
+              maxChildSize: 0.4,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.only(right: 16, left: 16, top: 20, bottom: 0),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: AppColors.border(context),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.only(right: 16, left: 16, top: 20, bottom: 0),
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.only(bottom: 20),
-                              decoration: BoxDecoration(
-                                color: AppColors.border(context),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
 
-                          InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-                              _navigateToMemberProfile(participant, context);
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: AppColors.primary(context).withOpacity(0.1),
-                                    child: Icon(
-                                      Icons.person,
-                                      color: AppColors.primary(context),
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          participant.userName,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary(context),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        if (participant.userEmail.isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 2),
-                                            child: Text(
-                                              participant.userEmail,
-                                              style: TextStyle(
-                                                color: AppColors.textSecondary(context),
-                                                fontSize: 13,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 20,
+                        InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                            _navigateToMemberProfile(participant, context);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppColors.primary(context).withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.person,
                                     color: AppColors.primary(context),
+                                    size: 24,
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        participant.userName,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary(context),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (participant.userEmail.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            participant.userEmail,
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary(context),
+                                              fontSize: 13,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 20,
+                                  color: AppColors.primary(context),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
 
-                          const SizedBox(height: 16),
-                          const Divider(height: 1),
-                          const SizedBox(height: 12),
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
 
-                          if (widget.program.suggestedContribution != null &&
-                              widget.program.suggestedContribution! > 0)
-                            _buildActionTile(
-                              context: context,
-                              icon: participant.hasPaidContribution
-                                  ? Icons.payment
-                                  : Icons.payment_outlined,
-                              title: _getPaymentActionText(participant),
-                              color: participant.hasPaidContribution
-                                  ? AppColors.success(context)
-                                  : AppColors.warning(context),
-                              subtitle: _getPaymentSubtitle(participant),
-                              onTap: () {
-                                Navigator.pop(context);
-                                _togglePaymentStatus(participant, context);
-                              },
-                            ),
-
+                        if (widget.program.suggestedContribution != null &&
+                            widget.program.suggestedContribution! > 0)
                           _buildActionTile(
                             context: context,
-                            icon: Icons.remove_circle_outline,
-                            title: 'Remove from Program',
-                            color: AppColors.error(context),
-                            isDestructive: true,
+                            icon: hasPaid
+                                ? Icons.payment
+                                : Icons.payment_outlined,
+                            title: hasPaid ? 'Mark as Pending' : 'Mark as Paid', // Use real status
+                            color: hasPaid
+                                ? AppColors.success(context)
+                                : AppColors.warning(context),
+                            subtitle: subtitle, // Use real subtitle
                             onTap: () {
                               Navigator.pop(context);
-                              _showRemoveConfirmation(participant, context);
+                              _togglePaymentStatus(participant, context);
                             },
                           ),
 
-                          const SizedBox(height: 0),
+                        _buildActionTile(
+                          context: context,
+                          icon: Icons.remove_circle_outline,
+                          title: 'Remove from Program',
+                          color: AppColors.error(context),
+                          isDestructive: true,
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showRemoveConfirmation(participant, context);
+                          },
+                        ),
 
-                          SizedBox(
-                            height: 55,
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.card(context),
-                                foregroundColor: AppColors.textPrimary(context),
-                                side: BorderSide(color: AppColors.border(context)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(vertical: 0),
+                        const SizedBox(height: 0),
+
+                        SizedBox(
+                          height: 55,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.card(context),
+                              foregroundColor: AppColors.textPrimary(context),
+                              side: BorderSide(color: AppColors.border(context)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              padding: const EdgeInsets.symmetric(vertical: 0),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
 
   void _navigateToMemberProfile(ParticipantModel participant, BuildContext context) async {
     try {
@@ -1704,22 +1714,37 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     );
   }
 
-  String _getPaymentActionText(ParticipantModel participant) {
-    if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
-      return participant.hasPaidContribution 
-          ? 'Mark as Pending'
-          : 'Mark as Paid';
-    }
-    return participant.hasPaidContribution ? 'Mark as Pending' : 'Mark as Paid';
+// Also update the _getPaymentActionText method to use real-time check
+String _getPaymentActionText(ParticipantModel participant) {
+  // Since we can't make this async, we'll use the same logic based on contributionPaid
+  // But the bottom sheet uses real-time check above
+  final contributionPaid = participant.contributionPaid ?? 0;
+  final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
+  
+  if (suggestedAmount > 0 && contributionPaid >= suggestedAmount) {
+    return 'Mark as Pending';
+  } else {
+    return 'Mark as Paid';
   }
+}
 
-  String? _getPaymentSubtitle(ParticipantModel participant) {
-    if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
-      return 'For ${_formatMonthDisplay(_selectedMonth!)}';
-    }
-    return null;
+String? _getPaymentSubtitle(ParticipantModel participant) {
+  final contributionPaid = participant.contributionPaid ?? 0;
+  final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
+  
+  if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
+    return 'For ${_formatMonthDisplay(_selectedMonth!)}';
   }
-
+  
+  if (suggestedAmount > 0) {
+    if (contributionPaid >= suggestedAmount) {
+      return 'Fully paid';
+    } else {
+      return '₹${contributionPaid.toStringAsFixed(0)}/₹${suggestedAmount.toStringAsFixed(0)}';
+    }
+  }
+  return null;
+}
 // Clean, final version of _togglePaymentStatus
 // Put this into lib/features/programs/screens/tabs/program_participants_tab.dart
 // This version:
@@ -1797,26 +1822,32 @@ Future<void> _togglePaymentStatus(
     // --- MONTHLY PROGRAM ---
     if (isMonthlyProgram) {
       if (_selectedMonth == null) {
-        debugPrint('⚠️ _togglePaymentStatus: monthly program but no month selected');
-        if (mounted) {
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: const Text('Please select a month first'),
-              backgroundColor: warningColor,
-            ),
-          );
-        }
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: const Text('Please select a month first'),
+            backgroundColor: warningColor,
+          ),
+        );
         return;
       }
 
-      final monthlyContribution = contributions.firstWhere(
+      // Get all contributions for this month
+      final monthlyContributions = contributions.where(
         (c) => c.isMonthlyContribution && c.monthId == _selectedMonth,
-        orElse: () => null as ContributionModel,
+      ).toList();
+
+      final totalPaid = monthlyContributions.fold<double>(
+        0.0,
+        (sum, c) => sum + c.amount,
       );
 
-      // If found -> mark as pending (remove that month's contribution)
-      if (monthlyContribution != null) {
-        debugPrint('🔧 _togglePaymentStatus: removing monthly contribution for ${_selectedMonth}');
+      debugPrint(
+        '🔧 Monthly total paid for $_selectedMonth = ₹$totalPaid / ₹$suggestedAmount',
+      );
+
+      if (totalPaid >= suggestedAmount) {
+        // ✅ Fully paid → mark as pending (remove all contributions for this month)
+        debugPrint('🔧 Fully paid → removing monthly contributions');
         
         await _removeContributions(
           contributionProvider: contributionProvider,
@@ -1828,8 +1859,9 @@ Future<void> _togglePaymentStatus(
           isMonthlyProgram: true,
         );
       } else {
-        // Create new monthly contribution
-        debugPrint('🔧 _togglePaymentStatus: creating monthly contribution for ${_selectedMonth}');
+        // ⚠️ Not fully paid → add remaining amount
+        final remaining = suggestedAmount - totalPaid;
+        debugPrint('🔧 Not fully paid → adding ₹$remaining');
         
         await _createContribution(
           contributionProvider: contributionProvider,
@@ -1838,7 +1870,7 @@ Future<void> _togglePaymentStatus(
           communityId: communityId,
           userId: participant.userId,
           participantName: participant.userName,
-          amount: suggestedAmount,
+          amount: remaining,
           monthId: _selectedMonth,
           isMonthlyProgram: true,
         );
@@ -1850,8 +1882,27 @@ Future<void> _togglePaymentStatus(
     // Get only non-monthly contributions for regular programs
     final nonMonthlyContributions = contributions.where((c) => !c.isMonthlyContribution).toList();
     
-    if (nonMonthlyContributions.isEmpty) {
-      debugPrint('🔧 _togglePaymentStatus: no contributions -> creating full contribution');
+    // Calculate total paid from non-monthly contributions
+    final totalPaid = nonMonthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+    debugPrint('🔧 _togglePaymentStatus: total paid = ₹$totalPaid of ₹$suggestedAmount');
+
+    if (totalPaid >= suggestedAmount) {
+      // ✅ Fully paid → mark as pending (remove all contributions)
+      debugPrint('🔧 Fully paid → removing all contributions');
+      
+      await _removeContributions(
+        contributionProvider: contributionProvider,
+        scaffoldMessenger: scaffoldMessenger,
+        programId: programId,
+        userId: participant.userId,
+        participantName: participant.userName,
+        monthId: null,
+        isMonthlyProgram: false,
+      );
+    } else {
+      // ⚠️ Not fully paid → add remaining amount to reach full payment
+      final remaining = suggestedAmount - totalPaid;
+      debugPrint('🔧 Not fully paid → adding remaining ₹$remaining to reach full payment');
       
       await _createContribution(
         contributionProvider: contributionProvider,
@@ -1860,45 +1911,10 @@ Future<void> _togglePaymentStatus(
         communityId: communityId,
         userId: participant.userId,
         participantName: participant.userName,
-        amount: suggestedAmount,
+        amount: remaining, // This adds the remaining amount needed
         monthId: null,
         isMonthlyProgram: false,
       );
-    } else {
-      // Calculate total paid from non-monthly contributions
-      final totalPaid = nonMonthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
-      debugPrint('🔧 _togglePaymentStatus: total paid = ₹$totalPaid of ₹$suggestedAmount');
-
-      if (totalPaid >= suggestedAmount) {
-        // Already fully paid -> remove all non-monthly contributions
-        debugPrint('🔧 _togglePaymentStatus: removing all non-monthly contributions');
-        
-        await _removeContributions(
-          contributionProvider: contributionProvider,
-          scaffoldMessenger: scaffoldMessenger,
-          programId: programId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          monthId: null,
-          isMonthlyProgram: false,
-        );
-      } else {
-        // Partially paid -> add remaining amount
-        final remaining = (suggestedAmount - totalPaid);
-        debugPrint('🔧 _togglePaymentStatus: adding remaining ₹$remaining');
-        
-        await _createContribution(
-          contributionProvider: contributionProvider,
-          scaffoldMessenger: scaffoldMessenger,
-          programId: programId,
-          communityId: communityId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          amount: remaining,
-          monthId: null,
-          isMonthlyProgram: false,
-        );
-      }
     }
 
   } catch (error, stackTrace) {
@@ -1923,6 +1939,31 @@ Future<void> _togglePaymentStatus(
     
     debugPrint('🔧 _togglePaymentStatus: finished for ${participant.userName}');
   }
+}
+
+// Update your UI button logic to always show "Mark as Pending" until fully paid
+Widget _buildPaymentButton(ParticipantModel participant) {
+  final totalPaid = _calculateTotalPaid(participant.userId); // Implement this
+  final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
+  final isFullyPaid = totalPaid >= suggestedAmount;
+  
+  return ElevatedButton(
+    onPressed: () => _togglePaymentStatus(participant, context),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: isFullyPaid ? Colors.green : Colors.orange,
+    ),
+    child: Text(
+      isFullyPaid ? 'Mark as Pending' : 'Mark as Pending',
+      style: TextStyle(color: Colors.white),
+    ),
+  );
+}
+
+// Helper method to calculate total paid
+double _calculateTotalPaid(String userId) {
+  // Implement based on your data structure
+  // This should return the total amount paid by this user
+  return 0.0;
 }
 
 // Helper method that doesn't access context
@@ -2130,4 +2171,97 @@ Future<void> _removeContributions({
       );
     }
   }
+  Future<bool> _checkParticipantPaidStatus(
+  String userId,
+  String programId,
+) async {
+  try {
+    final contributionProvider = context.read<ContributionProvider>();
+    final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
+    
+    if (suggestedAmount <= 0) return false;
+    
+    // Get user's contributions
+    final contributions = await contributionProvider.getUserContributionsForProgram(
+      programId,
+      userId,
+      forceRefresh: true,
+    );
+    
+    if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
+      // Check monthly contributions for selected month
+      final monthlyContributions = contributions
+          .where((c) => c.isMonthlyContribution && c.monthId == _selectedMonth)
+          .toList();
+      
+      final totalPaid = monthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+      return totalPaid >= suggestedAmount;
+    } else {
+      // Check regular contributions
+      final nonMonthlyContributions = contributions
+          .where((c) => !c.isMonthlyContribution)
+          .toList();
+      
+      final totalPaid = nonMonthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+      return totalPaid >= suggestedAmount;
+    }
+  } catch (error) {
+    debugPrint('❌ Error checking payment status: $error');
+    return false;
+  }
+}
+
+// Method to get payment subtitle with real data
+Future<String?> _getPaymentSubtitleWithRealData(ParticipantModel participant) async {
+  try {
+    final contributionProvider = context.read<ContributionProvider>();
+    final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
+    
+    if (suggestedAmount <= 0) {
+      return widget.program.isMonthlyPaymentProgram && _selectedMonth != null
+          ? 'For ${_formatMonthDisplay(_selectedMonth!)}'
+          : null;
+    }
+    
+    // Get user's contributions
+    final contributions = await contributionProvider.getUserContributionsForProgram(
+      widget.program.programId,
+      participant.userId,
+      forceRefresh: true,
+    );
+    
+    double totalPaid;
+    
+    if (widget.program.isMonthlyPaymentProgram && _selectedMonth != null) {
+      // Get monthly contributions
+      final monthlyContributions = contributions
+          .where((c) => c.isMonthlyContribution && c.monthId == _selectedMonth)
+          .toList();
+      
+      totalPaid = monthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+      
+      if (totalPaid >= suggestedAmount) {
+        return 'Fully paid for ${_formatMonthDisplay(_selectedMonth!)}';
+      } else {
+        return '₹${totalPaid.toStringAsFixed(0)}/₹${suggestedAmount.toStringAsFixed(0)} for ${_formatMonthDisplay(_selectedMonth!)}';
+      }
+    } else {
+      // Get regular contributions
+      final nonMonthlyContributions = contributions
+          .where((c) => !c.isMonthlyContribution)
+          .toList();
+      
+      totalPaid = nonMonthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+      
+      if (totalPaid >= suggestedAmount) {
+        return 'Fully paid';
+      } else {
+        return '₹${totalPaid.toStringAsFixed(0)}/₹${suggestedAmount.toStringAsFixed(0)}';
+      }
+    }
+  } catch (error) {
+    debugPrint('❌ Error getting payment subtitle: $error');
+    return null;
+  }
+}
 }
