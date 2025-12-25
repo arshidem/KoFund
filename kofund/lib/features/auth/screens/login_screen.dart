@@ -11,6 +11,10 @@ import 'verification_pending_screen.dart';
 import 'forgot_password_screen.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/community/screens/join_community_screen.dart';
+import 'package:kofund/core/services/network_service.dart';
+import 'package:flutter/gestures.dart';
+import 'package:kofund/features/profile/screens/settings/terms_of_service_screen.dart';
+import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -23,12 +27,18 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
+  
   bool _isLoading = false;
-  String? _errorMessage;
   bool _obscurePassword = true;
   bool _showInviteNotification = false;
+  bool _termsAccepted = false; 
+
   String? _cachedInviteCode;
+String? _emailError;
+String? _passwordError;
+String? _termsError;
+String? _formError; // network / auth
+ String? _errorMessage; // For general auth errors
 
   @override
   void initState() {
@@ -95,115 +105,198 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+Future<void> _login() async {
+  // Clear previous errors
+  setState(() {
+    _emailError = null;
+    _passwordError = null;
+    _formError = null;
+    _errorMessage = null;
+    _termsError = null;
 
-    if (email.isEmpty || password.isEmpty) {
-      _showError('Please enter both email and password');
-      return;
-    }
-
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      _showError('Please enter a valid email address');
-      return;
-    }
-
-    if (password.length < 6) {
-      _showError('Password must be at least 6 characters long');
-      return;
-    }
-
-    if (password.length > 128) {
-      _showError('Password cannot exceed 128 characters');
-      return;
-    }
-
+  });
+ if (!_termsAccepted) {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _termsError = 'Please accept Terms of Service and Privacy Policy';
     });
-
-    try {
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final success = await authProvider.signIn(
-        email: email,
-        password: password,
-      );
-
-      if (success && mounted) {
-        _showSuccess('Login successful!');
-        
-        // ⭐ UPDATED: Check if we have pending invite
-        if (_cachedInviteCode != null) {
-          debugPrint('✅ Login successful, navigating to join community with invite');
-          await Future.delayed(const Duration(milliseconds: 500));
-          _navigateToJoinCommunityWithInvite();
-        } else {
-          // Normal flow - go to splash screen
-          debugPrint('✅ Login successful, normal flow to splash');
-          Navigator.pushReplacementNamed(context, RouteNames.splash);
-        }
-      } else if (mounted) {
-        if (authProvider.shouldNavigateToVerification) {
-          _showError('Please verify your email to continue.');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VerificationPendingScreen(
-                email: authProvider.currentUserEmail ?? email,
-              ),
-            ),
-          );
-        } else {
-          _showError(authProvider.error ?? 'Login failed. Please try again.');
-        }
-      }
-    } catch (e) {
-      _showError(_getErrorMessage(e));
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    return;
   }
 
-  Future<void> _signInWithGoogle() async {
+  // Network check first
+  try {
+    final hasNetwork = await NetworkService().isConnected;
+    if (!hasNetwork) {
+      setState(() {
+        _formError = 'Connect to internet to login';
+      });
+      return;
+    }
+  } catch (e) {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _formError = 'Unable to check network connection';
     });
+    return;
+  }
 
-    try {
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final success = await authProvider.signInWithGoogle();
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
 
-      if (success && mounted) {
-        _showSuccess('Welcome to KoFund!');
-        
-        // ⭐ UPDATED: Check if we have pending invite
-        if (_cachedInviteCode != null) {
-          debugPrint('✅ Google login successful, navigating to join community with invite');
-          await Future.delayed(const Duration(seconds: 1));
-          _navigateToJoinCommunityWithInvite();
-        } else {
-          // Normal flow
-          debugPrint('✅ Google login successful, normal flow to splash');
-          await Future.delayed(const Duration(seconds: 1));
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-          );
-        }
+  bool hasError = false;
+
+  // Email validation
+  if (email.isEmpty) {
+    _emailError = 'Email is required';
+    hasError = true;
+  } else if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    _emailError = 'Enter a valid email';
+    hasError = true;
+  }
+
+  // Password validation
+  if (password.isEmpty) {
+    _passwordError = 'Password is required';
+    hasError = true;
+  } else if (password.length < 6) {
+    _passwordError = 'Minimum 6 characters';
+    hasError = true;
+  }
+
+  if (hasError) {
+    setState(() {});
+    return;
+  }
+
+  // Set loading state
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final success = await authProvider.signIn(
+      email: email,
+      password: password,
+    );
+
+    if (success && mounted) {
+      _showSuccess('Login successful!');
+      
+      // Check if we have pending invite
+      if (_cachedInviteCode != null) {
+        debugPrint('✅ Login successful, navigating to join community with invite');
+        await Future.delayed(const Duration(milliseconds: 500));
+        _navigateToJoinCommunityWithInvite();
       } else {
-        _showError(authProvider.error ?? 'Google sign-in was cancelled');
+        // Normal flow - go to splash screen
+        debugPrint('✅ Login successful, normal flow to splash');
+        Navigator.pushReplacementNamed(context, RouteNames.splash);
       }
-    } catch (e) {
-      _showError(_getErrorMessage(e));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    } else if (mounted) {
+      if (authProvider.shouldNavigateToVerification) {
+        _showError('Please verify your email to continue.');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerificationPendingScreen(
+              email: authProvider.currentUserEmail ?? email,
+            ),
+          ),
+        );
+      } else {
+        _showError(authProvider.error ?? 'Login failed. Please try again.');
+      }
+    }
+  } catch (e) {
+    _showError(_getErrorMessage(e));
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
+
+Future<void> _signInWithGoogle() async {
+  // Clear ALL errors first
+  setState(() {
+    _formError = null;
+    _errorMessage = null;
+    _termsError = null;
+  });
+  if (!_termsAccepted) {
+    setState(() {
+      _termsError = 'Please accept Terms of Service and Privacy Policy';
+    });
+    return;
+  }
+  // Network check first
+  try {
+    final hasNetwork = await NetworkService().isConnected;
+    if (!hasNetwork) {
+      if (mounted) {
+        setState(() {
+          _formError = 'Connect to internet for Google sign-in';
+        });
+      }
+      return;
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _formError = 'Unable to check network connection';
+      });
+    }
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithGoogle();
+
+    if (success && mounted) {
+      _showSuccess('Welcome to KoFund!');
+      
+      if (_cachedInviteCode != null) {
+        await Future.delayed(const Duration(seconds: 1));
+        _navigateToJoinCommunityWithInvite();
+      } else {
+        await Future.delayed(const Duration(seconds: 1));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SplashScreen()),
+        );
+      }
+    } else {
+      // Check provider error - ONLY show if not a cancellation
+      final providerError = authProvider.error ?? '';
+      if (providerError.isNotEmpty && !_isCancellationError(providerError)) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = providerError;
+          });
+        }
+      }
+    }
+  } catch (e) {
+    final errorStr = e.toString();
+    // Don't show cancellation errors - just silently ignore
+    if (!_isCancellationError(errorStr)) {
+      final errorMsg = _getGoogleErrorMessage(e);
+      if (errorMsg.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+        }
+      }
+    }
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
 
   void _navigateToForgotPassword() {
     Navigator.push(
@@ -213,52 +306,166 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
-  String _getErrorMessage(dynamic error) {
-    if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'user-not-found':
-          return 'No account found with this email.';
-        case 'wrong-password':
-          return 'Incorrect password. Please try again.';
-        case 'invalid-email':
-          return 'Please enter a valid email address.';
-        case 'user-disabled':
-          return 'This account has been disabled. Please contact support.';
-        case 'too-many-requests':
-          return 'Too many login attempts. Please try again later.';
-        case 'network-request-failed':
-          return 'Network error. Please check your internet connection.';
-        case 'account-exists-with-different-credential':
-          return 'An account already exists with the same email but different sign-in method.';
-        case 'popup-closed-by-user':
-          return 'Sign-in was cancelled.';
-        default:
-          return 'An error occurred: ${error.message}';
-      }
+bool _isCancellationError(String error) {
+  if (error.isEmpty) return false;
+  
+  final errorLower = error.toLowerCase();
+  
+  // Common cancellation patterns
+  final cancellationPatterns = [
+    'cancelled',
+    'canceled',
+    'popup closed',
+    'popup-closed',
+    'sign-in was cancelled',
+    'signin was cancelled',
+    'google signin was cancelled',
+    'Google sign-in was cancelled', // This is your specific error
+    'popup-closed-by-user',
+    'cancelled-popup-request',
+    'access_denied',
+    'user cancelled',
+    'user canceled',
+    'the user cancelled',
+    'exception: signin cancelled',
+    'exception: google signin was cancelled',
+    'signin cancelled', // Add more variations
+    'sign-in cancelled',
+    'google sign-in cancelled',
+  ];
+  
+  for (final pattern in cancellationPatterns) {
+    if (errorLower.contains(pattern)) {
+      debugPrint('Detected cancellation error: $error');
+      return true;
     }
-    
-    if (error.toString().contains('signInWithPopup') || 
-        error.toString().contains('signInWithRedirect')) {
-      return 'Google sign-in is not supported on this device. Please use email/password instead.';
-    }
-    
-    return error.toString();
   }
+  
+  return false;
+}
 
-  void _showError(String message) {
-    setState(() => _errorMessage = message);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+String _getErrorMessage(dynamic error) {
+  if (error is FirebaseAuthException) {
+    // First check for cancellations
+    if (error.code == 'popup-closed-by-user' ||
+        error.code == 'cancelled-popup-request') {
+      return ''; // Return empty string for cancellation
+    }
+    
+    // Handle other errors
+    switch (error.code) {
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'too-many-requests':
+        return 'Too many login attempts. Please try again later.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with the same email but different sign-in method.';
+      default:
+        return 'An error occurred: ${error.message}';
+    }
+  }
+  
+  // Check for cancellation in string
+  final errorString = error.toString();
+  if (_isCancellationError(errorString)) {
+    return ''; // Return empty string for cancellation
+  }
+  
+  if (errorString.contains('signInWithPopup') || 
+      errorString.contains('signInWithRedirect')) {
+    return 'Google sign-in is not supported on this device. Please use email/password instead.';
+  }
+  
+  return 'An error occurred: $error';
+}
+String _getGoogleErrorMessage(dynamic error) {
+  if (error is FirebaseAuthException) {
+    // Check for cancellations FIRST
+    if (error.code == 'popup-closed-by-user' ||
+        error.code == 'cancelled-popup-request' ||
+        error.code == 'access_denied' ||
+        error.message?.toLowerCase().contains('cancelled') == true ||
+        error.message?.toLowerCase().contains('canceled') == true) {
+      return ''; // Return empty string for cancellation
+    }
+    
+    // Handle other errors
+    switch (error.code) {
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with the same email but different sign-in method.';
+      case 'invalid-credential':
+        return 'Invalid credentials. Please try again.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'user-not-found':
+        return 'No account found. Please sign up first.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'too-many-requests':
+        return 'Too many login attempts. Please try again later.';
+      default:
+        return 'Google sign-in failed: ${error.message}';
+    }
+  }
+  
+  // Check for cancellation in string
+  final errorString = error.toString();
+  if (_isCancellationError(errorString)) {
+    return ''; // Return empty string for cancellation
+  }
+  
+  if (errorString.contains('signInWithPopup') || 
+      errorString.contains('signInWithRedirect')) {
+    return 'Google sign-in is not supported on this device. Please use email/password instead.';
+  }
+  
+  // For non-cancellation errors, return a user-friendly message
+  if (errorString.isNotEmpty) {
+    return 'Google sign-in failed. Please try again.';
+  }
+  
+  return '';
+}
+void _showError(String message) {
+  // Don't show empty messages or cancellation errors
+  if (message.isEmpty || _isCancellationError(message)) {
+    return;
+  }
+  
+  // Check if it's a Google cancellation specifically
+  if (message.toLowerCase().contains('google sign-in was cancelled') ||
+      message.toLowerCase().contains('signin was cancelled') ||
+      message.toLowerCase().contains('sign-in was cancelled')) {
+    return;
+  }
+  
+  setState(() => _errorMessage = message);
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
       ),
-    );
-  }
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
+
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -275,103 +482,243 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _clearError() => setState(() => _errorMessage = null);
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-    bool? showObscureToggle,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLength = 100,
-    String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    // Combine custom formatters with length limiting formatter
-    List<TextInputFormatter> combinedFormatters = [];
-    
-    if (inputFormatters != null) {
-      combinedFormatters.addAll(inputFormatters);
-    }
-    
-    // Add length limiting formatter (this won't show counter)
-    combinedFormatters.add(LengthLimitingTextInputFormatter(maxLength));
+Widget _buildInputField({
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  bool obscureText = false,
+  bool showObscureToggle = false,
+  TextInputType keyboardType = TextInputType.text,
+  int maxLength = 100,
+  List<TextInputFormatter>? inputFormatters,
+  String? errorText,
+}) {
+  final List<TextInputFormatter> formatters = [
+    if (inputFormatters != null) ...inputFormatters,
+    LengthLimitingTextInputFormatter(maxLength),
+  ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
+  return TextFormField(
+    controller: controller,
+    obscureText: obscureText && _obscurePassword,
+    keyboardType: keyboardType,
+    inputFormatters: formatters,
+    style: TextStyle(
+      color: AppColors.textPrimary(context),
+      fontSize: 14,
+    ),
+    decoration: InputDecoration(
+      labelText: label, // ⭐ FLOATING LABEL
+      labelStyle: TextStyle(
+        color: AppColors.textSecondary(context),
+        fontSize: 14,
+      ),
+      floatingLabelStyle: TextStyle(
+        color: AppColors.primary(context),
+        fontWeight: FontWeight.w600,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: AppColors.primary(context),
+        size: 20,
+      ),
+      suffixIcon: showObscureToggle
+          ? IconButton(
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                size: 20,
+              ),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+            )
+          : null,
+      filled: true,
+      fillColor: AppColors.surface(context),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 18,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: AppColors.primary(context),
+          width: 2,
         ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText && _obscurePassword,
-          keyboardType: keyboardType,
-          inputFormatters: combinedFormatters,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 16,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            suffixIcon: showObscureToggle == true
-                ? IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.textSecondary(context),
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
+      ),
+      errorText: errorText,
+      errorStyle: const TextStyle(
+        fontSize: 12,
+        height: 1.2,
+      ),
+    ),
+    onChanged: (_) {
+      setState(() {
+        if (controller == _emailController) _emailError = null;
+        if (controller == _passwordController) _passwordError = null;
+        _formError = null;
+      });
+    },
+  );
+}
+
+Widget _buildTermsCheckbox() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          // Checkbox with individual control
+          Container(
+            margin: const EdgeInsets.only(right: 0), // ⭐ Control checkbox right spacing
+            child: Transform.translate(
+              offset: const Offset(-4, 0), // ⭐ Move checkbox horizontally/vertically
+              child: Transform.scale(
+                scale: 0.8, // ⭐ Control checkbox size
+                child: Checkbox(
+                  value: _termsAccepted,
+                  onChanged: (value) {
+                    setState(() {
+                      _termsAccepted = value ?? false;
+                      _termsError = null;
+                    });
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4), // ⭐ Control border radius
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  // ⭐ Control colors
+                  fillColor: MaterialStateProperty.resolveWith<Color?>(
+                    (Set<MaterialState> states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return AppColors.primary(context);
+                      }
+                      return null;
                     },
-                  )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
+                  ),
+                  checkColor: Colors.white,
+                  overlayColor: MaterialStateProperty.resolveWith<Color?>(
+                    (Set<MaterialState> states) {
+                      return AppColors.primary(context).withOpacity(0.1);
+                    },
+                  ),
+                ),
               ),
             ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 20,
+          ),
+          
+          // Text with individual control
+          Transform.translate(
+            offset: const Offset(-6, 0), // ⭐ Move text horizontally/vertically
+            child: Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  setState(() {
+                    _termsAccepted = !_termsAccepted;
+                    _termsError = null;
+                  });
+                },
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minHeight: 24, // ⭐ Control minimum touch area height
+                  ),
+                  padding: EdgeInsets.zero, // ⭐ Zero container padding
+                  margin: EdgeInsets.zero, // ⭐ Zero container margin
+                  alignment: Alignment.centerLeft, // ⭐ Force left alignment
+                  child: RichText(
+                    textAlign: TextAlign.left, // ⭐ Force text alignment
+                    textWidthBasis: TextWidthBasis.parent,
+                    overflow: TextOverflow.visible,
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 10, // ⭐ Control text size
+                        height: 1.2, // ⭐ Control line height
+                        color: AppColors.textPrimary(context),
+                      ),
+                      children: [
+                        const TextSpan(text: 'I agree to the '),
+                        TextSpan(
+                          text: 'Terms of Service',
+                          style: TextStyle(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationThickness: 1.5, // ⭐ Control underline thickness
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TermsOfServiceScreen(),
+                                ),
+                              );
+                            },
+                        ),
+                        const TextSpan(text: ' and '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: TextStyle(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            decorationThickness: 1.5, // ⭐ Control underline thickness
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PrivacyPolicyScreen(),
+                                ),
+                              );
+                            },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
+        ],
+      ),
+      
+      // Error message with individual control
+      if (_termsError != null)
+        Transform.translate(
+          offset: const Offset(-6, 0), // ⭐ Position error message
+          child: Container(
+            padding: const EdgeInsets.only(left: 8, top: 4),
+            margin: EdgeInsets.zero,
+            child: Text(
+              _termsError!,
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 12,
+                height: 1.1,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-          onChanged: (_) => _clearError(),
         ),
-        const SizedBox(height: 6),
-      ],
-    );
-  }
-
+    ],
+  );
+}
 // ⭐ MINIMAL: Build invite notification banner
 Widget _buildInviteBanner() {
   if (_cachedInviteCode == null) return const SizedBox.shrink();
@@ -547,71 +894,87 @@ Widget _buildInviteBanner() {
                 const SizedBox(height: 16),
               ],
 
-              if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
+          // Display general auth errors
+if (_errorMessage != null) ...[
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.red.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.red.withOpacity(0.3)),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.error_outline, color: Colors.red, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            _errorMessage!,
+            style: TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+  const SizedBox(height: 16),
+],
 
-              // Form Fields
-              _buildInputField(
-                controller: _emailController,
-                label: 'Email Address *',
-                hint: 'Enter your email',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                maxLength: 100,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) {
-                    return 'Please enter a valid email address';
-                  }
-                  return null;
-                },
-              ),
+// Display network/form errors (SEPARATE from auth errors)
+if (_formError != null) ...[
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.orange.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.wifi_off, color: Colors.orange, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            _formError!,
+            style: TextStyle(
+              color: Colors.orange.shade800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+  const SizedBox(height: 16),
+],
 
-              _buildInputField(
-                controller: _passwordController,
-                label: 'Password *',
-                hint: 'Enter your password',
-                icon: Icons.lock_outline,
-                obscureText: true,
-                showObscureToggle: true,
-                maxLength: 128,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a password';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
+         // Email field
+_buildInputField(
+  controller: _emailController,
+  label: 'Email Address *',
+  // hint: 'Enter your email',
+  icon: Icons.email_outlined,
+  keyboardType: TextInputType.emailAddress,
+  maxLength: 100,
+  errorText: _emailError, // Pass error here
+),
+  const SizedBox(height: 16),
+
+// Password field
+_buildInputField(
+  controller: _passwordController,
+  label: 'Password *',
+  // hint: 'Enter your password',
+  icon: Icons.lock_outline,
+  obscureText: true,
+  showObscureToggle: true,
+  maxLength: 128,
+  errorText: _passwordError, // Pass error here
+),
 
               // Forgot Password Button
               Align(
@@ -635,44 +998,107 @@ Widget _buildInviteBanner() {
                 ),
               ),
 
+// Terms checkbox
+_buildTermsCheckbox(),
               const SizedBox(height: 20),
 
               // Login Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                    shadowColor: Colors.transparent,
+             // Replace your current login button with this:
+// Network-aware Login Button (SAME PATTERN AS CREATE COMMUNITY)
+// Login Button - Fixed
+FutureBuilder<bool>(
+  future: NetworkService().isConnected,
+  builder: (context, futureSnapshot) {
+    final bool isOnlineFromFuture = futureSnapshot.data ?? true;
+    
+    return StreamBuilder<bool>(
+      stream: NetworkService().onConnectionChanged,
+      builder: (context, streamSnapshot) {
+        // ⭐ REMOVE initialData and use conditional logic
+        final bool currentIsOnline = streamSnapshot.hasData 
+            ? streamSnapshot.data! 
+            : (futureSnapshot.hasData ? futureSnapshot.data! : true);
+        
+        final bool isDisabled = _isLoading || !currentIsOnline;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: isDisabled ? null : _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      AppColors.primary(context).withOpacity(0.5),
+                  disabledForegroundColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          _cachedInviteCode != null
-                              ? 'Sign In & Join Community'
-                              : 'Sign In',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
                         ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentIsOnline ? Icons.login : Icons.wifi_off,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            currentIsOnline
+                                ? (_cachedInviteCode != null
+                                    ? 'Sign In & Join Community'
+                                    : 'Sign In')
+                                : 'Offline',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            
+            // Network status message
+            if (!currentIsOnline)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: const [
+                    Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: Colors.redAccent,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Connect to internet to login',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
+          ],
+        );
+      },
+    );
+  },
+),
               const SizedBox(height: 20),
               
               // Divider
@@ -707,35 +1133,59 @@ Widget _buildInviteBanner() {
               const SizedBox(height: 20),
 
               // Google Sign-In Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
-                  icon: Image.asset(
-                    'assets/logos/google_logo.png',
-                    height: 20,
-                    width: 20,
-                  ),
-                  label: Text(
-                    _cachedInviteCode != null
-                        ? 'Join with Google'
-                        : 'Continue with Google',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary(context),
-                    ),
-                  ),
-                  onPressed: isLoading ? null : _signInWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.border(context)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: AppColors.surface(context),
-                  ),
-                ),
+// Google Sign-In Button - Fixed
+FutureBuilder<bool>(
+  future: NetworkService().isConnected,
+  builder: (context, futureSnapshot) {
+    return StreamBuilder<bool>(
+      stream: NetworkService().onConnectionChanged,
+      builder: (context, streamSnapshot) {
+        final isOnline = streamSnapshot.hasData
+            ? streamSnapshot.data!
+            : (futureSnapshot.hasData ? futureSnapshot.data! : true);
+        final isDisabled = _isLoading || !isOnline;
+        
+        return SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: OutlinedButton.icon(
+            icon: Image.asset(
+              'assets/logos/google_logo.png',
+              height: 20,
+              width: 20,
+            ),
+            label: Text(
+              isOnline
+                  ? (_cachedInviteCode != null
+                      ? 'Join with Google'
+                      : 'Continue with Google')
+                  : 'Offline',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isOnline 
+                    ? AppColors.textPrimary(context)
+                    : AppColors.textPrimary(context).withOpacity(0.5),
               ),
+            ),
+            onPressed: isDisabled ? null : _signInWithGoogle,
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: isOnline 
+                    ? AppColors.border(context)
+                    : AppColors.border(context).withOpacity(0.5),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              backgroundColor: AppColors.surface(context),
+            ),
+          ),
+        );
+      },
+    );
+  },
+),
 
               const SizedBox(height: 16),
 

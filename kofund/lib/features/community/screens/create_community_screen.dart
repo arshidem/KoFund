@@ -7,7 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
-
+import 'package:kofund/core/services/network_service.dart';
 class CreateCommunityScreen extends StatefulWidget {
   const CreateCommunityScreen({super.key});
 
@@ -20,10 +20,25 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  
-  String _selectedType = CommunityType.apartment;
-  bool _isLoading = false;
 
+  String? _selectedType;
+  String? _typeError; // Add this with your other error variables
+  bool _isLoading = false;
+  
+void _scrollToCommunityType() {
+  final BuildContext? currentContext = context;
+  if (currentContext != null) {
+    // You might need to wrap the dropdown in a KeyedSubtree
+    // or find another way to scroll to it
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Scrollable.ensureVisible(
+        currentContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+}
   @override
   void dispose() {
     _nameController.dispose();
@@ -32,9 +47,69 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     super.dispose();
   }
 
-  Future<void> _createCommunity() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _createCommunity() async {
+  // 1. VALIDATE ALL FIELDS AND SHOW ALL ERRORS AT ONCE
+  bool hasErrors = false;
+  
+  // Clear all previous errors
+  setState(() {
+    _typeError = null;
+  });
 
+  // Force validate all fields
+  _formKey.currentState!.validate();
+
+  // Check community name
+  if (_nameController.text.isEmpty || _nameController.text.length < 3) {
+    hasErrors = true;
+  }
+
+  // Check location
+  if (_locationController.text.isEmpty || _locationController.text.length < 3) {
+    hasErrors = true;
+  }
+
+  // Check community type
+  if (_selectedType == null || _selectedType!.isEmpty) {
+    setState(() {
+      _typeError = 'Please select a community type';
+    });
+    hasErrors = true;
+  }
+
+  // If any errors exist, stop here
+  if (hasErrors) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToFirstError();
+    });
+    return;
+  }
+
+  // 2. Check network AFTER form validation passes
+  try {
+    final hasNetwork = await NetworkService().isConnected;
+    if (!hasNetwork) {
+      if (mounted) {
+        SnackbarHelper.showError(
+          context, 
+          'Internet connection required to create a community. Please check your network and try again.'
+        );
+      }
+      return;
+    }
+  } catch (e) {
+    if (mounted) {
+      SnackbarHelper.showError(context, 'Unable to check network connection');
+    }
+    return;
+  }
+
+  // 3. Only set loading state AFTER network check passes
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
     final authProvider = context.read<AppAuthProvider>();
     final communityProvider = context.read<CommunityProvider>();
 
@@ -43,261 +118,281 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    final String adminName = authProvider.getUserDisplayName;
 
-    try {
-      final String adminName = authProvider.getUserDisplayName;
+    final success = await communityProvider.createCommunity(
+      name: _nameController.text.trim(),
+      adminId: authProvider.user!.uid,
+      adminEmail: authProvider.user!.email ?? '',
+      adminName: adminName,
+      type: _selectedType!,
+      description: _descriptionController.text.trim().isNotEmpty 
+          ? _descriptionController.text.trim()
+          : 'Community for ${_nameController.text.trim()}',
+      location: _locationController.text.trim(),
+    );
 
-      final success = await communityProvider.createCommunity(
-        name: _nameController.text.trim(),
-        adminId: authProvider.user!.uid,
-        adminEmail: authProvider.user!.email ?? '',
-        adminName: adminName,
-        type: _selectedType,
-        description: _descriptionController.text.trim().isNotEmpty 
-            ? _descriptionController.text.trim()
-            : 'Community for ${_nameController.text.trim()}',
-        location: _locationController.text.trim().isNotEmpty 
-            ? _locationController.text.trim()
-            : null,
+    if (success && communityProvider.currentCommunity != null) {
+      final community = communityProvider.currentCommunity!;
+      
+      await authProvider.setUserAsCommunityAdmin(
+        communityId: community.communityId,
+        communityName: community.name,
       );
 
-      if (success && communityProvider.currentCommunity != null) {
-        final community = communityProvider.currentCommunity!;
-        
-        await authProvider.setUserAsCommunityAdmin(
-          communityId: community.communityId,
-          communityName: community.name,
+      await authProvider.refreshUserData();
+
+      if (mounted) {
+        SnackbarHelper.showSuccess(
+          context, 
+          'Community "${_nameController.text.trim()}" created successfully!'
         );
-
-        await authProvider.refreshUserData();
-
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Community "${_nameController.text.trim()}" created successfully!'
-          );
-          Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
-        }
-      } else {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context,
-            communityProvider.error ?? 'Failed to create community',
-          );
-        }
+        Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
       }
-    } catch (e) {
+    } else {
       if (mounted) {
-        SnackbarHelper.showError(context, 'Error creating community: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        SnackbarHelper.showError(
+          context,
+          communityProvider.error ?? 'Failed to create community',
+        );
       }
     }
+  } catch (e) {
+    if (mounted) {
+      SnackbarHelper.showError(context, 'Error creating community: $e');
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
+}
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    int maxLength = 100,
-    bool isRequired = false,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-            ),
-            children: isRequired
-                ? [
-                    TextSpan(
-                      text: ' *',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ]
-                : [],
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          maxLength: maxLines == 1 ? maxLength : null,
-          inputFormatters: [
-            if (maxLines == 1) LengthLimitingTextInputFormatter(maxLength),
-          ],
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 16,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
-              ),
-            ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: maxLines == 1 ? 20 : 16,
-              bottom: maxLines == 1 ? 20 : 16,
-            ),
-            counterText: '',
-          ),
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
+// Add this method to scroll to first error
+void _scrollToFirstError() {
+  final context = _formKey.currentContext;
+  if (context != null) {
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
+}
 
-  Widget _buildCommunityTypeDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: 'Community Type',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
+Widget _buildInputField({
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  required String hint, // ⭐ KEEP HINT for description
+  bool obscureText = false,
+  bool showObscureToggle = false,
+  TextInputType keyboardType = TextInputType.text,
+  int maxLines = 1,
+  int maxLength = 100,
+  List<TextInputFormatter>? inputFormatters,
+  String? errorText,
+  bool isRequired = false,
+  String? Function(String?)? validator,
+}) {
+  final List<TextInputFormatter> formatters = [
+    if (inputFormatters != null) ...inputFormatters,
+    LengthLimitingTextInputFormatter(maxLength),
+  ];
+
+  return TextFormField(
+    controller: controller,
+    obscureText: obscureText,
+    keyboardType: keyboardType,
+    maxLines: maxLines,
+    inputFormatters: formatters,
+    validator: validator,
+    style: TextStyle(
+      color: AppColors.textPrimary(context),
+      fontSize: 14,
+    ),
+    decoration: InputDecoration(
+      labelText: isRequired ? '$label *' : label, // ⭐ FLOATING LABEL
+      labelStyle: TextStyle(
+        color: AppColors.textSecondary(context),
+        fontSize: 14,
+      ),
+      floatingLabelStyle: TextStyle(
+        color: AppColors.primary(context),
+        fontWeight: FontWeight.w600,
+      ),
+      hintText: hint, // ⭐ DESCRIPTIVE HINT
+      hintStyle: TextStyle(
+        color: AppColors.textSecondary(context),
+        fontSize: maxLines > 1 ? 13 : 14, // Smaller for multiline
+      ),
+      prefixIcon: Icon(
+        icon,
+        color: AppColors.primary(context),
+        size: 20,
+      ),
+      filled: true,
+      fillColor: AppColors.surface(context),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: maxLines == 1 ? 18 : 16,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: AppColors.primary(context),
+          width: 2,
+        ),
+      ),
+      errorText: errorText,
+      errorStyle: const TextStyle(
+        fontSize: 12,
+        height: 1.2,
+      ),
+    ),
+  );
+}
+
+Widget _buildCommunityTypeDropdown() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // ⭐ NO LABEL - Just the dropdown with hint
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _typeError != null 
+                ? Colors.red.withOpacity(0.8) 
+                : AppColors.border(context),
+            width: _typeError != null ? 1.5 : 1,
+          ),
+          color: _typeError != null 
+              ? Colors.red.withOpacity(0.03) 
+              : AppColors.surface(context),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String?>(
+            value: _selectedType,
+            isExpanded: true,
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: _typeError != null 
+                  ? Colors.red 
+                  : AppColors.textSecondary(context),
             ),
-            children: const [
-              TextSpan(
-                text: ' *',
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            hint: Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Text(
+                'Select community type *',
                 style: TextStyle(
+                  color: _typeError != null 
+                      ? Colors.red.withOpacity(0.7) 
+                      : AppColors.textSecondary(context),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            items: CommunityType.allTypes.map((type) {
+              return DropdownMenuItem<String?>(
+                value: type,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary(context).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: Text(
+                            CommunityType.getIcon(type),
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              type,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              CommunityType.getDescription(type),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary(context),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedType = value;
+                _typeError = null; // Clear error on selection
+              });
+            },
+          ),
+        ),
+      ),
+      
+      // ⭐ ERROR MESSAGE (appears below when there's an error)
+      if (_typeError != null)
+        Padding(
+          padding: const EdgeInsets.only(left: 6, top: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _typeError!,
+                style: const TextStyle(
                   color: Colors.red,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  height: 1.2,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border(context)),
-            color: AppColors.surface(context),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedType,
-              isExpanded: true,
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: AppColors.textSecondary(context),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              items: CommunityType.allTypes.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 1),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary(context).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              CommunityType.getIcon(type),
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                type,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                CommunityType.getDescription(type),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary(context),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedType = value;
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
+      
+      const SizedBox(height: 16),
+    ],
+  );
+}
 @override
 Widget build(BuildContext context) {
   return Scaffold(
@@ -375,45 +470,58 @@ Widget build(BuildContext context) {
                 child: Column(
                   children: [
                     // Rest of your form fields remain exactly the same...
-                    _buildInputField(
-                      controller: _nameController,
-                      label: 'Community Name',
-                      hint: 'Enter community name',
-                      icon: Icons.group,
-                      isRequired: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a community name';
-                        }
-                        if (value.length < 3) {
-                          return 'Name must be at least 3 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    // ... rest of your existing code
+// Community Name - Clear with hint
+_buildInputField(
+  controller: _nameController,
+  label: 'Community Name',
+  icon: Icons.group,
+  hint: 'e.g., Tech Enthusiasts Club, Fitness Group',
+  isRequired: true,
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a community name';
+    }
+    if (value.length < 3) {
+      return 'Name must be at least 3 characters';
+    }
+    return null;
+  },
+),
+              const SizedBox(height: 12),
 
-                      // Community Type Dropdown
                       _buildCommunityTypeDropdown(),
 
-                      // Description
-                      _buildInputField(
-                        controller: _descriptionController,
-                        label: 'Description',
-                        hint: 'Describe your community purpose, goals, or rules...',
-                        icon: Icons.description,
-                        maxLines: 3,
-                        maxLength: 200,
-                      ),
+              const SizedBox(height: 12),
 
-                      // Location
-                      _buildInputField(
-                        controller: _locationController,
-                        label: 'Location',
-                        hint: 'e.g., Kochi, Chennai, Bangalore',
-                        icon: Icons.location_on,
-                        maxLength: 50,
-                      ),
+// Description - Detailed hint
+_buildInputField(
+  controller: _descriptionController,
+  label: 'Description',
+  icon: Icons.description,
+  hint: 'Describe purpose, goals, rules, or activities...',
+  maxLines: 3,
+  maxLength: 200,
+),
+              const SizedBox(height: 12),
+
+
+// Location - Helpful hint
+_buildInputField(
+  controller: _locationController,
+  label: 'Location',
+  icon: Icons.location_on,
+  hint: 'e.g., Kochi, Chennai, Bangalore, or "Online"',
+  isRequired: true,
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter location';
+    }
+    if (value.length < 3) {
+      return 'Location must be at least 3 characters';
+    }
+    return null;
+  },
+),
 
                       const SizedBox(height: 16),
 
@@ -492,73 +600,94 @@ Container(
 
                       const SizedBox(height: 32),
 
-                      // Create Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _createCommunity,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary(context),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.add_circle_outline, size: 20),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Create Community',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+// Replace your StreamBuilder with this:
+FutureBuilder<bool>(
+  future: NetworkService().isConnected, // Initial check
+  builder: (context, snapshot) {
+    final bool isOnline = snapshot.data ?? true;
+    
+    return StreamBuilder<bool>(
+      stream: NetworkService().onConnectionChanged,
+      builder: (context, streamSnapshot) {
+        // Use stream data if available, otherwise use future data
+        final bool currentIsOnline = streamSnapshot.data ?? isOnline;
+        final bool isDisabled = _isLoading || !currentIsOnline;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: isDisabled ? null : _createCommunity,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor:
+                      AppColors.primary(context).withOpacity(0.5),
+                  disabledForegroundColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Cancel Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: _isLoading ? null : () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.border(context)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            backgroundColor: AppColors.surface(context),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentIsOnline ? Icons.group_add : Icons.wifi_off,
+                            size: 20,
                           ),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 15,
+                          const SizedBox(width: 10),
+                          Text(
+                            currentIsOnline ? 'Create Community' : 'Offline',
+                            style: const TextStyle(
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary(context),
                             ),
                           ),
-                        ),
+                        ],
                       ),
+              ),
+            ),
+            
+            if (!currentIsOnline)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: const [
+                    Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: Colors.redAccent,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Internet connection required',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  },
+),
 
+                    
                       const SizedBox(height: 20),
 
                       Row(

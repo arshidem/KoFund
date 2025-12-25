@@ -609,65 +609,91 @@ Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
     await _auth.currentUser?.reload();
   }
 
-  // ✅ UPDATED: Google Sign In with FCM token registration
-  Future<bool> signInWithGoogle() async {
-    _setLoading(true);
-    _error = null;
+Future<bool> signInWithGoogle() async {
+  _setLoading(true);
+  _error = null;
 
-    try {
-      final user = await _authService.signInWithGoogle();
+  try {
+    final user = await _authService.signInWithGoogle();
 
-      if (user != null) {
-        // For Google accounts, they are typically verified, but let's check if user exists in Firestore
-        final userData = await _authService.getUserData(user.uid);
-        
-        if (userData != null) {
-          _user = UserModel.fromMap(userData);
-        } else {
-          // Create user profile for Google sign-in user
-          debugPrint('Creating user profile for Google sign-in user...');
-          final userModel = UserModel(
-            uid: user.uid,
-            email: user.email ?? '',
-            displayName: user.displayName ?? 'Google User',
-            phoneNumber: user.phoneNumber ?? '',
-            role: 'member',
-            isApproved: false,
-            createdAt: Timestamp.now(),
-          );
-          
-          await _firestore.collection('users')
-              .doc(user.uid)
-              .set(userModel.toMap());
-          
-          _user = userModel;
-        }
-        
-        // ✅ CRITICAL: Save user data locally for offline support
-        final updatedUserData = await _authService.getUserData(user.uid);
-        if (updatedUserData != null) {
-          await _saveUserDataLocally(updatedUserData);
-        }
-        
-        // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS
-        await _registerFCMTokenAfterLogin(user.uid);
-        
-        _isOfflineMode = false; // We're online now
-        _setLoading(false);
-        notifyListeners();
-        return true;
+    if (user != null) {
+      // For Google accounts, they are typically verified, but let's check if user exists in Firestore
+      final userData = await _authService.getUserData(user.uid);
+      
+      if (userData != null) {
+        _user = UserModel.fromMap(userData);
       } else {
-        _setError('Google sign-in was cancelled.');
-        _setLoading(false);
-        return false;
+        // Create user profile for Google sign-in user
+        debugPrint('Creating user profile for Google sign-in user...');
+        final userModel = UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? 'Google User',
+          phoneNumber: user.phoneNumber ?? '',
+          role: 'member',
+          isApproved: false,
+          createdAt: Timestamp.now(),
+        );
+        
+        await _firestore.collection('users')
+            .doc(user.uid)
+            .set(userModel.toMap());
+        
+        _user = userModel;
       }
-    } catch (e) {
-      debugPrint('❌ GOOGLE SIGN-IN ERROR: $e');
-      _setError(_getAuthErrorMessage(e));
+      
+      // ✅ CRITICAL: Save user data locally for offline support
+      final updatedUserData = await _authService.getUserData(user.uid);
+      if (updatedUserData != null) {
+        await _saveUserDataLocally(updatedUserData);
+      }
+      
+      // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS
+      await _registerFCMTokenAfterLogin(user.uid);
+      
+      _isOfflineMode = false; // We're online now
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } else {
+      // ⭐ CHANGED: Don't set error for cancellation - just return false
       _setLoading(false);
       return false;
     }
+  } catch (e) {
+    debugPrint('❌ GOOGLE SIGN-IN ERROR: $e');
+    
+    // ⭐ CHANGED: Only set error if it's NOT a cancellation
+    if (!_isGoogleCancellationError(e)) {
+      _setError(_getAuthErrorMessage(e));
+    } else {
+      debugPrint('🔄 Google sign-in was cancelled by user');
+    }
+    
+    _setLoading(false);
+    return false;
   }
+}
+
+// ⭐ ADD THIS HELPER METHOD to detect Google cancellation errors
+bool _isGoogleCancellationError(dynamic error) {
+  if (error is FirebaseAuthException) {
+    return error.code == 'popup-closed-by-user' ||
+           error.code == 'cancelled-popup-request' ||
+           error.code == 'access_denied' ||
+           (error.message?.toLowerCase().contains('cancelled') == true) ||
+           (error.message?.toLowerCase().contains('canceled') == true);
+  }
+  
+  final errorString = error.toString().toLowerCase();
+  return errorString.contains('cancelled') ||
+         errorString.contains('canceled') ||
+         errorString.contains('popup closed') ||
+         errorString.contains('popup-closed') ||
+         errorString.contains('signin was cancelled') ||
+         errorString.contains('sign-in was cancelled');
+}
+
 
   // Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
@@ -737,55 +763,63 @@ Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
     }
   }
 
-  String _getAuthErrorMessage(dynamic error) {
-    if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'email-already-in-use':
-          return 'This email is already registered. Please sign in instead.';
-        case 'invalid-email':
-          return 'Please enter a valid email address.';
-        case 'weak-password':
-          return 'Password is too weak. Use at least 6 characters.';
-        case 'user-not-found':
-          return 'No account found with this email.';
-        case 'wrong-password':
-          return 'Incorrect password. Please try again.';
-        case 'account-exists-with-different-credential':
-          return 'An account already exists with the same email but different sign-in method.';
-        case 'invalid-credential':
-          return 'The authentication credential is invalid.';
-        case 'operation-not-allowed':
-          return 'This sign-in method is not enabled. Please contact support.';
-        case 'user-disabled':
-          return 'This account has been disabled. Please contact support.';
-        case 'too-many-requests':
-          return 'Too many attempts. Please try again later.';
-        case 'network-request-failed':
-          return 'Network error. Please check your internet connection.';
-        case 'popup-closed-by-user':
-          return 'Sign-in was cancelled.';
-        case 'popup-blocked':
-          return 'Popup was blocked. Please allow popups for this site.';
-        default:
-          return 'Authentication failed: ${error.message}';
-      }
+String _getAuthErrorMessage(dynamic error) {
+  if (error is FirebaseAuthException) {
+    // ⭐ CHECK FOR CANCELLATION FIRST
+    if (error.code == 'popup-closed-by-user' ||
+        error.code == 'cancelled-popup-request' ||
+        error.message?.toLowerCase().contains('cancelled') == true ||
+        error.message?.toLowerCase().contains('canceled') == true) {
+      return ''; // Return empty string for cancellation
     }
     
-    if (error.toString().contains('signInWithPopup') || 
-        error.toString().contains('signInWithRedirect')) {
-      if (kIsWeb) {
-        return 'Google sign-in popup was blocked. Please allow popups for this site.';
-      } else {
-        return 'Google sign-in is not available on this platform.';
-      }
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'This email is already registered. Please sign in instead.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with the same email but different sign-in method.';
+      case 'invalid-credential':
+        return 'The authentication credential is invalid.';
+      case 'operation-not-allowed':
+        return 'This sign-in method is not enabled. Please contact support.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'popup-closed-by-user':
+        return ''; // Empty for cancellation
+      case 'popup-blocked':
+        return 'Popup was blocked. Please allow popups for this site.';
+      default:
+        return 'Authentication failed: ${error.message}';
     }
-    
-    if (error.toString().contains('platform')) {
-      return 'This feature is not supported on your device.';
-    }
-    
-    return 'An error occurred: $error';
   }
+  
+  if (error.toString().contains('signInWithPopup') || 
+      error.toString().contains('signInWithRedirect')) {
+    if (kIsWeb) {
+      return 'Google sign-in popup was blocked. Please allow popups for this site.';
+    } else {
+      return 'Google sign-in is not available on this platform.';
+    }
+  }
+  
+  if (error.toString().contains('platform')) {
+    return 'This feature is not supported on your device.';
+  }
+  
+  return 'An error occurred: $error';
+}
 
   Future<void> signOut(BuildContext context) async {
     try {

@@ -1,5 +1,6 @@
 // lib/features/programs/constants/program_types.dart
 import 'package:flutter/material.dart';
+
 class ProgramTypes {
   // ✅ SINGLE SOURCE OF TRUTH - Modify only here to update everywhere
   
@@ -37,6 +38,21 @@ class ProgramTypes {
       case meeting: return 'Meeting';
       case other: return 'Other';
       default: return 'General'; // Fallback
+    }
+  }
+
+  // ✅ Centralized descriptions - ADD NEW CASES HERE FOR NEW TYPES
+  static String getDescription(String type) {
+    switch (type) {
+      case general: return 'General purpose program';
+      case football: return 'Football match or tournament';
+      case trip: return 'Community trip or outing';
+      case charity: return 'Charity or fundraising event';
+      case festival: return 'Festival or celebration';
+      case sports: return 'Sports activities';
+      case meeting: return 'Community meeting';
+      case other: return 'Other type of program';
+      default: return 'General purpose program';
     }
   }
 

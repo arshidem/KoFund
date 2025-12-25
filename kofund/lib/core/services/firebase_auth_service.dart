@@ -186,52 +186,69 @@ class FirebaseAuthService {
     }
   }
 
-  // GOOGLE SIGN IN - PROPER PLATFORM DETECTION
-  Future<User?> signInWithGoogle() async {
-    try {
-      if (kIsWeb) {
-        // WEB IMPLEMENTATION
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        googleProvider.addScope('email');
-        googleProvider.addScope('profile');
+// GOOGLE SIGN IN - PROPER PLATFORM DETECTION WITH CANCELLATION HANDLING
+Future<User?> signInWithGoogle() async {
+  try {
+    if (kIsWeb) {
+      // WEB IMPLEMENTATION
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
 
-        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
-        final User? user = userCredential.user;
-        
-        if (user != null) {
-          await _createOrUpdateUserInFirestore(user);
-        }
-        
-        return user;
-      } else {
-        // MOBILE IMPLEMENTATION (Android & iOS)
-        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-        
-        if (googleUser == null) {
-          throw Exception('Google sign-in was cancelled');
-        }
-        
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        
-        final OAuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        
-        final UserCredential userCredential = await _auth.signInWithCredential(credential);
-        final User? user = userCredential.user;
-        
-        if (user != null) {
-          await _createOrUpdateUserInFirestore(user);
-        }
-        
-        return user;
+      final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+      final User? user = userCredential.user;
+      
+      if (user != null) {
+        await _createOrUpdateUserInFirestore(user);
       }
-    } catch (e) {
-      print('Google Sign-In Error: $e');
-      rethrow;
+      
+      return user;
+    } else {
+      // MOBILE IMPLEMENTATION (Android & iOS)
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      // ⭐ FIX: Handle cancellation gracefully
+      if (googleUser == null) {
+        debugPrint('🔄 Google sign-in was cancelled by user');
+        return null; // ⭐ Return null instead of throwing
+      }
+      
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
+      
+      if (user != null) {
+        await _createOrUpdateUserInFirestore(user);
+      }
+      
+      return user;
     }
+  } catch (e) {
+    // ⭐ FIX: Check for cancellation errors in exception
+    final errorString = e.toString().toLowerCase();
+    if (errorString.contains('cancelled') ||
+        errorString.contains('canceled') ||
+        errorString.contains('popup closed') ||
+        errorString.contains('popup-closed') ||
+        errorString.contains('signin was cancelled') ||
+        errorString.contains('sign-in was cancelled') ||
+        (e is FirebaseAuthException && 
+         (e.code == 'popup-closed-by-user' || 
+          e.code == 'cancelled-popup-request'))) {
+      debugPrint('🔄 Google sign-in was cancelled: $e');
+      return null; // ⭐ Return null for cancellation
+    }
+    
+    debugPrint('❌ Google Sign-In Error: $e');
+    rethrow; // Re-throw actual errors
   }
+}
 
   Future<void> _createOrUpdateUserInFirestore(User user) async {
     final userDoc = await _firestore.collection('users').doc(user.uid).get();
@@ -551,30 +568,39 @@ Future<bool> updatePassword(String newPassword) async {
   }
 }
   // Error handling
-  String _handleAuthError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'email-already-in-use':
-        return 'This email is already registered. Please sign in instead.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'account-exists-with-different-credential':
-        return 'An account already exists with the same email but different sign-in method.';
-      case 'popup-closed-by-user':
-        return 'Sign-in was cancelled.';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your internet connection.';
-      default:
-        return 'An error occurred: ${e.message}';
-    }
+// Error handling
+String _handleAuthError(FirebaseAuthException e) {
+  // ⭐ FIX: Check for cancellation first
+  if (e.code == 'popup-closed-by-user' ||
+      e.code == 'cancelled-popup-request' ||
+      e.message?.toLowerCase().contains('cancelled') == true ||
+      e.message?.toLowerCase().contains('canceled') == true) {
+    return ''; // ⭐ Return empty string for cancellation
   }
+  
+  switch (e.code) {
+    case 'email-already-in-use':
+      return 'This email is already registered. Please sign in instead.';
+    case 'invalid-email':
+      return 'Please enter a valid email address.';
+    case 'weak-password':
+      return 'Password is too weak. Use at least 6 characters.';
+    case 'user-not-found':
+      return 'No account found with this email.';
+    case 'wrong-password':
+      return 'Incorrect password. Please try again.';
+    case 'account-exists-with-different-credential':
+      return 'An account already exists with the same email but different sign-in method.';
+    case 'popup-closed-by-user':
+      return ''; // Already handled above
+    case 'user-disabled':
+      return 'This account has been disabled. Please contact support.';
+    case 'too-many-requests':
+      return 'Too many attempts. Please try again later.';
+    case 'network-request-failed':
+      return 'Network error. Please check your internet connection.';
+    default:
+      return 'An error occurred: ${e.message}';
+  }
+}
 }
