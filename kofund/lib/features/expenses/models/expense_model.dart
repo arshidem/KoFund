@@ -13,6 +13,30 @@ class ExpenseModel {
   DateTime expenseDate;
   String status; // pending, approved, rejected
   Timestamp createdAt;
+  
+  // ✅ ADD: Entry tracking fields (who added this record)
+  String? addedByUserId;
+  String? addedByUserName;
+  Timestamp? addedAt;
+
+  // ✅ ADD: Edit tracking fields
+  bool isEdited;
+  String? lastEditedByUserId;
+  String? lastEditedByUserName;
+  Timestamp? lastEditedAt;
+  String? editReason;
+  
+  // ✅ ADD: Edit history array to track all changes
+  List<Map<String, dynamic>> editHistory;
+
+  // ✅ ADD: Payment receipt tracking
+  String? receiptUrl;
+  String? receiptFileName;
+
+  // ✅ ADD: Additional metadata
+  String? referenceNumber;
+  String? vendorName;
+  String? paymentMethod; // cash, bank_transfer, upi, cheque, etc.
 
   ExpenseModel({
     required this.expenseId,
@@ -26,6 +50,22 @@ class ExpenseModel {
     required this.expenseDate,
     required this.status,
     required this.createdAt,
+    
+    // New fields with defaults
+    this.addedByUserId,
+    this.addedByUserName,
+    this.addedAt,
+    this.isEdited = false,
+    this.lastEditedByUserId,
+    this.lastEditedByUserName,
+    this.lastEditedAt,
+    this.editReason,
+    this.editHistory = const [],
+    this.receiptUrl,
+    this.receiptFileName,
+    this.referenceNumber,
+    this.vendorName,
+    this.paymentMethod,
   });
 
   factory ExpenseModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -38,9 +78,25 @@ class ExpenseModel {
       amount: (map['amount'] ?? 0).toDouble(),
       category: map['category'] ?? '',
       paidBy: map['paidBy'] ?? '',
-      expenseDate: (map['expenseDate'] as Timestamp).toDate(),
+      expenseDate: (map['expenseDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: map['status'] ?? 'pending',
-      createdAt: map['createdAt'] ?? Timestamp.now(),
+      createdAt: map['createdAt'] as Timestamp? ?? Timestamp.now(),
+      
+      // New fields
+      addedByUserId: map['addedByUserId'],
+      addedByUserName: map['addedByUserName'],
+      addedAt: map['addedAt'] as Timestamp?,
+      isEdited: map['isEdited'] == true,
+      lastEditedByUserId: map['lastEditedByUserId'],
+      lastEditedByUserName: map['lastEditedByUserName'],
+      lastEditedAt: map['lastEditedAt'] as Timestamp?,
+      editReason: map['editReason'],
+      editHistory: (map['editHistory'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
+      receiptUrl: map['receiptUrl'],
+      receiptFileName: map['receiptFileName'],
+      referenceNumber: map['referenceNumber'],
+      vendorName: map['vendorName'],
+      paymentMethod: map['paymentMethod'],
     );
   }
 
@@ -56,10 +112,25 @@ class ExpenseModel {
       'expenseDate': Timestamp.fromDate(expenseDate),
       'status': status,
       'createdAt': createdAt,
-    };
+      
+      // New fields
+      'addedByUserId': addedByUserId,
+      'addedByUserName': addedByUserName,
+      'addedAt': addedAt,
+      'isEdited': isEdited,
+      'lastEditedByUserId': lastEditedByUserId,
+      'lastEditedByUserName': lastEditedByUserName,
+      'lastEditedAt': lastEditedAt,
+      'editReason': editReason,
+      'editHistory': editHistory,
+      'receiptUrl': receiptUrl,
+      'receiptFileName': receiptFileName,
+      'referenceNumber': referenceNumber,
+      'vendorName': vendorName,
+      'paymentMethod': paymentMethod,
+    }..removeWhere((key, value) => value == null);
   }
 
-  // ✅ Add copyWith method
   ExpenseModel copyWith({
     String? expenseId,
     String? programId,
@@ -72,6 +143,20 @@ class ExpenseModel {
     DateTime? expenseDate,
     String? status,
     Timestamp? createdAt,
+    String? addedByUserId,
+    String? addedByUserName,
+    Timestamp? addedAt,
+    bool? isEdited,
+    String? lastEditedByUserId,
+    String? lastEditedByUserName,
+    Timestamp? lastEditedAt,
+    String? editReason,
+    List<Map<String, dynamic>>? editHistory,
+    String? receiptUrl,
+    String? receiptFileName,
+    String? referenceNumber,
+    String? vendorName,
+    String? paymentMethod,
   }) {
     return ExpenseModel(
       expenseId: expenseId ?? this.expenseId,
@@ -85,6 +170,20 @@ class ExpenseModel {
       expenseDate: expenseDate ?? this.expenseDate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      addedByUserId: addedByUserId ?? this.addedByUserId,
+      addedByUserName: addedByUserName ?? this.addedByUserName,
+      addedAt: addedAt ?? this.addedAt,
+      isEdited: isEdited ?? this.isEdited,
+      lastEditedByUserId: lastEditedByUserId ?? this.lastEditedByUserId,
+      lastEditedByUserName: lastEditedByUserName ?? this.lastEditedByUserName,
+      lastEditedAt: lastEditedAt ?? this.lastEditedAt,
+      editReason: editReason ?? this.editReason,
+      editHistory: editHistory ?? this.editHistory,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
+      receiptFileName: receiptFileName ?? this.receiptFileName,
+      referenceNumber: referenceNumber ?? this.referenceNumber,
+      vendorName: vendorName ?? this.vendorName,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }

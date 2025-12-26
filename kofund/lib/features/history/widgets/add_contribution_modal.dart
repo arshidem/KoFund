@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/services/program_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/contribution_service.dart';
@@ -29,10 +30,16 @@ class _AddContributionModalState extends State<AddContributionModal> {
   double _amount = 0;
   String _paymentMethod = 'cash';
   final List<String> _paymentMethods = ['cash', 'online', 'bank transfer', 'other'];
+  String _memberSearchQuery = '';
+  List<UserModel> _filteredUsers = [];
+  List<UserModel> _allUsers = [];
   
-  // ✅ ADD: Monthly contribution fields
+  // Program search
+  String _programSearchQuery = '';
+  List<ProgramModel> _filteredPrograms = [];
+  List<ProgramModel> _allPrograms = [];
   bool _isMonthlyProgram = false;
-  String? _selectedMonth; // Format: "2025-01"
+  String? _selectedMonth;
   List<String> _availableMonths = [];
 
   @override
@@ -43,120 +50,212 @@ class _AddContributionModalState extends State<AddContributionModal> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        height: MediaQuery.of(context).size.height * 0.9,
-        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
         child: Column(
           children: [
-            const SizedBox(height: 30), // Space to avoid camera notch
+            // AppBar-like header with gradient
+Container(
+  decoration: BoxDecoration(
+    gradient: AppColors.primaryGradient(context),
+    borderRadius: const BorderRadius.only(
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+    ),
+  ),
+  child: Column(
+    children: [
+      // Main header row
+      Padding(
+        padding: const EdgeInsets.only(right: 16, left: 16, top: 40, bottom: 16),
+        child: Row(
+          children: [
+            // Back button
+            IconButton(
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
             
-            // Header
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 8),
-                Text(
+            // Spacer to push title to center
+            Expanded(
+              child: Center(
+                child: Text(
                   'Add Contribution',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                const Spacer(),
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: _goToPreviousStep,
-                    child: const Text('Back'),
-                  ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
+            
+            // Right side button or empty container
+            if (_currentStep > 0)
+              TextButton(
+                onPressed: _goToPreviousStep,
+                child: Text(
+                  'Back',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              )
+            else
+              // Empty container to balance the left icon button
+              SizedBox(
+                width: 48, // Same width as IconButton
+              ),
+          ],
+        ),
+      ),
 
-            // ✅ UPDATED: Clean progress bar with step counter
-            Column(
-              children: [
-                // Step counter row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Current step
-                    Text(
-                      '${_currentStep + 1}/3',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+      // Step progress section
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_currentStep + 1}/3',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
-                    // Total steps
-                    Text(
-                      '3/3',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                  ),
+                  Text(
+                    '3/3',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.7),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Step-based progress bar
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: _currentStep >= 0 
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[200],
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(3),
-                            bottomLeft: Radius.circular(3),
-                          ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Step progress indicator
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _currentStep >= 0 
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(2),
+                          bottomLeft: Radius.circular(2),
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: _currentStep >= 1 
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[200],
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _currentStep >= 1 
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _currentStep >= 2 
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.3),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(2),
+                          bottomRight: Radius.circular(2),
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: _currentStep >= 2 
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey[200],
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(3),
-                            bottomRight: Radius.circular(3),
-                          ),
-                        ),
-                      ),
+                  ),
+                ],
+              ),
+              // Step labels (optional)
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Program',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _currentStep >= 0 
+                          ? Colors.white 
+                          : Colors.white.withOpacity(0.5),
+                      fontWeight: _currentStep >= 0 
+                          ? FontWeight.w600 
+                          : FontWeight.normal,
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                  ),
+                  Text(
+                    'Member',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _currentStep >= 1 
+                          ? Colors.white 
+                          : Colors.white.withOpacity(0.5),
+                      fontWeight: _currentStep >= 1 
+                          ? FontWeight.w600 
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  Text(
+                    'Details',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _currentStep >= 2 
+                          ? Colors.white 
+                          : Colors.white.withOpacity(0.5),
+                      fontWeight: _currentStep >= 2 
+                          ? FontWeight.w600 
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  ),
+),
 
             Expanded(
-              child: IndexedStack(
-                index: _currentStep,
-                children: [
-                  _buildProgramSelectionStep(communityId),
-                  _buildUserSelectionStep(),
-                  _buildContributionDetailsStep(),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: IndexedStack(
+                  index: _currentStep,
+                  children: [
+                    _buildProgramSelectionStep(communityId),
+                    _buildUserSelectionStep(communityId),
+                    _buildContributionDetailsStep(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -164,491 +263,847 @@ class _AddContributionModalState extends State<AddContributionModal> {
       ),
     );
   }
-
-  Widget _buildProgramSelectionStep(String communityId) {
-    return FutureBuilder<List<ProgramModel>>(
-      future: _programService.getActiveProgramsByCommunity(communityId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-
-        final programs = snapshot.data ?? [];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select Program',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose which program this contribution is for',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Expanded(
-              child: ListView.builder(
-                itemCount: programs.length,
-                itemBuilder: (context, index) {
-                  final program = programs[index];
-                  final isMonthly = program.isMonthlyPaymentProgram;
-                  
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isMonthly 
-                              ? Colors.green.withOpacity(0.1)
-                              : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          isMonthly ? Icons.calendar_month : Icons.event,
-                          color: isMonthly ? Colors.green : Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      title: Row(
-                        children: [
-                          Text(program.title),
-                          if (isMonthly) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Monthly',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.green[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${program.programDate.day}/${program.programDate.month}/${program.programDate.year}',
-                          ),
-                          if (program.suggestedContribution != null && program.suggestedContribution! > 0)
-                            Text(
-                              'Suggested: ₹${program.suggestedContribution}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green[700],
-                              ),
-                            ),
-                        ],
-                      ),
-                      trailing: _selectedProgram?.programId == program.programId
-                          ? Icon(
-                              Icons.check_circle, 
-                              color: isMonthly ? Colors.green : Theme.of(context).colorScheme.primary
-                            )
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _selectedProgram = program;
-                          _isMonthlyProgram = program.isMonthlyPaymentProgram;
-                          
-                          // ✅ Generate month options if monthly program
-                          if (_isMonthlyProgram) {
-                            _availableMonths = _generateMonthOptions();
-                            _selectedMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
-                          } else {
-                            _availableMonths = [];
-                            _selectedMonth = null;
-                          }
-                        });
-                        _goToNextStep();
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildUserSelectionStep() {
-    final auth = Provider.of<AppAuthProvider>(context);
-    final communityId = auth.user?.communityId ?? '';
-
-    return FutureBuilder<List<UserModel>>(
-      future: _userService.getUsersByCommunity(communityId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
-        }
-
-        final users = snapshot.data ?? [];
-        final filteredUsers = users.where((user) => user.isApproved).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select Member',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose which member made this contribution',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Search bar
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search members...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onChanged: (value) {
-                // Implement search functionality
-              },
-            ),
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredUsers.length,
-                itemBuilder: (context, index) {
-                  final user = filteredUsers[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        child: Text(
-                          user.displayName?.isNotEmpty == true 
-                              ? user.displayName![0].toUpperCase()
-                              : 'U',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(user.displayName ?? 'Unknown User'),
-                      subtitle: Text(user.email),
-                      trailing: _selectedUser?.uid == user.uid
-                          ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _selectedUser = user;
-                        });
-                        _goToNextStep();
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildContributionDetailsStep() {
-    // ✅ Auto-fill amount with suggested contribution
-    if (_amount == 0 && _selectedProgram != null && _selectedProgram!.suggestedContribution != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _amount = _selectedProgram!.suggestedContribution!;
-        });
-      });
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Contribution Details',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Enter contribution amount and payment method',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // ✅ ADD: Month selector for monthly programs
-          if (_isMonthlyProgram && _availableMonths.isNotEmpty) ...[
-            _buildMonthGridSelector(), // ✅ FIXED: Changed from _buildMonthSelector()
-            const SizedBox(height: 16),
-          ],
-
-          // Amount input
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              suffixText: _selectedProgram?.suggestedContribution != null 
-                  ? 'Suggested: ₹${_selectedProgram!.suggestedContribution}'
-                  : null,
-            ),
-            keyboardType: TextInputType.number,
-            initialValue: _amount > 0 ? _amount.toString() : null,
-            onChanged: (value) {
-              setState(() {
-                _amount = double.tryParse(value) ?? 0;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Payment method dropdown
-          DropdownButtonFormField<String>(
-            value: _paymentMethod,
-            decoration: InputDecoration(
-              labelText: 'Payment Method',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            items: _paymentMethods.map((method) {
-              return DropdownMenuItem(
-                value: method,
-                child: Text(method[0].toUpperCase() + method.substring(1)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _paymentMethod = value!;
-              });
-            },
-          ),
-          const SizedBox(height: 20),
-
-          // Summary
-          if (_selectedProgram != null && _selectedUser != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Summary',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Program: ${_selectedProgram!.title}'),
-                    if (_isMonthlyProgram) 
-                      Text('Type: Monthly Program Contribution'),
-                    Text('Member: ${_selectedUser!.displayName}'),
-                    Text('Amount: ₹$_amount'),
-                    Text('Payment: ${_paymentMethod[0].toUpperCase() + _paymentMethod.substring(1)}'),
-                    if (_isMonthlyProgram && _selectedMonth != null)
-                      Text('Month: ${_getMonthDisplayName(_selectedMonth!)}'),
-                  ],
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 20),
-
-          // Submit button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _amount > 0 ? _submitContribution : null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: _isMonthlyProgram ? Colors.green : Theme.of(context).colorScheme.primary,
-              ),
-              child: Text(
-                _isMonthlyProgram ? 'Add Monthly Contribution' : 'Add Contribution',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-Widget _buildMonthGridSelector() {
-  // Find index of current month
-  final currentMonthIndex = _availableMonths.indexWhere(
-    (month) => month == "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}",
-  );
-
+Widget _buildProgramSelectionStep(String communityId) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        'Select Month *',
+      Text(
+        'Select Program',
         style: TextStyle(
           fontSize: 16,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(context),
         ),
       ),
       const SizedBox(height: 8),
+      Text(
+        'Choose which program this contribution is for',
+        style: TextStyle(
+          color: AppColors.textSecondary(context),
+          fontSize: 14,
+        ),
+      ),
+      const SizedBox(height: 20),
+
+      // Program search bar
+      Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.border(context),
+            width: 1,
+          ),
+        ),
+        child: TextField(
+          onChanged: (value) {
+            setState(() {
+              _programSearchQuery = value.toLowerCase();
+              if (_allPrograms.isNotEmpty) {
+                _filteredPrograms = _allPrograms.where((program) {
+                  return program.title.toLowerCase().contains(_programSearchQuery) ||
+                         (program.suggestedContribution != null && 
+                          program.suggestedContribution.toString().contains(_programSearchQuery)) ||
+                         DateFormat('dd/MM/yyyy').format(program.programDate).contains(_programSearchQuery);
+                }).toList();
+              }
+            });
+          },
+decoration: InputDecoration(
+  hintText: 'Search programs...',
+  hintStyle: TextStyle(
+    color: AppColors.textTertiary(context),
+    fontSize: 14,
+  ),
+  prefixIcon: Icon(
+    Icons.search,
+    color: AppColors.textSecondary(context),
+    size: 20,
+  ),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: AppColors.border(context),
+      width: 1,
+    ),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: AppColors.border(context),
+      width: 1,
+    ),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: AppColors.primary(context),
+      width: 1.5,
+    ),
+  ),
+  filled: true,
+  fillColor: AppColors.background(context),
+  contentPadding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 14,
+  ),
+),
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+Expanded(
+  child: FutureBuilder<List<ProgramModel>>(
+    future: _programService.getActiveProgramsByCommunity(communityId),
+    builder: (context, snapshot) {
+     if (snapshot.connectionState == ConnectionState.waiting) {
+  // Skeleton loader that matches exact program list layout
+  return ListView.builder(
+    itemCount: 5, // Show 5 skeleton items
+    itemBuilder: (context, index) {
+      final isLastItem = index == 4; // Since we have 5 items
       
-      SizedBox(
-        height: 80,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Calculate position to scroll to
-            final double itemWidth = 70; // Width of each month card
-            final double spacing = 12; // Right padding
-            final double centerOffset = (constraints.maxWidth / 2) - (itemWidth / 2);
-            
-            return Scrollable(
-              axisDirection: AxisDirection.right,
-              controller: ScrollController(),
-              viewportBuilder: (context, offset) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  // Auto-scroll to current month after build
-                  if (currentMonthIndex != -1) {
-                    final double targetOffset = 
-                        (currentMonthIndex * (itemWidth + spacing)) - centerOffset;
-                    
-                    // Use a scroll controller to programmatically scroll
-                    Scrollable.ensureVisible(
-                      context,
-                      alignment: 0.5, // Center alignment
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                });
-                
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  controller: ScrollController(
-                    initialScrollOffset: currentMonthIndex != -1 
-                        ? (currentMonthIndex * (itemWidth + spacing)) - centerOffset
-                        : 0,
-                  ),
-                  itemCount: _availableMonths.length,
-                  itemBuilder: (context, index) {
-                    final month = _availableMonths[index];
-                    final isSelected = _selectedMonth == month;
-                    final isCurrentMonth = month == "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
-                    
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        right: 12,
-                        left: index == 0 ? 12 : 0, // Add left padding for first item
+      return Column(
+        children: [
+          // Skeleton program card (exact match to your layout)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: null, // Disabled during loading
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    // Skeleton icon (exact size 40x40)
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiary(context).withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedMonth = month),
-                        child: Container(
-                          width: 70,
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? Colors.blue 
-                                : (isCurrentMonth ? Colors.blue[50] : Colors.grey[100]),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? Colors.blue : (Colors.grey[300] ?? Colors.grey),
-                              width: isSelected ? 2 : 1,
-                            ),
-                            boxShadow: isSelected 
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Skeleton text content (exact match)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title and monthly chip skeleton
+                          Row(
+                            children: [
+                              // Title skeleton (Flexible like actual layout)
+                              Flexible(
+                                child: Container(
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              
+                              // Monthly chip skeleton (shows on some items)
+                              if (index % 2 == 0) // 50% chance like real data
+                                Container(
+                                  width: 55,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                            ],
                           ),
+                          const SizedBox(height: 4),
+                          
+                          // Date and suggested amount skeleton
+                          Container(
+                            height: 15,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.textTertiary(context).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Skeleton selection indicator (exact size with padding)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppColors.textTertiary(context).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Horizontal divider skeleton (exact match to your divider)
+          if (!isLastItem)
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.border(context).withOpacity(0.3),
+              indent: 16,
+              endIndent: 16,
+            ),
+        ],
+      );
+    },
+  );
+}
+
+      if (snapshot.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 44,
+                color: Colors.red.withOpacity(0.7),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load programs',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please check your connection',
+                style: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  // You can add retry logic here
+                  setState(() {});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final programs = snapshot.data ?? [];
+      _allPrograms = programs;
+      
+      // Apply search filter if query exists
+      final displayPrograms = _programSearchQuery.isEmpty 
+          ? programs 
+          : programs.where((program) {
+              return program.title.toLowerCase().contains(_programSearchQuery) ||
+                     (program.suggestedContribution != null && 
+                      program.suggestedContribution.toString().contains(_programSearchQuery)) ||
+                     DateFormat('dd/MM/yyyy').format(program.programDate).contains(_programSearchQuery);
+            }).toList();
+
+      if (displayPrograms.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _programSearchQuery.isEmpty ? Icons.event_busy : Icons.search_off,
+                size: 44,
+                color: AppColors.textTertiary(context),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _programSearchQuery.isEmpty 
+                    ? 'No programs found' 
+                    : 'No matching programs',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _programSearchQuery.isEmpty
+                    ? 'Create a program in your community first'
+                    : 'Try a different search term',
+                style: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        itemCount: displayPrograms.length,
+        itemBuilder: (context, index) {
+          final program = displayPrograms[index];
+          final isMonthly = program.isMonthlyPaymentProgram;
+          final isLastItem = index == displayPrograms.length - 1;
+          
+          return Column(
+            children: [
+              // Program card with left border divider style
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedProgram = program;
+                      _isMonthlyProgram = program.isMonthlyPaymentProgram;
+                      
+                      if (_isMonthlyProgram) {
+                        _availableMonths = _generateMonthOptions();
+                        _selectedMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+                      } else {
+                        _availableMonths = [];
+                        _selectedMonth = null;
+                      }
+                    });
+                    _goToNextStep();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        // Icon
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isMonthly 
+                                ? Colors.green.withOpacity(0.1)
+                                : AppColors.primary(context).withOpacity(0.1),
+                          ),
+                          child: Icon(
+                            isMonthly ? Icons.calendar_month : Icons.event,
+                            size: 20,
+                            color: isMonthly ? Colors.green : AppColors.primary(context),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        
+                        // Main content
+                        Expanded(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Title and monthly chip in same line
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      program.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        color: AppColors.textPrimary(context),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isMonthly) 
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: Colors.green.withOpacity(0.3),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Monthly',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${DateFormat('dd/MM/yyyy').format(program.programDate)} • Suggested: ₹${program.suggestedContribution?.toStringAsFixed(2) ?? '0.00'}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary(context),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Selection indicator
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: _selectedProgram?.programId == program.programId
+                              ? Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.border(context),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // Horizontal divider (except last item)
+              if (!isLastItem)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.border(context),
+                  indent: 16,
+                  endIndent: 16,
+                ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+),
+    ],
+  );
+}
+
+Widget _buildUserSelectionStep(String communityId) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Select Member',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        'Choose which member made this contribution',
+        style: TextStyle(
+          color: AppColors.textSecondary(context),
+          fontSize: 14,
+        ),
+      ),
+      const SizedBox(height: 20),
+
+      // Search bar
+Container(
+  margin: const EdgeInsets.only(bottom: 16),
+  child: TextField(
+    onChanged: (value) {
+      setState(() {
+        _memberSearchQuery = value.toLowerCase();
+        if (_allUsers.isNotEmpty) {
+          _filteredUsers = _allUsers.where((user) {
+            return (user.displayName?.toLowerCase().contains(_memberSearchQuery) ?? false) ||
+                   user.email.toLowerCase().contains(_memberSearchQuery) ||
+                   (user.role?.toLowerCase().contains(_memberSearchQuery) ?? false);
+          }).toList();
+        }
+      });
+    },
+    decoration: InputDecoration(
+      hintText: 'Search members...',
+      hintStyle: TextStyle(
+        color: AppColors.textTertiary(context),
+        fontSize: 14,
+      ),
+      prefixIcon: Icon(
+        Icons.search,
+        color: AppColors.textSecondary(context),
+        size: 20,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: AppColors.border(context),
+          width: 1,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: AppColors.border(context),
+          width: 1,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: AppColors.primary(context),
+          width: 1.5,
+        ),
+      ),
+      filled: true,
+      fillColor: AppColors.background(context),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ),
+    ),
+    style: TextStyle(
+      color: AppColors.textPrimary(context),
+      fontSize: 14,
+    ),
+  ),
+),
+      const SizedBox(height: 16),
+
+   Expanded(
+  child: FutureBuilder<List<UserModel>>(
+    future: _userService.getUsersByCommunity(communityId),
+    builder: (context, snapshot) {
+   if (snapshot.connectionState == ConnectionState.waiting) {
+  // Skeleton loader that matches actual user list layout
+  return ListView.builder(
+    itemCount: 5, // Show 5 skeleton items
+    itemBuilder: (context, index) {
+      final isLastItem = index == 4; // Since we have 5 items
+      
+      return Column(
+        children: [
+          // Skeleton member card
+          Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  // Skeleton avatar (exact match)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.textTertiary(context).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // Skeleton text content (exact match)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name skeleton (exact font size and weight)
+                        Container(
+                          width: double.infinity,
+                          height: 18,
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.textTertiary(context).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        
+                        // Email skeleton (exact font size)
+                        Container(
+                          width: double.infinity,
+                          height: 15,
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.textTertiary(context).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        
+                        // Role skeleton (exact size and shape)
+                        if (index % 2 == 0) // Show role skeleton for some items like actual data
+                          Container(
+                            width: 70,
+                            height: 16,
+                            margin: const EdgeInsets.only(top: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.textTertiary(context).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Skeleton selection indicator (exact size)
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.textTertiary(context).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Horizontal divider skeleton (except last item)
+          if (!isLastItem)
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.border(context).withOpacity(0.3),
+              indent: 16,
+              endIndent: 16,
+            ),
+        ],
+      );
+    },
+  );
+}
+
+      if (snapshot.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 44,
+                color: Colors.red.withOpacity(0.7),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load members',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please check your connection',
+                style: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  // You can add retry logic here
+                  setState(() {});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final users = snapshot.data ?? [];
+      _allUsers = users;
+      final approvedUsers = users.where((user) => user.isApproved).toList();
+      
+      // Apply search filter if query exists
+      final displayUsers = _memberSearchQuery.isEmpty 
+          ? approvedUsers 
+          : approvedUsers.where((user) {
+              return (user.displayName?.toLowerCase().contains(_memberSearchQuery) ?? false) ||
+                     user.email.toLowerCase().contains(_memberSearchQuery) ||
+                     (user.role?.toLowerCase().contains(_memberSearchQuery) ?? false);
+            }).toList();
+
+      if (displayUsers.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _memberSearchQuery.isEmpty ? Icons.group_off : Icons.search_off,
+                size: 44,
+                color: AppColors.textTertiary(context),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _memberSearchQuery.isEmpty 
+                    ? 'No approved members found' 
+                    : 'No matching members',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _memberSearchQuery.isEmpty
+                    ? 'Add members to your community first'
+                    : 'Try a different search term',
+                style: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        itemCount: displayUsers.length,
+        itemBuilder: (context, index) {
+          final user = displayUsers[index];
+          final isLastItem = index == displayUsers.length - 1;
+          
+          return Column(
+            children: [
+              // Member card
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedUser = user;
+                    });
+                    _goToNextStep();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        // Avatar
+                        CircleAvatar(
+                          backgroundColor: AppColors.primary(context).withOpacity(0.1),
+                          radius: 20,
+                          child: Text(
+                            user.displayName?.isNotEmpty == true 
+                                ? user.displayName![0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              color: AppColors.primary(context),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        
+                        // Main content
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _getMonthAbbreviation(month),
+                                user.displayName ?? 'Unknown User',
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.white : Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppColors.textPrimary(context),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
+                              const SizedBox(height: 4),
                               Text(
-                                _getYear(month),
+                                user.email,
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: isSelected ? Colors.white : Colors.grey[600],
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary(context),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (isCurrentMonth)
+                              // User role indicator
+                              if (user.role != null && user.role!.isNotEmpty)
                                 Container(
                                   margin: const EdgeInsets.only(top: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? Colors.white : Colors.blue[100],
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: _getRoleColor(user.role!).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: _getRoleColor(user.role!).withOpacity(0.3),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Text(
-                                    'Current',
+                                    user.role!,
                                     style: TextStyle(
-                                      fontSize: 8,
-                                      color: isSelected ? Colors.blue : Colors.blue[800],
+                                      fontSize: 10,
+                                      color: _getRoleColor(user.role!),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -656,103 +1111,567 @@ Widget _buildMonthGridSelector() {
                             ],
                           ),
                         ),
+                        
+                        // Selection indicator
+                        _selectedUser?.uid == user.uid
+                            ? Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary(context),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.border(context),
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // Horizontal divider (except last item)
+              if (!isLastItem)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.border(context),
+                  indent: 16,
+                  endIndent: 16,
+                ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+),
+    ],
+  );
+}
+
+// Helper method to get color based on user role
+Color _getRoleColor(String role) {
+  switch (role.toLowerCase()) {
+    case 'admin':
+      return Colors.red;
+    case 'moderator':
+      return Colors.orange;
+    case 'treasurer':
+      return Colors.green;
+    case 'secretary':
+      return Colors.purple;
+    default:
+      return AppColors.primary(context);
+  }
+}
+
+ Widget _buildContributionDetailsStep() {
+  if (_amount == 0 && _selectedProgram != null && _selectedProgram!.suggestedContribution != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _amount = _selectedProgram!.suggestedContribution!;
+      });
+    });
+  }
+
+  return Column(
+    children: [
+      // Scrollable content
+      Expanded(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 80), // Add bottom padding for fixed button
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Contribution Details',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Enter contribution amount and payment method',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                if (_isMonthlyProgram && _availableMonths.isNotEmpty) ...[
+                  _buildMonthGridSelector(),
+                  const SizedBox(height: 20),
+                ],
+
+                // Amount input
+                Card(
+                  color: AppColors.surface(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Amount',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: TextEditingController(
+                            text: _amount > 0 ? _amount.toStringAsFixed(2) : '',
+                          ),
+                          decoration: InputDecoration(
+                            prefixText: '₹ ',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                            suffixText: _selectedProgram?.suggestedContribution != null 
+                                ? 'Suggested: ₹${_selectedProgram!.suggestedContribution!.toStringAsFixed(2)}'
+                                : null,
+                            suffixStyle: TextStyle(
+                              color: AppColors.primary(context),
+                              fontSize: 12,
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          onChanged: (value) {
+                            setState(() {
+                              _amount = double.tryParse(value) ?? 0;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Payment method
+                Card(
+                  color: AppColors.surface(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Method',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _paymentMethod,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                          dropdownColor: AppColors.surface(context),
+                          items: _paymentMethods.map((method) {
+                            return DropdownMenuItem(
+                              value: method,
+                              child: Text(
+                                method[0].toUpperCase() + method.substring(1),
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _paymentMethod = value!;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Summary card
+                if (_selectedProgram != null && _selectedUser != null)
+                  Card(
+                    color: AppColors.surface(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.list_alt,
+                                color: AppColors.primary(context),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Summary',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.background(context),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.border(context),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSummaryItem('Program', _selectedProgram!.title),
+                                if (_isMonthlyProgram)
+                                  _buildSummaryItem('Type', 'Monthly Program'),
+                                _buildSummaryItem('Member', _selectedUser!.displayName ?? 'Unknown'),
+                                _buildSummaryItem('Amount', '₹$_amount'),
+                                _buildSummaryItem('Payment', 
+                                  _paymentMethod[0].toUpperCase() + _paymentMethod.substring(1)),
+                                if (_isMonthlyProgram && _selectedMonth != null)
+                                  _buildSummaryItem('Month', _getMonthDisplayName(_selectedMonth!)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                );
-              },
-            );
-          },
+                    ),
+                  ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ),
       ),
-      
-      // Selected month info
-      if (_selectedMonth != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
+
+      // Fixed bottom button
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          border: Border(
+            top: BorderSide(
+              color: AppColors.border(context),
+              width: 1,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          ),
+        ),
+        child: ElevatedButton(
+          onPressed: _amount > 0 ? _submitContribution : null,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: AppColors.primary(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            disabledBackgroundColor: AppColors.textTertiary(context),
+          ),
+          child: Text(
+            _isMonthlyProgram ? 'Add Monthly Contribution' : 'Add Contribution',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+  Widget _buildSummaryItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            margin: const EdgeInsets.only(top: 8, right: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary(context),
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.calendar_month, size: 16, color: Colors.blue),
-                const SizedBox(width: 8),
                 Text(
-                  'Selected: ${_getMonthDisplayName(_selectedMonth!)}',
-                  style: const TextStyle(
-                    color: Colors.blue,
+                  label,
+                  style: TextStyle(
                     fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      
-      // Scroll hint
-      if (_availableMonths.length > 5)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.arrow_left, size: 16, color: Colors.grey[500]),
-              Text(
-                ' Scroll for more months ',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthGridSelector() {
+    final currentMonthIndex = _availableMonths.indexWhere(
+      (month) => month == "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}",
+    );
+
+    return Card(
+      color: AppColors.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select Month *',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            SizedBox(
+              height: 80,
+              child: Scrollable(
+                axisDirection: AxisDirection.right,
+                viewportBuilder: (context, offset) {
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    controller: ScrollController(
+                      initialScrollOffset: currentMonthIndex != -1 
+                          ? (currentMonthIndex * 82) - 120
+                          : 0,
+                    ),
+                    itemCount: _availableMonths.length,
+                    itemBuilder: (context, index) {
+                      final month = _availableMonths[index];
+                      final isSelected = _selectedMonth == month;
+                      final isCurrentMonth = month == "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+                      
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: 12,
+                          left: index == 0 ? 4 : 0,
+                        ),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedMonth = month),
+                          child: Container(
+                            width: 70,
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppColors.primary(context)
+                                  : (isCurrentMonth ? AppColors.primary(context).withOpacity(0.1) : Colors.transparent),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected 
+                                    ? AppColors.primary(context)
+                                    : (isCurrentMonth ? AppColors.primary(context) : AppColors.border(context)),
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _getMonthAbbreviation(month),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected 
+                                        ? Colors.white
+                                        : AppColors.textPrimary(context),
+                                  ),
+                                ),
+                                Text(
+                                  _getYear(month),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isSelected 
+                                        ? Colors.white.withOpacity(0.9)
+                                        : AppColors.textSecondary(context),
+                                  ),
+                                ),
+                                if (isCurrentMonth)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected 
+                                          ? Colors.white
+                                          : AppColors.primary(context).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'Current',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: isSelected 
+                                            ? AppColors.primary(context)
+                                            : AppColors.primary(context),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            
+            if (_selectedMonth != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month,
+                        size: 16,
+                        color: AppColors.primary(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Selected: ${_getMonthDisplayName(_selectedMonth!)}',
+                        style: TextStyle(
+                          color: AppColors.primary(context),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Icon(Icons.arrow_right, size: 16, color: Colors.grey[500]),
-            ],
-          ),
+          ],
         ),
-    ],
-  );
-}
-
-String _getMonthAbbreviation(String monthId) {
-  final parts = monthId.split('-');
-  final month = int.parse(parts[1]);
-  return DateFormat('MMM').format(DateTime(0, month));
-}
-
-String _getYear(String monthId) {
-  final parts = monthId.split('-');
-  return parts[0];
-}
-
-List<String> _generateMonthOptions() {
-  final List<String> months = [];
-  final now = DateTime.now();
-  
-  // Generate 6 months before current, current month, and 6 months after
-  for (int i = -6; i <= 6; i++) {
-    final date = DateTime(now.year, now.month + i, 1);
-    final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
-    months.add(monthStr);
+      ),
+    );
   }
-  
-  return months;
-}
 
-  // ✅ ADD: Get month display name
+  String _getMonthAbbreviation(String monthId) {
+    final parts = monthId.split('-');
+    final month = int.parse(parts[1]);
+    return DateFormat('MMM').format(DateTime(0, month));
+  }
+
+  String _getYear(String monthId) {
+    final parts = monthId.split('-');
+    return parts[0];
+  }
+
+  List<String> _generateMonthOptions() {
+    final List<String> months = [];
+    final now = DateTime.now();
+    
+    for (int i = -6; i <= 6; i++) {
+      final date = DateTime(now.year, now.month + i, 1);
+      final monthStr = "${date.year}-${date.month.toString().padLeft(2, '0')}";
+      months.add(monthStr);
+    }
+    
+    return months;
+  }
+
   String _getMonthDisplayName(String monthId) {
     final parts = monthId.split('-');
     final year = int.parse(parts[0]);
     final month = int.parse(parts[1]);
     final date = DateTime(year, month, 1);
     
-    // Show "Jan 2024" format
     final monthName = DateFormat('MMM').format(date);
-    
-    // Add "(Current)" for current month
     final currentMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
     final suffix = monthId == currentMonth ? " (Current)" : "";
     
@@ -775,46 +1694,68 @@ List<String> _generateMonthOptions() {
     }
   }
 
-  Future<void> _submitContribution() async {
-    if (_selectedProgram == null || _selectedUser == null || _amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
-    
-    // ✅ ADD: Validate month selection for monthly programs
-    if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select month for monthly contribution')),
-      );
-      return;
-    }
-
-    try {
-      final contribution = ContributionModel(
-        contributionId: '', // Will be set by Firestore
-        programId: _selectedProgram!.programId,
-        userId: _selectedUser!.uid,
-        communityId: _selectedProgram!.communityId,
-        amount: _amount,
-        paymentMethod: _paymentMethod,
-        // ✅ ADD: Monthly fields
-        isMonthlyContribution: _isMonthlyProgram,
-        monthId: _isMonthlyProgram ? _selectedMonth : null,
-      );
-
-      await _contributionService.addContribution(contribution);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contribution added successfully!')),
-      );
-
-      Navigator.pop(context); // Close modal
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding contribution: $e')),
-      );
-    }
+Future<void> _submitContribution() async {
+  if (_selectedProgram == null || _selectedUser == null || _amount <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please fill all required fields'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
   }
+  
+  if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please select month for monthly contribution'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  try {
+    final auth = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = auth.user;
+    
+    final contribution = ContributionModel(
+      contributionId: '', // Will be set by Firestore
+      programId: _selectedProgram!.programId,
+      userId: _selectedUser!.uid, // Who contributed
+      communityId: _selectedProgram!.communityId,
+      amount: _amount,
+      paymentMethod: _paymentMethod,
+      
+      // ✅ ADD: Entry tracking - who added this record
+      addedByUserId: currentUser?.uid,
+      addedByUserName: currentUser?.displayName ?? 'Admin',
+      addedAt: Timestamp.now(),
+      
+      // ✅ Monthly fields
+      isMonthlyContribution: _isMonthlyProgram,
+      monthId: _isMonthlyProgram ? _selectedMonth : null,
+    );
+
+    await _contributionService.addContribution(contribution);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Contribution added successfully!'),
+        backgroundColor: AppColors.primary(context),
+      ),
+    );
+
+    Navigator.pop(context);
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error adding contribution: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+
 }

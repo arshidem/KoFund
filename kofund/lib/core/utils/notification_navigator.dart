@@ -22,7 +22,7 @@ class NotificationNavigator {
       case 'contribution':
         Navigator.pushNamed(
           context,
-          RouteNames.updateContribution,
+          RouteNames.communityDashboard,
           arguments: {'contributionId': id},
         );
         break;
@@ -78,8 +78,8 @@ class NotificationNavigator {
         if (segments.length > 1) {
           Navigator.pushNamed(
             context,
-            RouteNames.updateContribution,
-            arguments: {'contributionId': segments[1]},
+            RouteNames.communityDashboard,
+            // arguments: {'contributionId': segments[1]},
           );
         }
         break;

@@ -11,16 +11,21 @@ import '../../../core/services/expense_service.dart';
 import '../../../core/services/program_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../auth/providers/app_auth_provider.dart';
+import '../../contributions/models/contribution_model.dart';
+import '../../contributions/providers/contribution_provider.dart';
+import '../../expenses/providers/expense_provider.dart';
 import '../providers/history_provider.dart';
 import '../utils/contribution_receipt_pdf.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
+import 'edit_contribution_screen.dart';
+import 'edit_expense_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HistoryScreen extends StatelessWidget {
   final bool? forceBackButton; // Optional override for specific cases
-
   const HistoryScreen({
     super.key,
     this.forceBackButton,
@@ -56,10 +61,11 @@ class _HistoryScreenBodyState extends State<_HistoryScreenBody> {
   String _formatTime(DateTime dt) => DateFormat.jm().format(dt);
   String _formatAmount(double amount) =>
       NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(amount);
+Map<String, String> _programNames = {};
 
   final TextEditingController _searchController = TextEditingController();
   final RefreshController _refreshController = RefreshController();
-
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   @override
   void initState() {
     super.initState();
@@ -97,7 +103,25 @@ class _HistoryScreenBodyState extends State<_HistoryScreenBody> {
       print('❌ DEBUG: History refresh failed: $e');
     }
   }
-
+Future<void> _loadProgramName(String programId) async {
+  if (_programNames.containsKey(programId)) return;
+  
+  try {
+    final programDoc = await FirebaseFirestore.instance
+        .collection('programs')
+        .doc(programId)
+        .get();
+    
+    if (programDoc.exists) {
+      final name = programDoc.data()?['title'] ?? programDoc.data()?['name'] ?? 'Unknown';
+      setState(() {
+        _programNames[programId] = name;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error loading program: $e');
+  }
+}
   @override
   void dispose() {
     _searchController.dispose();
@@ -716,6 +740,8 @@ class _DateGroup extends StatelessWidget {
 }
 
 // =================== TILE ===================
+// =================== TILE ===================
+// =================== TILE ===================
 class _HistoryTile extends StatelessWidget {
   final HistoryItem item;
   final String Function(DateTime) formatTime;
@@ -732,6 +758,112 @@ class _HistoryTile extends StatelessWidget {
     required this.communityLabel,
   }) : super(key: key);
 
+  Future<Map<String, dynamic>?> _fetchContributionData(String historyItemId) async {
+    try {
+      if (item.type != HistoryItemType.contribution) return null;
+      
+      debugPrint('🔍 DEBUG: HistoryItem ID: "$historyItemId"');
+      
+      // Try different patterns to find the actual document ID
+      List<String> possibleDocIds = [];
+      
+      // Pattern 1: Remove "contrib_vwzl" prefix (12 chars)
+      if (historyItemId.startsWith('contrib_vwzl')) {
+        possibleDocIds.add(historyItemId.substring(12));
+      }
+      
+      // Pattern 2: Remove "contrib_" prefix (8 chars)
+      if (historyItemId.startsWith('contrib_')) {
+        possibleDocIds.add(historyItemId.substring(8));
+      }
+      
+      // Pattern 3: Try the ID as-is
+      possibleDocIds.add(historyItemId);
+      
+      // Remove duplicates
+      possibleDocIds = possibleDocIds.toSet().toList();
+      
+      debugPrint('🔄 Possible document IDs to try: $possibleDocIds');
+      
+      for (String docId in possibleDocIds) {
+        try {
+          debugPrint('🔄 Trying ID: "$docId"');
+          final doc = await FirebaseFirestore.instance
+              .collection('contributions')
+              .doc(docId)
+              .get();
+          
+          if (doc.exists) {
+            debugPrint('✅ SUCCESS! Found contribution with ID: "$docId"');
+            return doc.data();
+          } else {
+            debugPrint('❌ Not found with ID: "$docId"');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error trying ID "$docId": $e');
+        }
+      }
+      
+      debugPrint('❌ All attempts failed to find contribution');
+      return null;
+      
+    } catch (e) {
+      debugPrint('❌ Error fetching contribution data: $e');
+      return null;
+    }
+  }
+
+  // ADD THIS NEW METHOD TO FETCH EXPENSE DATA
+  Future<Map<String, dynamic>?> _fetchExpenseData(String historyItemId) async {
+    try {
+      if (item.type != HistoryItemType.expense) return null;
+      
+      debugPrint('🔍 DEBUG: Fetching expense data for ID: "$historyItemId"');
+      
+      // For expenses, try different patterns to find the actual document ID
+      List<String> possibleDocIds = [];
+      
+      // Pattern 1: Remove "expense_" prefix (8 chars)
+      if (historyItemId.startsWith('expense_')) {
+        possibleDocIds.add(historyItemId.substring(8));
+      }
+      
+      // Pattern 2: Try the ID as-is
+      possibleDocIds.add(historyItemId);
+      
+      // Remove duplicates
+      possibleDocIds = possibleDocIds.toSet().toList();
+      
+      debugPrint('🔄 Possible expense document IDs to try: $possibleDocIds');
+      
+      for (String docId in possibleDocIds) {
+        try {
+          debugPrint('🔄 Trying expense ID: "$docId"');
+          final doc = await FirebaseFirestore.instance
+              .collection('expenses')  // This should match your Firestore collection name
+              .doc(docId)
+              .get();
+          
+          if (doc.exists) {
+            debugPrint('✅ SUCCESS! Found expense with ID: "$docId"');
+            return doc.data();
+          } else {
+            debugPrint('❌ Expense not found with ID: "$docId"');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error trying expense ID "$docId": $e');
+        }
+      }
+      
+      debugPrint('❌ All attempts failed to find expense');
+      return null;
+      
+    } catch (e) {
+      debugPrint('❌ Error fetching expense data: $e');
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isContribution = item.type == HistoryItemType.contribution;
@@ -741,7 +873,18 @@ class _HistoryTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
+          Map<String, dynamic>? itemData;
+          
+          if (isContribution) {
+            // Fetch contribution data
+            itemData = await _fetchContributionData(item.id);
+          } else if (item.type == HistoryItemType.expense) {
+            // Fetch expense data - THIS WAS MISSING!
+            itemData = await _fetchExpenseData(item.id);
+          }
+          
+          // Show bottom sheet
           showModalBottomSheet(
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -752,6 +895,7 @@ class _HistoryTile extends StatelessWidget {
                 item: item,
                 currentUid: currentUid,
                 communityLabel: communityLabel,
+                itemData: itemData, // Pass the fetched data
               );
             },
           );
@@ -842,71 +986,371 @@ class _BottomDetails extends StatelessWidget {
   final HistoryItem item;
   final String? currentUid;
   final String communityLabel;
+  final Map<String, dynamic>? itemData;
 
   const _BottomDetails({
     Key? key,
     required this.item,
     required this.currentUid,
     required this.communityLabel,
+    this.itemData,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final f = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-// In _BottomDetails widget, replace the Container with:
-Center(
-  child: Container(
-    width: 40,
-    height: 4,
-    margin: const EdgeInsets.only(bottom: 8),
-    decoration: BoxDecoration(
-      color: AppColors.border(context),
-      borderRadius: BorderRadius.circular(2),
-    ),
-  ),
-),
-          Text(
-            item.title,
-            style: TextStyle(
-              fontSize: 18, 
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
+    
+    // Debug print with more details
+    debugPrint('🔍 _BottomDetails:');
+    debugPrint('  Item type: ${item.type}');
+    debugPrint('  Item ID: ${item.id}');
+    debugPrint('  Item data: ${itemData != null ? "EXISTS" : "NULL"}');
+    
+    if (itemData != null) {
+      debugPrint('  Data keys: ${itemData!.keys.join(", ")}');
+      if (item.type == HistoryItemType.expense) {
+        debugPrint('  Expense status: ${itemData!['status']}');
+        debugPrint('  Expense paidBy: ${itemData!['paidBy']}');
+        debugPrint('  Expense description: ${itemData!['description']}');
+      }
+    }
+    
+    // Check if current user is admin
+    final bool isAdmin = _checkIfAdmin(context);
+    final bool isCurrentUserPaidBy = _checkIfCurrentUserPaidBy(context, item);
+    
+    // ✅ FIXED: Check if itemData exists before allowing edit
+    final bool canEditContribution = isAdmin && 
+                        item.type == HistoryItemType.contribution &&
+                        itemData != null;
+    
+    // For expenses: Admin OR user who paid can edit
+    final bool canEditExpense = (isAdmin || isCurrentUserPaidBy) && 
+                       item.type == HistoryItemType.expense;
+    
+    final bool canDelete = isAdmin; // Only admin can delete
+    
+    // Calculate if we have receipt button
+    bool hasReceiptButton = item.type == HistoryItemType.contribution && currentUid == item.userId;
+    
+    // Get expense status if it's an expense
+    String? expenseStatus;
+    if (item.type == HistoryItemType.expense && itemData != null) {
+      expenseStatus = (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
+    }
+    
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      snap: true,
+      snapSizes: const [0.5, 0.7, 0.95],
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-            textAlign: TextAlign.center,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _buildDetailRow('Amount:', f.format(item.amount), context),
-          _buildDetailRow('Date:', DateFormat.yMMMMd().add_jm().format(item.date), context),
-          if (item.category != null) _buildDetailRow('Category:', item.category!, context),
-          if (item.userId != null) _buildDetailRow('By:', item.subtitle, context),
-          const SizedBox(height: 20),
-
-          if (item.type == HistoryItemType.contribution && currentUid == item.userId)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.receipt),
-                onPressed: () => ContributionReceiptPdf.showPreview(
-                  context,
-                  item,
-                  communityName: communityLabel,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              // Drag handle
+              Container(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border(context),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-                label: const Text("Get Receipt"),
+              ),
+              
+              // Title row with icons
+              _buildTitleRow(
+                context,
+                item: item,
+                expenseStatus: expenseStatus,
+                canEditContribution: canEditContribution,
+                canEditExpense: canEditExpense,
+                canDelete: canDelete,
+                isAdmin: isAdmin,
+              ),
+              
+              // Main content
+              Expanded(
+                child: _buildContent(
+                  context,
+                  f: f,
+                  item: item,
+                  expenseStatus: expenseStatus,
+                  isAdmin: isAdmin,
+                  hasReceiptButton: hasReceiptButton,
+                  scrollController: scrollController,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // =================== WIDGET BUILDERS ===================
+
+  Widget _buildTitleRow(
+    BuildContext context, {
+    required HistoryItem item,
+    required String? expenseStatus,
+    required bool canEditContribution,
+    required bool canEditExpense,
+    required bool canDelete,
+    required bool isAdmin,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                if (item.type == HistoryItemType.expense && expenseStatus != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _buildExpenseStatusChip(expenseStatus),
+                  ),
+                
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          if (canEditContribution || canEditExpense)
+            IconButton(
+              icon: Icon(
+                Icons.edit,
+                color: AppColors.primary(context),
+                size: 20,
+              ),
+              onPressed: () => _editItem(context, item),
+              tooltip: item.type == HistoryItemType.contribution 
+                  ? 'Edit Contribution' 
+                  : 'Edit Expense',
+            ),
+          
+          if (canDelete)
+            IconButton(
+              icon: Icon(
+                Icons.delete,
+                color: Colors.red,
+                size: 20,
+              ),
+              onPressed: () => _deleteItem(context, item),
+              tooltip: 'Delete ${item.type == HistoryItemType.contribution ? "Contribution" : "Expense"}',
+            ),
+          
+          if (isAdmin && item.type == HistoryItemType.contribution && itemData == null)
+            IconButton(
+              icon: Icon(
+                Icons.edit_off,
+                color: Colors.grey[400],
+                size: 20,
+              ),
+              onPressed: null,
+              tooltip: 'Edit not available - data missing',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context, {
+    required NumberFormat f,
+    required HistoryItem item,
+    required String? expenseStatus,
+    required bool isAdmin,
+    required bool hasReceiptButton,
+    required ScrollController scrollController,
+  }) {
+    return Column(
+      children: [
+        // Scrollable content
+        Expanded(
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                
+                // Show data missing warning for contributions
+                if (item.type == HistoryItemType.contribution && itemData == null)
+                  _buildDataMissingWarning(),
+                
+                if (item.type == HistoryItemType.contribution || item.type == HistoryItemType.expense)
+                  _buildEntryInfo(context),
+                
+                // Expense info section
+                if (item.type == HistoryItemType.expense)
+                  _buildExpenseInfo(context),
+                
+                if (item.type == HistoryItemType.contribution || item.type == HistoryItemType.expense)
+                  _buildEditInfo(context),
+
+                // Common details
+                _buildDetailRow('Amount:', f.format(item.amount), context),
+                _buildDetailRow('Date:', DateFormat.yMMMMd().add_jm().format(item.date), context),
+                if (item.category != null) _buildDetailRow('Category:', item.category!, context),
+                
+                // Program name for contributions
+                if (item.type == HistoryItemType.contribution && itemData != null)
+                  _buildProgramName(context),
+                
+                // User info
+                if (item.userId != null) _buildDetailRow('By:', item.subtitle, context),
+                
+                // Paid by info for expenses
+                if (item.type == HistoryItemType.expense && itemData != null)
+                  _buildPaidByInfo(context),
+                
+                // Expense status in details
+                if (item.type == HistoryItemType.expense && expenseStatus != null)
+                  _buildDetailRow('Status:', _formatExpenseStatus(expenseStatus), context),
+                
+                // Edit History - FIXED: This should show for both contributions AND expenses
+                if (itemData != null && ((item.type == HistoryItemType.contribution && itemData!['editHistory'] != null) || 
+                    (item.type == HistoryItemType.expense && itemData!['editHistory'] != null)))
+                  _buildEditHistory(context),
+                
+                // Expense status change buttons (admin only)
+                if (item.type == HistoryItemType.expense && isAdmin && expenseStatus != null)
+                  _buildExpenseStatusChangeButton(context, item, expenseStatus),
+                
+                SizedBox(height: hasReceiptButton ? 70 : 20),
+              ],
+            ),
+          ),
+        ),
+        
+        // Receipt button for contributions
+        if (hasReceiptButton)
+          _buildReceiptButton(context),
+      ],
+    );
+  }
+
+  // =================== EXPENSE SPECIFIC WIDGETS ===================
+
+  Widget _buildExpenseStatusChip(String status) {
+    Color chipColor;
+    Color textColor;
+    String label;
+    
+    final lowerStatus = status.toLowerCase();
+    
+    switch (lowerStatus) {
+      case 'approved':
+        chipColor = Colors.green;
+        textColor = Colors.white;
+        label = 'Approved';
+        break;
+      case 'rejected':
+        chipColor = Colors.red;
+        textColor = Colors.white;
+        label = 'Rejected';
+        break;
+      case 'pending':
+      default:
+        chipColor = Colors.orange;
+        textColor = Colors.white;
+        label = 'Pending';
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseInfo(BuildContext context) {
+    final description = itemData?['description']?.toString();
+    if (description == null || description.isEmpty) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.description,
+                size: 14,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Description:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+          if (description.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 22),
+              child: Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                ),
               ),
             ),
         ],
@@ -914,20 +1358,523 @@ Center(
     );
   }
 
-  Widget _buildDetailRow(String label, String value, BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+  Widget _buildPaidByInfo(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _getPaidByName(itemData!['paidBy'] ?? ''),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildDetailRow('Paid By:', 'Loading...', context);
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _buildDetailRow('Paid By:', 'Unknown', context);
+        }
+        return _buildDetailRow('Paid By:', snapshot.data!, context);
+      },
+    );
+  }
+
+  Widget _buildExpenseStatusChangeButton(BuildContext context, HistoryItem item, String currentStatus) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            'Change Status:',
             style: TextStyle(
-              fontWeight: FontWeight.w600, 
-              color: AppColors.textSecondary(context)
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _changeExpenseStatus(context, item, 'pending'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: currentStatus == 'pending' ? Colors.orange : Colors.grey,
+                    side: BorderSide(
+                      color: currentStatus == 'pending' ? Colors.orange : Colors.grey,
+                    ),
+                  ),
+                  child: const Text('Pending'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _changeExpenseStatus(context, item, 'approved'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: currentStatus == 'approved' ? Colors.green : Colors.grey,
+                    side: BorderSide(
+                      color: currentStatus == 'approved' ? Colors.green : Colors.grey,
+                    ),
+                  ),
+                  child: const Text('Approve'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _changeExpenseStatus(context, item, 'rejected'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: currentStatus == 'rejected' ? Colors.red : Colors.grey,
+                    side: BorderSide(
+                      color: currentStatus == 'rejected' ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                  child: const Text('Reject'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =================== CONTRIBUTION SPECIFIC WIDGETS ===================
+
+  Widget _buildDataMissingWarning() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info, size: 14, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Contribution details not available for editing',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+Widget _buildEntryInfo(BuildContext context) {
+  String? addedBy;
+  String? addedAt;
+  
+  if (item.type == HistoryItemType.contribution) {
+    addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
+    final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
+    addedAt = addedAtTimestamp != null 
+        ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
+        : null;
+  } else if (item.type == HistoryItemType.expense) {
+    addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
+    final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
+    addedAt = addedAtTimestamp != null 
+        ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
+        : null;
+  }
+  
+  if (addedBy == null) return const SizedBox.shrink();
+  
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: AppColors.primary(context).withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.person_add_alt_1,
+              size: 14,
+              color: AppColors.primary(context),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Added by: $addedBy',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+          ],
+        ),
+        if (addedAt != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 22),
+            child: Text(
+              'On: $addedAt',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textTertiary(context),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+Widget _buildEditInfo(BuildContext context) {
+  // For contributions
+  if (item.type == HistoryItemType.contribution) {
+    final isEdited = itemData?['isEdited'] == true;
+    final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
+    final editReason = itemData?['editReason'];
+    
+    if (!isEdited) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.edit_note,
+                size: 14,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Edited',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
+              if (lastEditedBy != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    'by $lastEditedBy',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.withOpacity(0.8),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (editReason != null && editReason.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 22),
+              child: Text(
+                'Reason: $editReason',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange.withOpacity(0.8),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  // For expenses
+  else if (item.type == HistoryItemType.expense && itemData != null) {
+    final isEdited = itemData?['isEdited'] == true;
+    final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
+    final editReason = itemData?['editReason'];
+    
+    if (!isEdited) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.edit_note,
+                size: 14,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Edited',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
+              if (lastEditedBy != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    'by $lastEditedBy',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.withOpacity(0.8),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (editReason != null && editReason.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 22),
+              child: Text(
+                'Reason: $editReason',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange.withOpacity(0.8),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  return const SizedBox.shrink();
+}
+
+  Widget _buildProgramName(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _getProgramName(context, itemData!['programId']),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildDetailRow('Program:', 'Loading...', context);
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _buildDetailRow('Program:', 'Unknown Program', context);
+        }
+        return _buildDetailRow('Program:', snapshot.data!, context);
+      },
+    );
+  }
+
+Widget _buildEditHistory(BuildContext context) {
+  // Get edit history based on item type
+  List<dynamic> editHistory = [];
+  
+  if (item.type == HistoryItemType.contribution) {
+    editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
+  } else if (item.type == HistoryItemType.expense) {
+    editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
+  }
+  
+  if (editHistory.isEmpty) return const SizedBox.shrink();
+  
+  return Column(
+    children: [
+      const SizedBox(height: 16),
+      Divider(
+        color: AppColors.border(context),
+        height: 1,
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Edit History',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      const SizedBox(height: 8),
+      ...editHistory.map((edit) => _buildEditHistoryItem(edit, context)).toList(),
+    ],
+  );
+}
+
+  Widget _buildEditHistoryItem(Map<String, dynamic> edit, BuildContext context) {
+    final editedAt = (edit['editedAt'] as Timestamp?)?.toDate();
+    final editedBy = edit['editedByUserName'] ?? edit['editedByUserId'] ?? 'Unknown';
+    final changes = (edit['changes'] as Map<String, dynamic>?) ?? {};
+    final reason = edit['reason'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.border(context),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.history,
+                size: 12,
+                color: AppColors.textTertiary(context),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                editedAt != null 
+                  ? DateFormat('MMM dd, yyyy hh:mm a').format(editedAt)
+                  : 'Unknown time',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textTertiary(context),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'By: $editedBy',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          ...changes.entries.map((entry) {
+            final field = entry.key;
+            final change = entry.value as Map<String, dynamic>;
+            final oldValue = change['old'];
+            final newValue = change['new'];
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '• ${_formatFieldName(field)}: ',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    TextSpan(text: '$oldValue → '),
+                    TextSpan(
+                      text: '$newValue',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          
+          if (reason != null && reason.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Reason: $reason',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textTertiary(context),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // =================== COMMON WIDGETS ===================
+
+  Widget _buildReceiptButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.border(context),
+            width: 1,
+          ),
+        ),
+      ),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.receipt),
+        onPressed: () => ContributionReceiptPdf.showPreview(
+          context,
+          item,
+          communityName: communityLabel,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary(context),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+        ),
+        label: const Text(
+          "Get Receipt",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600, 
+                color: AppColors.textSecondary(context)
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
+            flex: 3,
             child: Text(
               value,
               style: TextStyle(
@@ -940,7 +1887,485 @@ Center(
       ),
     );
   }
+
+  // =================== ACTION METHODS ===================
+
+  void _editItem(BuildContext context, HistoryItem item) {
+    if (item.type == HistoryItemType.contribution) {
+      _editContribution(context, item);
+    } else if (item.type == HistoryItemType.expense) {
+      _editExpense(context, item);
+    }
+  }
+
+  // =================== EXPENSE ACTIONS ===================
+
+  void _editExpense(BuildContext context, HistoryItem item) {
+    debugPrint('🎯 Edit expense button pressed for item: ${item.id}');
+    
+    try {
+      debugPrint('🔄 Navigating to edit expense screen...');
+      
+      String firestoreId = item.id;
+      if (firestoreId.startsWith('expense_')) {
+        firestoreId = firestoreId.substring(8); // Remove 'expense_' prefix
+        debugPrint('   🔄 Removed "expense_" prefix');
+        debugPrint('   🔍 Real Firestore ID: $firestoreId');
+      }
+      
+      // Show loading indicator while fetching
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // First, fetch the expense to ensure it exists
+      final expenseProvider = context.read<ExpenseProvider>();
+      
+      expenseProvider.getExpenseById(firestoreId).then((expense) {
+        Navigator.pop(context); // Close loading dialog
+        
+        if (expense == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Expense not found'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        
+        // Navigate to edit expense screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EditExpenseScreen(
+              expenseId: firestoreId,
+              onSave: (updatedExpense) async {
+                try {
+                  debugPrint('💾 Saving updated expense...');
+                  
+                  if (updatedExpense == null) {
+                    debugPrint('   ⚠️ Update cancelled or no changes');
+                    return;
+                  }
+                  
+                  final authProvider = context.read<AppAuthProvider>();
+                  final currentUser = authProvider.user;
+                  
+                  if (currentUser == null) {
+                    throw Exception('User not authenticated');
+                  }
+                  
+                  debugPrint('👤 Current user: ${currentUser.uid}');
+                  
+                  await expenseProvider.updateExpense(
+                    updatedExpense,
+                    editedByUserId: currentUser.uid,
+                    editedByUserName: currentUser.displayName ?? 'Admin',
+                    editReason: updatedExpense.editReason,
+                  );
+                  
+                  debugPrint('✅ Expense updated successfully');
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Expense updated successfully'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  
+                  if (Navigator.canPop(context)) Navigator.pop(context);
+                  if (Navigator.canPop(context)) Navigator.pop(context);
+                  
+                } catch (e) {
+                  debugPrint('❌ Error updating expense: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        ).then((_) {
+          debugPrint('🏁 Edit expense screen closed');
+        });
+      }).catchError((e) {
+        Navigator.pop(context); // Close loading dialog
+        debugPrint('❌ Error fetching expense: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      });
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error navigating to edit expense screen: $e');
+      debugPrint('📌 Stack trace: $stackTrace');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening edit screen: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _changeExpenseStatus(BuildContext context, HistoryItem item, String newStatus) async {
+    try {
+      // Clean the expense ID if needed
+      String expenseId = item.id;
+      if (expenseId.startsWith('expense_')) {
+        expenseId = expenseId.substring(8);
+      }
+      
+      // Use ExpenseProvider to update status
+      final expenseProvider = context.read<ExpenseProvider>();
+      await expenseProvider.updateExpenseStatus(expenseId, newStatus);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Expense status changed to ${newStatus.toUpperCase()}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Close bottom sheet
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+    } catch (e) {
+      debugPrint('Error changing expense status: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to change status: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // =================== CONTRIBUTION ACTIONS ===================
+
+void _editContribution(BuildContext context, HistoryItem item) {
+  debugPrint('🎯 Edit button pressed for item: ${item.id}');
+  debugPrint('📊 itemData exists: ${itemData != null}');
+  
+  if (itemData == null) {
+    debugPrint('❌ itemData is null!');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cannot edit: Contribution data not found'),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return;
+  }
+
+  try {
+    debugPrint('🔄 Navigating to edit screen with ID only...');
+    
+    String firestoreId = item.id;
+    if (firestoreId.startsWith('contrib_')) {
+      firestoreId = firestoreId.substring(8);
+      debugPrint('   🔄 Removed "contrib_" prefix');
+      debugPrint('   🔍 Real Firestore ID: $firestoreId');
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditContributionScreen(
+          contributionId: firestoreId,
+          onSave: (updatedContribution) async {
+            try {
+              debugPrint('💾 Saving updated contribution...');
+              
+              if (updatedContribution == null) {
+                debugPrint('   ⚠️ Update cancelled or no changes');
+                return;
+              }
+              
+              final authProvider = context.read<AppAuthProvider>();
+              final currentUser = authProvider.user;
+              
+              if (currentUser == null) {
+                throw Exception('User not authenticated');
+              }
+              
+              debugPrint('👤 Current user: ${currentUser.uid}');
+              
+              final provider = context.read<ContributionProvider>();
+              await provider.updateContribution(
+                updatedContribution,
+                editedByUserId: currentUser.uid,
+                editedByUserName: currentUser.displayName ?? 'Admin',
+                editReason: updatedContribution.editReason,
+              );
+              
+              debugPrint('✅ Contribution updated successfully');
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Contribution updated successfully'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              
+              if (Navigator.canPop(context)) Navigator.pop(context);
+              if (Navigator.canPop(context)) Navigator.pop(context);
+              
+            } catch (e) {
+              debugPrint('❌ Error updating contribution: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to update: ${e.toString()}'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    ).then((_) {
+      debugPrint('🏁 Edit screen closed');
+    });
+  } catch (e, stackTrace) {
+    debugPrint('❌ Error navigating to edit screen: $e');
+    debugPrint('📌 Stack trace: $stackTrace');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error opening edit screen: ${e.toString()}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 }
+
+// =================== COMMON ACTIONS ===================
+
+Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirm Delete'),
+      content: Text(
+        'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    try {
+      if (item.type == HistoryItemType.contribution) {
+        // For contributions: Clean the ID if needed
+        String contributionId = item.id;
+        
+        // DEBUG: Check what ID we have
+        debugPrint('🔍 Original contribution ID from item: $contributionId');
+        
+        // Check if we need to clean the ID
+        if (contributionId.startsWith('contrib_')) {
+          contributionId = contributionId.substring(8); // Remove 'contrib_' prefix
+          debugPrint('🔄 Cleaned contribution ID: $contributionId');
+        }
+        
+        final provider = context.read<ContributionProvider>();
+        await provider.deleteContribution(contributionId);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contribution deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+      } else if (item.type == HistoryItemType.expense) {
+        // For expenses: Clean the ID if needed
+        String expenseId = item.id;
+        
+        // DEBUG: Check what ID we have
+        debugPrint('🔍 Original expense ID from item: $expenseId');
+        
+        // Check if we need to clean the ID
+        if (expenseId.startsWith('expense_')) {
+          expenseId = expenseId.substring(8); // Remove 'expense_' prefix
+          debugPrint('🔄 Cleaned expense ID: $expenseId');
+        }
+        
+        final expenseProvider = context.read<ExpenseProvider>();
+        await expenseProvider.deleteExpense(expenseId);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Expense deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      
+      // Close bottom sheet
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Error deleting item: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+// =================== HELPER METHODS ===================
+
+Future<String> _getProgramName(BuildContext context, String programId) async {
+  if (programId.isEmpty) return 'Unknown Program';
+  
+  try {
+    // Try main programs collection first
+    final programDoc = await FirebaseFirestore.instance
+        .collection('programs')
+        .doc(programId)
+        .get();
+    
+    if (programDoc.exists) {
+      return programDoc.data()?['title'] ?? programDoc.data()?['name'] ?? 'Unknown Program';
+    }
+    
+    // Try community programs if communityId is available
+    if (itemData != null && itemData!['communityId'] != null) {
+      final communityProgramDoc = await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(itemData!['communityId'])
+          .collection('programs')
+          .doc(programId)
+          .get();
+      
+      if (communityProgramDoc.exists) {
+        return communityProgramDoc.data()?['title'] ?? communityProgramDoc.data()?['name'] ?? 'Unknown Program';
+      }
+    }
+    
+    return 'Program $programId';
+  } catch (e) {
+    debugPrint('Error fetching program name: $e');
+    return 'Unknown Program';
+  }
+}
+
+Future<String> _getPaidByName(String userId) async {
+  if (userId.isEmpty) return 'Unknown User';
+  
+  try {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    
+    if (userDoc.exists) {
+      return userDoc.data()?['displayName'] ?? 
+             userDoc.data()?['name'] ?? 
+             userDoc.data()?['email']?.split('@').first ??
+             'User $userId';
+    }
+    return 'User $userId';
+  } catch (e) {
+    debugPrint('Error fetching paid by user name: $e');
+    return 'User $userId';
+  }
+}
+
+String _formatExpenseStatus(String status) {
+  final lowerStatus = status.toLowerCase();
+  switch (lowerStatus) {
+    case 'approved': return 'Approved';
+    case 'pending': return 'Pending Review';
+    case 'rejected': return 'Rejected';
+    case 'paid': return 'Paid';
+    case 'unpaid': return 'Unpaid';
+    default: return status;
+  }
+}
+
+String _formatFieldName(String field) {
+  final fieldMap = {
+    'amount': 'Amount',
+    'paymentMethod': 'Payment Method',
+    'userId': 'Member',
+    'programId': 'Program',
+    'note': 'Note',
+    'monthId': 'Month',
+    // Expense specific fields
+    'title': 'Title',
+    'description': 'Description',
+    'category': 'Category',
+    'vendorName': 'Vendor',
+    'referenceNumber': 'Reference Number',
+    'program': 'Program', // For expense changes where program is stored as 'program'
+  };
+  return fieldMap[field] ?? field;
+}
+
+bool _checkIfAdmin(BuildContext context) {
+  final auth = context.read<AppAuthProvider>();
+  final user = auth.user;
+  return user?.isAdmin == true;
+}
+
+bool _checkIfCurrentUserPaidBy(BuildContext context, HistoryItem item) {
+  final auth = context.read<AppAuthProvider>();
+  final currentUserId = auth.user?.uid;
+  
+  if (item.type == HistoryItemType.expense && 
+      itemData != null && 
+      currentUserId != null) {
+    final paidById = itemData!['paidBy'];
+    return paidById == currentUserId;
+  }
+  
+  return false;
+}
+}
+
+
+
+
 
 // =================== FILTER SHEET ===================
 class FilterSheet extends StatefulWidget {

@@ -239,7 +239,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         final displayItems = items.take(4).toList();
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.card(context),
             borderRadius: BorderRadius.circular(12),
@@ -348,7 +348,7 @@ Widget _buildHistoryItem({
             // Add onTap functionality if needed
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             child: Row(
               children: [
                 // Circular icon with wallet + arrow
@@ -492,29 +492,111 @@ Container(
   );
 }
 
-  Widget _buildLoadingState(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
+ Widget _buildLoadingState(BuildContext context) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      children: [
+        // Show 3 skeleton items for loading
+        for (int i = 0; i < 3; i++) ...[
+          _buildHistoryItemSkeleton(context),
+          if (i < 2) // Add divider between items (except last one)
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.border(context).withOpacity(0.3),
+              indent: 16,
+              endIndent: 16,
+            ),
+        ],
+      ],
+    ),
+  );
+}
+
+Widget _buildHistoryItemSkeleton(BuildContext context) {
+  return Material(
+    color: Colors.transparent,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Row(
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            "Loading transactions...",
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
+          // Skeleton circular icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.textTertiary(context).withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
+          ),
+          const SizedBox(width: 12),
+          
+          // Skeleton text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title skeleton
+                Container(
+                  width: double.infinity,
+                  height: 16,
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                
+                // Subtitle skeleton
+                Container(
+                  width: double.infinity,
+                  height: 14,
+                  margin: const EdgeInsets.only(bottom: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Skeleton time and amount
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Time skeleton
+              Container(
+                width: 60,
+                height: 12,
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              
+              // Amount skeleton
+              Container(
+                width: 80,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildErrorState(BuildContext context) {
     return Container(

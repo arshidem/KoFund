@@ -73,7 +73,122 @@ class ExpenseProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
+// Add this method to your ExpenseProvider class
+Future<void> updateExpense(
+  ExpenseModel expense, {
+  required String editedByUserId,
+  required String editedByUserName,
+  String? editReason,
+}) async {
+  try {
+    print('📱 ExpenseProvider: Updating expense ${expense.expenseId}');
+    
+    // First, update in Firestore via service
+    await expenseService.updateExpense(
+      expense,
+      editedByUserId: editedByUserId,
+      editedByUserName: editedByUserName,
+      editReason: editReason,
+    );
+    
+    // Now update locally
+    final index = _expenses.indexWhere(
+      (e) => e.expenseId == expense.expenseId
+    );
+    
+    if (index != -1) {
+      // Get current version for comparison
+      final currentExpense = _expenses[index];
+      
+      // Detect changes locally
+      final Map<String, Map<String, dynamic>> changes = {};
+      
+      if (currentExpense.amount != expense.amount) {
+        changes['amount'] = {
+          'old': currentExpense.amount,
+          'new': expense.amount,
+        };
+      }
+      
+      if (currentExpense.title != expense.title) {
+        changes['title'] = {
+          'old': currentExpense.title,
+          'new': expense.title,
+        };
+      }
+      
+      if (currentExpense.description != expense.description) {
+        changes['description'] = {
+          'old': currentExpense.description,
+          'new': expense.description,
+        };
+      }
+      
+      if (currentExpense.programId != expense.programId) {
+        changes['program'] = {
+          'old': currentExpense.programId,
+          'new': expense.programId,
+        };
+      }
+      
+      if (currentExpense.category != expense.category) {
+        changes['category'] = {
+          'old': currentExpense.category,
+          'new': expense.category,
+        };
+      }
+      
+      if (currentExpense.paymentMethod != expense.paymentMethod) {
+        changes['paymentMethod'] = {
+          'old': currentExpense.paymentMethod ?? 'Not set',
+          'new': expense.paymentMethod ?? 'Not set',
+        };
+      }
+      
+      // Update program expenses list too
+      final programIndex = _programExpenses.indexWhere(
+        (e) => e.expenseId == expense.expenseId
+      );
+      if (programIndex != -1) {
+        _programExpenses[programIndex] = expense;
+      }
+      
+      _expenses[index] = expense;
+      _expenseTotalsCache.clear();
+      notifyListeners();
+      
+      print('✅ ExpenseProvider: Local update successful');
+    } else {
+      print('⚠️ Warning: Expense not found in local list');
+    }
+    
+  } catch (e) {
+    print('❌ ExpenseProvider error: $e');
+    rethrow;
+  }
+}
+// Add this method to your ExpenseProvider class (after the existing methods)
+Future<ExpenseModel?> getExpenseById(String expenseId) async {
+  try {
+    debugPrint('🔄 Getting expense by ID: $expenseId');
+    
+    // Use the expenseService to fetch the expense
+    // If your expenseService doesn't have this method, you'll need to add it
+    final expense = await expenseService.getExpenseById(expenseId);
+    
+    if (expense == null) {
+      debugPrint('❌ Expense not found with ID: $expenseId');
+      return null;
+    }
+    
+    debugPrint('✅ Found expense: ${expense.expenseId}');
+    return expense;
+    
+  } catch (e) {
+    debugPrint('❌ Error getting expense by ID: $e');
+    return null;
+  }
+}
   /// Update expense status (approved, pending, rejected)
   Future<void> updateExpenseStatus(String expenseId, String status) async {
     try {

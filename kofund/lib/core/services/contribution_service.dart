@@ -548,21 +548,214 @@ Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
   // 🔹 Update / Delete
   // -------------------------------
 
-  Future<void> updateContribution(ContributionModel contribution) async {
-    try {
-      await _firestore
-          .collection('contributions')
-          .doc(contribution.contributionId)
-          .update({
-            'amount': contribution.amount,
-            'paymentMethod': contribution.paymentMethod,
-            // Status is not updated since it's always 'completed'
-            'updatedAt': Timestamp.now(), // Add updated timestamp
-          });
-    } catch (e) {
-      throw Exception('Failed to update contribution: $e');
+Future<void> updateContribution(ContributionModel contribution, {
+  required String editedByUserId,
+  required String editedByUserName,
+  String? editReason,
+}) async {
+  try {
+    // Get document reference from root 'contributions' collection
+    final docRef = _firestore
+        .collection('contributions')
+        .doc(contribution.contributionId);
+    
+    final snapshot = await docRef.get();
+    
+    // Throw error if document not found
+    if (!snapshot.exists) {
+      throw Exception('Contribution document not found');
     }
+    
+    final currentData = snapshot.data();
+    
+    if (currentData == null || currentData is! Map<String, dynamic>) {
+      throw Exception('Document has no data');
+    }
+    
+    final currentContribution = ContributionModel.fromMap(currentData, snapshot.id);
+    
+    // Helper function to get program title
+    Future<Map<String, String>> _getProgramInfo(String programId, String? communityId) async {
+      try {
+        String? programTitle;
+        String? programLocation;
+        
+        // Try to get program details from multiple possible locations
+        
+        // 1. Try from 'programs' root collection
+        final programDoc = await _firestore
+            .collection('programs')
+            .doc(programId)
+            .get();
+            
+        if (programDoc.exists && programDoc.data() != null) {
+          final data = programDoc.data()!;
+          programTitle = data['title'] as String? ?? 'Program $programId';
+          programLocation = data['location'] as String? ?? '';
+        }
+        
+        // 2. If not found, try from community's programs subcollection
+        if (programTitle == null && communityId != null && communityId.isNotEmpty) {
+          final subProgramDoc = await _firestore
+              .collection('communities')
+              .doc(communityId)
+              .collection('programs')
+              .doc(programId)
+              .get();
+              
+          if (subProgramDoc.exists && subProgramDoc.data() != null) {
+            final data = subProgramDoc.data()!;
+            programTitle = data['title'] as String? ?? 'Program $programId';
+            programLocation = data['location'] as String? ?? '';
+          }
+        }
+        
+        // 3. Fallback if still not found
+        if (programTitle == null) {
+          programTitle = 'Program $programId';
+        }
+        
+        return {
+          'title': programTitle,
+          'location': programLocation ?? '',
+          'id': programId,
+        };
+        
+      } catch (e) {
+        print('⚠️ Error fetching program info: $e');
+        return {
+          'title': 'Program $programId',
+          'location': '',
+          'id': programId,
+        };
+      }
+    }
+    
+    // Detect changes
+    final Map<String, Map<String, dynamic>> changes = {};
+    
+    if (currentContribution.amount != contribution.amount) {
+      changes['amount'] = {
+        'old': currentContribution.amount,
+        'new': contribution.amount,
+      };
+    }
+    
+    if (currentContribution.paymentMethod != contribution.paymentMethod) {
+      changes['paymentMethod'] = {
+        'old': currentContribution.paymentMethod,
+        'new': contribution.paymentMethod,
+      };
+    }
+    
+    // PROGRAM CHANGE: Store titles instead of IDs
+    if (currentContribution.programId != contribution.programId) {
+      // Get program info for both old and new
+      final oldProgramInfo = await _getProgramInfo(
+        currentContribution.programId, 
+        currentContribution.communityId
+      );
+      final newProgramInfo = await _getProgramInfo(
+        contribution.programId, 
+        contribution.communityId
+      );
+      
+      changes['program'] = { // Changed key from 'programId' to 'program'
+        'old': oldProgramInfo['title'],
+        'new': newProgramInfo['title'],
+        // Include additional info if needed
+        'oldId': currentContribution.programId,
+        'newId': contribution.programId,
+        'oldLocation': oldProgramInfo['location'],
+        'newLocation': newProgramInfo['location'],
+      };
+    }
+    
+    if (currentContribution.userId != contribution.userId) {
+      changes['userId'] = {
+        'old': currentContribution.userId,
+        'new': contribution.userId,
+      };
+    }
+    
+    if (currentContribution.note != contribution.note) {
+      changes['note'] = {
+        'old': currentContribution.note ?? '',
+        'new': contribution.note ?? '',
+      };
+    }
+    
+    if (currentContribution.isMonthlyContribution != contribution.isMonthlyContribution) {
+      changes['isMonthlyContribution'] = {
+        'old': currentContribution.isMonthlyContribution,
+        'new': contribution.isMonthlyContribution,
+      };
+    }
+    
+    if (currentContribution.monthId != contribution.monthId) {
+      changes['monthId'] = {
+        'old': currentContribution.monthId ?? '',
+        'new': contribution.monthId ?? '',
+      };
+    }
+    
+    // ✅ FIX: Only add edit history if there are actual changes
+    if (changes.isNotEmpty) {
+      // Get existing edit history
+      List<dynamic> existingHistory = [];
+      final historyData = currentData['editHistory'];
+      if (historyData is List) {
+        existingHistory = List<dynamic>.from(historyData);
+      }
+      
+      // Add new edit record only if there are changes
+      final editRecord = {
+        'editedAt': Timestamp.now(),
+        'editedByUserId': editedByUserId,
+        'editedByUserName': editedByUserName,
+        'changes': changes,
+        'reason': editReason ?? '',
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      
+      final updatedHistory = List<dynamic>.from(existingHistory)..add(editRecord);
+      
+      // Prepare update data - STORE PROGRAM ID IN MAIN DOCUMENT
+      final updateData = {
+        'amount': contribution.amount,
+        'paymentMethod': contribution.paymentMethod,
+        'programId': contribution.programId, // Store ID here
+        'userId': contribution.userId,
+        'note': contribution.note,
+        'isMonthlyContribution': contribution.isMonthlyContribution,
+        'monthId': contribution.monthId,
+        
+        // Edit tracking
+        'isEdited': true,
+        'lastEditedByUserId': editedByUserId,
+        'lastEditedByUserName': editedByUserName,
+        'lastEditedAt': Timestamp.now(),
+        'editReason': editReason,
+        'editHistory': updatedHistory,
+        'updatedAt': Timestamp.now(),
+      };
+      
+      // Remove null values
+      final cleanUpdateData = Map<String, dynamic>.from(updateData)
+        ..removeWhere((key, value) => value == null);
+      
+      await docRef.update(cleanUpdateData);
+    } else {
+      // If no changes, just update the timestamp
+      await docRef.update({
+        'updatedAt': Timestamp.now(),
+      });
+    }
+    
+  } catch (e) {
+    throw Exception('Failed to update contribution: $e');
   }
+}
 
   // ✅ REMOVED: updateContributionStatus (not needed since all are completed)
 

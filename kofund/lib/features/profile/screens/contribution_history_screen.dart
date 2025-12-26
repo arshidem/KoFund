@@ -23,7 +23,7 @@ class ContributionHistoryScreen extends StatefulWidget {
 class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   String? _currentUserId;
   bool _isInitialLoad = true;
-
+  
   @override
   void initState() {
     super.initState();

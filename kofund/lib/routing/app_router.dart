@@ -27,9 +27,9 @@ import '../features/programs/screens/program_details_screen.dart';
 import '../features/programs/screens/create_program_screen.dart';
 
 // 🆕 CONTRIBUTION SCREENS
-import '../features/contributions/screens/all_contribution_screen.dart';
-import '../features/contributions/screens/update_contribution_screen.dart';
-import '../features/contributions/screens/add_contribution_screen.dart';
+// import '../features/contributions/screens/all_contribution_screen.dart';
+// import '../features/contributions/screens/update_contribution_screen.dart';
+// import '../features/contributions/screens/add_contribution_screen.dart';
 import '../features/contributions/models/contribution_model.dart';
 
 // PROFILE & SETTINGS SCREENS
@@ -187,15 +187,15 @@ case RouteNames.joinCommunity:
         );
       
       // 🆕 CONTRIBUTION ROUTES
-      case RouteNames.allContributions:
-        return MaterialPageRoute(builder: (_) => const AllContributionsScreen());
-      case RouteNames.updateContribution:
-        final contribution = settings.arguments as ContributionModel;
-        return MaterialPageRoute(
-          builder: (_) => UpdateContributionScreen(contribution: contribution),
-        );
-      case RouteNames.addContribution:
-        return MaterialPageRoute(builder: (_) => const AddContributionScreen());
+      // case RouteNames.allContributions:
+      //   return MaterialPageRoute(builder: (_) => const AllContributionsScreen());
+      // case RouteNames.updateContribution:
+      //   final contribution = settings.arguments as ContributionModel;
+      //   return MaterialPageRoute(
+      //     builder: (_) => UpdateContributionScreen(contribution: contribution),
+      //   );
+      // case RouteNames.addContribution:
+      //   return MaterialPageRoute(builder: (_) => const AddContributionScreen());
       
       // PROFILE ROUTES
       case RouteNames.profile:

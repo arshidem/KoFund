@@ -21,9 +21,9 @@ class RouteNames {
   static const String memberDetails = '/member-details';
 
   // 🆕 CONTRIBUTION ROUTES
-  static const String allContributions = '/all-contributions';
-  static const String updateContribution = '/update-contribution';
-  static const String addContribution = '/add-contribution';
+  // static const String allContributions = '/all-contributions';
+  // static const String updateContribution = '/update-contribution';
+  // static const String addContribution = '/add-contribution';
 
   // PROFILE ROUTES
   static const String profile = '/profile';

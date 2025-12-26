@@ -56,22 +56,181 @@ class ContributionProvider with ChangeNotifier {
       rethrow;
     }
   }
-  // ✅ REMOVED: updateContributionStatus (not needed - all contributions are completed)
-
-  Future<void> updateContribution(ContributionModel contribution) async {
-    try {
-      await _contributionService.updateContribution(contribution);
+// In your provider
+Future<void> updateContribution(
+  ContributionModel contribution, {
+  required String editedByUserId,
+  required String editedByUserName,
+  String? editReason,
+}) async {
+  try {
+    // DEBUG
+    print('📱 Provider: Updating contribution ${contribution.contributionId}');
+    
+    // First, update in Firestore
+    await _contributionService.updateContribution(
+      contribution,
+      editedByUserId: editedByUserId,
+      editedByUserName: editedByUserName,
+      editReason: editReason,
+    );
+    
+    // Now update locally (only if Firestore update succeeded)
+    final index = contributions.indexWhere(
+      (c) => c.contributionId == contribution.contributionId
+    );
+    
+    if (index != -1) {
+      // Get current version for comparison
+      final currentContribution = contributions[index];
       
-      // Clear relevant cache
+      // Detect changes locally
+      final Map<String, Map<String, dynamic>> changes = {};
+      
+      // Helper function to get program title
+      Future<String?> _getProgramTitle(String programId) async {
+        try {
+          // Try to get from local cache first if you have a program provider
+          // Or fetch from Firestore
+          final programDoc = await FirebaseFirestore.instance
+              .collection('programs')
+              .doc(programId)
+              .get();
+          
+          if (programDoc.exists) {
+            return programDoc.data()?['title'] as String? ?? 'Program $programId';
+          }
+          
+          // Try communities subcollection
+          final communityId = currentContribution.communityId;
+          final subProgramDoc = await FirebaseFirestore.instance
+              .collection('communities')
+              .doc(communityId)
+              .collection('programs')
+              .doc(programId)
+              .get();
+              
+          if (subProgramDoc.exists) {
+            return subProgramDoc.data()?['title'] as String? ?? 'Program $programId';
+          }
+          
+          return 'Program $programId';
+        } catch (e) {
+          print('⚠️ Error fetching program title: $e');
+          return 'Program $programId';
+        }
+      }
+      
+      // Compare amount
+      if (currentContribution.amount != contribution.amount) {
+        changes['amount'] = {
+          'old': currentContribution.amount,
+          'new': contribution.amount,
+        };
+      }
+      
+      // Compare payment method
+      if (currentContribution.paymentMethod != contribution.paymentMethod) {
+        changes['paymentMethod'] = {
+          'old': currentContribution.paymentMethod,
+          'new': contribution.paymentMethod,
+        };
+      }
+      
+      // Compare userId (if this can be changed)
+      if (currentContribution.userId != contribution.userId) {
+        changes['userId'] = {
+          'old': currentContribution.userId,
+          'new': contribution.userId,
+        };
+      }
+      
+      // Compare programId - STORE TITLES NOT IDS
+      if (currentContribution.programId != contribution.programId) {
+        // Fetch both program titles
+        final oldProgramTitle = await _getProgramTitle(currentContribution.programId);
+        final newProgramTitle = await _getProgramTitle(contribution.programId);
+        
+        changes['program'] = { // Changed from 'programId' to 'program' for clarity
+          'old': oldProgramTitle,
+          'new': newProgramTitle,
+          // Store IDs as well for reference if needed
+          'oldId': currentContribution.programId,
+          'newId': contribution.programId,
+        };
+      } else {
+        // Even if not changed, we might want to include program title for context
+        // Optional: Include program title in changes for reference
+        // final programTitle = await _getProgramTitle(contribution.programId);
+        // changes['programInfo'] = {
+        //   'title': programTitle,
+        //   'id': contribution.programId,
+        // };
+      }
+      
+      // Compare note
+      if (currentContribution.note != contribution.note) {
+        changes['note'] = {
+          'old': currentContribution.note ?? '',
+          'new': contribution.note ?? '',
+        };
+      }
+      
+      // Compare monthId
+      if (currentContribution.monthId != contribution.monthId) {
+        changes['monthId'] = {
+          'old': currentContribution.monthId ?? '',
+          'new': contribution.monthId ?? '',
+        };
+      }
+      
+      // Compare isMonthlyContribution
+      if (currentContribution.isMonthlyContribution != contribution.isMonthlyContribution) {
+        changes['isMonthlyContribution'] = {
+          'old': currentContribution.isMonthlyContribution,
+          'new': contribution.isMonthlyContribution,
+        };
+      }
+
+      final editRecord = {
+        'editedAt': Timestamp.now(),
+        'editedByUserId': editedByUserId,
+        'editedByUserName': editedByUserName,
+        'changes': changes,
+        'reason': editReason ?? '',
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      
+      // Update local model
+      final updatedContribution = contribution.copyWith(
+        isEdited: true,
+        lastEditedByUserId: editedByUserId,
+        lastEditedByUserName: editedByUserName,
+        lastEditedAt: Timestamp.now(),
+        editReason: editReason,
+        editHistory: [...currentContribution.editHistory, editRecord],
+      );
+      
+      // Update in local list
+      contributions[index] = updatedContribution;
+      
+      // Also update in other lists if they exist
+      _updateContributionInLists(updatedContribution);
+      
+      // Clear cache
       clearCacheForUser(contribution.programId, contribution.userId);
       
-      // Update in local lists
-      _updateContributionInLists(contribution);
       notifyListeners();
-    } catch (e) {
-      rethrow;
+      print('✅ Provider: Local update successful');
+    } else {
+      print('⚠️ Warning: Contribution not found in local list, but Firestore update succeeded');
     }
+    
+  } catch (e) {
+    print('❌ Provider error: $e');
+    rethrow;
   }
+}
 
   void _updateContributionInLists(ContributionModel updatedContribution) {
     // Update in community contributions
@@ -301,29 +460,46 @@ class ContributionProvider with ChangeNotifier {
   // -------------------------------
 
  // Get contribution by ID
-  Future<ContributionModel?> getContributionById(String contributionId) async {
-    try {
-      // First check in cache by searching all loaded contributions
-      final allContributions = [..._contributions, ..._userContributions, ..._communityContributions];
-      final localResult = allContributions.firstWhere(
-        (contribution) => contribution.contributionId == contributionId,
-        orElse: () => null as ContributionModel,
-      );
-      
-      if (localResult != null) return localResult;
-      
-      // If not found locally, try to fetch from Firestore
-      final doc = await _firestore.collection('contributions').doc(contributionId).get();
-      if (doc.exists) {
-        return ContributionModel.fromMap(doc.data()!, doc.id);
-      }
-      
-      return null;
-    } catch (e) {
-      print('❌ Error getting contribution by ID: $e');
-      return null;
+// In your ContributionProvider class
+Future<ContributionModel?> getContributionById(String contributionId) async {
+  try {
+    debugPrint('🔄 Getting contribution by ID: $contributionId');
+    
+    // Try with the given ID first
+    var docRef = FirebaseFirestore.instance
+        .collection('contributions')
+        .doc(contributionId);
+    
+    var snapshot = await docRef.get();
+    
+    // If not found, try adding 'contrib_' prefix
+    if (!snapshot.exists && !contributionId.startsWith('contrib_')) {
+      debugPrint('⚠️ Not found, trying with "contrib_" prefix...');
+      docRef = FirebaseFirestore.instance
+          .collection('contributions')
+          .doc('contrib_$contributionId');
+      snapshot = await docRef.get();
     }
+    
+    if (!snapshot.exists) {
+      debugPrint('❌ Contribution not found with ID: $contributionId');
+      return null; // Return null instead of throwing
+    }
+    
+    final data = snapshot.data();
+    if (data == null || data is! Map<String, dynamic>) {
+      debugPrint('❌ Contribution data is invalid or null');
+      return null; // Return null instead of throwing
+    }
+    
+    debugPrint('✅ Found contribution: ${snapshot.id}');
+    return ContributionModel.fromMap(data, snapshot.id);
+    
+  } catch (e) {
+    debugPrint('❌ Error getting contribution by ID: $e');
+    return null; // Return null instead of rethrowing
   }
+}
 
   // ✅ REMOVED: pendingContributions getter (all contributions are completed)
 
