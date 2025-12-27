@@ -996,319 +996,606 @@ class _BottomDetails extends StatelessWidget {
     this.itemData,
   }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    final f = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    
-    // Debug print with more details
-    debugPrint('🔍 _BottomDetails:');
-    debugPrint('  Item type: ${item.type}');
-    debugPrint('  Item ID: ${item.id}');
-    debugPrint('  Item data: ${itemData != null ? "EXISTS" : "NULL"}');
-    
-    if (itemData != null) {
-      debugPrint('  Data keys: ${itemData!.keys.join(", ")}');
-      if (item.type == HistoryItemType.expense) {
-        debugPrint('  Expense status: ${itemData!['status']}');
-        debugPrint('  Expense paidBy: ${itemData!['paidBy']}');
-        debugPrint('  Expense description: ${itemData!['description']}');
-      }
+@override
+Widget build(BuildContext context) {
+  final f = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+
+  // Debug print with more details
+  debugPrint('🔍 _BottomDetails:');
+  debugPrint('  Item type: ${item.type}');
+  debugPrint('  Item ID: ${item.id}');
+  debugPrint('  Item data: ${itemData != null ? "EXISTS" : "NULL"}');
+
+  if (itemData != null) {
+    debugPrint('  Data keys: ${itemData!.keys.join(", ")}');
+    if (item.type == HistoryItemType.expense) {
+      debugPrint('  Expense status: ${itemData!['status']}');
+      debugPrint('  Expense paidBy: ${itemData!['paidBy']}');
+      debugPrint('  Expense description: ${itemData!['description']}');
     }
-    
-    // Check if current user is admin
-    final bool isAdmin = _checkIfAdmin(context);
-    final bool isCurrentUserPaidBy = _checkIfCurrentUserPaidBy(context, item);
-    
-    // ✅ FIXED: Check if itemData exists before allowing edit
-    final bool canEditContribution = isAdmin && 
-                        item.type == HistoryItemType.contribution &&
-                        itemData != null;
-    
-    // For expenses: Admin OR user who paid can edit
-    final bool canEditExpense = (isAdmin || isCurrentUserPaidBy) && 
-                       item.type == HistoryItemType.expense;
-    
-    final bool canDelete = isAdmin; // Only admin can delete
-    
-    // Calculate if we have receipt button
-    bool hasReceiptButton = item.type == HistoryItemType.contribution && currentUid == item.userId;
-    
-    // Get expense status if it's an expense
-    String? expenseStatus;
-    if (item.type == HistoryItemType.expense && itemData != null) {
-      expenseStatus = (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
-    }
-    
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      snap: true,
-      snapSizes: const [0.5, 0.7, 0.95],
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
+  }
+
+  // Check if current user is admin
+  final bool isAdmin = _checkIfAdmin(context);
+  final bool isCurrentUserPaidBy = _checkIfCurrentUserPaidBy(context, item);
+
+  // ✅ FIXED: Check if itemData exists before allowing edit
+  final bool canEditContribution = isAdmin &&
+      item.type == HistoryItemType.contribution &&
+      itemData != null;
+
+  // For expenses: Admin OR user who paid can edit
+  final bool canEditExpense = (isAdmin || isCurrentUserPaidBy) &&
+      item.type == HistoryItemType.expense;
+
+  final bool canDelete = isAdmin; // Only admin can delete
+
+  // Calculate if we have receipt button
+  bool hasReceiptButton =
+      item.type == HistoryItemType.contribution && currentUid == item.userId;
+
+  // Get expense status if it's an expense
+  String? expenseStatus;
+  if (item.type == HistoryItemType.expense && itemData != null) {
+    expenseStatus =
+        (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
+  }
+
+  return DraggableScrollableSheet(
+    expand: false,
+    snap: true,
+    snapSizes: const [0.5, 0.7, 0.95],
+    initialChildSize: _calculateInitialSize(
+      item: item,
+      itemData: itemData,
+      hasReceiptButton: hasReceiptButton,
+      canEditContribution: canEditContribution,
+      canEditExpense: canEditExpense,
+      canDelete: canDelete,
+      isAdmin: isAdmin,
+      expenseStatus: expenseStatus,
+    ),
+    minChildSize: 0.5,
+    maxChildSize: _calculateMaxSize(
+      item: item,
+      itemData: itemData,
+      hasReceiptButton: hasReceiptButton,
+      canEditContribution: canEditContribution,
+      canEditExpense: canEditExpense,
+      canDelete: canDelete,
+      isAdmin: isAdmin,
+      expenseStatus: expenseStatus,
+    ),
+    builder: (context, scrollController) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
-          child: Column(
-            children: [
-              // Drag handle
-              Container(
-                padding: const EdgeInsets.only(top: 12, bottom: 8),
-                child: Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.border(context),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-              
-              // Title row with icons
-              _buildTitleRow(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 14,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Top area: small spacing for drag handle and header
+            Padding(
+              padding: const EdgeInsets.only(top: 12, left: 16, right: 16),
+              child: _buildHeaderRow(
                 context,
+                f: f,
                 item: item,
                 expenseStatus: expenseStatus,
                 canEditContribution: canEditContribution,
                 canEditExpense: canEditExpense,
                 canDelete: canDelete,
-                isAdmin: isAdmin,
               ),
-              
-              // Main content
+            ),
+
+            // Thin divider to visually separate header from details
+            const SizedBox(height: 8),
+            Divider(height: 1, color: AppColors.border(context)),
+
+            // Main content area (scrollable)
+            Expanded(
+              child: _buildContent(
+                context,
+                f: f,
+                item: item,
+                expenseStatus: expenseStatus,
+                isAdmin: isAdmin,
+                hasReceiptButton: hasReceiptButton,
+                canEditContribution: canEditContribution,
+                canEditExpense: canEditExpense,
+                canDelete: canDelete,
+                scrollController: scrollController,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+double _calculateInitialSize({
+  required HistoryItem item,
+  required Map<String, dynamic>? itemData,
+  required bool hasReceiptButton,
+  required bool canEditContribution,
+  required bool canEditExpense,
+  required bool canDelete,
+  required bool isAdmin,
+  required String? expenseStatus,
+}) {
+  double baseSize = 0.7; // Default size
+  
+  // Adjust based on content
+  if (item.type == HistoryItemType.expense) {
+    baseSize += 0.1; // Expense has more info
+  }
+  
+  if (itemData != null && itemData['editHistory'] != null) {
+    baseSize += 0.1; // Has edit history
+  }
+  
+  if (hasReceiptButton || canEditContribution || canEditExpense || canDelete) {
+    baseSize += 0.05; // Has action buttons
+  }
+  
+  return baseSize.clamp(0.5, 0.95);
+}
+
+double _calculateMaxSize({
+  required HistoryItem item,
+  required Map<String, dynamic>? itemData,
+  required bool hasReceiptButton,
+  required bool canEditContribution,
+  required bool canEditExpense,
+  required bool canDelete,
+  required bool isAdmin,
+  required String? expenseStatus,
+}) {
+  double maxSize = 0.95; // Default max
+  
+  // If there's a lot of content, allow full height
+  bool hasComplexContent = 
+      item.type == HistoryItemType.expense ||
+      (itemData != null && itemData['editHistory'] != null) ||
+      (hasReceiptButton && (canEditContribution || canEditExpense || canDelete));
+  
+  if (hasComplexContent) {
+    maxSize = 1.0; // Allow full height
+  }
+  
+  return maxSize;
+}
+
+// =================== WIDGET BUILDERS ===================
+Widget _buildHeaderRow(
+  BuildContext context, {
+  required NumberFormat f,
+  required HistoryItem item,
+  required String? expenseStatus,
+  required bool canEditContribution,
+  required bool canEditExpense,
+  required bool canDelete,
+}) {
+  final title = (item.type == HistoryItemType.contribution && itemData != null)
+      ? (itemData!['programName'] ?? item.title)
+      : item.title;
+
+  final String? displayName =
+      itemData?['userName'] ??
+      itemData?['displayName'] ??
+      itemData?['addedByUserName'] ??
+      item.subtitle;
+
+  final String byLabel =
+      item.type == HistoryItemType.contribution ? 'By' : 'Paid by';
+
+  return Container(
+    padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).scaffoldBackgroundColor,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Centered drag handle at top
+        Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 18),
+            decoration: BoxDecoration(
+              color: AppColors.border(context),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Title row with three-dot menu
+Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Title (left)
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // First row: Program name + Three-dot menu
+          Row(
+            children: [
               Expanded(
-                child: _buildContent(
-                  context,
-                  f: f,
-                  item: item,
-                  expenseStatus: expenseStatus,
-                  isAdmin: isAdmin,
-                  hasReceiptButton: hasReceiptButton,
-                  scrollController: scrollController,
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Three-dot menu button (right side of title)
+              if (canEditContribution || canEditExpense || canDelete)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _buildThreeDotMenu(
+                    context,
+                    canEdit: canEditContribution || canEditExpense,
+                    canDelete: canDelete,
+                    item: item,
+                  ),
+                ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  // =================== WIDGET BUILDERS ===================
-
-  Widget _buildTitleRow(
-    BuildContext context, {
-    required HistoryItem item,
-    required String? expenseStatus,
-    required bool canEditContribution,
-    required bool canEditExpense,
-    required bool canDelete,
-    required bool isAdmin,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                if (item.type == HistoryItemType.expense && expenseStatus != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _buildExpenseStatusChip(expenseStatus),
+          
+          
+          // Second row: Type badge + expense status
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Type badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  item.type == HistoryItemType.contribution
+                      ? 'Contribution'
+                      : 'Expense',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary(context),
                   ),
-                
-                Expanded(
-                  child: Text(
-                    item.title,
+                ),
+              ),
+              // Expense status chip (if applicable)
+              if (item.type == HistoryItemType.expense &&
+                  expenseStatus != null)
+                _buildExpenseStatusChip(expenseStatus),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ],
+),
+
+        const SizedBox(height: 16),
+
+        // Amount section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Amount
+            Text(
+              f.format(item.amount),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary(context),
+                height: 0.9,
+              ),
+            ),
+
+            // Metadata column (right side)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // By/Paid By
+                if (displayName != null)
+                  Text(
+                    '$byLabel $displayName',
                     style: TextStyle(
-                      fontSize: 18, 
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary(context),
+                      fontSize: 14,
+                      color: AppColors.textSecondary(context),
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                  ),
+                const SizedBox(height: 2),
+                // Date
+                Text(
+                  DateFormat('MMM dd, yyyy').format(item.date),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                // Time
+                Text(
+                  DateFormat('hh:mm a').format(item.date),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textTertiary(context),
                   ),
                 ),
               ],
             ),
-          ),
-          
-          if (canEditContribution || canEditExpense)
-            IconButton(
-              icon: Icon(
-                Icons.edit,
-                color: AppColors.primary(context),
-                size: 20,
-              ),
-              onPressed: () => _editItem(context, item),
-              tooltip: item.type == HistoryItemType.contribution 
-                  ? 'Edit Contribution' 
-                  : 'Edit Expense',
-            ),
-          
-          if (canDelete)
-            IconButton(
-              icon: Icon(
-                Icons.delete,
-                color: Colors.red,
-                size: 20,
-              ),
-              onPressed: () => _deleteItem(context, item),
-              tooltip: 'Delete ${item.type == HistoryItemType.contribution ? "Contribution" : "Expense"}',
-            ),
-          
-          if (isAdmin && item.type == HistoryItemType.contribution && itemData == null)
-            IconButton(
-              icon: Icon(
-                Icons.edit_off,
-                color: Colors.grey[400],
-                size: 20,
-              ),
-              onPressed: null,
-              tooltip: 'Edit not available - data missing',
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContent(
-    BuildContext context, {
-    required NumberFormat f,
-    required HistoryItem item,
-    required String? expenseStatus,
-    required bool isAdmin,
-    required bool hasReceiptButton,
-    required ScrollController scrollController,
-  }) {
-    return Column(
-      children: [
-        // Scrollable content
-        Expanded(
-          child: SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                
-                // Show data missing warning for contributions
-                if (item.type == HistoryItemType.contribution && itemData == null)
-                  _buildDataMissingWarning(),
-                
-                if (item.type == HistoryItemType.contribution || item.type == HistoryItemType.expense)
-                  _buildEntryInfo(context),
-                
-                // Expense info section
-                if (item.type == HistoryItemType.expense)
-                  _buildExpenseInfo(context),
-                
-                if (item.type == HistoryItemType.contribution || item.type == HistoryItemType.expense)
-                  _buildEditInfo(context),
-
-                // Common details
-                _buildDetailRow('Amount:', f.format(item.amount), context),
-                _buildDetailRow('Date:', DateFormat.yMMMMd().add_jm().format(item.date), context),
-                if (item.category != null) _buildDetailRow('Category:', item.category!, context),
-                
-                // Program name for contributions
-                if (item.type == HistoryItemType.contribution && itemData != null)
-                  _buildProgramName(context),
-                
-                // User info
-                if (item.userId != null) _buildDetailRow('By:', item.subtitle, context),
-                
-                // Paid by info for expenses
-                if (item.type == HistoryItemType.expense && itemData != null)
-                  _buildPaidByInfo(context),
-                
-                // Expense status in details
-                if (item.type == HistoryItemType.expense && expenseStatus != null)
-                  _buildDetailRow('Status:', _formatExpenseStatus(expenseStatus), context),
-                
-                // Edit History - FIXED: This should show for both contributions AND expenses
-                if (itemData != null && ((item.type == HistoryItemType.contribution && itemData!['editHistory'] != null) || 
-                    (item.type == HistoryItemType.expense && itemData!['editHistory'] != null)))
-                  _buildEditHistory(context),
-                
-                // Expense status change buttons (admin only)
-                if (item.type == HistoryItemType.expense && isAdmin && expenseStatus != null)
-                  _buildExpenseStatusChangeButton(context, item, expenseStatus),
-                
-                SizedBox(height: hasReceiptButton ? 70 : 20),
-              ],
-            ),
-          ),
+          ],
         ),
-        
-        // Receipt button for contributions
-        if (hasReceiptButton)
-          _buildReceiptButton(context),
       ],
-    );
+    ),
+  );
+}
+
+// Three-dot Menu Widget (improved)
+Widget _buildThreeDotMenu(
+  BuildContext context, {
+  required bool canEdit,
+  required bool canDelete,
+  required HistoryItem item,
+}) {
+  return IconButton(
+    icon: Icon(
+      Icons.more_vert,
+      color: AppColors.textSecondary(context),
+      size: 24,
+    ),
+    onPressed: () {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+        ),
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (canEdit)
+                ListTile(
+                  leading: Icon(
+                    Icons.edit,
+                    color: AppColors.primary(context),
+                  ),
+                  title: Text(
+                    item.type == HistoryItemType.contribution
+                        ? 'Edit Contribution'
+                        : 'Edit Expense',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _editItem(context, item);
+                  },
+                ),
+              if (canDelete)
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  title: Text(
+                    'Delete',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteItem(context, item);
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+// Updated Expense Status Chip
+Widget _buildExpenseStatusChip(String status) {
+  final Color backgroundColor;
+  final Color textColor;
+  final String label;
+  final IconData icon;
+
+  switch (status) {
+    case 'approved':
+      backgroundColor = Colors.green.shade50;
+      textColor = Colors.green.shade700;
+      label = 'Approved';
+      icon = Icons.check_circle;
+      break;
+    case 'rejected':
+      backgroundColor = Colors.red.shade50;
+      textColor = Colors.red.shade700;
+      label = 'Rejected';
+      icon = Icons.cancel;
+      break;
+    case 'pending':
+    default:
+      backgroundColor = Colors.orange.shade50;
+      textColor = Colors.orange.shade700;
+      label = 'Pending';
+      icon = Icons.schedule;
   }
 
-  // =================== EXPENSE SPECIFIC WIDGETS ===================
-
-  Widget _buildExpenseStatusChip(String status) {
-    Color chipColor;
-    Color textColor;
-    String label;
-    
-    final lowerStatus = status.toLowerCase();
-    
-    switch (lowerStatus) {
-      case 'approved':
-        chipColor = Colors.green;
-        textColor = Colors.white;
-        label = 'Approved';
-        break;
-      case 'rejected':
-        chipColor = Colors.red;
-        textColor = Colors.white;
-        label = 'Rejected';
-        break;
-      case 'pending':
-      default:
-        chipColor = Colors.orange;
-        textColor = Colors.white;
-        label = 'Pending';
-        break;
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: chipColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: textColor.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
           color: textColor,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: textColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildContent(
+  BuildContext context, {
+  required NumberFormat f,
+  required HistoryItem item,
+  required String? expenseStatus,
+  required bool isAdmin,
+  required bool hasReceiptButton,
+  required bool canEditContribution,
+  required bool canEditExpense,
+  required bool canDelete,
+  required ScrollController scrollController,
+}) {
+  return Column(
+    children: [
+      // Scrollable details
+      Expanded(
+        child: SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+
+              // Data missing warning for contributions
+              if (item.type == HistoryItemType.contribution && itemData == null)
+                _buildDataMissingWarning(),
+
+              if (item.type == HistoryItemType.contribution ||
+                  item.type == HistoryItemType.expense)
+                _buildEntryInfo(context),
+
+              if (item.type == HistoryItemType.expense) 
+                _buildExpenseInfo(context),
+              if (item.type == HistoryItemType.expense && isAdmin && expenseStatus != null)
+                _buildExpenseStatusChangeButton(context, item, expenseStatus),
+
+              if (item.type == HistoryItemType.contribution ||
+                  item.type == HistoryItemType.expense)
+                _buildEditInfo(context),
+
+              if (itemData != null && (itemData!['editHistory'] != null))
+                _buildEditHistory(context),
+
+              // bottom spacing for action buttons
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
-    );
-  }
+
+      // Receipt Button Section
+      if (hasReceiptButton)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(
+              top: BorderSide(
+                color: AppColors.border(context),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.receipt, size: 22),
+              onPressed: () => ContributionReceiptPdf.showPreview(
+                context,
+                item,
+                communityName: communityLabel,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary(context),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              label: const Text(
+                "Get Receipt",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
 
   Widget _buildExpenseInfo(BuildContext context) {
     final description = itemData?['description']?.toString();
@@ -1464,209 +1751,209 @@ class _BottomDetails extends StatelessWidget {
     );
   }
 
-Widget _buildEntryInfo(BuildContext context) {
-  String? addedBy;
-  String? addedAt;
-  
-  if (item.type == HistoryItemType.contribution) {
-    addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
-    final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
-    addedAt = addedAtTimestamp != null 
-        ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
-        : null;
-  } else if (item.type == HistoryItemType.expense) {
-    addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
-    final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
-    addedAt = addedAtTimestamp != null 
-        ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
-        : null;
-  }
-  
-  if (addedBy == null) return const SizedBox.shrink();
-  
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: AppColors.primary(context).withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.person_add_alt_1,
-              size: 14,
-              color: AppColors.primary(context),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Added by: $addedBy',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary(context),
+  Widget _buildEntryInfo(BuildContext context) {
+    String? addedBy;
+    String? addedAt;
+    
+    if (item.type == HistoryItemType.contribution) {
+      addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
+      final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
+      addedAt = addedAtTimestamp != null 
+          ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
+          : null;
+    } else if (item.type == HistoryItemType.expense) {
+      addedBy = itemData?['addedByUserName'] ?? itemData?['addedByUserId'];
+      final addedAtTimestamp = itemData?['addedAt'] as Timestamp?;
+      addedAt = addedAtTimestamp != null 
+          ? DateFormat('MMM dd, yyyy hh:mm a').format(addedAtTimestamp.toDate())
+          : null;
+    }
+    
+    if (addedBy == null) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primary(context).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.person_add_alt_1,
+                size: 14,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Added by: $addedBy',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+          if (addedAt != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 22),
+              child: Text(
+                'On: $addedAt',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textTertiary(context),
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditInfo(BuildContext context) {
+    // For contributions
+    if (item.type == HistoryItemType.contribution) {
+      final isEdited = itemData?['isEdited'] == true;
+      final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
+      final editReason = itemData?['editReason'];
+      
+      if (!isEdited) return const SizedBox.shrink();
+      
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.orange.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.edit_note,
+                  size: 14,
+                  color: Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Edited',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange,
+                  ),
+                ),
+                if (lastEditedBy != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      'by $lastEditedBy',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (editReason != null && editReason.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 22),
+                child: Text(
+                  'Reason: $editReason',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.orange.withOpacity(0.8),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
           ],
         ),
-        if (addedAt != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 22),
-            child: Text(
-              'On: $addedAt',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textTertiary(context),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
+      );
+    }
+    
+    // For expenses
+    else if (item.type == HistoryItemType.expense && itemData != null) {
+      final isEdited = itemData?['isEdited'] == true;
+      final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
+      final editReason = itemData?['editReason'];
+      
+      if (!isEdited) return const SizedBox.shrink();
+      
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.orange.withOpacity(0.3),
+            width: 1,
           ),
-      ],
-    ),
-  );
-}
-
-Widget _buildEditInfo(BuildContext context) {
-  // For contributions
-  if (item.type == HistoryItemType.contribution) {
-    final isEdited = itemData?['isEdited'] == true;
-    final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
-    final editReason = itemData?['editReason'];
-    
-    if (!isEdited) return const SizedBox.shrink();
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
-          width: 1,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.edit_note,
-                size: 14,
-                color: Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Edited',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.edit_note,
+                  size: 14,
                   color: Colors.orange,
                 ),
-              ),
-              if (lastEditedBy != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(
-                    'by $lastEditedBy',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange.withOpacity(0.8),
-                    ),
+                const SizedBox(width: 8),
+                Text(
+                  'Edited',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange,
                   ),
                 ),
-            ],
-          ),
-          if (editReason != null && editReason.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 22),
-              child: Text(
-                'Reason: $editReason',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.orange.withOpacity(0.8),
-                  fontStyle: FontStyle.italic,
+                if (lastEditedBy != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      'by $lastEditedBy',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (editReason != null && editReason.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, left: 22),
+                child: Text(
+                  'Reason: $editReason',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.orange.withOpacity(0.8),
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-    );
-  }
-  
-  // For expenses
-  else if (item.type == HistoryItemType.expense && itemData != null) {
-    final isEdited = itemData?['isEdited'] == true;
-    final lastEditedBy = itemData?['lastEditedByUserName'] ?? itemData?['lastEditedByUserId'];
-    final editReason = itemData?['editReason'];
-    
-    if (!isEdited) return const SizedBox.shrink();
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
-          width: 1,
+          ],
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.edit_note,
-                size: 14,
-                color: Colors.orange,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Edited',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange,
-                ),
-              ),
-              if (lastEditedBy != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(
-                    'by $lastEditedBy',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          if (editReason != null && editReason.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, left: 22),
-              child: Text(
-                'Reason: $editReason',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.orange.withOpacity(0.8),
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+      );
+    }
+    
+    return const SizedBox.shrink();
   }
-  
-  return const SizedBox.shrink();
-}
 
   Widget _buildProgramName(BuildContext context) {
     return FutureBuilder<String>(
@@ -1683,39 +1970,39 @@ Widget _buildEditInfo(BuildContext context) {
     );
   }
 
-Widget _buildEditHistory(BuildContext context) {
-  // Get edit history based on item type
-  List<dynamic> editHistory = [];
-  
-  if (item.type == HistoryItemType.contribution) {
-    editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
-  } else if (item.type == HistoryItemType.expense) {
-    editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
-  }
-  
-  if (editHistory.isEmpty) return const SizedBox.shrink();
-  
-  return Column(
-    children: [
-      const SizedBox(height: 16),
-      Divider(
-        color: AppColors.border(context),
-        height: 1,
-      ),
-      const SizedBox(height: 12),
-      Text(
-        'Edit History',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary(context),
+  Widget _buildEditHistory(BuildContext context) {
+    // Get edit history based on item type
+    List<dynamic> editHistory = [];
+    
+    if (item.type == HistoryItemType.contribution) {
+      editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
+    } else if (item.type == HistoryItemType.expense) {
+      editHistory = (itemData?['editHistory'] as List<dynamic>?) ?? [];
+    }
+    
+    if (editHistory.isEmpty) return const SizedBox.shrink();
+    
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Divider(
+          color: AppColors.border(context),
+          height: 1,
         ),
-      ),
-      const SizedBox(height: 8),
-      ...editHistory.map((edit) => _buildEditHistoryItem(edit, context)).toList(),
-    ],
-  );
-}
+        const SizedBox(height: 12),
+        Text(
+          'Edit History',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...editHistory.map((edit) => _buildEditHistoryItem(edit, context)).toList(),
+      ],
+    );
+  }
 
   Widget _buildEditHistoryItem(Map<String, dynamic> edit, BuildContext context) {
     final editedAt = (edit['editedAt'] as Timestamp?)?.toDate();
@@ -1818,40 +2105,27 @@ Widget _buildEditHistory(BuildContext context) {
   // =================== COMMON WIDGETS ===================
 
   Widget _buildReceiptButton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.border(context),
-            width: 1,
-          ),
-        ),
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.receipt),
+      onPressed: () => ContributionReceiptPdf.showPreview(
+        context,
+        item,
+        communityName: communityLabel,
       ),
-      child: ElevatedButton.icon(
-        icon: const Icon(Icons.receipt),
-        onPressed: () => ContributionReceiptPdf.showPreview(
-          context,
-          item,
-          communityName: communityLabel,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary(context),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-        label: const Text(
-          "Get Receipt",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+        elevation: 2,
+      ),
+      label: const Text(
+        "Get Receipt",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -2061,306 +2335,306 @@ Widget _buildEditHistory(BuildContext context) {
 
   // =================== CONTRIBUTION ACTIONS ===================
 
-void _editContribution(BuildContext context, HistoryItem item) {
-  debugPrint('🎯 Edit button pressed for item: ${item.id}');
-  debugPrint('📊 itemData exists: ${itemData != null}');
-  
-  if (itemData == null) {
-    debugPrint('❌ itemData is null!');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cannot edit: Contribution data not found'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 2),
-      ),
-    );
-    return;
-  }
-
-  try {
-    debugPrint('🔄 Navigating to edit screen with ID only...');
+  void _editContribution(BuildContext context, HistoryItem item) {
+    debugPrint('🎯 Edit button pressed for item: ${item.id}');
+    debugPrint('📊 itemData exists: ${itemData != null}');
     
-    String firestoreId = item.id;
-    if (firestoreId.startsWith('contrib_')) {
-      firestoreId = firestoreId.substring(8);
-      debugPrint('   🔄 Removed "contrib_" prefix');
-      debugPrint('   🔍 Real Firestore ID: $firestoreId');
+    if (itemData == null) {
+      debugPrint('❌ itemData is null!');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot edit: Contribution data not found'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    try {
+      debugPrint('🔄 Navigating to edit screen with ID only...');
+      
+      String firestoreId = item.id;
+      if (firestoreId.startsWith('contrib_')) {
+        firestoreId = firestoreId.substring(8);
+        debugPrint('   🔄 Removed "contrib_" prefix');
+        debugPrint('   🔍 Real Firestore ID: $firestoreId');
     }
     
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditContributionScreen(
-          contributionId: firestoreId,
-          onSave: (updatedContribution) async {
-            try {
-              debugPrint('💾 Saving updated contribution...');
-              
-              if (updatedContribution == null) {
-                debugPrint('   ⚠️ Update cancelled or no changes');
-                return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditContributionScreen(
+            contributionId: firestoreId,
+            onSave: (updatedContribution) async {
+              try {
+                debugPrint('💾 Saving updated contribution...');
+                
+                if (updatedContribution == null) {
+                  debugPrint('   ⚠️ Update cancelled or no changes');
+                  return;
+                }
+                
+                final authProvider = context.read<AppAuthProvider>();
+                final currentUser = authProvider.user;
+                
+                if (currentUser == null) {
+                  throw Exception('User not authenticated');
+                }
+                
+                debugPrint('👤 Current user: ${currentUser.uid}');
+                
+                final provider = context.read<ContributionProvider>();
+                await provider.updateContribution(
+                  updatedContribution,
+                  editedByUserId: currentUser.uid,
+                  editedByUserName: currentUser.displayName ?? 'Admin',
+                  editReason: updatedContribution.editReason,
+                );
+                
+                debugPrint('✅ Contribution updated successfully');
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Contribution updated successfully'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                
+                if (Navigator.canPop(context)) Navigator.pop(context);
+                if (Navigator.canPop(context)) Navigator.pop(context);
+                
+              } catch (e) {
+                debugPrint('❌ Error updating contribution: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to update: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
               }
-              
-              final authProvider = context.read<AppAuthProvider>();
-              final currentUser = authProvider.user;
-              
-              if (currentUser == null) {
-                throw Exception('User not authenticated');
-              }
-              
-              debugPrint('👤 Current user: ${currentUser.uid}');
-              
-              final provider = context.read<ContributionProvider>();
-              await provider.updateContribution(
-                updatedContribution,
-                editedByUserId: currentUser.uid,
-                editedByUserName: currentUser.displayName ?? 'Admin',
-                editReason: updatedContribution.editReason,
-              );
-              
-              debugPrint('✅ Contribution updated successfully');
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contribution updated successfully'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              
-              if (Navigator.canPop(context)) Navigator.pop(context);
-              if (Navigator.canPop(context)) Navigator.pop(context);
-              
-            } catch (e) {
-              debugPrint('❌ Error updating contribution: $e');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to update: ${e.toString()}'),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-          },
-        ),
-      ),
-    ).then((_) {
-      debugPrint('🏁 Edit screen closed');
-    });
-  } catch (e, stackTrace) {
-    debugPrint('❌ Error navigating to edit screen: $e');
-    debugPrint('📌 Stack trace: $stackTrace');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error opening edit screen: ${e.toString()}'),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-}
-
-// =================== COMMON ACTIONS ===================
-
-Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Confirm Delete'),
-      content: Text(
-        'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+            },
           ),
-          child: const Text('Delete'),
         ),
-      ],
-    ),
-  );
-
-  if (confirmed == true) {
-    try {
-      if (item.type == HistoryItemType.contribution) {
-        // For contributions: Clean the ID if needed
-        String contributionId = item.id;
-        
-        // DEBUG: Check what ID we have
-        debugPrint('🔍 Original contribution ID from item: $contributionId');
-        
-        // Check if we need to clean the ID
-        if (contributionId.startsWith('contrib_')) {
-          contributionId = contributionId.substring(8); // Remove 'contrib_' prefix
-          debugPrint('🔄 Cleaned contribution ID: $contributionId');
-        }
-        
-        final provider = context.read<ContributionProvider>();
-        await provider.deleteContribution(contributionId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contribution deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-      } else if (item.type == HistoryItemType.expense) {
-        // For expenses: Clean the ID if needed
-        String expenseId = item.id;
-        
-        // DEBUG: Check what ID we have
-        debugPrint('🔍 Original expense ID from item: $expenseId');
-        
-        // Check if we need to clean the ID
-        if (expenseId.startsWith('expense_')) {
-          expenseId = expenseId.substring(8); // Remove 'expense_' prefix
-          debugPrint('🔄 Cleaned expense ID: $expenseId');
-        }
-        
-        final expenseProvider = context.read<ExpenseProvider>();
-        await expenseProvider.deleteExpense(expenseId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Expense deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-      
-      // Close bottom sheet
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      
-    } catch (e) {
-      debugPrint('❌ Error deleting item: $e');
+      ).then((_) {
+        debugPrint('🏁 Edit screen closed');
+      });
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error navigating to edit screen: $e');
+      debugPrint('📌 Stack trace: $stackTrace');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete: ${e.toString()}'),
+          content: Text('Error opening edit screen: ${e.toString()}'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
   }
-}
 
-// =================== HELPER METHODS ===================
+  // =================== COMMON ACTIONS ===================
 
-Future<String> _getProgramName(BuildContext context, String programId) async {
-  if (programId.isEmpty) return 'Unknown Program';
-  
-  try {
-    // Try main programs collection first
-    final programDoc = await FirebaseFirestore.instance
-        .collection('programs')
-        .doc(programId)
-        .get();
-    
-    if (programDoc.exists) {
-      return programDoc.data()?['title'] ?? programDoc.data()?['name'] ?? 'Unknown Program';
+  Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text(
+          'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        if (item.type == HistoryItemType.contribution) {
+          // For contributions: Clean the ID if needed
+          String contributionId = item.id;
+          
+          // DEBUG: Check what ID we have
+          debugPrint('🔍 Original contribution ID from item: $contributionId');
+          
+          // Check if we need to clean the ID
+          if (contributionId.startsWith('contrib_')) {
+            contributionId = contributionId.substring(8); // Remove 'contrib_' prefix
+            debugPrint('🔄 Cleaned contribution ID: $contributionId');
+          }
+          
+          final provider = context.read<ContributionProvider>();
+          await provider.deleteContribution(contributionId);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Contribution deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+        } else if (item.type == HistoryItemType.expense) {
+          // For expenses: Clean the ID if needed
+          String expenseId = item.id;
+          
+          // DEBUG: Check what ID we have
+          debugPrint('🔍 Original expense ID from item: $expenseId');
+          
+          // Check if we need to clean the ID
+          if (expenseId.startsWith('expense_')) {
+            expenseId = expenseId.substring(8); // Remove 'expense_' prefix
+            debugPrint('🔄 Cleaned expense ID: $expenseId');
+          }
+          
+          final expenseProvider = context.read<ExpenseProvider>();
+          await expenseProvider.deleteExpense(expenseId);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Expense deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        
+        // Close bottom sheet
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        
+      } catch (e) {
+        debugPrint('❌ Error deleting item: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // =================== HELPER METHODS ===================
+
+  Future<String> _getProgramName(BuildContext context, String programId) async {
+    if (programId.isEmpty) return 'Unknown Program';
     
-    // Try community programs if communityId is available
-    if (itemData != null && itemData!['communityId'] != null) {
-      final communityProgramDoc = await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(itemData!['communityId'])
+    try {
+      // Try main programs collection first
+      final programDoc = await FirebaseFirestore.instance
           .collection('programs')
           .doc(programId)
           .get();
       
-      if (communityProgramDoc.exists) {
-        return communityProgramDoc.data()?['title'] ?? communityProgramDoc.data()?['name'] ?? 'Unknown Program';
+      if (programDoc.exists) {
+        return programDoc.data()?['title'] ?? programDoc.data()?['name'] ?? 'Unknown Program';
       }
+      
+      // Try community programs if communityId is available
+      if (itemData != null && itemData!['communityId'] != null) {
+        final communityProgramDoc = await FirebaseFirestore.instance
+            .collection('communities')
+            .doc(itemData!['communityId'])
+            .collection('programs')
+            .doc(programId)
+            .get();
+        
+        if (communityProgramDoc.exists) {
+          return communityProgramDoc.data()?['title'] ?? communityProgramDoc.data()?['name'] ?? 'Unknown Program';
+        }
+      }
+      
+      return 'Program $programId';
+    } catch (e) {
+      debugPrint('Error fetching program name: $e');
+      return 'Unknown Program';
+    }
+  }
+
+  Future<String> _getPaidByName(String userId) async {
+    if (userId.isEmpty) return 'Unknown User';
+    
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (userDoc.exists) {
+        return userDoc.data()?['displayName'] ?? 
+               userDoc.data()?['name'] ?? 
+               userDoc.data()?['email']?.split('@').first ??
+               'User $userId';
+      }
+      return 'User $userId';
+    } catch (e) {
+      debugPrint('Error fetching paid by user name: $e');
+      return 'User $userId';
+    }
+  }
+
+  String _formatExpenseStatus(String status) {
+    final lowerStatus = status.toLowerCase();
+    switch (lowerStatus) {
+      case 'approved': return 'Approved';
+      case 'pending': return 'Pending Review';
+      case 'rejected': return 'Rejected';
+      case 'paid': return 'Paid';
+      case 'unpaid': return 'Unpaid';
+      default: return status;
+    }
+  }
+
+  String _formatFieldName(String field) {
+    final fieldMap = {
+      'amount': 'Amount',
+      'paymentMethod': 'Payment Method',
+      'userId': 'Member',
+      'programId': 'Program',
+      'note': 'Note',
+      'monthId': 'Month',
+      // Expense specific fields
+      'title': 'Title',
+      'description': 'Description',
+      'category': 'Category',
+      'vendorName': 'Vendor',
+      'referenceNumber': 'Reference Number',
+      'program': 'Program', // For expense changes where program is stored as 'program'
+    };
+    return fieldMap[field] ?? field;
+  }
+
+  bool _checkIfAdmin(BuildContext context) {
+    final auth = context.read<AppAuthProvider>();
+    final user = auth.user;
+    return user?.isAdmin == true;
+  }
+
+  bool _checkIfCurrentUserPaidBy(BuildContext context, HistoryItem item) {
+    final auth = context.read<AppAuthProvider>();
+    final currentUserId = auth.user?.uid;
+    
+    if (item.type == HistoryItemType.expense && 
+        itemData != null && 
+        currentUserId != null) {
+      final paidById = itemData!['paidBy'];
+      return paidById == currentUserId;
     }
     
-    return 'Program $programId';
-  } catch (e) {
-    debugPrint('Error fetching program name: $e');
-    return 'Unknown Program';
+    return false;
   }
-}
-
-Future<String> _getPaidByName(String userId) async {
-  if (userId.isEmpty) return 'Unknown User';
-  
-  try {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    
-    if (userDoc.exists) {
-      return userDoc.data()?['displayName'] ?? 
-             userDoc.data()?['name'] ?? 
-             userDoc.data()?['email']?.split('@').first ??
-             'User $userId';
-    }
-    return 'User $userId';
-  } catch (e) {
-    debugPrint('Error fetching paid by user name: $e');
-    return 'User $userId';
-  }
-}
-
-String _formatExpenseStatus(String status) {
-  final lowerStatus = status.toLowerCase();
-  switch (lowerStatus) {
-    case 'approved': return 'Approved';
-    case 'pending': return 'Pending Review';
-    case 'rejected': return 'Rejected';
-    case 'paid': return 'Paid';
-    case 'unpaid': return 'Unpaid';
-    default: return status;
-  }
-}
-
-String _formatFieldName(String field) {
-  final fieldMap = {
-    'amount': 'Amount',
-    'paymentMethod': 'Payment Method',
-    'userId': 'Member',
-    'programId': 'Program',
-    'note': 'Note',
-    'monthId': 'Month',
-    // Expense specific fields
-    'title': 'Title',
-    'description': 'Description',
-    'category': 'Category',
-    'vendorName': 'Vendor',
-    'referenceNumber': 'Reference Number',
-    'program': 'Program', // For expense changes where program is stored as 'program'
-  };
-  return fieldMap[field] ?? field;
-}
-
-bool _checkIfAdmin(BuildContext context) {
-  final auth = context.read<AppAuthProvider>();
-  final user = auth.user;
-  return user?.isAdmin == true;
-}
-
-bool _checkIfCurrentUserPaidBy(BuildContext context, HistoryItem item) {
-  final auth = context.read<AppAuthProvider>();
-  final currentUserId = auth.user?.uid;
-  
-  if (item.type == HistoryItemType.expense && 
-      itemData != null && 
-      currentUserId != null) {
-    final paidById = itemData!['paidBy'];
-    return paidById == currentUserId;
-  }
-  
-  return false;
-}
 }
 
 
