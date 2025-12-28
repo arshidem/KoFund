@@ -261,12 +261,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   String _formatPaymentMethod(String method) {
     switch (method.toLowerCase()) {
       case 'cash': return 'Cash';
-      case 'bank_transfer': return 'Bank Transfer';
       case 'upi': return 'UPI';
-      case 'cheque': return 'Cheque';
-      case 'credit_card': return 'Credit Card';
-      case 'debit_card': return 'Debit Card';
-      case 'other': return 'Other';
+    
       default: return method;
     }
   }

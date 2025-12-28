@@ -1,1332 +1,869 @@
+// lib/features/contributions/utils/contribution_receipt_pdf.dart
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
-import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import '../providers/program_provider.dart';
-import '../models/program_model.dart';
-import '../constants/program_types.dart';
-import 'create_program_screen.dart';
-import 'program_details_screen.dart';
-import 'edit_program_screen.dart';
-import 'program_reminder_screen.dart';
-import 'dart:ui';
-import 'package:flutter/services.dart';
-import 'package:kofund/core/skeleton/all_program_skeleton.dart';
-// 🆕 SIMPLIFIED FILTER ENUMS
-enum ProgramStatusFilter {
-  all,
-  ongoing,
-  completed,
-  cancelled,
-}
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// 🆕 SIMPLE FILTER MODEL
-class ProgramFilters {
-  ProgramStatusFilter statusFilter;
-  String? programType;
-  bool? monthlyOnly;
-  bool? availableOnly;
+class ContributionReceiptPdf {
+  // Generate premium receipt PDF
+static Future<Uint8List> _generateReceiptPdf({
+  required String contributorName,
+  required String programName,
+  required double amount,
+  required DateTime date,
+  required String paymentMethod,
+  required String transactionId,
+  String? addedBy,
+  String? note,
+  String? monthDisplayName,
+  String? communityName,
+}) async {
+  final pdf = pw.Document();
+  
+  // Format date and amount - REPLACE • with - and ₹ with Rs.
+  final dateFormat = DateFormat('dd MMM yyyy - hh:mm a'); // Changed • to -
+  final amountFormat = NumberFormat('#,##0.00');
+  final formattedDate = dateFormat.format(date);
+  final formattedAmount = 'Rs. ${amountFormat.format(amount)}'; // Changed ₹ to Rs.
+  
+  // Define the custom color (00BFA6)
+  final customColor = PdfColor.fromHex('#00BFA6');
+  
+  // Create watermark text style with font size 30
+  final watermarkTextStyle = pw.TextStyle(
+    fontSize: 30, // Set to 30 as requested
+    color: PdfColor.fromHex('#00BFA6').withOpacity(0.15), // Custom color with low opacity
+    fontWeight: pw.FontWeight.bold,
+  );
 
-  ProgramFilters({
-    this.statusFilter = ProgramStatusFilter.all,
-    this.programType,
-    this.monthlyOnly,
-    this.availableOnly,
-  });
-
-  ProgramFilters copyWith({
-    ProgramStatusFilter? statusFilter,
-    String? programType,
-    bool? monthlyOnly,
-    bool? availableOnly,
-  }) {
-    return ProgramFilters(
-      statusFilter: statusFilter ?? this.statusFilter,
-      programType: programType ?? this.programType,
-      monthlyOnly: monthlyOnly ?? this.monthlyOnly,
-      availableOnly: availableOnly ?? this.availableOnly,
-    );
-  }
-}
-
-class AllProgramsScreen extends StatefulWidget {
-  final bool isAdmin;
-
-  const AllProgramsScreen({
-    super.key,
-    required this.isAdmin,
-  });
-
-  @override
-  State<AllProgramsScreen> createState() => _AllProgramsScreenState();
-}
-
-class _AllProgramsScreenState extends State<AllProgramsScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final RefreshController _refreshController = RefreshController();
-  String _searchQuery = '';
-  ProgramFilters _filters = ProgramFilters();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPrograms();
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _refreshController.dispose();
-    super.dispose();
-  }
-void _navigateToRemindersScreen(ProgramModel program) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ProgramRemindersScreen(program: program),
+  pdf.addPage(
+    pw.Page(
+      pageFormat: PdfPageFormat(58 * PdfPageFormat.mm, 210 * PdfPageFormat.mm),
+      margin: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      build: (pw.Context context) {
+        return pw.Stack(
+          children: [
+            // Background Watermarks - create a dense pattern with font size 30
+            for (double y = -30; y < 250 * PdfPageFormat.mm; y += 60) // Reduced spacing for smaller font
+              for (double x = -15; x < 70 * PdfPageFormat.mm; x += 70) // Reduced spacing for smaller font
+                pw.Positioned(
+                  left: x,
+                  top: y,
+                  child: pw.Transform.rotate(
+                    angle: -0.4,
+                    child: pw.Text(
+                      'KoFund',
+                      style: watermarkTextStyle,
+                    ),
+                  ),
+                ),
+            
+            // Another layer with different angle
+            for (double y = 30; y < 250 * PdfPageFormat.mm; y += 60) // Adjusted spacing
+              for (double x = 45; x < 70 * PdfPageFormat.mm; x += 70) // Adjusted spacing
+                pw.Positioned(
+                  left: x,
+                  top: y,
+                  child: pw.Transform.rotate(
+                    angle: 0.4,
+                    child: pw.Text(
+                      'KoFund',
+                      style: watermarkTextStyle,
+                    ),
+                  ),
+                ),
+            
+            // Main Content
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                // Header with Logo
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        'KoFund',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: customColor,
+                        ),
+                      ),
+                      pw.Text(
+                        'Contribution Receipt',
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.Divider(thickness: 2, color: customColor),
+                    ],
+                  ),
+                ),
+                
+                pw.SizedBox(height: 16),
+                
+                // Receipt Info
+                _buildInfoRow('Receipt No:', transactionId),
+                pw.SizedBox(height: 4),
+                _buildInfoRow('Date:', formattedDate),
+                
+                pw.SizedBox(height: 16),
+                pw.Divider(),
+                pw.SizedBox(height: 12),
+                
+                // Amount Section
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        'Amount Paid',
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        formattedAmount,
+                        style: pw.TextStyle(
+                          fontSize: 32,
+                          fontWeight: pw.FontWeight.bold,
+                          color: customColor,
+                        ),
+                      ),
+                      if (monthDisplayName != null && monthDisplayName.isNotEmpty)
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 8),
+                          child: pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColor.fromHex('#E0F7F5'),
+                              borderRadius: pw.BorderRadius.circular(12),
+                            ),
+                            child: pw.Text(
+                              monthDisplayName,
+                              style: pw.TextStyle(
+                                fontSize: 11,
+                                color: customColor,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                
+                pw.SizedBox(height: 20),
+                pw.Divider(),
+                pw.SizedBox(height: 12),
+                
+                // Contribution Details
+                pw.Text(
+                  'Contribution Details',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: customColor,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                
+                _buildDetailRow('Contributor:', contributorName),
+                pw.SizedBox(height: 6),
+                _buildDetailRow('Program:', programName),
+                pw.SizedBox(height: 6),
+                _buildDetailRow('Payment Method:', paymentMethod),
+                
+                if (addedBy != null && addedBy.isNotEmpty)
+                  pw.Column(
+                    children: [
+                      pw.SizedBox(height: 6),
+                      _buildDetailRow('Added By:', addedBy),
+                    ],
+                  ),
+                
+                if (communityName != null && communityName.isNotEmpty)
+                  pw.Column(
+                    children: [
+                      pw.SizedBox(height: 6),
+                      _buildDetailRow('Community:', communityName),
+                    ],
+                  ),
+                
+                if (note != null && note.isNotEmpty)
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.SizedBox(height: 12),
+                      pw.Text(
+                        'Note:',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColors.grey50,
+                          borderRadius: pw.BorderRadius.circular(6),
+                        ),
+                        child: pw.Text(
+                          note,
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                
+                pw.SizedBox(height: 20),
+                pw.Divider(thickness: 1),
+                pw.SizedBox(height: 12),
+                
+                // Footer
+                pw.Center(
+                  child: pw.Column(
+                    children: [
+                      pw.Text(
+                        'Thank you for your contribution!',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.SizedBox(height: 8),
+                      pw.Text(
+                        'This is a computer generated receipt',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'No signature required',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          color: PdfColors.grey500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                pw.SizedBox(height: 16),
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text(
+                    'Generated: ${DateFormat('dd/MM/yyyy hh:mm a').format(DateTime.now())}',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.grey400,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     ),
   );
+  return await pdf.save();
+
 }
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text;
-    });
+
+
+  // Helper method for info rows
+  static pw.Widget _buildInfoRow(String label, String value) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.grey700,
+          ),
+        ),
+        pw.SizedBox(width: 8),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 10,
+              color: PdfColors.grey800,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Future<void> _loadPrograms() async {
-    final authProvider = context.read<AppAuthProvider>();
-    final programProvider = context.read<ProgramProvider>();
-    
-    if (authProvider.user?.communityId != null) {
-      await programProvider.loadCommunityPrograms(authProvider.user!.communityId!);
-      await programProvider.loadMyParticipations(
-        authProvider.user!.uid, 
-        authProvider.user!.communityId!,
-      );
-    }
+  // Helper method for detail rows
+  static pw.Widget _buildDetailRow(String label, String value) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 11,
+            fontWeight: pw.FontWeight.normal,
+            color: PdfColors.grey700,
+          ),
+        ),
+        pw.SizedBox(width: 8),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 11,
+              color: PdfColors.grey900,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  void _onRefresh() async {
-    print('🔄 DEBUG: Pull to refresh triggered in Programs');
-    
+  // Fetch contribution data and show receipt
+  static Future<void> generateReceipt(
+    BuildContext context,
+    String contributionId,
+  ) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Generating Receipt...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     try {
-      await _loadPrograms();
-      _refreshController.refreshCompleted();
-      print('✅ DEBUG: Programs refresh completed successfully');
-    } catch (e) {
-      _refreshController.refreshFailed();
-      print('❌ DEBUG: Programs refresh failed: $e');
-    }
-  }
+      // Fetch contribution data from Firestore
+      final contributionDoc = await FirebaseFirestore.instance
+          .collection('contributions')
+          .doc(contributionId)
+          .get();
 
-  // 🆕 SIMPLIFIED FILTER APPLY LOGIC
-  List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
-    return programs.where((program) {
-      // Status Filter
-      if (_filters.statusFilter != ProgramStatusFilter.all) {
-        switch (_filters.statusFilter) {
-          case ProgramStatusFilter.ongoing:
-            if (!program.isOngoing) return false;
-            break;
-          case ProgramStatusFilter.completed:
-            if (!program.isCompleted) return false;
-            break;
-          case ProgramStatusFilter.cancelled:
-            if (!program.isCancelled) return false;
-            break;
-          default:
-            break;
+      if (!contributionDoc.exists) {
+        throw Exception('Contribution not found');
+      }
+
+      final contributionData = contributionDoc.data() as Map<String, dynamic>;
+      
+      // Fetch user name
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(contributionData['userId'])
+          .get();
+      
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      final contributorName = userData?['name'] ?? 'Unknown User';
+
+      // Fetch program name
+      String programName = 'Unknown Program';
+      if (contributionData['programId'] != null) {
+        final programDoc = await FirebaseFirestore.instance
+            .collection('programs')
+            .doc(contributionData['programId'])
+            .get();
+        
+        if (programDoc.exists) {
+          final programData = programDoc.data() as Map<String, dynamic>;
+          programName = programData['name'] ?? 'Unknown Program';
         }
       }
 
-      // Program Type Filter
-      if (_filters.programType != null && _filters.programType != 'all') {
-        if (program.programType != _filters.programType) return false;
+      // Fetch added by user name
+      String? addedByName;
+      if (contributionData['addedByUserId'] != null) {
+        final addedByDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(contributionData['addedByUserId'])
+            .get();
+        
+        if (addedByDoc.exists) {
+          final addedByData = addedByDoc.data() as Map<String, dynamic>;
+          addedByName = addedByData['name'];
+        }
       }
 
-      // Monthly Program Filter
-      if (_filters.monthlyOnly == true) {
-        if (!program.isMonthlyPaymentProgram) return false;
-      }
-
-      // Availability Filter
-      if (_filters.availableOnly == true) {
-        if (!program.canJoin) return false;
-      }
-
-      return true;
-    }).toList();
-  }
-
-  // 🆕 OPEN FILTER SHEET
-  void _openFilterSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return FilterSheet(
-          filters: _filters,
-          onFiltersChanged: (newFilters) {
-            setState(() {
-              _filters = newFilters;
-            });
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final programProvider = context.watch<ProgramProvider>();
-    final isAdmin = widget.isAdmin;
-
-    // Apply search and filters
-    List<ProgramModel> filteredPrograms = programProvider.programs;
-    
-    // Apply search
-    if (_searchQuery.isNotEmpty) {
-      filteredPrograms = filteredPrograms.where((program) {
-        return program.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               program.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               program.location.toLowerCase().contains(_searchQuery.toLowerCase());
-      }).toList();
-    }
-    
-    // Apply filters
-    filteredPrograms = _applyFilters(filteredPrograms);
-
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      // 🎯 SMART APP BAR WITH SEARCH BAR
-      appBar: AppBar(
-        title: const Text('Programs'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30),
-              bottomRight: Radius.circular(30),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: _buildModernSearchBar(),
-          ),
-        ),
-      ),
-
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing programs...',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-            ),
-          ),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // FILTER TABS
-              _buildFilterTabs(),
-
-              // SEARCH HEADER
-              if (_searchQuery.isNotEmpty) _buildSearchHeader(filteredPrograms.length),
-
-              // MAIN CONTENT
-              Expanded(
-                child: _buildBodyContent(programProvider, filteredPrograms),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // FLOATING ACTION BUTTON ONLY FOR ADMINS
-      floatingActionButton: isAdmin
-          ? FloatingActionButton(
-              onPressed: () => _navigateToCreateProgram(context),
-              backgroundColor: AppColors.primary(context),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
-    );
-  }
-
- Widget _buildModernSearchBar() {
-  return Row(
-    children: [
-      // Search Bar
-      Expanded(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.card(context).withOpacity(0.5),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.4),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Search Icon with Glass Morphism
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      bottomLeft: Radius.circular(28),
-                    ),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.3),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(28),
-                            bottomLeft: Radius.circular(28),
-                          ),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.6),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary(context).withOpacity(0.3),
-                              blurRadius: 15,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.search,
-                          color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Text Field
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                        letterSpacing: 0.5,
-                      ),
-                      cursorColor: AppColors.primary(context),
-                      cursorWidth: 2,
-                      cursorHeight: 18,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
-                        hintText: 'Search programs...',
-                        hintStyle: TextStyle(
-                          color: AppColors.textSecondary(context).withOpacity(0.7),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        border: InputBorder.none,
-                        filled: false,
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? Container(
-                                margin: const EdgeInsets.only(right: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: Icon(
-                                    Icons.close, 
-                                    size: 18, 
-                                    color: Theme.of(context).appBarTheme.foregroundColor ?? AppColors.textPrimary(context)
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                ),
-                              )
-                            : null,
-                      ),
-                      onChanged: (value) {
-                        setState(() => _searchQuery = value);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      // Format payment method
+      String paymentMethod = _formatPaymentMethod(contributionData['paymentMethod'] ?? 'Unknown');
       
-      // Filter Icon with Glass Morphism
-      const SizedBox(width: 8),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.card(context).withOpacity(0.5),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.4),
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.tune, 
-                color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white, 
-                size: 22
-              ),
-              onPressed: () => _openFilterSheet(context),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-  Widget _buildSearchHeader(int resultCount) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.primary(context).withOpacity(0.06),
-      child: Row(
-        children: [
-          Icon(Icons.search, size: 16, color: AppColors.primary(context)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Search results for "$_searchQuery"',
-              style: TextStyle(
-                color: AppColors.primary(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.18),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$resultCount ${resultCount == 1 ? 'program' : 'programs'}',
-              style: TextStyle(
-                color: AppColors.primary(context),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      // Generate PDF
+      final pdfBytes = await _generateReceiptPdf(
+        contributorName: contributorName,
+        programName: programName,
+        amount: (contributionData['amount'] as num).toDouble(),
+        date: (contributionData['createdAt'] as Timestamp).toDate(),
+        paymentMethod: paymentMethod,
+        transactionId: contributionId.replaceFirst('contrib_', ''),
+        addedBy: addedByName,
+        note: contributionData['note'],
+        monthDisplayName: contributionData['monthDisplayName'],
+      );
 
-Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> displayedPrograms) {
-  // Show skeleton when loading and no programs to display
-  if (programProvider.isLoading && displayedPrograms.isEmpty) {
-    return ProgramListSkeleton(
-      isDarkMode: Theme.of(context).brightness == Brightness.dark,
-    );
-  }
-
-  if (programProvider.error != null && displayedPrograms.isEmpty) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            programProvider.error!,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadPrograms,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  return displayedPrograms.isEmpty
-      ? _buildEmptyState()
-      : ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: displayedPrograms.length,
-          itemBuilder: (context, index) {
-            final program = displayedPrograms[index];
-            return _buildProgramCard(program, programProvider, context.read<AppAuthProvider>());
-          },
-        );
-}
-
-  Widget _buildEmptyState() {
-    final isAdmin = widget.isAdmin;
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        const SizedBox(height: 120),
-        if (_searchQuery.isNotEmpty)
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: 1.0,
-            child: Icon(
-              Icons.search_off, 
-              size: 64, 
-              color: AppColors.primary(context).withOpacity(0.5)
-            ),
-          )
-        else
-          Icon(
-            Icons.event,
-            size: 64,
-            color: AppColors.primary(context).withOpacity(0.5),
-          ),
-        const SizedBox(height: 16),
-        Center(
-          child: Text(
-            _searchQuery.isNotEmpty ? 'No results found' : 'No Programs Available',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.primary(context).withOpacity(0.7),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: Text(
-            _searchQuery.isNotEmpty 
-                ? 'Try adjusting your search or filters'
-                : isAdmin
-                    ? 'Create the first program for your community.'
-                    : 'No programs available yet. Check back later.',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        if (_searchQuery.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Clear Search'),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // 🆕 SIMPLE FILTER TABS
-  Widget _buildFilterTabs() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _tab("All", _filters.statusFilter == ProgramStatusFilter.all,
-              () => _setFilter(ProgramStatusFilter.all)),
-          _tab("Ongoing", _filters.statusFilter == ProgramStatusFilter.ongoing,
-              () => _setFilter(ProgramStatusFilter.ongoing)),
-          _tab("Completed", _filters.statusFilter == ProgramStatusFilter.completed,
-              () => _setFilter(ProgramStatusFilter.completed)),
-          _tab("Cancelled", _filters.statusFilter == ProgramStatusFilter.cancelled,
-              () => _setFilter(ProgramStatusFilter.cancelled)),
-        ],
-      ),
-    );
-  }
-
-  Widget _tab(String text, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primary(context) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: active ? Colors.white : AppColors.textPrimary(context),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _setFilter(ProgramStatusFilter filter) {
-    setState(() {
-      _filters = _filters.copyWith(statusFilter: filter);
-    });
-  }
-
-  Widget _buildProgramCard(ProgramModel program, ProgramProvider programProvider, AppAuthProvider authProvider) {
-    final hasJoined = programProvider.hasUserJoined(program.programId, authProvider.user!.uid);
-    final canJoin = program.canJoin && !hasJoined;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: AppColors.card(context),
-        elevation: 2,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _viewProgramDetails(program),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // HEADER WITH TITLE AND THREE-DOT MENU (ADMIN ONLY)
-                Row(
-                  children: [
-                    _buildProgramIcon(program.programType),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        program.title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                    ),
-                    _buildProgramStatus(program),
-                    if (widget.isAdmin) ...[
-                      const SizedBox(width: 8),
-                      _buildAdminMenu(program, programProvider),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-// Add this after the title row (optional)
-if (program.enableAutoReminders)
-  Container(
-    margin: EdgeInsets.only(top: 4),
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(
-      color: Colors.orange.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.orange.withOpacity(0.3)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.notifications_active, size: 12, color: Colors.orange),
-        SizedBox(width: 4),
-        Text(
-          'Reminders ON',
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.orange,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
-  ),
-                // DESCRIPTION
-                Text(
-                  program.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 14,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // PROGRAM DETAILS
-                _buildProgramDetails(program),
-
-                const SizedBox(height: 16),
-
-                // FINANCIAL PROGRESS
-                _buildFinancialProgress(program, programProvider),
-
-                const SizedBox(height: 16),
-
-                // ACTION BUTTONS
-                _buildActionButtons(program, hasJoined, canJoin, programProvider, authProvider),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-// THREE-DOT MENU FOR ADMIN
-Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
-  return PopupMenuButton<String>(
-    icon: Icon(Icons.more_vert, color: AppColors.textSecondary(context)),
-    onSelected: (value) {
-      if (value == 'edit') {
-        _editProgram(program);
-      } else if (value == 'delete') {
-        _showDeleteConfirmation(program, programProvider);
-      } else if (value == 'reminders') {  // 🆕 ADD THIS
-        _navigateToRemindersScreen(program);
+      // Close loading
+      if (context.mounted) {
+        Navigator.of(context).pop();
       }
-    },
-    itemBuilder: (BuildContext context) => [
-      PopupMenuItem<String>(
-        value: 'edit',
-        child: Row(
-          children: [
-            Icon(Icons.edit, color: AppColors.primary(context)),
-            const SizedBox(width: 8),
-            Text('Edit Program'),
-          ],
-        ),
-      ),
-      PopupMenuItem<String>(  // 🆕 ADD THIS NEW ITEM
-        value: 'reminders',
-        child: Row(
-          children: [
-            Icon(Icons.notifications_active, color: Colors.orange),
-            const SizedBox(width: 8),
-            Text('Set Reminders'),
-          ],
-        ),
-      ),
-      PopupMenuItem<String>(
-        value: 'delete',
-        child: Row(
-          children: [
-            Icon(Icons.delete, color: Colors.red),
-            const SizedBox(width: 8),
-            Text('Delete Program'),
-          ],
-        ),
-      ),
-    ],
-  );
-}
 
-  Widget _buildProgramIcon(String programType) {
-    final iconData = ProgramTypes.getIconData(programType);
-    
-    return CircleAvatar(
-      backgroundColor: AppColors.primary(context).withOpacity(0.12),
-      child: Icon(iconData, color: AppColors.primary(context), size: 20),
-    );
-  }
+      // Show receipt preview
+      await _showReceiptPreview(context, pdfBytes, contributionId);
 
-  Widget _buildProgramStatus(ProgramModel program) {
-    Color color;
-    String text;
-
-    if (program.isCompleted) {
-      color = Colors.grey;
-      text = 'Completed';
-    } else if (program.isOngoing) {
-      color = Colors.green;
-      text = 'Ongoing';
-    } else if (program.isCancelled) {
-      color = Colors.red;
-      text = 'Cancelled';
-    } else {
-      color = AppColors.primary(context);
-      text = 'Active';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildProgramDetails(ProgramModel program) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildDetailRow(Icons.calendar_today, 'Date: ${_formatDate(program.programDate)}'),
-        _buildDetailRow(Icons.location_on, 'Location: ${program.location}'),
-        if (program.suggestedContribution != null && program.suggestedContribution! > 0)
-          _buildDetailRow(Icons.attach_money, 'Contribution: ₹${program.suggestedContribution!.toStringAsFixed(2)}'),
-        _buildDetailRow(Icons.people,
-            'Participants: ${program.currentParticipants}${program.isFixedParticipants ? '/${program.maxParticipants}' : ''}'),
-        _buildDetailRow(Icons.category, 'Type: ${ProgramTypes.getDisplayName(program.programType)}'),
-      ],
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: AppColors.textSecondary(context)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text, 
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate receipt: $e'),
+            backgroundColor: Colors.red,
           ),
-        ],
-      ),
-    );
-  }
-
-  // DASHBOARD-STYLE FINANCIAL PROGRESS
-  Widget _buildFinancialProgress(ProgramModel program, ProgramProvider programProvider) {
-    final target = program.totalProgramAmount ?? 0.0;
-    
-    return StreamBuilder<double>(
-      stream: programProvider.streamProgramTotalContributions(program.programId),
-      builder: (context, contribSnap) {
-        final collected = contribSnap.data ?? 0.0;
-        final rawProgress = target > 0 ? (collected / target) : 0.0;
-        final progress = (rawProgress.clamp(0.0, 1.0) as double);
-
-        return Column(
-          children: [
-            // Progress Bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: AppColors.progressBackground(context),
-                color: AppColors.progressFill(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            
-            // Progress Text
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "₹${collected.toStringAsFixed(2)} / ₹${target.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-                Text(
-                  "${(progress * 100).toStringAsFixed(1)}%",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary(context),
-                  ),
-                ),
-              ],
-            ),
-          ],
         );
-      },
-    );
+      }
+    }
   }
 
-  Widget _buildActionButtons(ProgramModel program, bool hasJoined, bool canJoin,
-      ProgramProvider programProvider, AppAuthProvider authProvider) {
-    return Row(
-      children: [
-        // View Details Button
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () => _viewProgramDetails(program),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.card(context),
-              foregroundColor: AppColors.textPrimary(context),
-              side: BorderSide(
-                color: AppColors.border(context),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text("View Details"),
-          ),
-        ),
-
-        const SizedBox(width: 8),
-
-        // Join/Leave Button
-        if (hasJoined) ...[
-          IconButton(
-            icon: const Icon(Icons.exit_to_app, color: Colors.red),
-            onPressed: () => _leaveProgram(program, programProvider, authProvider),
-          ),
-        ] else ...[
-          Expanded(
-            child: ElevatedButton(
-              onPressed: canJoin ? () => _joinProgram(program, programProvider, authProvider) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                !canJoin && program.isFixedParticipants && program.currentParticipants >= program.maxParticipants
-                    ? 'Full'
-                    : 'Join Now'
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // ADMIN FUNCTIONS
-  void _editProgram(ProgramModel program) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditProgramScreen(
-          program: program,
-          onProgramUpdated: () {
-            _loadPrograms();
-            SnackbarHelper.showSuccess(context, 'Program updated successfully!');
-          },
-        ),
+  // Show receipt preview
+  static Future<void> _showReceiptPreview(
+    BuildContext context,
+    Uint8List pdfBytes,
+    String contributionId,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => ReceiptPreviewDialog(
+        pdfBytes: pdfBytes,
+        contributionId: contributionId,
       ),
     );
   }
 
-  void _showDeleteConfirmation(ProgramModel program, ProgramProvider programProvider) {
+  // Format payment method
+  static String _formatPaymentMethod(String method) {
+    switch (method.toLowerCase()) {
+      case 'cash':
+        return 'Cash';
+      case 'upi':
+        return 'UPI Payment';
+      case 'bank_transfer':
+        return 'Bank Transfer';
+      case 'card':
+        return 'Credit/Debit Card';
+      default:
+        return method;
+    }
+  }
+
+  // Download PDF
+  static Future<void> downloadPdf(
+    BuildContext context,
+    Uint8List pdfBytes,
+    String contributionId,
+  ) async {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Program?'),
-        content: Text('Are you sure you want to delete "${program.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context)))
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Saving Receipt...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteProgram(program, programProvider);
-            }, 
-            child: const Text('Delete', style: TextStyle(color: Colors.red))
-          ),
-        ],
+        ),
       ),
     );
-  }
 
-  Future<void> _deleteProgram(ProgramModel program, ProgramProvider programProvider) async {
     try {
-      await programProvider.deleteProgram(program.programId);
-      SnackbarHelper.showSuccess(context, 'Program deleted successfully');
-      _loadPrograms();
+      final directory = await getExternalStorageDirectory();
+      final downloadsPath = Directory('/storage/emulated/0/Download');
+      
+      final saveDir = await downloadsPath.exists() ? downloadsPath : directory;
+      final fileName = 'KoFund_Receipt_${contributionId.replaceAll('contrib_', '')}.pdf';
+      final filePath = '${saveDir?.path}/$fileName';
+      final file = File(filePath);
+      
+      await file.writeAsBytes(pdfBytes);
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close saving dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receipt saved to Downloads folder!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      print('Receipt saved to: $filePath');
     } catch (e) {
-      SnackbarHelper.showError(context, 'Failed to delete program: $e');
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
-  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
-
-  void _navigateToCreateProgram(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreateProgramScreen()),
-    ).then((_) => _loadPrograms());
-  }
-
-  void _viewProgramDetails(ProgramModel program) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProgramDetailsScreen(programId: program.programId),
-      ),
-    );
-  }
-
-  Future<void> _joinProgram(
-      ProgramModel program,
-      ProgramProvider programProvider,
-      AppAuthProvider authProvider) async {
-    try {
-      await programProvider.joinProgram(
-        program,
-        authProvider.user!.uid,
-        authProvider.user!.displayName ?? 'Member',
-        authProvider.user!.email ?? '',
-        authProvider.user!.communityId!,
-      );
-      SnackbarHelper.showSuccess(context, 'Joined ${program.title}');
-    } catch (e) {
-      SnackbarHelper.showError(context, 'Failed to join: $e');
-    }
-  }
-
-  Future<void> _leaveProgram(
-      ProgramModel program,
-      ProgramProvider programProvider,
-      AppAuthProvider authProvider) async {
-    final confirm = await showDialog<bool>(
+  // Share PDF
+  static Future<void> sharePdf(
+    BuildContext context,
+    Uint8List pdfBytes,
+    String contributionId,
+  ) async {
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave Program?'),
-        content: Text('Are you sure you want to leave ${program.title}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave', style: TextStyle(color: Colors.red))),
-        ],
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Preparing to share...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
 
-    if (confirm == true) {
-      try {
-        await programProvider.leaveProgram(program.programId, authProvider.user!.uid);
-        SnackbarHelper.showInfo(context, 'Left ${program.title}');
-      } catch (e) {
-        SnackbarHelper.showError(context, 'Failed to leave: $e');
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final fileName = 'KoFund_Receipt_${contributionId.replaceAll('contrib_', '')}.pdf';
+      final filePath = '${tempDir.path}/$fileName';
+      final file = File(filePath);
+      
+      await file.writeAsBytes(pdfBytes);
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      await Share.shareXFiles(
+        [XFile(filePath, mimeType: 'application/pdf')],
+        subject: 'KoFund Contribution Receipt',
+        text: 'Here is my contribution receipt from KoFund',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Share failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
 }
 
-// 🆕 FIXED FILTER SHEET - NO OVERFLOW
-class FilterSheet extends StatefulWidget {
-  final ProgramFilters filters;
-  final Function(ProgramFilters) onFiltersChanged;
+// Receipt Preview Dialog
+class ReceiptPreviewDialog extends StatefulWidget {
+  final Uint8List pdfBytes;
+  final String contributionId;
 
-  const FilterSheet({
+  const ReceiptPreviewDialog({
     Key? key,
-    required this.filters,
-    required this.onFiltersChanged,
+    required this.pdfBytes,
+    required this.contributionId,
   }) : super(key: key);
 
   @override
-  State<FilterSheet> createState() => _FilterSheetState();
+  State<ReceiptPreviewDialog> createState() => _ReceiptPreviewDialogState();
 }
 
-class _FilterSheetState extends State<FilterSheet> {
-  late ProgramFilters _currentFilters;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentFilters = widget.filters;
-  }
+class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
+  bool _isDownloading = false;
+  bool _isSharing = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.8,
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // DRAG HANDLE
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.border(context),
-                  borderRadius: BorderRadius.circular(2),
+      backgroundColor: Colors.white,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          maxWidth: 500,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
               ),
-              
-              // TITLE
-              Text(
-                'Quick Filters',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Program Type Filter - COMPACT VERSION
-              _buildSection(
-                'Program Type',
-                _buildProgramTypeFilter(),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Quick Toggles - COMPACT VERSION
-              _buildSection(
-                'Filters',
-                Column(
-                  children: [
-                    _buildCompactToggle(
-                      'Monthly Programs Only',
-                      _currentFilters.monthlyOnly ?? false,
-                      (value) => setState(() {
-                        _currentFilters = _currentFilters.copyWith(monthlyOnly: value);
-                      }),
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Contribution Receipt',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    _buildCompactToggle(
-                      'Available to Join Only',
-                      _currentFilters.availableOnly ?? false,
-                      (value) => setState(() {
-                        _currentFilters = _currentFilters.copyWith(availableOnly: value);
-                      }),
-                    ),
-                  ],
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // PDF Preview
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: PdfPreview(
+                    build: (format) => widget.pdfBytes,
+                    allowPrinting: true,
+                    allowSharing: false,
+                    canChangePageFormat: false,
+                    canChangeOrientation: false,
+                    pdfFileName: 'KoFund_Receipt_${widget.contributionId.replaceAll('contrib_', '')}',
+                  ),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
-
-              // Action Buttons
-              Row(
+            // Action Buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+              ),
+              child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        widget.onFiltersChanged(ProgramFilters());
-                        Navigator.pop(context);
-                      },
+                    child: OutlinedButton.icon(
+                      icon: _isDownloading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            )
+                          : Icon(Icons.download_rounded),
+                      label: Text(_isDownloading ? 'Downloading...' : 'Download'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary(context),
-                        side: BorderSide(color: AppColors.primary(context)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text("Clear All"),
+                      onPressed: _isDownloading || _isSharing
+                          ? null
+                          : () async {
+                              setState(() => _isDownloading = true);
+                              try {
+                                await ContributionReceiptPdf.downloadPdf(
+                                  context,
+                                  widget.pdfBytes,
+                                  widget.contributionId,
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isDownloading = false);
+                                }
+                              }
+                            },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        widget.onFiltersChanged(_currentFilters);
-                        Navigator.pop(context);
-                      },
+                    child: ElevatedButton.icon(
+                      icon: _isSharing
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Icon(Icons.share_rounded),
+                      label: Text(_isSharing ? 'Sharing...' : 'Share'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary(context),
+                        backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 2,
                       ),
-                      child: const Text("Apply Filters"),
+                      onPressed: _isDownloading || _isSharing
+                          ? null
+                          : () async {
+                              setState(() => _isSharing = true);
+                              try {
+                                await ContributionReceiptPdf.sharePdf(
+                                  context,
+                                  widget.pdfBytes,
+                                  widget.contributionId,
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isSharing = false);
+                                }
+                              }
+                            },
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10), // BOTTOM PADDING FOR SAFE AREA
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, Widget content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: 12),
-        content,
-      ],
-    );
-  }
-
-  Widget _buildProgramTypeFilter() {
-    // COMPACT PROGRAM TYPE FILTER - FEWER ITEMS PER ROW
-    final programTypes = ['all', ...ProgramTypes.allTypes];
-    
-    return Wrap(
-      spacing: 6, // REDUCED SPACING
-      runSpacing: 6, // REDUCED RUN SPACING
-      children: programTypes.map((type) {
-        final isSelected = _currentFilters.programType == type || 
-                          (type == 'all' && _currentFilters.programType == null);
-        return FilterChip(
-          label: Text(
-            type == 'all' ? 'All Types' : ProgramTypes.getDisplayName(type),
-            style: TextStyle(
-              fontSize: 12, // SMALLER FONT
-              color: isSelected ? Colors.white : AppColors.textPrimary(context),
             ),
-          ),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              _currentFilters = _currentFilters.copyWith(
-                programType: selected ? (type == 'all' ? null : type) : null,
-              );
-            });
-          },
-          backgroundColor: AppColors.card(context),
-          selectedColor: AppColors.primary(context),
-          checkmarkColor: Colors.white,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        );
-      }).toList(),
-    );
-  }
-
-  // COMPACT TOGGLE VERSION
-  Widget _buildCompactToggle(String title, bool value, Function(bool) onChanged) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        dense: true, // MAKES IT MORE COMPACT
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textPrimary(context),
-          ),
+          ],
         ),
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: AppColors.primary(context),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        onTap: () => onChanged(!value),
       ),
     );
   }

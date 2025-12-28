@@ -678,12 +678,7 @@ Future<void> updateContribution(ContributionModel contribution, {
       };
     }
     
-    if (currentContribution.note != contribution.note) {
-      changes['note'] = {
-        'old': currentContribution.note ?? '',
-        'new': contribution.note ?? '',
-      };
-    }
+
     
     if (currentContribution.isMonthlyContribution != contribution.isMonthlyContribution) {
       changes['isMonthlyContribution'] = {
@@ -726,7 +721,6 @@ Future<void> updateContribution(ContributionModel contribution, {
         'paymentMethod': contribution.paymentMethod,
         'programId': contribution.programId, // Store ID here
         'userId': contribution.userId,
-        'note': contribution.note,
         'isMonthlyContribution': contribution.isMonthlyContribution,
         'monthId': contribution.monthId,
         

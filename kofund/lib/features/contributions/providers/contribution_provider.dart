@@ -168,13 +168,7 @@ Future<void> updateContribution(
         // };
       }
       
-      // Compare note
-      if (currentContribution.note != contribution.note) {
-        changes['note'] = {
-          'old': currentContribution.note ?? '',
-          'new': contribution.note ?? '',
-        };
-      }
+ 
       
       // Compare monthId
       if (currentContribution.monthId != contribution.monthId) {

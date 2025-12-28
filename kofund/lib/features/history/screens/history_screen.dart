@@ -15,7 +15,6 @@ import '../../contributions/models/contribution_model.dart';
 import '../../contributions/providers/contribution_provider.dart';
 import '../../expenses/providers/expense_provider.dart';
 import '../providers/history_provider.dart';
-import '../utils/contribution_receipt_pdf.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -23,6 +22,7 @@ import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import 'edit_contribution_screen.dart';
 import 'edit_expense_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 
 class HistoryScreen extends StatelessWidget {
   final bool? forceBackButton; // Optional override for specific cases
@@ -995,7 +995,37 @@ class _BottomDetails extends StatelessWidget {
     required this.communityLabel,
     this.itemData,
   }) : super(key: key);
-
+// Add this method to your _BottomDetails class or wherever appropriate
+ContributionModel _historyItemToContributionModel(HistoryItem item, Map<String, dynamic>? itemData) {
+  // Convert HistoryItem to ContributionModel
+  return ContributionModel(
+    contributionId: item.id,
+    programId: itemData?['programId'] ?? '',
+    userId: itemData?['userId'] ?? '',
+    communityId: itemData?['communityId'] ?? '',
+    amount: item.amount,
+    paymentMethod: itemData?['paymentMethod'] ?? 'cash',
+    // Add other necessary fields from itemData
+    isMonthlyContribution: itemData?['isMonthlyContribution'] ?? false,
+    monthId: itemData?['monthId'],
+    addedByUserId: itemData?['addedByUserId'],
+    addedByUserName: itemData?['addedByUserName'],
+    addedAt: itemData?['addedAt'] != null ? 
+        (itemData!['addedAt'] is Timestamp ? itemData!['addedAt'] : Timestamp.now()) : 
+        Timestamp.now(),
+    isEdited: itemData?['isEdited'] ?? false,
+    lastEditedByUserId: itemData?['lastEditedByUserId'],
+    lastEditedByUserName: itemData?['lastEditedByUserName'],
+    lastEditedAt: itemData?['lastEditedAt'] != null ? 
+        (itemData!['lastEditedAt'] is Timestamp ? itemData!['lastEditedAt'] : Timestamp.now()) : 
+        null,
+    editReason: itemData?['editReason'],
+    editHistory: (itemData?['editHistory'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
+    createdAt: itemData?['createdAt'] != null ? 
+        (itemData!['createdAt'] is Timestamp ? itemData!['createdAt'] : Timestamp.fromDate(item.date)) : 
+        Timestamp.fromDate(item.date),
+  );
+}
 @override
 Widget build(BuildContext context) {
   final f = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
@@ -1568,11 +1598,10 @@ Widget _buildContent(
             width: double.infinity,
             child: ElevatedButton.icon(
               icon: const Icon(Icons.receipt, size: 22),
-              onPressed: () => ContributionReceiptPdf.showPreview(
-                context,
-                item,
-                communityName: communityLabel,
-              ),
+                     onPressed: () {
+  _generateReceipt(item, context); // Show receipt
+
+},
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary(context),
                 foregroundColor: Colors.white,
@@ -2103,15 +2132,95 @@ Widget _buildContent(
   }
 
   // =================== COMMON WIDGETS ===================
+Future<void> _generateReceipt(HistoryItem item, BuildContext context) async {
+  if (!context.mounted) return;
 
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+
+  try {
+    // First, get the program name
+    String programName = 'Program';
+    if (itemData != null && itemData!['programId'] != null) {
+      programName = await _getProgramName(context, itemData!['programId']);
+    } else {
+      programName = item.title; // Fallback to item title
+    }
+
+    // Get contributor name
+    String contributorName = 'User';
+    if (itemData != null && itemData!['userId'] != null) {
+      // You need to implement this method or use existing one
+      contributorName = await _getUserName(itemData!['userId'], context);
+    } else {
+      contributorName = item.subtitle ?? 'User'; // Fallback to subtitle
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+
+    // Convert HistoryItem to ContributionModel
+    final contribution = _historyItemToContributionModel(item, itemData);
+
+    // Generate and show receipt
+    await ContributionReceiptPdf.generateAndShowReceipt(
+      context: context,
+      contribution: contribution,
+      contributorName: contributorName,
+      programName: programName,
+      // communityName can be added here if you have it
+    );
+
+  } catch (e, st) {
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    debugPrint('Receipt error: $e\n$st');
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate receipt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+// Add this method to get user name
+Future<String> _getUserName(String userId, BuildContext context) async {
+  try {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    
+    if (userDoc.exists) {
+      return userDoc.data()?['displayName'] ?? 
+             userDoc.data()?['name'] ?? 
+             userDoc.data()?['email']?.split('@').first ??
+             'User $userId';
+    }
+    
+    return 'User $userId';
+  } catch (e) {
+    debugPrint('Error fetching user name: $e');
+    return 'User $userId';
+  }
+}
   Widget _buildReceiptButton(BuildContext context) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.receipt),
-      onPressed: () => ContributionReceiptPdf.showPreview(
-        context,
-        item,
-        communityName: communityLabel,
-      ),
+           onPressed: () {
+  _generateReceipt(item, context); // Show receipt
+
+},
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary(context),
         foregroundColor: Colors.white,

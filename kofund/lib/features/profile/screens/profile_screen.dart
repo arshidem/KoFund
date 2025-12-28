@@ -1091,9 +1091,8 @@ _buildInfoRow('Role', user.isAdmin ? 'ADMIN' : 'MEMBER'),                _buildI
   String _formatPaymentMethod(String method) {
     switch (method) {
       case 'cash': return 'Cash';
-      case 'online': return 'Online';
       case 'upi': return 'UPI';
-      case 'bank_transfer': return 'Bank Transfer';
+    
       default: return method;
     }
   }

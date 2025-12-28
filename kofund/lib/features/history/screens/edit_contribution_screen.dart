@@ -28,7 +28,6 @@ class EditContributionScreen extends StatefulWidget {
 class _EditContributionScreenState extends State<EditContributionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _editReasonController = TextEditingController();
-  final _noteController = TextEditingController();
   final _amountController = TextEditingController();
 
   // Form values
@@ -50,11 +49,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
   final List<String> _paymentMethods = [
     'Cash',
     'UPI',
-    'Bank Transfer',
-    'Cheque',
-    'Credit Card',
-    'Debit Card',
-    'Other',
+  
   ];
 
   // Available months for selection
@@ -112,7 +107,6 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       _amountController.text = _contribution!.amount.toStringAsFixed(2);
       _paymentMethod = _contribution!.paymentMethod;
       _selectedProgramId = _contribution!.programId;
-      _noteController.text = _contribution!.note ?? '';
       _isMonthly = _contribution!.isMonthlyContribution;
       _monthId = _contribution!.monthId;
       
@@ -282,7 +276,6 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
     bool hasChanges = newAmount != _contribution!.amount ||
         _paymentMethod != _contribution!.paymentMethod ||
         _selectedProgramId != _contribution!.programId ||
-        _noteController.text.trim() != (_contribution!.note ?? '') ||
         _isMonthly != _contribution!.isMonthlyContribution ||
         _monthId != _contribution!.monthId;
 
@@ -354,7 +347,6 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
         amount: newAmount,
         paymentMethod: _paymentMethod,
         programId: _selectedProgramId ?? _contribution!.programId,
-        note: _noteController.text.trim(),
         isMonthlyContribution: _isMonthly,
         monthId: _isMonthly ? _monthId : null,
         editReason: _editReasonController.text.trim(),
@@ -674,15 +666,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
                           ),
                         ],
 
-                        const SizedBox(height: 16),
-
-                        // Note Field
-                        CustomTextField(
-                          label: 'Note (Optional)',
-                          controller: _noteController,
-                          maxLines: 3,
-                          hintText: 'Add any additional notes...',
-                        ),
+        
 
                         const SizedBox(height: 16),
 
@@ -736,13 +720,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
                                       ? _getProgramNameById(_selectedProgramId!)
                                       : _getProgramNameById(_contribution!.programId),
                                 ),
-                                if (_noteController.text.trim() != (_contribution!.note ?? ''))
-                                  _buildChangeItem(
-                                    'Note',
-                                    _contribution!.note ?? 'None',
-                                    _noteController.text.trim(),
-                                    isText: true,
-                                  ),
+                             
                                 if (_isMonthly != _contribution!.isMonthlyContribution)
                                   _buildChangeItem(
                                     'Type',
@@ -850,7 +828,6 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
   @override
   void dispose() {
     _editReasonController.dispose();
-    _noteController.dispose();
     _amountController.dispose();
     super.dispose();
   }

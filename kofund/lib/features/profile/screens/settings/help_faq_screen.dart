@@ -46,10 +46,7 @@ Future<void> _loadAppInfo() async {
         question: 'How do I join a program?',
         answer: 'Go to the Programs tab, browse available programs, and tap "Join Program". You may need to pay a contribution fee if required.',
       ),
-      FAQItem(
-        question: 'How do I make a contribution?',
-        answer: 'Navigate to your program details page and tap the "Make Contribution" button. You can pay via UPI, credit/debit card, or bank transfer.',
-      ),
+    
       FAQItem(
         question: 'Can I edit my profile information?',
         answer: 'Yes, go to Profile → Edit Profile. You can update your name, email, phone, and profile picture.',

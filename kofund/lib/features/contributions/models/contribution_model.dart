@@ -10,9 +10,7 @@ class ContributionModel {
   String paymentMethod;
   String status;
   Timestamp createdAt;
-  
-  // ✅ ADD: Note field
-  String? note;
+
 
   // ✅ ADD: Monthly fields
   bool isMonthlyContribution;
@@ -41,8 +39,7 @@ class ContributionModel {
     required this.amount,
     required this.paymentMethod,
     
-    // ✅ ADD: Note parameter
-    this.note,
+
     
     // ✅ ADD: Monthly parameters
     this.isMonthlyContribution = false,
@@ -90,8 +87,7 @@ class ContributionModel {
       amount: (map['amount'] ?? 0).toDouble(),
       paymentMethod: map['paymentMethod'] ?? '',
       
-      // ✅ Note field
-      note: map['note'],
+ 
       
       // ✅ Monthly fields
       isMonthlyContribution: map['isMonthlyContribution'] ?? false,
@@ -127,8 +123,7 @@ class ContributionModel {
       'status': 'completed',
       'createdAt': createdAt,
       
-      // ✅ Note field
-      'note': note,
+   
       
       // ✅ Monthly fields
       'isMonthlyContribution': isMonthlyContribution,
@@ -159,7 +154,6 @@ class ContributionModel {
     String? communityId,
     double? amount,
     String? paymentMethod,
-    String? note,
     bool? isMonthlyContribution,
     String? monthId,
     
@@ -188,8 +182,6 @@ class ContributionModel {
       amount: amount ?? this.amount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       
-      // ✅ Note field
-      note: note ?? this.note,
       
       // ✅ Monthly fields
       isMonthlyContribution: isMonthlyContribution ?? this.isMonthlyContribution,
@@ -348,7 +340,6 @@ class ContributionModel {
       'paymentMethod': 'Payment Method',
       'userId': 'Member',
       'programId': 'Program',
-      'note': 'Note',
       'monthId': 'Month',
       'isMonthlyContribution': 'Type',
     };

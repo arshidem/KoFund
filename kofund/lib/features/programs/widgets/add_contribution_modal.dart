@@ -45,7 +45,7 @@ int get _displayCurrentStep {
   UserModel? _selectedUser;
   double _amount = 0;
   String _paymentMethod = 'cash';
-  final List<String> _paymentMethods = ['cash', 'online', 'bank transfer', 'other'];
+  final List<String> _paymentMethods = ['cash', 'upi'];
   bool _hasSkippedInitialStep = false;
   bool _isMonthlyProgram = false;
   String? _selectedMonth;
@@ -1162,48 +1162,73 @@ void _goToPreviousStep() {
   }
 }
 
-  Future<void> _submitContribution() async {
-    if (_selectedProgram == null || _selectedUser == null || _amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
-    
-    // Validate month selection for monthly programs
-    if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select month for monthly contribution')),
-      );
-      return;
-    }
-
-    try {
-      final contribution = ContributionModel(
-        contributionId: '', // Will be set by Firestore
-        programId: _selectedProgram!.programId,
-        userId: _selectedUser!.uid,
-        communityId: _selectedProgram!.communityId,
-        amount: _amount,
-        paymentMethod: _paymentMethod,
-        isMonthlyContribution: _isMonthlyProgram,
-        monthId: _isMonthlyProgram ? _selectedMonth : null,
-        createdAt: Timestamp.now(),
-      );
-
-      // Use Provider to add contribution
-      final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
-      await contributionProvider.addContribution(contribution);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contribution added successfully!')),
-      );
-
-      Navigator.pop(context); // Close modal
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding contribution: $e')),
-      );
-    }
+Future<void> _submitContribution() async {
+  if (_selectedProgram == null || _selectedUser == null || _amount <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please fill all required fields'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
   }
+  
+  // Validate month selection for monthly programs
+  if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Please select month for monthly contribution'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  try {
+    // Get current user info for entry tracking
+    final auth = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = auth.user;
+
+    final contribution = ContributionModel(
+      contributionId: '', // Will be set by Firestore
+      programId: _selectedProgram!.programId,
+      userId: _selectedUser!.uid, // Who contributed
+      communityId: _selectedProgram!.communityId,
+      amount: _amount,
+      paymentMethod: _paymentMethod,
+      
+      // ✅ ADD: Entry tracking - who added this record
+      addedByUserId: currentUser?.uid,
+      addedByUserName: currentUser?.displayName ?? 'Admin',
+      addedAt: Timestamp.now(),
+      
+      // ✅ Monthly fields
+      isMonthlyContribution: _isMonthlyProgram,
+      monthId: _isMonthlyProgram ? _selectedMonth : null,
+      
+      // Existing timestamp field
+      createdAt: Timestamp.now(),
+    );
+
+    // Use Provider to add contribution
+    final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
+    await contributionProvider.addContribution(contribution);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Contribution added successfully!'),
+        backgroundColor: AppColors.primary(context),
+      ),
+    );
+
+    Navigator.pop(context); // Close modal
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error adding contribution: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 }

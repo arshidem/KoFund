@@ -29,7 +29,7 @@ class _AddContributionModalState extends State<AddContributionModal> {
   UserModel? _selectedUser;
   double _amount = 0;
   String _paymentMethod = 'cash';
-  final List<String> _paymentMethods = ['cash', 'online', 'bank transfer', 'other'];
+  final List<String> _paymentMethods = ['cash', 'upi'];
   String _memberSearchQuery = '';
   List<UserModel> _filteredUsers = [];
   List<UserModel> _allUsers = [];

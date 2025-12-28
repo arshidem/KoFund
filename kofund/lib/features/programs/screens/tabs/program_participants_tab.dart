@@ -1995,7 +1995,6 @@ Future<void> _createContribution({
       communityId: communityId,
       amount: amount,
       paymentMethod: 'manual',
-      note: note,
       isMonthlyContribution: isMonthlyProgram,
       monthId: monthId,
     );

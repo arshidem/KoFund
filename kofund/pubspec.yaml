@@ -73,3 +73,6 @@ flutter:
   assets:
     - assets/logos/google_logo.png
     - assets/logos/KoFund.png
+    - assets/fonts/NotoSans-Regular.ttf
+    - assets/icons/checked.png
+

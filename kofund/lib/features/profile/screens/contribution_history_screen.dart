@@ -6,12 +6,13 @@ import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/features/history/utils/contribution_receipt_pdf.dart';
 import 'package:kofund/features/history/providers/history_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
+import 'package:kofund/features/contributions/models/contribution_model.dart';
+import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 
 class ContributionHistoryScreen extends StatefulWidget {
   const ContributionHistoryScreen({super.key});
@@ -603,10 +604,10 @@ String _formatTime(DateTime dt) {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.receipt),
-                  onPressed: () {
-                    Navigator.pop(context); // Close details sheet
-                    _generateReceipt(historyItem, communityLabel);
-                  },
+              onPressed: () {
+  Navigator.pop(context); // Close details sheet
+  _generateReceipt(historyItem, communityLabel);
+},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary(context),
                     foregroundColor: Colors.white,
@@ -672,14 +673,104 @@ String _formatTime(DateTime dt) {
     );
   }
 
-  // ✅ NEW: Generate receipt method
-  void _generateReceipt(HistoryItem item, String communityLabel) {
-    ContributionReceiptPdf.showPreview(
-      context,
-      item,
-      communityName: communityLabel,
+// ✅ UPDATE: Generate receipt method
+Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
+  if (!context.mounted) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+
+  try {
+    // Convert HistoryItem to ContributionModel
+    final contribution = _convertToContributionModel(item);
+    
+    // Get user name (you may need to fetch this)
+    final contributorName = await _getUserName(item.userId);
+    
+    if (!context.mounted) return;
+    
+    Navigator.of(context).pop();
+
+    // Generate and show receipt
+    await ContributionReceiptPdf.generateAndShowReceipt(
+      context: context,
+      contribution: contribution,
+      contributorName: contributorName,
+      programName: item.title,
+      communityName: communityLabel.isNotEmpty ? communityLabel : null,
     );
+
+  } catch (e, st) {
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    debugPrint('Receipt error: $e\n$st');
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate receipt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+}
+
+// ✅ ADD: Helper method to convert HistoryItem to ContributionModel
+ContributionModel _convertToContributionModel(HistoryItem item) {
+  return ContributionModel(
+    contributionId: item.id.replaceAll('contrib_', ''),
+    programId: item.programId ?? '',
+    userId: item.userId ?? '',
+    communityId: '', // You may need to get this from somewhere
+    amount: item.amount,
+    paymentMethod: 'cash', // Default, you should get this from itemData
+    // Add other fields with default values
+    isMonthlyContribution: false,
+    monthId: null,
+    addedByUserId: null,
+    addedByUserName: null,
+    addedAt: Timestamp.now(),
+    isEdited: false,
+    lastEditedByUserId: null,
+    lastEditedByUserName: null,
+    lastEditedAt: null,
+    editReason: null,
+    editHistory: const [],
+    createdAt: Timestamp.fromDate(item.date),
+  );
+}
+
+// ✅ ADD: Helper method to get user name
+Future<String> _getUserName(String? userId) async {
+  if (userId == null || userId.isEmpty) return 'User';
+  
+  try {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    
+    if (userDoc.exists) {
+      return userDoc.data()?['displayName'] ?? 
+             userDoc.data()?['name'] ?? 
+             userDoc.data()?['email']?.split('@').first ??
+             'User $userId';
+    }
+    
+    return 'User $userId';
+  } catch (e) {
+    debugPrint('Error fetching user name: $e');
+    return 'User $userId';
+  }
+}
 
   Widget _buildEmptyState() {
     return Center(
@@ -741,9 +832,7 @@ String _formatTime(DateTime dt) {
   String _formatPaymentMethod(String method) {
     switch (method) {
       case 'cash': return 'Cash';
-      case 'online': return 'Online';
       case 'upi': return 'UPI';
-      case 'bank_transfer': return 'Bank Transfer';
       default: return method;
     }
   }
