@@ -507,51 +507,45 @@ final Map<String, String> _localUserNameCache = {};
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FutureBuilder<String>(
-                          future: _getUserName(contribution.userId, context),
-                          builder: (context, snapshot) {
-                            final userName = snapshot.data ?? 'User';
-                            return Row(
-                              children: [
-                                Text(
-                                  userName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary(context),
-                                    fontSize: 15,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (contribution.isEdited)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.orange.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'Edited',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
+                     Row(
+  children: [
+    Text(
+      contribution.contributorName, // Use contributorName directly
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary(context),
+        fontSize: 15,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+    if (contribution.isEdited)
+      Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 6,
+            vertical: 2,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: Colors.orange.withOpacity(0.3),
+            ),
+          ),
+          child: Text(
+            'Edited',
+            style: TextStyle(
+              fontSize: 9,
+              color: Colors.orange,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+  ],
+),
                         const SizedBox(height: 4),
                         Text(
                           '${_formatPaymentMethod(contribution.paymentMethod)} • ${DateFormat('dd/MM/yyyy').format(contribution.createdAt.toDate())}',
@@ -922,81 +916,74 @@ Container(
       width: 0.6,
     ),
   ),
-  child: FutureBuilder<String>(
-    future: _getUserName(contribution.userId, context),
-    builder: (context, snapshot) {
-      final contributorName = snapshot.data ?? '—';
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      // ───── AMOUNT ─────
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          // ───── AMOUNT ─────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '₹',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                contribution.amount.toStringAsFixed(2),
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // ───── CONTRIBUTOR ─────
           Text(
-            contributorName,
+            '₹',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            contribution.amount.toStringAsFixed(2),
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 6),
+
+      // ───── CONTRIBUTOR ─────
+      Text(
+        contribution.contributorName, // Use contributorName directly
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary(context),
+        ),
+      ),
+
+      // ───── MONTH CHIP ─────
+      if (contribution.isMonthlyContribution &&
+          contribution.monthDisplayName.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.border(context),
+              width: 0.6,
+            ),
+          ),
+          child: Text(
+            contribution.monthDisplayName,
+            style: TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary(context),
             ),
           ),
-
-          // ───── MONTH CHIP ─────
-          if (contribution.isMonthlyContribution &&
-              contribution.monthDisplayName.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.surface(context),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.border(context),
-                  width: 0.6,
-                ),
-              ),
-              child: Text(
-                contribution.monthDisplayName,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary(context),
-                ),
-              ),
-            ),
-          ],
-        ],
-      );
-    },
+        ),
+      ],
+    ],
   ),
 ),
 
@@ -1111,29 +1098,6 @@ Column(
       ],
     ),
 
-    // ───── OPTIONAL SUMMARY ─────
-    if (contribution.changesDescription.isNotEmpty) ...[
-      const SizedBox(height: 20),
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.border(context),
-            width: 0.6,
-          ),
-        ),
-        child: Text(
-          contribution.changesDescription,
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.55,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-      ),
-    ],
 
     // ───── MINIMAL TIMELINE ─────
     if (contribution.formattedEditHistory.isNotEmpty) ...[

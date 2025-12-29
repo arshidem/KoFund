@@ -1988,16 +1988,17 @@ Future<void> _createContribution({
       note = 'Admin marked as fully paid';
     }
     
-    final contribution = ContributionModel(
-      contributionId: contributionId,
-      programId: programId,
-      userId: userId,
-      communityId: communityId,
-      amount: amount,
-      paymentMethod: 'manual',
-      isMonthlyContribution: isMonthlyProgram,
-      monthId: monthId,
-    );
+  final contribution = ContributionModel(
+  contributionId: contributionId,
+  programId: programId,
+  userId: userId,
+  contributorName: participantName, // ADD THIS REQUIRED FIELD
+  communityId: communityId,
+  amount: amount,
+  paymentMethod: 'manual',
+  isMonthlyContribution: isMonthlyProgram,
+  monthId: monthId,
+);
     
     await contributionProvider.addContribution(contribution);
     

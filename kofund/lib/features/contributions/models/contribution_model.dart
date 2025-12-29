@@ -5,6 +5,7 @@ class ContributionModel {
   String contributionId;
   String programId;
   String userId;
+  String contributorName;
   String communityId;
   double amount;
   String paymentMethod;
@@ -35,6 +36,7 @@ class ContributionModel {
     required this.contributionId,
     required this.programId,
     required this.userId,
+    required this.contributorName,
     required this.communityId,
     required this.amount,
     required this.paymentMethod,
@@ -83,6 +85,7 @@ class ContributionModel {
       contributionId: id,
       programId: map['programId'] ?? '',
       userId: map['userId'] ?? '',
+      contributorName: map['contributorName'] ?? '',
       communityId: map['communityId'] ?? '',
       amount: (map['amount'] ?? 0).toDouble(),
       paymentMethod: map['paymentMethod'] ?? '',
@@ -117,6 +120,7 @@ class ContributionModel {
     return {
       'programId': programId,
       'userId': userId,
+      'contributorName': contributorName,
       'communityId': communityId,
       'amount': amount,
       'paymentMethod': paymentMethod,
@@ -151,6 +155,7 @@ class ContributionModel {
     String? contributionId,
     String? programId,
     String? userId,
+    String? contributorName,
     String? communityId,
     double? amount,
     String? paymentMethod,
@@ -178,6 +183,7 @@ class ContributionModel {
       contributionId: contributionId ?? this.contributionId,
       programId: programId ?? this.programId,
       userId: userId ?? this.userId,
+      contributorName: contributorName ?? this.contributorName,
       communityId: communityId ?? this.communityId,
       amount: amount ?? this.amount,
       paymentMethod: paymentMethod ?? this.paymentMethod,

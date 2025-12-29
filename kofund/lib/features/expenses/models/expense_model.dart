@@ -10,13 +10,13 @@ class ExpenseModel {
   double amount;
   String category;
   String paidBy; // userId
+  String paidByName; // userId
   DateTime expenseDate;
   String status; // pending, approved, rejected
   Timestamp createdAt;
   
   // ✅ ADD: Entry tracking fields (who added this record)
-  String? addedByUserId;
-  String? addedByUserName;
+
   Timestamp? addedAt;
 
   // ✅ ADD: Edit tracking fields
@@ -47,13 +47,13 @@ class ExpenseModel {
     required this.amount,
     required this.category,
     required this.paidBy,
+    required this.paidByName,
     required this.expenseDate,
     required this.status,
     required this.createdAt,
     
     // New fields with defaults
-    this.addedByUserId,
-    this.addedByUserName,
+
     this.addedAt,
     this.isEdited = false,
     this.lastEditedByUserId,
@@ -78,13 +78,13 @@ class ExpenseModel {
       amount: (map['amount'] ?? 0).toDouble(),
       category: map['category'] ?? '',
       paidBy: map['paidBy'] ?? '',
+      paidByName: map['paidByName'] ?? '',
       expenseDate: (map['expenseDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       status: map['status'] ?? 'pending',
       createdAt: map['createdAt'] as Timestamp? ?? Timestamp.now(),
       
       // New fields
-      addedByUserId: map['addedByUserId'],
-      addedByUserName: map['addedByUserName'],
+   
       addedAt: map['addedAt'] as Timestamp?,
       isEdited: map['isEdited'] == true,
       lastEditedByUserId: map['lastEditedByUserId'],
@@ -109,13 +109,13 @@ class ExpenseModel {
       'amount': amount,
       'category': category,
       'paidBy': paidBy,
+      'paidByName': paidByName,
       'expenseDate': Timestamp.fromDate(expenseDate),
       'status': status,
       'createdAt': createdAt,
       
       // New fields
-      'addedByUserId': addedByUserId,
-      'addedByUserName': addedByUserName,
+
       'addedAt': addedAt,
       'isEdited': isEdited,
       'lastEditedByUserId': lastEditedByUserId,
@@ -140,11 +140,11 @@ class ExpenseModel {
     double? amount,
     String? category,
     String? paidBy,
+    String? paidByName,
     DateTime? expenseDate,
     String? status,
     Timestamp? createdAt,
-    String? addedByUserId,
-    String? addedByUserName,
+
     Timestamp? addedAt,
     bool? isEdited,
     String? lastEditedByUserId,
@@ -167,11 +167,11 @@ class ExpenseModel {
       amount: amount ?? this.amount,
       category: category ?? this.category,
       paidBy: paidBy ?? this.paidBy,
+      paidByName: paidByName ?? this.paidByName,
       expenseDate: expenseDate ?? this.expenseDate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
-      addedByUserId: addedByUserId ?? this.addedByUserId,
-      addedByUserName: addedByUserName ?? this.addedByUserName,
+
       addedAt: addedAt ?? this.addedAt,
       isEdited: isEdited ?? this.isEdited,
       lastEditedByUserId: lastEditedByUserId ?? this.lastEditedByUserId,

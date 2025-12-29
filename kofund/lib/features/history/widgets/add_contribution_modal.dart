@@ -1722,19 +1722,32 @@ Future<void> _submitContribution() async {
     final contribution = ContributionModel(
       contributionId: '', // Will be set by Firestore
       programId: _selectedProgram!.programId,
-      userId: _selectedUser!.uid, // Who contributed
+      userId: _selectedUser!.uid,
+      contributorName: _selectedUser!.displayName ?? 'Unknown',
       communityId: _selectedProgram!.communityId,
       amount: _amount,
       paymentMethod: _paymentMethod,
       
-      // ✅ ADD: Entry tracking - who added this record
-      addedByUserId: currentUser?.uid,
-      addedByUserName: currentUser?.displayName ?? 'Admin',
-      addedAt: Timestamp.now(),
-      
-      // ✅ Monthly fields
+      // Monthly fields
       isMonthlyContribution: _isMonthlyProgram,
       monthId: _isMonthlyProgram ? _selectedMonth : null,
+      
+      // Entry tracking
+      addedByUserId: currentUser?.uid,
+      addedByUserName: currentUser?.displayName ?? 'Unknown',
+      addedAt: Timestamp.now(),
+      
+      // Edit tracking (defaults to false/nulls)
+      isEdited: false,
+      lastEditedByUserId: null,
+      lastEditedByUserName: null,
+      lastEditedAt: null,
+      editReason: null,
+      
+      // Edit history
+      editHistory: [],
+      
+      // Created at (will use default Timestamp.now() if not provided)
     );
 
     await _contributionService.addContribution(contribution);

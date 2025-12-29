@@ -995,107 +995,37 @@ class _BottomDetails extends StatelessWidget {
     required this.communityLabel,
     this.itemData,
   }) : super(key: key);
-// Add this method to your _BottomDetails class or wherever appropriate
-ContributionModel _historyItemToContributionModel(HistoryItem item, Map<String, dynamic>? itemData) {
-  // Convert HistoryItem to ContributionModel
-  return ContributionModel(
-    contributionId: item.id,
-    programId: itemData?['programId'] ?? '',
-    userId: itemData?['userId'] ?? '',
-    communityId: itemData?['communityId'] ?? '',
-    amount: item.amount,
-    paymentMethod: itemData?['paymentMethod'] ?? 'cash',
-    // Add other necessary fields from itemData
-    isMonthlyContribution: itemData?['isMonthlyContribution'] ?? false,
-    monthId: itemData?['monthId'],
-    addedByUserId: itemData?['addedByUserId'],
-    addedByUserName: itemData?['addedByUserName'],
-    addedAt: itemData?['addedAt'] != null ? 
-        (itemData!['addedAt'] is Timestamp ? itemData!['addedAt'] : Timestamp.now()) : 
-        Timestamp.now(),
-    isEdited: itemData?['isEdited'] ?? false,
-    lastEditedByUserId: itemData?['lastEditedByUserId'],
-    lastEditedByUserName: itemData?['lastEditedByUserName'],
-    lastEditedAt: itemData?['lastEditedAt'] != null ? 
-        (itemData!['lastEditedAt'] is Timestamp ? itemData!['lastEditedAt'] : Timestamp.now()) : 
-        null,
-    editReason: itemData?['editReason'],
-    editHistory: (itemData?['editHistory'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
-    createdAt: itemData?['createdAt'] != null ? 
-        (itemData!['createdAt'] is Timestamp ? itemData!['createdAt'] : Timestamp.fromDate(item.date)) : 
-        Timestamp.fromDate(item.date),
-  );
-}
+
 @override
 Widget build(BuildContext context) {
   final f = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
-  // Debug print with more details
-  debugPrint('🔍 _BottomDetails:');
-  debugPrint('  Item type: ${item.type}');
-  debugPrint('  Item ID: ${item.id}');
-  debugPrint('  Item data: ${itemData != null ? "EXISTS" : "NULL"}');
-
-  if (itemData != null) {
-    debugPrint('  Data keys: ${itemData!.keys.join(", ")}');
-    if (item.type == HistoryItemType.expense) {
-      debugPrint('  Expense status: ${itemData!['status']}');
-      debugPrint('  Expense paidBy: ${itemData!['paidBy']}');
-      debugPrint('  Expense description: ${itemData!['description']}');
-    }
-  }
-
   // Check if current user is admin
   final bool isAdmin = _checkIfAdmin(context);
-  final bool isCurrentUserPaidBy = _checkIfCurrentUserPaidBy(context, item);
-
-  // ✅ FIXED: Check if itemData exists before allowing edit
-  final bool canEditContribution = isAdmin &&
-      item.type == HistoryItemType.contribution &&
-      itemData != null;
-
-  // For expenses: Admin OR user who paid can edit
-  final bool canEditExpense = (isAdmin || isCurrentUserPaidBy) &&
-      item.type == HistoryItemType.expense;
-
-  final bool canDelete = isAdmin; // Only admin can delete
-
-  // Calculate if we have receipt button
-  bool hasReceiptButton =
-      item.type == HistoryItemType.contribution && currentUid == item.userId;
-
-  // Get expense status if it's an expense
+  
+  // Get expense status if it's an expense (MOVE THIS UP)
   String? expenseStatus;
   if (item.type == HistoryItemType.expense && itemData != null) {
-    expenseStatus =
-        (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
+    expenseStatus = (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
   }
+  
+  // Get receipt button - only for contributions by the contributor
+  bool hasReceiptButton = false;
+  if (item.type == HistoryItemType.contribution && itemData != null) {
+    final contributorId = itemData?['userId'];
+    hasReceiptButton = currentUid == contributorId;
+  }
+
+  // Check if three-dot menu should be shown
+  final bool showThreeDotMenu = _shouldShowThreeDotMenu(context, item);
 
   return DraggableScrollableSheet(
     expand: false,
     snap: true,
-    snapSizes: const [0.5, 0.7, 0.95],
-    initialChildSize: _calculateInitialSize(
-      item: item,
-      itemData: itemData,
-      hasReceiptButton: hasReceiptButton,
-      canEditContribution: canEditContribution,
-      canEditExpense: canEditExpense,
-      canDelete: canDelete,
-      isAdmin: isAdmin,
-      expenseStatus: expenseStatus,
-    ),
-    minChildSize: 0.5,
-    maxChildSize: _calculateMaxSize(
-      item: item,
-      itemData: itemData,
-      hasReceiptButton: hasReceiptButton,
-      canEditContribution: canEditContribution,
-      canEditExpense: canEditExpense,
-      canDelete: canDelete,
-      isAdmin: isAdmin,
-      expenseStatus: expenseStatus,
-    ),
+    snapSizes: const [0.4, 0.6, 0.9],
+    initialChildSize: 1.0,
+    minChildSize: 0.4,
+    maxChildSize: 1.0,
     builder: (context, scrollController) {
       return Container(
         decoration: BoxDecoration(
@@ -1114,39 +1044,41 @@ Widget build(BuildContext context) {
         ),
         child: Column(
           children: [
-            // Top area: small spacing for drag handle and header
+            // Header section (non-scrollable)
             Padding(
               padding: const EdgeInsets.only(top: 12, left: 16, right: 16),
               child: _buildHeaderRow(
                 context,
                 f: f,
                 item: item,
-                expenseStatus: expenseStatus,
-                canEditContribution: canEditContribution,
-                canEditExpense: canEditExpense,
-                canDelete: canDelete,
+                expenseStatus: expenseStatus, // Now this variable exists
+                showThreeDotMenu: showThreeDotMenu,
               ),
             ),
 
-            // Thin divider to visually separate header from details
+            // Thin divider
             const SizedBox(height: 8),
             Divider(height: 1, color: AppColors.border(context)),
 
-            // Main content area (scrollable)
+            // Scrollable content area
             Expanded(
-              child: _buildContent(
-                context,
-                f: f,
-                item: item,
-                expenseStatus: expenseStatus,
-                isAdmin: isAdmin,
-                hasReceiptButton: hasReceiptButton,
-                canEditContribution: canEditContribution,
-                canEditExpense: canEditExpense,
-                canDelete: canDelete,
-                scrollController: scrollController,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                physics: const ClampingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: _buildContent(
+                    context,
+                    f: f,
+                    item: item,
+                    isAdmin: isAdmin,
+                  ),
+                ),
               ),
             ),
+
+            // Bottom buttons (non-scrollable)
+            _buildBottomButtons(context, hasReceiptButton),
           ],
         ),
       );
@@ -1154,235 +1086,76 @@ Widget build(BuildContext context) {
   );
 }
 
-double _calculateInitialSize({
-  required HistoryItem item,
-  required Map<String, dynamic>? itemData,
-  required bool hasReceiptButton,
-  required bool canEditContribution,
-  required bool canEditExpense,
-  required bool canDelete,
-  required bool isAdmin,
-  required String? expenseStatus,
-}) {
-  double baseSize = 0.7; // Default size
-  
-  // Adjust based on content
-  if (item.type == HistoryItemType.expense) {
-    baseSize += 0.1; // Expense has more info
-  }
-  
-  if (itemData != null && itemData['editHistory'] != null) {
-    baseSize += 0.1; // Has edit history
-  }
-  
-  if (hasReceiptButton || canEditContribution || canEditExpense || canDelete) {
-    baseSize += 0.05; // Has action buttons
-  }
-  
-  return baseSize.clamp(0.5, 0.95);
-}
-
-double _calculateMaxSize({
-  required HistoryItem item,
-  required Map<String, dynamic>? itemData,
-  required bool hasReceiptButton,
-  required bool canEditContribution,
-  required bool canEditExpense,
-  required bool canDelete,
-  required bool isAdmin,
-  required String? expenseStatus,
-}) {
-  double maxSize = 0.95; // Default max
-  
-  // If there's a lot of content, allow full height
-  bool hasComplexContent = 
-      item.type == HistoryItemType.expense ||
-      (itemData != null && itemData['editHistory'] != null) ||
-      (hasReceiptButton && (canEditContribution || canEditExpense || canDelete));
-  
-  if (hasComplexContent) {
-    maxSize = 1.0; // Allow full height
-  }
-  
-  return maxSize;
-}
-
-// =================== WIDGET BUILDERS ===================
+// =================== HEADER ROW ===================
 Widget _buildHeaderRow(
   BuildContext context, {
   required NumberFormat f,
   required HistoryItem item,
   required String? expenseStatus,
-  required bool canEditContribution,
-  required bool canEditExpense,
-  required bool canDelete,
+  required bool showThreeDotMenu,
 }) {
-  final title = (item.type == HistoryItemType.contribution && itemData != null)
-      ? (itemData!['programName'] ?? item.title)
-      : item.title;
-
-  final String? displayName =
-      itemData?['userName'] ??
-      itemData?['displayName'] ??
-      itemData?['addedByUserName'] ??
-      item.subtitle;
-
-  final String byLabel =
-      item.type == HistoryItemType.contribution ? 'By' : 'Paid by';
-
   return Container(
-    padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
-    decoration: BoxDecoration(
-      color: Theme.of(context).scaffoldBackgroundColor,
-    ),
+    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+ 
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Centered drag handle at top
+        // Drag Handle
         Center(
           child: Container(
-            width: 36,
+            width: 48,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 18),
+            margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: AppColors.border(context),
-              borderRadius: BorderRadius.circular(2),
+              color: AppColors.border(context).withOpacity(0.4),
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
-        // Title row with three-dot menu
-Row(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    // Title (left)
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // First row: Program name + Three-dot menu
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context),
-                    height: 1.3,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              // Three-dot menu button (right side of title)
-              if (canEditContribution || canEditExpense || canDelete)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: _buildThreeDotMenu(
-                    context,
-                    canEdit: canEditContribution || canEditExpense,
-                    canDelete: canDelete,
-                    item: item,
-                  ),
-                ),
-            ],
-          ),
-          
-          
-          // Second row: Type badge + expense status
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              // Type badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary(context).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  item.type == HistoryItemType.contribution
-                      ? 'Contribution'
-                      : 'Expense',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary(context),
-                  ),
-                ),
-              ),
-              // Expense status chip (if applicable)
-              if (item.type == HistoryItemType.expense &&
-                  expenseStatus != null)
-                _buildExpenseStatusChip(expenseStatus),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ],
-),
-
-        const SizedBox(height: 16),
-
-        // Amount section
+        // Title row with conditional three-dot menu
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Amount
-            Text(
-              f.format(item.amount),
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary(context),
-                height: 0.9,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${item.type == HistoryItemType.contribution ? 'Contribution' : 'Expense'} Details',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      DateFormat('EEEE, MMMM dd • hh:mm a').format(item.date),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            // Metadata column (right side)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // By/Paid By
-                if (displayName != null)
-                  Text(
-                    '$byLabel $displayName',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary(context),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                const SizedBox(height: 2),
-                // Date
-                Text(
-                  DateFormat('MMM dd, yyyy').format(item.date),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary(context),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                // Time
-                Text(
-                  DateFormat('hh:mm a').format(item.date),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textTertiary(context),
-                  ),
-                ),
-              ],
-            ),
+            
+            // Show three-dot menu only if allowed
+            if (showThreeDotMenu)
+              _buildThreeDotMenu(context, item),
           ],
         ),
       ],
@@ -1390,87 +1163,488 @@ Row(
   );
 }
 
-// Three-dot Menu Widget (improved)
-Widget _buildThreeDotMenu(
-  BuildContext context, {
-  required bool canEdit,
-  required bool canDelete,
-  required HistoryItem item,
-}) {
-  return IconButton(
-    icon: Icon(
-      Icons.more_vert,
-      color: AppColors.textSecondary(context),
-      size: 24,
-    ),
-    onPressed: () {
-      showModalBottomSheet(
-        context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
-        ),
-        builder: (context) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border(context),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (canEdit)
-                ListTile(
-                  leading: Icon(
+  // =================== THREE-DOT MENU ===================
+  Widget _buildThreeDotMenu(BuildContext context, HistoryItem item) {
+    // Get current user
+    final auth = context.read<AppAuthProvider>();
+    final currentUserId = auth.user?.uid;
+    final isAdmin = auth.user?.isAdmin == true;
+    
+    // Check if current user is the expense payer
+    final bool isExpensePayer = item.type == HistoryItemType.expense && 
+                                itemData != null && 
+                                itemData!['paidBy'] == currentUserId;
+    
+    // Check permissions
+    final bool canEdit = item.type == HistoryItemType.contribution
+        ? isAdmin
+        : (isAdmin || isExpensePayer);
+    
+    final bool canDelete = item.type == HistoryItemType.contribution
+        ? isAdmin
+        : (isAdmin || isExpensePayer);
+    
+    final bool canChangeStatus = item.type == HistoryItemType.expense && isAdmin;
+
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        color: AppColors.textSecondary(context),
+        size: 24,
+      ),
+      itemBuilder: (BuildContext context) {
+        List<PopupMenuEntry<String>> menuItems = [];
+        
+        // Edit option
+        if (canEdit) {
+          menuItems.add(
+            PopupMenuItem<String>(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(
                     Icons.edit,
+                    size: 20,
                     color: AppColors.primary(context),
                   ),
-                  title: Text(
-                    item.type == HistoryItemType.contribution
-                        ? 'Edit Contribution'
+                  const SizedBox(width: 12),
+                  Text(
+                    item.type == HistoryItemType.contribution 
+                        ? 'Edit Contribution' 
                         : 'Edit Expense',
                     style: TextStyle(
                       color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _editItem(context, item);
-                  },
-                ),
-              if (canDelete)
-                ListTile(
-                  leading: const Icon(
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Delete option
+        if (canDelete) {
+          menuItems.add(
+            PopupMenuItem<String>(
+              value: 'delete',
+              child: Row(
+                children: [
+                  const Icon(
                     Icons.delete,
+                    size: 20,
                     color: Colors.red,
                   ),
-                  title: Text(
+                  const SizedBox(width: 12),
+                  Text(
                     'Delete',
                     style: TextStyle(
                       color: Colors.red,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _deleteItem(context, item);
-                  },
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Status change options for expenses (admin only)
+        if (canChangeStatus && item.type == HistoryItemType.expense) {
+          menuItems.add(const PopupMenuDivider(height: 8));
+          
+          final currentStatus = (itemData?['status'] as String?)?.toLowerCase() ?? 'pending';
+          
+          // Pending status
+          if (currentStatus != 'pending') {
+            menuItems.add(
+              PopupMenuItem<String>(
+                value: 'status_pending',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 20,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Mark as Pending'),
+                  ],
                 ),
-            ],
+              ),
+            );
+          }
+          
+          // Approved status
+          if (currentStatus != 'approved') {
+            menuItems.add(
+              PopupMenuItem<String>(
+                value: 'status_approved',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Mark as Approved'),
+                  ],
+                ),
+              ),
+            );
+          }
+          
+          // Rejected status
+          if (currentStatus != 'rejected') {
+            menuItems.add(
+              PopupMenuItem<String>(
+                value: 'status_rejected',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cancel,
+                      size: 20,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Mark as Rejected'),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+        
+        return menuItems;
+      },
+      onSelected: (String value) {
+        if (value == 'edit') {
+          _editItem(context, item);
+        } else if (value == 'delete') {
+          _deleteItem(context, item);
+        } else if (value.startsWith('status_')) {
+          final newStatus = value.split('_')[1];
+          _changeExpenseStatus(context, item, newStatus);
+        }
+      },
+    );
+  }
+
+// =================== CONTENT ===================
+Widget _buildContent(
+  BuildContext context, {
+  required NumberFormat f,
+  required HistoryItem item,
+  required bool isAdmin,
+}) {
+  // Get expense status if it's an expense
+  String? expenseStatus;
+  if (item.type == HistoryItemType.expense && itemData != null) {
+    expenseStatus = (itemData!['status'] as String?)?.toLowerCase() ?? 'pending';
+  }
+  
+  // Get contributor/payer name based on item type
+  final String? displayName = _getDisplayName(item);
+  
+  // Check if edited
+  final bool isEdited = itemData?['isEdited'] == true;
+  
+  final title = (item.type == HistoryItemType.contribution && itemData != null)
+        ? (itemData!['programName'] ?? item.title)
+        : item.title;
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Amount Card - NOW MOVED TO CONTENT (scrollable area)
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppColors.border(context),
+            width: 0.6,
           ),
         ),
-      );
-    },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Amount
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '₹',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  item.amount.toStringAsFixed(2),
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // Title/Program name
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary(context),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            // Contributor/Payer info
+            if (displayName != null && displayName.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${item.type == HistoryItemType.contribution ? 'By:' : 'Paid by:'} $displayName',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textTertiary(context),
+                ),
+              ),
+            ],
+
+            // Status chips
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                // Type chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      width: 0.6,
+                    ),
+                  ),
+                  child: Text(
+                    item.type == HistoryItemType.contribution
+                        ? 'CONTRIBUTION'
+                        : 'EXPENSE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+
+                // Edited badge
+                if (isEdited)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.2),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history_rounded, size: 14, color: Colors.orange),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Edited',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Expense status chip
+                if (item.type == HistoryItemType.expense && expenseStatus != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(expenseStatus).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _getStatusColor(expenseStatus).withOpacity(0.3),
+                        width: 0.6,
+                      ),
+                    ),
+                    child: Text(
+                      expenseStatus.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusColor(expenseStatus),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 20),
+
+      // Basic Information Section
+      _buildSectionHeader(
+        context,
+        title: 'Basic Information',
+        icon: Icons.info_outline_rounded,
+      ),
+
+      const SizedBox(height: 10),
+
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.border(context),
+            width: 0.6,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Get contributor/payer name based on item type
+            if (_getDisplayName(item) != null) ...[
+              _buildInfoRowMinimal(
+                context,
+                icon: item.type == HistoryItemType.contribution 
+                    ? Icons.person_rounded 
+                    : Icons.payments_rounded,
+                label: item.type == HistoryItemType.contribution 
+                    ? 'Contributor' 
+                    : 'Paid By',
+                value: _getDisplayName(item)!,
+              ),
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                thickness: 0.6,
+                color: AppColors.border(context),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Added By (if available)
+            if (itemData?['addedByUserName'] != null && itemData!['addedByUserName'].isNotEmpty)
+              Column(
+                children: [
+                  _buildInfoRowMinimal(
+                    context,
+                    icon: Icons.person_add_rounded,
+                    label: 'Added By',
+                    value: itemData!['addedByUserName'],
+                  ),
+                  const SizedBox(height: 12),
+                  Divider(
+                    height: 1,
+                    thickness: 0.6,
+                    color: AppColors.border(context),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+
+            // Payment Method (if available)
+            if (itemData?['paymentMethod'] != null && itemData!['paymentMethod'].isNotEmpty)
+              _buildInfoRowMinimal(
+                context,
+                icon: Icons.payment_rounded,
+                label: 'Payment Method',
+                value: _formatPaymentMethod(itemData!['paymentMethod']),
+              ),
+
+            // Category (for expenses)
+            if (item.type == HistoryItemType.expense && itemData?['category'] != null)
+              Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Divider(
+                    height: 1,
+                    thickness: 0.6,
+                    color: AppColors.border(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRowMinimal(
+                    context,
+                    icon: _getCategoryIcon(itemData!['category']),
+                    label: 'Category',
+                    value: itemData!['category'].toString().toUpperCase(),
+                  ),
+                ],
+              ),
+
+            // Description (if available)
+            if (itemData?['description'] != null && itemData!['description'].isNotEmpty)
+              Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Divider(
+                    height: 1,
+                    thickness: 0.6,
+                    color: AppColors.border(context),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Description',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textTertiary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    itemData!['description'],
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+
+      // Edit History Section
+      if (itemData != null && itemData!['editHistory'] != null)
+        _buildEditHistorySection(context),
+
+      // Bottom spacing
+      const SizedBox(height: 40),
+    ],
   );
 }
+
 
 // Updated Expense Status Chip
 Widget _buildExpenseStatusChip(String status) {
@@ -1529,102 +1703,132 @@ Widget _buildExpenseStatusChip(String status) {
   );
 }
 
-Widget _buildContent(
-  BuildContext context, {
-  required NumberFormat f,
-  required HistoryItem item,
-  required String? expenseStatus,
-  required bool isAdmin,
-  required bool hasReceiptButton,
-  required bool canEditContribution,
-  required bool canEditExpense,
-  required bool canDelete,
-  required ScrollController scrollController,
-}) {
-  return Column(
+Widget _buildSectionHeader(BuildContext context, {required String title, required IconData icon}) {
+  return Row(
     children: [
-      // Scrollable details
-      Expanded(
-        child: SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-
-              // Data missing warning for contributions
-              if (item.type == HistoryItemType.contribution && itemData == null)
-                _buildDataMissingWarning(),
-
-              if (item.type == HistoryItemType.contribution ||
-                  item.type == HistoryItemType.expense)
-                _buildEntryInfo(context),
-
-              if (item.type == HistoryItemType.expense) 
-                _buildExpenseInfo(context),
-              if (item.type == HistoryItemType.expense && isAdmin && expenseStatus != null)
-                _buildExpenseStatusChangeButton(context, item, expenseStatus),
-
-              if (item.type == HistoryItemType.contribution ||
-                  item.type == HistoryItemType.expense)
-                _buildEditInfo(context),
-
-              if (itemData != null && (itemData!['editHistory'] != null))
-                _buildEditHistory(context),
-
-              // bottom spacing for action buttons
-              const SizedBox(height: 16),
-            ],
-          ),
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary(context).withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: AppColors.primary(context),
         ),
       ),
-
-      // Receipt Button Section
-      if (hasReceiptButton)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            border: Border(
-              top: BorderSide(
-                color: AppColors.border(context),
-                width: 1,
-              ),
-            ),
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.receipt, size: 22),
-                     onPressed: () {
-  _generateReceipt(item, context); // Show receipt
-
-},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              label: const Text(
-                "Get Receipt",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+      const SizedBox(width: 12),
+      Text(
+        title,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary(context),
         ),
+      ),
     ],
   );
 }
+
+Widget _buildInfoRowMinimal(BuildContext context, {required IconData icon, required String label, required String value}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(
+        icon,
+        size: 18,
+        color: AppColors.textSecondary(context),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textTertiary(context),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+Widget _buildEditHistorySection(BuildContext context) {
+  final editHistory = (itemData!['editHistory'] as List<dynamic>?) ?? [];
+  if (editHistory.isEmpty) return const SizedBox.shrink();
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: 24),
+      Divider(
+        thickness: 0.6,
+        color: AppColors.border(context),
+      ),
+      const SizedBox(height: 20),
+
+      // Header
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.history_rounded,
+              size: 18,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit History',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Most recent changes first',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textTertiary(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // Edit History Items
+      const SizedBox(height: 20),
+      ...editHistory.map((edit) => _buildEditHistoryItem(edit, context)).toList(),
+    ],
+  );
+}
+
 
   Widget _buildExpenseInfo(BuildContext context) {
     final description = itemData?['description']?.toString();
@@ -2032,103 +2236,344 @@ Widget _buildContent(
       ],
     );
   }
-
-  Widget _buildEditHistoryItem(Map<String, dynamic> edit, BuildContext context) {
-    final editedAt = (edit['editedAt'] as Timestamp?)?.toDate();
-    final editedBy = edit['editedByUserName'] ?? edit['editedByUserId'] ?? 'Unknown';
-    final changes = (edit['changes'] as Map<String, dynamic>?) ?? {};
-    final reason = edit['reason'];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background(context),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppColors.border(context),
-          width: 1,
-        ),
+Widget _buildExpenseStatusChangeButtons(BuildContext context, HistoryItem item, String currentStatus) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: 24),
+      Divider(
+        thickness: 0.6,
+        color: AppColors.border(context),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      const SizedBox(height: 20),
+
+      // Header
+      Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.history,
-                size: 12,
-                color: AppColors.textTertiary(context),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary(context).withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.settings,
+              size: 20,
+              color: AppColors.primary(context),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Status Management',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 16),
+
+      // Buttons
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _changeExpenseStatus(context, item, 'pending'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: currentStatus == 'pending' ? Colors.orange : AppColors.textSecondary(context),
+                side: BorderSide(
+                  color: currentStatus == 'pending' ? Colors.orange : AppColors.border(context),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              const SizedBox(width: 6),
-              Text(
-                editedAt != null 
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: 18,
+                    color: currentStatus == 'pending' ? Colors.orange : AppColors.textSecondary(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Pending',
+                    style: TextStyle(
+                      fontWeight: currentStatus == 'pending' ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _changeExpenseStatus(context, item, 'approved'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: currentStatus == 'approved' ? Colors.green : AppColors.textSecondary(context),
+                side: BorderSide(
+                  color: currentStatus == 'approved' ? Colors.green : AppColors.border(context),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: currentStatus == 'approved' ? Colors.green : AppColors.textSecondary(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Approve',
+                    style: TextStyle(
+                      fontWeight: currentStatus == 'approved' ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => _changeExpenseStatus(context, item, 'rejected'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: currentStatus == 'rejected' ? Colors.red : AppColors.textSecondary(context),
+                side: BorderSide(
+                  color: currentStatus == 'rejected' ? Colors.red : AppColors.border(context),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cancel,
+                    size: 18,
+                    color: currentStatus == 'rejected' ? Colors.red : AppColors.textSecondary(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Reject',
+                    style: TextStyle(
+                      fontWeight: currentStatus == 'rejected' ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+Widget _buildEditHistoryItem(Map<String, dynamic> edit, BuildContext context) {
+  final editedAt = (edit['editedAt'] as Timestamp?)?.toDate();
+  final editedBy = edit['editedByUserName'] ?? edit['editedByUserId'] ?? 'Unknown';
+  final changes = (edit['changes'] as Map<String, dynamic>?) ?? {};
+  final reason = edit['reason'];
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF3FAF7),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(
+        color: const Color(0xFFE1EFEA),
+        width: 1,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Date and User
+        Row(
+          children: [
+            Text(
+              editedAt != null
                   ? DateFormat('MMM dd, yyyy hh:mm a').format(editedAt)
                   : 'Unknown time',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textTertiary(context),
-                ),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary(context),
               ),
-              const Spacer(),
-              Text(
-                'By: $editedBy',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary(context),
-                ),
+            ),
+            const Spacer(),
+            Text(
+              'By: $editedBy',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary(context),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          ...changes.entries.map((entry) {
-            final field = entry.key;
-            final change = entry.value as Map<String, dynamic>;
-            final oldValue = change['old'];
-            final newValue = change['new'];
-            
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary(context),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // Change lines
+        ...changes.entries.map((fieldChange) {
+          final fieldName = _getFieldDisplayName(fieldChange.key);
+          final change = fieldChange.value as Map<String, dynamic>;
+          final oldValue = change['old']?.toString();
+          final newValue = change['new']?.toString();
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary(context),
+                ),
+                children: [
+                  const TextSpan(text: '•  '),
+                  TextSpan(
+                    text: '$fieldName: ',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                  children: [
+                  if (oldValue != null)
                     TextSpan(
-                      text: '• ${_formatFieldName(field)}: ',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    TextSpan(text: '$oldValue → '),
-                    TextSpan(
-                      text: '$newValue',
+                      text: oldValue,
                       style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  if (oldValue != null && newValue != null)
+                    const TextSpan(text: '  →  '),
+                  if (newValue != null)
+                    const TextSpan(
+                      text: '',
+                    ),
+                  if (newValue != null)
+                    TextSpan(
+                      text: newValue,
+                      style: const TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-          
-          if (reason != null && reason.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Reason: $reason',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textTertiary(context),
-                fontStyle: FontStyle.italic,
+                ],
               ),
             ),
-          ],
+          );
+        }).toList(),
+
+        // Reason
+        if (reason != null && reason.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Reason: $reason',
+            style: TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: AppColors.textTertiary(context),
+            ),
+          ),
         ],
-      ),
-    );
+      ],
+    ),
+  );
+}
+String _formatPaymentMethod(String method) {
+  final lowerMethod = method.toLowerCase();
+  switch (lowerMethod) {
+    case 'cash':
+      return 'Cash';
+    case 'bank_transfer':
+    case 'bank transfer':
+      return 'Bank Transfer';
+    case 'upi':
+      return 'UPI';
+    case 'credit_card':
+    case 'credit card':
+      return 'Credit Card';
+    case 'debit_card':
+    case 'debit card':
+      return 'Debit Card';
+    default:
+      return method;
+  }
+}
+
+Color _getStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'approved':
+      return Colors.green;
+    case 'rejected':
+      return Colors.red;
+    case 'pending':
+    default:
+      return Colors.orange;
+  }
+}
+
+IconData _getCategoryIcon(String category) {
+  switch (category.toLowerCase()) {
+    case 'food':
+      return Icons.restaurant;
+    case 'transport':
+      return Icons.directions_car;
+    case 'materials':
+      return Icons.inventory;
+    case 'venue':
+      return Icons.place;
+    case 'equipment':
+      return Icons.build;
+    default:
+      return Icons.category;
+  }
+}
+
+String _getFieldDisplayName(String field) {
+  final fieldMap = {
+    'amount': 'Amount',
+    'paymentMethod': 'Payment Method',
+    'userId': 'Member',
+    'programId': 'Program',
+    'title': 'Title',
+    'description': 'Description',
+    'category': 'Category',
+    'vendorName': 'Vendor',
+    'status': 'Status',
+    'note': 'Note',
+    'monthId': 'Month',
+  };
+  return fieldMap[field] ?? field;
+}
+ // Get display name based on item type
+  String? _getDisplayName(HistoryItem item) {
+    if (item.type == HistoryItemType.contribution) {
+      // For contributions, use contributorName from ContributionModel
+      return itemData?['contributorName'] ??
+             itemData?['userName'] ??
+             itemData?['displayName'] ??
+             item.subtitle;
+    } else {
+      // For expenses, use paidByName from ExpenseModel
+      return itemData?['paidByName'] ??
+             itemData?['paidByUserName'] ??
+             item.subtitle;
+    }
   }
 
   // =================== COMMON WIDGETS ===================
@@ -2193,6 +2638,108 @@ Future<void> _generateReceipt(HistoryItem item, BuildContext context) async {
     }
   }
 }
+   Widget _buildBottomButtons(BuildContext context, bool hasReceiptButton) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.border(context),
+            width: 1.5,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary(context),
+                side: BorderSide(
+                  color: AppColors.border(context),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          if (hasReceiptButton)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: ElevatedButton(
+                  onPressed: () {
+                    _generateReceipt(item, context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary(context),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                    shadowColor: AppColors.primary(context).withOpacity(0.3),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long_rounded, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Get Receipt',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+ bool _shouldShowThreeDotMenu(BuildContext context, HistoryItem item) {
+    final auth = context.read<AppAuthProvider>();
+    final isAdmin = auth.user?.isAdmin == true;
+    final currentUserId = auth.user?.uid;
+    
+    if (item.type == HistoryItemType.contribution) {
+      // For contributions: only show if user is admin
+      return isAdmin;
+    } else if (item.type == HistoryItemType.expense) {
+      // For expenses: show if user is admin OR is the expense payer
+      final isExpensePayer = itemData != null && 
+                           itemData!['paidBy'] == currentUserId;
+      return isAdmin || isExpensePayer;
+    }
+    
+    return false;
+  }
 // Add this method to get user name
 Future<String> _getUserName(String userId, BuildContext context) async {
   try {
@@ -2237,6 +2784,36 @@ Future<String> _getUserName(String userId, BuildContext context) async {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+  // Convert HistoryItem to ContributionModel
+  ContributionModel _historyItemToContributionModel(HistoryItem item, Map<String, dynamic>? itemData) {
+    return ContributionModel(
+      contributionId: item.id,
+      programId: itemData?['programId'] ?? '',
+      userId: itemData?['userId'] ?? '',
+      contributorName: itemData?['contributorName'] ?? '', // Use contributorName field
+      communityId: itemData?['communityId'] ?? '',
+      amount: item.amount,
+      paymentMethod: itemData?['paymentMethod'] ?? 'cash',
+      isMonthlyContribution: itemData?['isMonthlyContribution'] ?? false,
+      monthId: itemData?['monthId'],
+      addedByUserId: itemData?['addedByUserId'],
+      addedByUserName: itemData?['addedByUserName'],
+      addedAt: itemData?['addedAt'] != null ? 
+          (itemData!['addedAt'] is Timestamp ? itemData!['addedAt'] : Timestamp.now()) : 
+          Timestamp.now(),
+      isEdited: itemData?['isEdited'] ?? false,
+      lastEditedByUserId: itemData?['lastEditedByUserId'],
+      lastEditedByUserName: itemData?['lastEditedByUserName'],
+      lastEditedAt: itemData?['lastEditedAt'] != null ? 
+          (itemData!['lastEditedAt'] is Timestamp ? itemData!['lastEditedAt'] : Timestamp.now()) : 
+          null,
+      editReason: itemData?['editReason'],
+      editHistory: (itemData?['editHistory'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
+      createdAt: itemData?['createdAt'] != null ? 
+          (itemData!['createdAt'] is Timestamp ? itemData!['createdAt'] : Timestamp.fromDate(item.date)) : 
+          Timestamp.fromDate(item.date),
     );
   }
 

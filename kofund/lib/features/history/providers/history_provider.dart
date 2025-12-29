@@ -25,6 +25,7 @@ class HistoryItem {
   final double amount;
   final DateTime date;
   final String? userId;
+  final String? contributorName;
   final String? programId;
   final String? paymentMethod;
   final String? category;
@@ -39,6 +40,7 @@ class HistoryItem {
     required this.amount,
     required this.date,
     this.userId,
+    this.contributorName,
     this.programId,
     this.paymentMethod,
     this.category,
@@ -522,6 +524,7 @@ void setUserCommunity(String communityId) {
       amount: contribution.amount,
       date: date,
       userId: contribution.userId,
+      contributorName: contribution.contributorName,
       programId: contribution.programId,
       paymentMethod: contribution.paymentMethod,
       original: contribution,

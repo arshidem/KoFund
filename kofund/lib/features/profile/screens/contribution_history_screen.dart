@@ -13,6 +13,16 @@ import 'package:flutter/services.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
+import 'package:intl/intl.dart';
+
+// Move ChangeEntry to top level
+class ChangeEntry {
+  final String fieldName;
+  final String? oldValue;
+  final String? newValue;
+  
+  ChangeEntry({required this.fieldName, this.oldValue, this.newValue});
+}
 
 class ContributionHistoryScreen extends StatefulWidget {
   const ContributionHistoryScreen({super.key});
@@ -77,7 +87,40 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     final profileProvider = context.read<ProfileProvider>();
     profileProvider.clearAllData();
   }
-
+void _debugFirestoreContribution(String contributionId) async {
+  try {
+    print('🔍 DEBUG: Fetching contribution $contributionId directly from Firestore');
+    
+    final doc = await FirebaseFirestore.instance
+        .collection('contributions')
+        .doc(contributionId)
+        .get();
+    
+    if (doc.exists) {
+      final data = doc.data();
+      print('✅ Contribution exists in Firestore');
+      print('📋 All fields:');
+      data?.forEach((key, value) {
+        print('  - $key: $value (type: ${value.runtimeType})');
+      });
+      
+      // Check specifically for edit-related fields
+      print('🔎 Edit-related fields check:');
+      final editFields = ['isEdited', 'editHistory', 'lastEditedAt', 'lastEditedByUserId', 'editReason'];
+      for (var field in editFields) {
+        if (data?.containsKey(field) ?? false) {
+          print('  ✅ $field exists: ${data![field]}');
+        } else {
+          print('  ❌ $field does NOT exist');
+        }
+      }
+    } else {
+      print('❌ Contribution does not exist in Firestore');
+    }
+  } catch (e) {
+    print('❌ Error fetching from Firestore: $e');
+  }
+}
   void _checkAuthAndLoadHistory() {
     if (!mounted) return;
     
@@ -135,28 +178,32 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     }
   }
 
-  // ✅ FIXED: Create HistoryItem with proper user ID
-  HistoryItem _convertToHistoryItem(Map<String, dynamic> contribution, String userId) {
-    final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-    final amount = (contribution['amount'] ?? 0).toDouble();
-    final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
-    final contributionId = contribution['contributionId'] ?? 'unknown_id';
-    final programId = contribution['programId'] ?? '';
+  
 
-    return HistoryItem(
-      id: 'contrib_$contributionId',
-      type: HistoryItemType.contribution,
-      title: programTitle,
-      subtitle: 'Paid via ${_formatPaymentMethod(paymentMethod)}',
-      amount: amount,
-      date: createdAt,
-      userId: userId,
-      programId: programId,
-      category: 'Contribution',
-    );
-  }
+HistoryItem _convertToHistoryItem(Map<String, dynamic> contribution, String userId) {
+  final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+  final amount = (contribution['amount'] ?? 0).toDouble();
+  final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
+  final contributionId = contribution['contributionId'] ?? 'unknown_id';
+  final programId = contribution['programId'] ?? '';
+  
+  // FIX: Get contributorName from the contribution map
+  final contributorName = contribution['contributorName'] ?? '';
 
+  return HistoryItem(
+    id: 'contrib_$contributionId',
+    type: HistoryItemType.contribution,
+    title: programTitle,
+    subtitle: 'Paid via ${_formatPaymentMethod(paymentMethod)}',
+    amount: amount,
+    date: createdAt,
+    userId: userId,
+    contributorName: contributorName, // Now this variable exists
+    programId: programId,
+    category: 'Contribution',
+  );
+}
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
@@ -169,7 +216,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
    appBar: AppBar(
   toolbarHeight: 80,
   title: const Text(
-    'My Contributions', // Added TextStyle here
+    'My Contributions',
     style: TextStyle(
       color: Colors.white,
       fontSize: 18,
@@ -187,7 +234,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   systemOverlayStyle: const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark, // Added this for consistency
+    statusBarBrightness: Brightness.dark,
   ),
   flexibleSpace: Container(
     decoration: BoxDecoration(
@@ -249,10 +296,12 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             itemCount: contributionHistory.length,
-            itemBuilder: (context, index) {
-              final contribution = contributionHistory[index];
-              return _buildContributionListItem(contribution, authProvider);
-            },
+          // In your list builder, add debug logging:
+itemBuilder: (context, index) {
+  final contribution = contributionHistory[index];
+  _debugContributionData(contribution); // Add this line
+  return _buildContributionListItem(contribution, authProvider);
+},
           ),
         ),
       ],
@@ -287,8 +336,6 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              // Navigate to sign in screen
-              // Navigator.pushNamed(context, '/signin');
             },
             icon: const Icon(Icons.login),
             label: const Text('Sign In'),
@@ -435,12 +482,15 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     );
   }
 
- Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
+Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
   final programTitle = contribution['programTitle'] ?? 'Unknown Program';
   final amount = (contribution['amount'] ?? 0).toDouble();
   final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
   final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-  final programType = contribution['programType'] ?? ProgramTypes.general;
+  
+  // FIX: Check if isEdited exists and handle different data types
+  final isEdited = _getIsEditedStatus(contribution);
+  final monthDisplayName = contribution['monthDisplayName'] ?? '';
 
   return Column(
     children: [
@@ -454,18 +504,20 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                // Circular icon
+                // Circular icon - Use different color for edited items
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.green.withOpacity(0.1),
+                    color: isEdited 
+                      ? Colors.orange.withOpacity(0.1)
+                      : Colors.green.withOpacity(0.1),
                   ),
                   child: Icon(
                     Icons.payments,
                     size: 20,
-                    color: Colors.green,
+                    color: isEdited ? Colors.orange : Colors.green,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -475,19 +527,52 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        programTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: AppColors.textPrimary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              programTitle,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: AppColors.textPrimary(context),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isEdited)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.orange.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Edited',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Paid via ${_formatPaymentMethod(paymentMethod)}',
+                        monthDisplayName.isNotEmpty 
+                          ? '$monthDisplayName • Paid via ${_formatPaymentMethod(paymentMethod)}'
+                          : 'Paid via ${_formatPaymentMethod(paymentMethod)}',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary(context),
@@ -516,7 +601,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: Colors.green,
+                        color: isEdited ? Colors.orange : Colors.green,
                       ),
                     ),
                   ],
@@ -539,142 +624,969 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   );
 }
 
-// Add this helper method if not already present
+// Add this helper method to properly handle isEdited status
+bool _getIsEditedStatus(Map<String, dynamic> contribution) {
+  final isEdited = contribution['isEdited'];
+  
+  // Handle different data types
+  if (isEdited is bool) {
+    return isEdited;
+  } else if (isEdited is String) {
+    return isEdited.toLowerCase() == 'true';
+  } else if (isEdited is int) {
+    return isEdited == 1;
+  }
+  
+  // Also check if there's edit history
+  final editHistory = contribution['editHistory'];
+  if (editHistory is List && editHistory.isNotEmpty) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Helper method to format time
 String _formatTime(DateTime dt) {
   final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
   final minute = dt.minute.toString().padLeft(2, '0');
   final amPm = dt.hour < 12 ? 'AM' : 'PM';
   return '$hour:$minute $amPm';
 }
-  // ✅ UPDATE: Show contribution details method
-  void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
-    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-    final amount = (contribution['amount'] ?? 0).toDouble();
-    final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
-    final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final communityLabel = authProvider.user?.communityId ?? '';
+// Add debug method
+void _debugContributionData(Map<String, dynamic> contribution) {
+  print('🔍 DEBUG Contribution Data:');
+  print('  - isEdited: ${contribution['isEdited']} (type: ${contribution['isEdited']?.runtimeType})');
+  print('  - has editHistory: ${contribution['editHistory'] != null}');
+  print('  - editHistory type: ${contribution['editHistory']?.runtimeType}');
+  print('  - editHistory length: ${(contribution['editHistory'] as List?)?.length ?? 0}');
+  print('  - All keys: ${contribution.keys.toList()}');
+}
+// Show contribution details method with premium design - FIXED VERSION
+void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
+  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+  final amount = (contribution['amount'] ?? 0).toDouble();
+  final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
+  final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+  
+  // FIX: Use the helper method to check isEdited status
+  final isEdited = _getIsEditedStatus(contribution);
+  
+  // FIX: Get monthDisplayName from the map or compute it
+  final monthId = contribution['monthId'];
+  final monthDisplayName = _getMonthDisplayName(monthId);
+  
+  final addedByUserName = contribution['addedByUserName'] ?? '';
+  
+  // Get formatted edit history
+  final formattedEditHistory = _getFormattedEditHistory(contribution);
+  
+  // Get changes description from edit history
+  final changesDescription = _getChangesDescription(formattedEditHistory);
 
-    // ✅ FIXED: Create HistoryItem with proper user ID
-    final historyItem = _convertToHistoryItem(contribution, authProvider.user?.uid ?? '');
+  print('🔍 DEBUG _showContributionDetails:');
+  print('  isEdited: $isEdited');
+  print('  formattedEditHistory length: ${formattedEditHistory.length}');
+  print('  changesDescription: $changesDescription');
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag handle
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        color: Color(0x66000000), // Semi-transparent black overlay
+        child: GestureDetector(
+          onTap: () {}, // Prevent closing when tapping inside
+          child: DraggableScrollableSheet(
+            initialChildSize: isEdited ? 0.8 : 0.6,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            snap: true,
+            snapSizes: const [0.5, 0.75, 0.95],
+            builder: (context, scrollController) {
+              return Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              // Title
-              Text(
-                programTitle,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              
-              // Details
-              _buildDetailRow('Amount:', '₹${amount.toStringAsFixed(2)}', context),
-              _buildDetailRow('Payment Method:', _formatPaymentMethod(paymentMethod), context),
-              _buildDetailRow('Date:', _formatFullDate(createdAt), context),
-              _buildDetailRow('Status:', 'Completed', context),
-              const SizedBox(height: 20),
-              
-              // Receipt Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.receipt),
-              onPressed: () {
-  Navigator.pop(context); // Close details sheet
-  _generateReceipt(historyItem, communityLabel);
-},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Color(0xFF0F1F1D)
+                      : Color(0xFFF8FDFC),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
-                  label: const Text("Download Receipt"),
-                ),
-              ),
-              
-              const SizedBox(height: 8),
-              
-              // Close Button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary(context),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 32,
+                      spreadRadius: 0,
+                      offset: const Offset(0, -8),
                     ),
-                  ),
-                  child: const Text("Close"),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+                child: Column(
+                  children: [
+                    // Drag Handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 4),
+                      child: Center(
+                        child: Container(
+                          width: 48,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border(context).withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Contribution Details',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary(context),
+                                    height: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary(context).withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    DateFormat('EEEE, MMMM dd • hh:mm a').format(createdAt),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.primary(context),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isEdited)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.orange.withOpacity(0.15),
+                                    Colors.orange.withOpacity(0.08),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.history_rounded, size: 16, color: Colors.orange),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Edited',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Amount Card - Premium Design
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 24),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface(context),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppColors.border(context),
+                                  width: 0.6,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // ───── AMOUNT ─────
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        '₹',
+                                        style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary(context),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        amount.toStringAsFixed(2),
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary(context),
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
 
-  Widget _buildDetailRow(String label, String value, BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
+                                  const SizedBox(height: 6),
+
+                                  // ───── PROGRAM NAME ─────
+                                  Text(
+                                    programTitle,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+
+                                  // ───── MONTH CHIP ─────
+                                  if (monthDisplayName.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface(context),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: AppColors.border(context),
+                                          width: 0.6,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        monthDisplayName,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.textSecondary(context),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            
+                            // ───── BASIC INFORMATION ─────
+                            _buildSectionHeader(
+                              context,
+                              title: 'Basic Information',
+                              icon: Icons.info_outline_rounded,
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface(context),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppColors.border(context),
+                                  width: 0.6,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ───── PAYMENT METHOD ─────
+                                  _buildInfoRowMinimal(
+                                    context,
+                                    icon: Icons.payment_rounded,
+                                    label: 'Payment Method',
+                                    value: _formatPaymentMethod(paymentMethod),
+                                  ),
+
+                                  if (addedByUserName.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Divider(
+                                      height: 1,
+                                      thickness: 0.6,
+                                      color: AppColors.border(context),
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // ───── ADDED BY ─────
+                                    _buildInfoRowMinimal(
+                                      context,
+                                      icon: Icons.person_rounded,
+                                      label: 'Added By',
+                                      value: addedByUserName,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            
+                            // ───── EDIT HISTORY SECTION ─────
+                            if (isEdited && formattedEditHistory.isNotEmpty)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 24),
+
+                                  Divider(
+                                    thickness: 0.6,
+                                    color: AppColors.border(context),
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // ───── HEADER ─────
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.10),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.history_rounded,
+                                          size: 18,
+                                          color: Colors.orange,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Edit History',
+                                            style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary(context),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Most recent changes first',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textTertiary(context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+
+                                  // ───── OPTIONAL SUMMARY ─────
+                                  // if (changesDescription.isNotEmpty) ...[
+                                  //   const SizedBox(height: 20),
+                                  //   Container(
+                                  //     padding: const EdgeInsets.all(16),
+                                  //     decoration: BoxDecoration(
+                                  //       color: AppColors.surface(context),
+                                  //       borderRadius: BorderRadius.circular(16),
+                                  //       border: Border.all(
+                                  //         color: AppColors.border(context),
+                                  //         width: 0.6,
+                                  //       ),
+                                  //     ),
+                                  //     child: Text(
+                                  //       changesDescription,
+                                  //       style: TextStyle(
+                                  //         fontSize: 13,
+                                  //         height: 1.55,
+                                  //         color: AppColors.textPrimary(context),
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  // ],
+
+                                  // ───── MINIMAL TIMELINE ─────
+                                  if (formattedEditHistory.isNotEmpty) ...[
+                                    const SizedBox(height: 24),
+
+                                    for (final edit in formattedEditHistory)
+                                      _buildEditHistoryItem(context, edit),
+                                  ],
+                                ],
+                              ),
+                            
+                            // Bottom Padding
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // Bottom Action Buttons - Premium Design
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface(context),
+                        border: Border(
+                          top: BorderSide(
+                            color: AppColors.border(context),
+                            width: 1.5,
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            spreadRadius: 0,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary(context),
+                                side: BorderSide(
+                                  color: AppColors.border(context),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Close',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 12),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Close details sheet
+                                  _generateReceiptFromContribution(contribution, authProvider);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary(context),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  elevation: 4,
+                                  shadowColor: AppColors.primary(context).withOpacity(0.3),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.receipt_long_rounded, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Get Receipt',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// Add this helper method to get month display name
+String _getMonthDisplayName(String? monthId) {
+  if (monthId == null || monthId.isEmpty) return '';
+  
+  try {
+    final parts = monthId.split('-');
+    if (parts.length == 2) {
+      final year = parts[0];
+      final month = int.parse(parts[1]);
+      final date = DateTime(int.parse(year), month, 1);
+      final monthName = DateFormat('MMM').format(date);
+      return '$monthName $year';
+    }
+  } catch (e) {
+    print('Error parsing monthId $monthId: $e');
+    return monthId;
+  }
+  return monthId;
+}
+
+// Add this helper method to get changes description from edit history
+String _getChangesDescription(List<Map<String, dynamic>> editHistory) {
+  if (editHistory.isEmpty) return '';
+  
+  // Get the latest edit record
+  final latestEdit = editHistory.isNotEmpty ? editHistory.first : null;
+  if (latestEdit == null) return '';
+  
+  final changes = latestEdit['changes'] as Map<String, dynamic>?;
+  if (changes == null || changes.isEmpty) return '';
+  
+  final List<String> changeDescriptions = [];
+  
+  changes.forEach((field, changeData) {
+    final oldValue = changeData is Map ? changeData['old']?.toString() : null;
+    final newValue = changeData is Map ? changeData['new']?.toString() : changeData?.toString();
+    final fieldName = _getFieldDisplayName(field);
+    
+    if (oldValue != null && newValue != null) {
+      changeDescriptions.add('$fieldName: $oldValue → $newValue');
+    } else if (newValue != null) {
+      changeDescriptions.add('$fieldName changed to $newValue');
+    }
+  });
+  
+  return changeDescriptions.join(', ');
+}
+
+
+// Build edit history item widget
+Widget _buildEditHistoryItem(BuildContext context, Map<String, dynamic> edit) {
+  final editedAt = edit['editedAt'] != null 
+      ? (edit['editedAt'] as Timestamp).toDate()
+      : null;
+  final editedBy = edit['editedByUserName'] ?? 
+                 edit['editedByUserId'] ?? 
+                 'Unknown';
+  final changes = edit['changes'] ?? {};
+  final reason = edit['reason'];
+
+  // Get change entries
+  final changeEntries = _getChangeEntries(changes);
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+     decoration: BoxDecoration(
+                                        color: AppColors.surface(context),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: AppColors.border(context),
+                                          width: 0.6,
+                                        ),
+                                      ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ───── DATE + USER ─────
+        Row(
+          children: [
+            Text(
+              editedAt != null
+                  ? DateFormat('MMM dd, yyyy hh:mm a').format(editedAt)
+                  : 'Unknown time',
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary(context),
+                fontSize: 12,
+                color: AppColors.textTertiary(context),
               ),
             ),
+            const Spacer(),
+            Text(
+              'By: $editedBy',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary(context),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        // ───── CHANGE LINES ─────
+        if (changeEntries.isNotEmpty)
+          for (final change in changeEntries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  children: [
+                    const TextSpan(text: '•  '),
+                    TextSpan(
+                      text: '${change.fieldName}: ',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (change.oldValue != null)
+                      TextSpan(
+                        text: change.oldValue,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    if (change.oldValue != null && change.newValue != null)
+                      const TextSpan(text: '  →  '),
+                    if (change.newValue != null)
+                      const TextSpan(text: ''),
+                    if (change.newValue != null)
+                      TextSpan(
+                        text: change.newValue,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+        // ───── REASON ─────
+        if (reason != null && reason.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Reason: $reason',
+            style: TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: AppColors.textTertiary(context),
+            ),
           ),
-          Expanded(
-            child: Text(
+        ],
+      ],
+    ),
+  );
+}
+
+// Helper method to build minimal info rows
+Widget _buildInfoRowMinimal(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required String value,
+}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Icon(
+        icon,
+        size: 16,
+        color: AppColors.textTertiary(context),
+      ),
+      const SizedBox(width: 10),
+
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textTertiary(context),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
               value,
               style: TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary(context),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
+    ],
+  );
+}
 
-// ✅ UPDATE: Generate receipt method
+// Helper method for section headers
+Widget _buildSectionHeader(BuildContext context, {required String title, required IconData icon}) {
+  return Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary(context).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: AppColors.primary(context),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary(context),
+          letterSpacing: 0.3,
+        ),
+      ),
+    ],
+  );
+}
+
+// Helper method to get formatted edit history
+List<Map<String, dynamic>> _getFormattedEditHistory(Map<String, dynamic> contribution) {
+  final editHistory = contribution['editHistory'] ?? [];
+  if (editHistory is List) {
+    return editHistory.whereType<Map<String, dynamic>>().toList();
+  }
+  return [];
+}
+
+// Helper method to get change entries
+List<ChangeEntry> _getChangeEntries(Map<String, dynamic> changes) {
+  final entries = <ChangeEntry>[];
+  
+  changes.forEach((key, value) {
+    final fieldName = _getFieldDisplayName(key);
+    
+    String? oldValue;
+    String? newValue;
+    
+    if (value is Map<String, dynamic>) {
+      oldValue = value['old']?.toString();
+      newValue = value['new']?.toString();
+    } else if (value is String) {
+      newValue = value;
+    }
+    
+    entries.add(ChangeEntry(
+      fieldName: fieldName, 
+      oldValue: oldValue, 
+      newValue: newValue
+    ));
+  });
+  
+  return entries;
+}
+
+// Helper method for field display names
+String _getFieldDisplayName(String field) {
+  final displayNames = {
+    'amount': 'Amount',
+    'paymentMethod': 'Payment Method',
+    'userId': 'Member',
+    'programId': 'Program',
+    'monthId': 'Month',
+    'isMonthlyContribution': 'Type',
+    'communityId': 'Community',
+    'createdAt': 'Date',
+    'addedBy': 'Added By',
+    'addedByUserName': 'Added By',
+  };
+  
+  if (displayNames.containsKey(field)) {
+    return displayNames[field]!;
+  }
+  
+  // Convert camelCase to Title Case
+  final buffer = StringBuffer();
+  for (int i = 0; i < field.length; i++) {
+    if (i > 0 && field[i] == field[i].toUpperCase()) {
+      buffer.write(' ');
+    }
+    buffer.write(i == 0 ? field[i].toUpperCase() : field[i]);
+  }
+  
+  return buffer.toString();
+}
+
+// Generate receipt method
+Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution, AppAuthProvider authProvider) async {
+  if (!context.mounted) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+
+  try {
+    // Convert to ContributionModel
+    final contributionModel = _convertMapToContributionModel(contribution, authProvider);
+    
+    // Get user name
+    final contributorName = await _getUserName(authProvider.user?.uid ?? '');
+    
+    if (!context.mounted) return;
+    
+    Navigator.of(context).pop();
+
+    // Generate and show receipt
+    await ContributionReceiptPdf.generateAndShowReceipt(
+      context: context,
+      contribution: contributionModel,
+      contributorName: contributorName,
+      programName: contribution['programTitle'] ?? 'Unknown Program',
+    );
+
+  } catch (e, st) {
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    debugPrint('Receipt error: $e\n$st');
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate receipt: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+ContributionModel _convertMapToContributionModel(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
+  // Debug: Print contribution data
+  print('🔄 Converting contribution: ${contribution['contributionId']}');
+  print('  isEdited value: ${contribution['isEdited']}');
+  print('  editHistory: ${contribution['editHistory']}');
+  
+  return ContributionModel(
+    contributionId: contribution['contributionId'] ?? '',
+    programId: contribution['programId'] ?? '',
+    userId: contribution['userId'] ?? authProvider.user?.uid ?? '',
+    contributorName: contribution['contributorName'] ?? authProvider.user?.displayName ?? '',
+    communityId: contribution['communityId'] ?? '',
+    amount: (contribution['amount'] ?? 0).toDouble(),
+    paymentMethod: contribution['paymentMethod'] ?? 'cash',
+    isMonthlyContribution: contribution['isMonthlyContribution'] == true,
+    monthId: contribution['monthId'],
+    addedByUserId: contribution['addedByUserId'],
+    addedByUserName: contribution['addedByUserName'],
+    addedAt: contribution['addedAt'] as Timestamp? ?? Timestamp.now(),
+    
+    // FIX: Better handling of isEdited
+    isEdited: _getIsEditedStatus(contribution),
+    
+    lastEditedByUserId: contribution['lastEditedByUserId'],
+    lastEditedByUserName: contribution['lastEditedByUserName'],
+    lastEditedAt: contribution['lastEditedAt'] as Timestamp?,
+    editReason: contribution['editReason'],
+    editHistory: contribution['editHistory'] ?? [],
+    createdAt: (contribution['createdAt'] as Timestamp?) ?? Timestamp.now(),
+  );
+}
+
+// Helper method to get user name
+Future<String> _getUserName(String? userId) async {
+  if (userId == null || userId.isEmpty) return 'User';
+  
+  try {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    
+    if (userDoc.exists) {
+      return userDoc.data()?['displayName'] ?? 
+             userDoc.data()?['name'] ?? 
+             userDoc.data()?['email']?.split('@').first ??
+             'User $userId';
+    }
+    
+    return 'User $userId';
+  } catch (e) {
+    debugPrint('Error fetching user name: $e');
+    return 'User $userId';
+  }
+}
+
+// Convert HistoryItem to ContributionModel (kept for backward compatibility)
+ContributionModel _convertToContributionModel(HistoryItem item) {
+  return ContributionModel(
+    contributionId: item.id.replaceAll('contrib_', ''),
+    programId: item.programId ?? '',
+    userId: item.userId ?? '',
+    contributorName: item.contributorName ?? '',
+    communityId: '',
+    amount: item.amount,
+    paymentMethod: 'cash',
+    isMonthlyContribution: false,
+    monthId: null,
+    addedByUserId: null,
+    addedByUserName: null,
+    addedAt: Timestamp.now(),
+    isEdited: false,
+    lastEditedByUserId: null,
+    lastEditedByUserName: null,
+    lastEditedAt: null,
+    editReason: null,
+    editHistory: const [],
+    createdAt: Timestamp.fromDate(item.date),
+  );
+}
+
+// Generate receipt method for HistoryItem (for backward compatibility)
 Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
+  final authProvider = context.read<AppAuthProvider>();
+  
   if (!context.mounted) return;
 
   showDialog(
@@ -689,7 +1601,7 @@ Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
     // Convert HistoryItem to ContributionModel
     final contribution = _convertToContributionModel(item);
     
-    // Get user name (you may need to fetch this)
+    // Get user name
     final contributorName = await _getUserName(item.userId);
     
     if (!context.mounted) return;
@@ -720,55 +1632,6 @@ Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
         ),
       );
     }
-  }
-}
-
-// ✅ ADD: Helper method to convert HistoryItem to ContributionModel
-ContributionModel _convertToContributionModel(HistoryItem item) {
-  return ContributionModel(
-    contributionId: item.id.replaceAll('contrib_', ''),
-    programId: item.programId ?? '',
-    userId: item.userId ?? '',
-    communityId: '', // You may need to get this from somewhere
-    amount: item.amount,
-    paymentMethod: 'cash', // Default, you should get this from itemData
-    // Add other fields with default values
-    isMonthlyContribution: false,
-    monthId: null,
-    addedByUserId: null,
-    addedByUserName: null,
-    addedAt: Timestamp.now(),
-    isEdited: false,
-    lastEditedByUserId: null,
-    lastEditedByUserName: null,
-    lastEditedAt: null,
-    editReason: null,
-    editHistory: const [],
-    createdAt: Timestamp.fromDate(item.date),
-  );
-}
-
-// ✅ ADD: Helper method to get user name
-Future<String> _getUserName(String? userId) async {
-  if (userId == null || userId.isEmpty) return 'User';
-  
-  try {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
-    
-    if (userDoc.exists) {
-      return userDoc.data()?['displayName'] ?? 
-             userDoc.data()?['name'] ?? 
-             userDoc.data()?['email']?.split('@').first ??
-             'User $userId';
-    }
-    
-    return 'User $userId';
-  } catch (e) {
-    debugPrint('Error fetching user name: $e');
-    return 'User $userId';
   }
 }
 
@@ -807,49 +1670,14 @@ Future<String> _getUserName(String? userId) async {
     );
   }
 
-  // Helper method for relative dates
-  String _formatRelativeDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
-  // Helper method for full date formatting
-  String _formatFullDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
   // Helper method for payment method formatting
   String _formatPaymentMethod(String method) {
     switch (method) {
       case 'cash': return 'Cash';
       case 'upi': return 'UPI';
+      case 'online': return 'Online';
+      case 'bank_transfer': return 'Bank Transfer';
       default: return method;
-    }
-  }
-
-  // Helper method for payment method colors
-  Color _getPaymentMethodColor(String paymentMethod) {
-    switch (paymentMethod.toLowerCase()) {
-      case 'cash':
-        return Colors.orange;
-      case 'online':
-        return Colors.blue;
-      case 'upi':
-        return Colors.purple;
-      case 'bank_transfer':
-        return Colors.teal;
-      default:
-        return Colors.grey;
     }
   }
 }

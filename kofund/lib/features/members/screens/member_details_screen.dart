@@ -290,6 +290,8 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     return Scaffold(
       backgroundColor: AppColors.background(context),
   appBar: AppBar(
+        toolbarHeight: 80, // Set your desired height here (default is 56)
+
   title: const Text(
     'Member Details', // Added TextStyle here
     style: TextStyle(

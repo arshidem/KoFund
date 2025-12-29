@@ -459,83 +459,93 @@ Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
     }
   }
 
-  // ✅ ADDED: Get user payment history with program details
-  Future<List<Map<String, dynamic>>> getUserPaymentHistoryWithDetails(
-      String userId, String communityId) async {
-    try {
-      // Get user's contributions
-      final userContributions = await getUserContributions(userId, communityId);
+Future<List<Map<String, dynamic>>> getUserPaymentHistoryWithDetails(
+    String userId, String communityId) async {
+  try {
+    // ✅ OPTIMIZED: Fetch only contributions with minimal fields
+    final querySnapshot = await _firestore
+        .collection('contributions')
+        .where('userId', isEqualTo: userId)
+        .where('communityId', isEqualTo: communityId)
+        .orderBy('createdAt', descending: true)
+        .limit(50) // Limit results to reduce reads
+        .get();
+    
+    final paymentHistory = <Map<String, dynamic>>[];
+    final programIds = <String>{};
+    
+    // First pass: collect contribution data and program IDs
+    for (final doc in querySnapshot.docs) {
+      final data = doc.data();
       
-      // Get program details for each contribution
-      final List<Map<String, dynamic>> paymentHistory = [];
+      // ✅ Only fetch essential fields
+      final contributionData = {
+        'contributionId': doc.id,
+        'programId': data['programId'],
+        'amount': data['amount'],
+        'paymentMethod': data['paymentMethod'],
+        'status': data['status'],
+        'createdAt': data['createdAt'],
+        
+        // ✅ Include edit fields (they should be small)
+        'isEdited': data['isEdited'] ?? false,
+        'editHistory': data['editHistory'] ?? [], // Edit history is stored as array
+        'lastEditedByUserName': data['lastEditedByUserName'],
+        'editReason': data['editReason'],
+        
+        // Include other needed fields
+        'isMonthlyContribution': data['isMonthlyContribution'] ?? false,
+        'monthId': data['monthId'],
+        'addedByUserName': data['addedByUserName'],
+      };
       
-      for (final contribution in userContributions) {
-        try {
-          // Get program details
-          final programDoc = await _firestore
-              .collection('programs')
-              .doc(contribution.programId)
-              .get();
-          
-          if (programDoc.exists) {
-            final programData = programDoc.data()!;
-            
-            paymentHistory.add({
-              'contributionId': contribution.contributionId,
-              'programId': contribution.programId,
-              'programTitle': programData['title'] ?? 'Unknown Program',
-              'programDate': programData['programDate'],
-              'amount': contribution.amount,
-              'paymentMethod': contribution.paymentMethod,
-              'status': contribution.status,
-              'createdAt': contribution.createdAt,
-              'programType': programData['programType'] ?? 'general',
-              'suggestedContribution': (programData['suggestedContribution'] ?? 0).toDouble(),
-            });
-          } else {
-            // Program not found, but still include contribution
-            paymentHistory.add({
-              'contributionId': contribution.contributionId,
-              'programId': contribution.programId,
-              'programTitle': 'Program Not Found',
-              'programDate': null,
-              'amount': contribution.amount,
-              'paymentMethod': contribution.paymentMethod,
-              'status': contribution.status,
-              'createdAt': contribution.createdAt,
-              'programType': 'unknown',
-              'suggestedContribution': 0,
-            });
+      paymentHistory.add(contributionData);
+      
+      if (data['programId'] != null) {
+        programIds.add(data['programId']);
+      }
+    }
+    
+    // ✅ OPTIMIZED: Batch fetch all programs at once (reduces reads)
+    if (programIds.isNotEmpty) {
+      final programsSnapshot = await _firestore
+          .collection('programs')
+          .where(FieldPath.documentId, whereIn: programIds.toList())
+          .get();
+      
+      // Create a map of program ID to program data
+      final programMap = {
+        for (var doc in programsSnapshot.docs)
+          doc.id: {
+            'title': doc.data()['title'] ?? 'Unknown Program',
+            'programType': doc.data()['programType'] ?? 'general',
+            'suggestedContribution': (doc.data()['suggestedContribution'] ?? 0).toDouble(),
           }
-        } catch (e) {
-          // If there's an error fetching program details, still include the contribution
-          paymentHistory.add({
-            'contributionId': contribution.contributionId,
-            'programId': contribution.programId,
-            'programTitle': 'Deleted Program',
-            'programDate': null,
-            'amount': contribution.amount,
-            'paymentMethod': contribution.paymentMethod,
-            'status': contribution.status,
-            'createdAt': contribution.createdAt,
-            'programType': 'error',
-            'suggestedContribution': 0,
-          });
+      };
+      
+      // Add program details to each contribution
+      for (var contribution in paymentHistory) {
+        final programId = contribution['programId'];
+        if (programId != null && programMap.containsKey(programId)) {
+          final programData = programMap[programId]!;
+          contribution['programTitle'] = programData['title'];
+          contribution['programType'] = programData['programType'];
+          contribution['suggestedContribution'] = programData['suggestedContribution'];
+        } else {
+          contribution['programTitle'] = 'Program Not Found';
+          contribution['programType'] = 'unknown';
+          contribution['suggestedContribution'] = 0;
         }
       }
-      
-      // Sort by creation date (newest first)
-      paymentHistory.sort((a, b) {
-        final Timestamp timestampA = a['createdAt'];
-        final Timestamp timestampB = b['createdAt'];
-        return timestampB.compareTo(timestampA);
-      });
-      
-      return paymentHistory;
-    } catch (e) {
-      throw Exception('Failed to get user payment history with details: $e');
     }
+    
+    return paymentHistory;
+    
+  } catch (e) {
+    print('❌ Error: $e');
+    return [];
   }
+}
 
   // ✅ REMOVED: bulkMarkPayments (not needed since all are completed)
 

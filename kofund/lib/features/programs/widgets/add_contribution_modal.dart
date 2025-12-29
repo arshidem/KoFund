@@ -1189,26 +1189,27 @@ Future<void> _submitContribution() async {
     final auth = Provider.of<AppAuthProvider>(context, listen: false);
     final currentUser = auth.user;
 
-    final contribution = ContributionModel(
-      contributionId: '', // Will be set by Firestore
-      programId: _selectedProgram!.programId,
-      userId: _selectedUser!.uid, // Who contributed
-      communityId: _selectedProgram!.communityId,
-      amount: _amount,
-      paymentMethod: _paymentMethod,
-      
-      // ✅ ADD: Entry tracking - who added this record
-      addedByUserId: currentUser?.uid,
-      addedByUserName: currentUser?.displayName ?? 'Admin',
-      addedAt: Timestamp.now(),
-      
-      // ✅ Monthly fields
-      isMonthlyContribution: _isMonthlyProgram,
-      monthId: _isMonthlyProgram ? _selectedMonth : null,
-      
-      // Existing timestamp field
-      createdAt: Timestamp.now(),
-    );
+final contribution = ContributionModel(
+  contributionId: '', // Will be set by Firestore
+  programId: _selectedProgram!.programId,
+  userId: _selectedUser!.uid, // Who contributed
+  contributorName: _selectedUser!.displayName ?? 'Unknown', // ✅ ADD THIS REQUIRED FIELD
+  communityId: _selectedProgram!.communityId,
+  amount: _amount,
+  paymentMethod: _paymentMethod,
+  
+  // ✅ ADD: Entry tracking - who added this record
+  addedByUserId: currentUser?.uid,
+  addedByUserName: currentUser?.displayName ?? 'Admin',
+  addedAt: Timestamp.now(),
+  
+  // ✅ Monthly fields
+  isMonthlyContribution: _isMonthlyProgram,
+  monthId: _isMonthlyProgram ? _selectedMonth : null,
+  
+  // Existing timestamp field
+  createdAt: Timestamp.now(),
+);
 
     // Use Provider to add contribution
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);

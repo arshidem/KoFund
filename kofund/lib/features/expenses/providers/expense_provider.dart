@@ -3,6 +3,7 @@ import '../../../core/services/expense_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../features/auth/providers/app_auth_provider.dart';
 import '../models/expense_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExpenseProvider with ChangeNotifier {
   final ExpenseService expenseService;
@@ -164,6 +165,25 @@ Future<void> updateExpense(
     
   } catch (e) {
     print('❌ ExpenseProvider error: $e');
+    rethrow;
+  }
+}
+// Add this to your ExpenseProvider class
+// In your ExpenseProvider class
+Future<void> updateExpenseWithHistory(
+  String expenseId,
+  Map<String, dynamic> updates,
+) async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('expenses')
+        .doc(expenseId)
+        .update({
+          ...updates,
+          'updatedAt': Timestamp.now(),
+        });
+  } catch (e) {
+    print('Error updating expense with history: $e');
     rethrow;
   }
 }
