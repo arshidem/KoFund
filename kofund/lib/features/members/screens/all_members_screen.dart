@@ -851,7 +851,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   Widget _buildMembersListContent(List<UserModel> displayedMembers, UserModel? currentUser, MemberProvider memberProvider) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      // padding: const EdgeInsets.symmetric(vertical: 4),
       children: [
         // Search Header (like history screen)
         if (_searchQuery.isNotEmpty) _buildSearchHeader(displayedMembers.length),
@@ -1204,6 +1204,7 @@ Widget _buildModernSearchBar() {
     }
 
     return Column(
+      
       children: [
         Material(
           color: isSelected 
@@ -1228,6 +1229,16 @@ Widget _buildModernSearchBar() {
               });
             } : null,
             child: Container(
+                          decoration: BoxDecoration(
+      color: AppColors.card(context),
+      // boxShadow: [
+      //   BoxShadow(
+      //     color: Colors.black.withOpacity(0.05),
+      //     blurRadius: 12,
+      //     offset: const Offset(0, 4),
+      //   ),
+      // ],
+    ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [

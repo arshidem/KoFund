@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/program_service.dart';
+import '../../../core/services/network_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/contribution_service.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -41,7 +42,19 @@ class _AddContributionModalState extends State<AddContributionModal> {
   bool _isMonthlyProgram = false;
   String? _selectedMonth;
   List<String> _availableMonths = [];
+late TextEditingController _amountController;
 
+@override
+void initState() {
+  super.initState();
+  _amountController = TextEditingController();
+}
+
+@override
+void dispose() {
+  _amountController.dispose();
+  super.dispose();
+}
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AppAuthProvider>(context);
@@ -1230,50 +1243,49 @@ Color _getRoleColor(String role) {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Amount',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary(context),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: TextEditingController(
-                            text: _amount > 0 ? _amount.toStringAsFixed(2) : '',
-                          ),
-                          decoration: InputDecoration(
-                            prefixText: '₹ ',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: AppColors.border(context),
-                              ),
-                            ),
-                            suffixText: _selectedProgram?.suggestedContribution != null 
-                                ? 'Suggested: ₹${_selectedProgram!.suggestedContribution!.toStringAsFixed(2)}'
-                                : null,
-                            suffixStyle: TextStyle(
-                              color: AppColors.primary(context),
-                              fontSize: 12,
-                            ),
-                          ),
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (value) {
-                            setState(() {
-                              _amount = double.tryParse(value) ?? 0;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+           child: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'Amount',
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppColors.textPrimary(context),
+      ),
+    ),
+    const SizedBox(height: 8),
+    TextField(
+      controller: _amountController, // Use a separate controller
+      decoration: InputDecoration(
+        prefixText: '₹ ',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(
+            color: AppColors.border(context),
+          ),
+        ),
+        suffixText: _selectedProgram?.suggestedContribution != null 
+            ? 'Suggested: ₹${_selectedProgram!.suggestedContribution!.toStringAsFixed(2)}'
+            : null,
+        suffixStyle: TextStyle(
+          color: AppColors.primary(context),
+          fontSize: 12,
+        ),
+        hintText: 'Enter amount', // Optional: Add a hint for user guidance
+      ),
+      style: TextStyle(
+        color: AppColors.textPrimary(context),
+      ),
+      keyboardType: TextInputType.numberWithOptions(decimal: true),
+      onChanged: (value) {
+        setState(() {
+          _amount = double.tryParse(value) ?? 0;
+        });
+      },
+    ),
+  ],
+),
                   ),
                 ),
 
@@ -1406,38 +1418,95 @@ Color _getRoleColor(String role) {
       ),
 
       // Fixed bottom button
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.background(context),
-          border: Border(
-            top: BorderSide(
-              color: AppColors.border(context),
-              width: 1,
-            ),
-          ),
-        ),
-        child: ElevatedButton(
-          onPressed: _amount > 0 ? _submitContribution : null,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            backgroundColor: AppColors.primary(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            disabledBackgroundColor: AppColors.textTertiary(context),
-          ),
-          child: Text(
-            _isMonthlyProgram ? 'Add Monthly Contribution' : 'Add Contribution',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+   Container(
+  width: double.infinity,
+  padding: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: AppColors.background(context),
+    border: Border(
+      top: BorderSide(
+        color: AppColors.border(context),
+        width: 1,
       ),
+    ),
+  ),
+  child: FutureBuilder<bool>(
+    future: NetworkService().isConnected,
+    builder: (context, snapshot) {
+      final bool isOnline = snapshot.data ?? true;
+      
+      return StreamBuilder<bool>(
+        stream: NetworkService().onConnectionChanged,
+        builder: (context, streamSnapshot) {
+          final bool currentIsOnline = streamSnapshot.data ?? isOnline;
+          final bool isDisabled = _amount <= 0 || !currentIsOnline;
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: isDisabled ? null : _submitContribution,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  disabledForegroundColor: Colors.white70,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      currentIsOnline ? Icons.add_circle_outline : Icons.wifi_off,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      currentIsOnline 
+                        ? (_isMonthlyProgram 
+                            ? 'Add Monthly Contribution' 
+                            : 'Add Contribution')
+                        : 'Offline',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              if (!currentIsOnline)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: const [
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.redAccent,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Internet connection required',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+)
     ],
   );
 }

@@ -9,6 +9,7 @@ import '../../../expenses/models/expense_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
+import '../../../../core/services/network_service.dart'; // Add this import
 import 'package:kofund/features/history/screens/edit_expense_screen.dart';
 
 // Add this class at the top of your file, after the imports
@@ -74,107 +75,122 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
-    final isAdmin = _isAdmin(context);
-    final currentUser = authProvider.user;
-    
-    return Column(
-      children: [
-        // Expense Summary
-        _buildExpenseSummary(context),
-        
-        const SizedBox(height: 0), // 8px gap
-        
-        // Search and Filter Bar
-        _buildSearchFilterBar(context),
-        
-        const SizedBox(height: 0), // 8px gap
-        
-        // Expenses List
-        Expanded(
-          child: StreamBuilder<List<ExpenseModel>>(
-            stream: Provider.of<ExpenseProvider>(context, listen: false)
-                .streamProgramExpenses(widget.program.programId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary(context),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error,
-                        color: AppColors.error(context),
-                        size: 48,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Error loading expenses',
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context),
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${snapshot.error}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final expenses = snapshot.data ?? [];
-              final filteredExpenses = _filterExpenses(expenses);
-
-              if (filteredExpenses.isEmpty) {
-                return _buildEmptyState(expenses.isEmpty, isAdmin, context);
-              }
-
-              return ListView.builder(
-                itemCount: filteredExpenses.length,
-                itemBuilder: (context, index) {
-                  final expense = filteredExpenses[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0), // 8px gap between cards
-                    child: _buildExpenseCard(expense, context, isAdmin),
+@override
+Widget build(BuildContext context) {
+  final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
+  final isAdmin = _isAdmin(context);
+  final currentUser = authProvider.user;
+  
+  return Stack(
+    children: [
+      // Main content (Column)
+      Column(
+        children: [
+          // Expense Summary
+          _buildExpenseSummary(context),
+          
+          const SizedBox(height: 0), // 8px gap
+          
+          // Search and Filter Bar
+          _buildSearchFilterBar(context),
+          
+          const SizedBox(height: 0), // 8px gap
+          
+          // Expenses List
+          Expanded(
+            child: StreamBuilder<List<ExpenseModel>>(
+              stream: Provider.of<ExpenseProvider>(context, listen: false)
+                  .streamProgramExpenses(widget.program.programId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary(context),
+                    ),
                   );
-                },
-              );
-            },
-          ),
-        ),
+                }
 
-        // Add Expense Button (Admin Only) or Not Approved Message
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal:8, vertical: 16), // 8px padding
-          child: Column(
-            children: [
-              if (currentUser != null && !currentUser.isApproved) 
-                _buildNotApprovedMessage(context),
-              
-              if (isAdmin || (currentUser != null && currentUser.isApproved)) 
-                _buildAddExpenseButton(context, isAdmin),
-            ],
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error,
+                          color: AppColors.error(context),
+                          size: 48,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Error loading expenses',
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${snapshot.error}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final expenses = snapshot.data ?? [];
+                final filteredExpenses = _filterExpenses(expenses);
+
+                if (filteredExpenses.isEmpty) {
+                  return _buildEmptyState(expenses.isEmpty, isAdmin, context);
+                }
+
+                return ListView.builder(
+                  itemCount: filteredExpenses.length,
+                  itemBuilder: (context, index) {
+                    final expense = filteredExpenses[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0), // 8px gap between cards
+                      child: _buildExpenseCard(expense, context, isAdmin),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // Not Approved Message only (no button here anymore)
+          if (currentUser != null && !currentUser.isApproved)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              child: _buildNotApprovedMessage(context),
+            ),
+        ],
+      ),
+
+      // Floating Add Button - Positioned like your contribution modal
+      if (isAdmin || (currentUser != null && currentUser.isApproved))
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            onPressed: () => _showAddExpenseDialog(context, isAdmin),
+            backgroundColor: AppColors.primary(context),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
+            child: const Icon(Icons.add),
           ),
         ),
-      ],
-    );
-  }
+    ],
+  );
+}
 
 Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmin) {
   return Column(
@@ -765,25 +781,24 @@ Widget _buildExpenseSummary(BuildContext context) {
     );
   }
 
-  Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text('Add Expense'),
+Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
+  return Visibility(
+    child: Positioned(
+      bottom: 16,
+      right: 16,
+      child: FloatingActionButton(
         onPressed: () => _showAddExpenseDialog(context, isAdmin),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary(context),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          minimumSize: const Size(double.infinity, 50),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
+        elevation: 4,
+        child: const Icon(Icons.add),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildNotApprovedMessage(BuildContext context) {
     return Container(
@@ -1954,79 +1969,180 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
     RegExp(r'[a-zA-Z0-9\s]'), // Only allow letters, numbers, and spaces
   );
 
+  // Variables for error messages
+  String? titleError;
+  String? amountError;
+
   showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setDialogState) {
-        return AlertDialog(
-          backgroundColor: AppColors.card(context),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'Add New Expense',
+        // Function to reset errors when user types
+        void clearTitleError() {
+          if (titleError != null) {
+            setDialogState(() {
+              titleError = null;
+            });
+          }
+        }
+
+        void clearAmountError() {
+          if (amountError != null) {
+            setDialogState(() {
+              amountError = null;
+            });
+          }
+        }
+
+        // Validation function
+        Future<void> validateAndSubmit(bool isOnline) async {
+          // Check network first
+          if (!isOnline) {
+            setDialogState(() {
+              titleError = 'No internet connection';
+            });
+            return;
+          }
+
+          // Reset errors
+          setDialogState(() {
+            titleError = null;
+            amountError = null;
+          });
+
+          bool hasError = false;
+
+          // Validate title
+          if (titleController.text.isEmpty) {
+            setDialogState(() {
+              titleError = 'Please enter expense title';
+              hasError = true;
+            });
+          } else if (titleController.text.length < 3) {
+            setDialogState(() {
+              titleError = 'Title must be at least 3 characters';
+              hasError = true;
+            });
+          }
+
+          // Validate amount
+          if (amountController.text.isEmpty) {
+            setDialogState(() {
+              amountError = 'Please enter amount';
+              hasError = true;
+            });
+          } else {
+            final amount = double.tryParse(amountController.text);
+            if (amount == null || amount <= 0) {
+              setDialogState(() {
+                amountError = 'Please enter a valid amount greater than 0';
+                hasError = true;
+              });
+            } else if (amount > 9999999.99) {
+              setDialogState(() {
+                amountError = 'Amount cannot exceed ₹ 99,99,999.99';
+                hasError = true;
+              });
+            }
+          }
+
+          // If no errors, proceed
+          if (!hasError) {
+            try {
+              await _createExpense(
+                context: context,
+                title: titleController.text.trim(),
+                description: descriptionController.text.trim(),
+                amount: double.parse(amountController.text),
+                category: selectedCategory,
+                expenseDate: selectedDate,
+                isAdmin: isAdmin,
+              );
+
+              Navigator.pop(context);
+            } catch (e) {
+              setDialogState(() {
+                amountError = 'Failed to add expense: $e';
+              });
+            }
+          }
+        }
+
+return AlertDialog(
+  backgroundColor: AppColors.card(context),
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  contentPadding: const EdgeInsets.all(20),
+  insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+  title: Text(
+    'Add New Expense',
+    style: TextStyle(
+      color: AppColors.textPrimary(context),
+      fontSize: 16,
+    ),
+  ),
+  content: Container(
+    width: MediaQuery.of(context).size.width * 0.8, // 70% width - good choice!
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title field with error
+          TextField(
+            controller: titleController,
+            inputFormatters: [titleInputFormatter],
+            maxLength: 50,
+            decoration: InputDecoration(
+              labelText: 'Expense Title *',
+              labelStyle: TextStyle(
+                color: AppColors.textSecondary(context),
+              ),
+              errorText: titleError, // Make sure you add this for inline validation
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.border(context),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.border(context),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 2,
+                ),
+              ),
+              filled: true,
+              fillColor: AppColors.surface(context),
+              counterText: '${titleController.text.length}/50',
+              counterStyle: TextStyle(
+                fontSize: 11,
+                color: titleController.text.length > 45 
+                    ? Colors.orange 
+                    : AppColors.textTertiary(context),
+              ),
+            ),
             style: TextStyle(
               color: AppColors.textPrimary(context),
-              fontSize: 16,
+              fontSize: 13,
             ),
+            onChanged: (value) {
+              setDialogState(() {}); // Update counter
+              clearTitleError(); // Clear error when typing
+            },
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Expense Title Field
-                TextField(
-                  controller: titleController,
-                  inputFormatters: [titleInputFormatter],
-                  maxLength: 50, // Limit to 50 characters
-                  decoration: InputDecoration(
-                    labelText: 'Expense Title *',
-                    labelStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: AppColors.primary(context),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface(context),
-                    counterText: '${titleController.text.length}/50', // Character counter
-                    counterStyle: TextStyle(
-                      fontSize: 11,
-                      color: titleController.text.length > 45 
-                          ? Colors.orange 
-                          : AppColors.textTertiary(context),
-                    ),
-                  ),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
-                  ),
-                  onChanged: (value) {
-                    setDialogState(() {}); // Update counter
-                  },
-                ),
                 const SizedBox(height: 12),
-                
+
                 // Description Field
                 TextField(
                   controller: descriptionController,
-                  maxLength: 200, // Limit to 200 characters
+                  maxLength: 200,
                   decoration: InputDecoration(
                     labelText: 'Description (optional)',
                     labelStyle: TextStyle(
@@ -2071,20 +2187,21 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                   },
                 ),
                 const SizedBox(height: 12),
-                
-                // Amount Field
+
+                // Amount field with error
                 TextField(
                   controller: amountController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  maxLength: 10, // Limit to 10 digits (including decimal)
+                  maxLength: 10,
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')), // Only numbers and decimal
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],
                   decoration: InputDecoration(
                     labelText: 'Amount (₹) *',
                     labelStyle: TextStyle(
                       color: AppColors.textSecondary(context),
                     ),
+                    errorText: amountError,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -2117,9 +2234,12 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                     color: AppColors.textPrimary(context),
                     fontSize: 13,
                   ),
+                  onChanged: (value) {
+                    clearAmountError();
+                  },
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Category Dropdown
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
@@ -2168,7 +2288,7 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                   },
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Date Picker
                 Row(
                   children: [
@@ -2203,7 +2323,7 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                     ),
                   ],
                 ),
-                
+
                 // Info message for non-admin users
                 if (!isAdmin)
                   Container(
@@ -2235,8 +2355,66 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                       ],
                     ),
                   ),
+
+                // Network status and submit button
+                FutureBuilder<bool>(
+                  future: NetworkService().isConnected,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Container(
+                        margin: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: const CircularProgressIndicator(),
+                      );
+                    }
+
+                    final bool isOnline = snapshot.data ?? true;
+
+                    return StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: isOnline,
+                      builder: (context, streamSnapshot) {
+                        final bool currentIsOnline = streamSnapshot.data ?? isOnline;
+
+                        return Column(
+                          children: [
+                            if (!currentIsOnline)
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(top: 16),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(
+                                      Icons.wifi_off,
+                                      size: 16,
+                                      color: Colors.red,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'No internet connection.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
               ],
             ),
+          ),
           ),
           actions: [
             TextButton(
@@ -2249,62 +2427,46 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                 ),
               ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                // Validate inputs
-                if (titleController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter expense title')),
-                  );
-                  return;
-                }
-                
-                if (titleController.text.length < 3) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Title must be at least 3 characters')),
-                  );
-                  return;
-                }
-                
-                if (amountController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter amount')),
-                  );
-                  return;
-                }
+            FutureBuilder<bool>(
+              future: NetworkService().isConnected,
+              builder: (context, snapshot) {
+                final bool isOnline = snapshot.data ?? true;
 
-                final amount = double.tryParse(amountController.text);
-                if (amount == null || amount <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid amount greater than 0')),
-                  );
-                  return;
-                }
-                
-                if (amount > 9999999.99) { // Limit to 10 million
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Amount cannot exceed ₹ 99,99,999.99')),
-                  );
-                  return;
-                }
+                return StreamBuilder<bool>(
+                  stream: NetworkService().onConnectionChanged,
+                  initialData: isOnline,
+                  builder: (context, streamSnapshot) {
+                    final bool currentIsOnline = streamSnapshot.data ?? isOnline;
 
-                await _createExpense(
-                  context: context,
-                  title: titleController.text.trim(),
-                  description: descriptionController.text.trim(),
-                  amount: amount,
-                  category: selectedCategory,
-                  expenseDate: selectedDate,
-                  isAdmin: isAdmin,
+                    return ElevatedButton(
+                      onPressed: currentIsOnline
+                          ? () => validateAndSubmit(currentIsOnline)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: currentIsOnline
+                            ? AppColors.primary(context)
+                            : Colors.grey[600],
+                        disabledBackgroundColor: Colors.grey.withOpacity(0.5),
+                        disabledForegroundColor: Colors.white70,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            currentIsOnline ? Icons.add : Icons.wifi_off,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            currentIsOnline ? 'Add Expense' : 'Offline',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
-
-                Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Add Expense'),
             ),
           ],
         );

@@ -339,18 +339,17 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                 
                 // Recent Programs List
                 if (recentPrograms.isNotEmpty) ...[
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   _buildRecentProgramsList(recentPrograms),
                 ],
                 
                 // Recent Contributions List
                 if (recentContributions.isNotEmpty) ...[
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   _buildRecentContributionsList(recentContributions),
                 ],
                 
-                const SizedBox(height: 18),
-                _buildAccountInfo(user),
+                // _buildAccountInfo(user),
               ],
             ),
           ),
@@ -418,25 +417,28 @@ AppBar _buildAppBar(bool showBackButton) {
 }
 
 Widget _buildProfileHeader(UserModel user) {
-  // Get the same gradient from AppBar
-  final gradient = AppColors.primaryGradient(context);
-  
+  // ✅ Old gradient for avatar only
+  final Gradient avatarGradient = AppColors.primaryGradient(context);
+
+  // ✅ Safe initial
+  final String initial =
+      (user.displayName != null && user.displayName!.trim().isNotEmpty)
+          ? user.displayName!.trim()[0].toUpperCase()
+          : 'U';
+
   return ClipRRect(
     borderRadius: BorderRadius.circular(20),
     child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
+        color: AppColors.card(context), // ✅ Card background
         borderRadius: BorderRadius.circular(24),
-        // ✅ Exact same gradient as AppBar
-        gradient: gradient,
-        // ✅ Unified border
         border: Border.all(
-          color: Colors.white.withOpacity(0.3), // Lighter border to match gradient
+          color: AppColors.border(context),
         ),
-        // ✅ Unified soft shadow (same as Invite Link & Stats)
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1), // Slightly stronger for gradient
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -450,26 +452,35 @@ Widget _buildProfileHeader(UserModel user) {
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
+              /// Avatar (Initial + Gradient)
               Container(
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  // Avatar with gradient overlay
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withOpacity(0.3),
-                      Colors.white.withOpacity(0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                  gradient: avatarGradient, // ✅ Old gradient restored
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.6),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  size: 54,
-                  color: Colors.white,
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      fontSize: 44,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ),
               ),
 
@@ -486,14 +497,16 @@ Widget _buildProfileHeader(UserModel user) {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        // Edit button with gradient
-                        gradient: gradient,
+                        color: AppColors.primary(context),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(
+                          color: AppColors.card(context),
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
-                            blurRadius: 10,
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
                         ],
@@ -512,14 +525,14 @@ Widget _buildProfileHeader(UserModel user) {
 
           const SizedBox(height: 18),
 
-          /// Name and other text elements remain the same
+          /// Name
           Text(
             user.displayName ?? 'No Name',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Colors.white, // White text on gradient background
+              color: AppColors.textPrimary(context),
             ),
           ),
 
@@ -529,72 +542,82 @@ Widget _buildProfileHeader(UserModel user) {
           Text(
             user.email,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: Colors.white70, // Slightly transparent white
+              color: AppColors.textSecondary(context),
             ),
           ),
 
+          /// Phone (optional)
           if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               user.phoneNumber!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.white70,
+                color: AppColors.textSecondary(context),
               ),
             ),
           ],
 
           const SizedBox(height: 16),
 
-          /// Status badge with gradient overlay
-   if (user.communityId != null)
-  Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-    decoration: BoxDecoration(
-      color: user.isAdmin 
-          ? Colors.orange.withOpacity(0.25)  // Orange for admin
-          : Colors.white.withOpacity(0.25),  // White for member
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(
-        color: user.isAdmin 
-            ? Colors.orange.withOpacity(0.5) 
-            : Colors.white.withOpacity(0.5),
-      ),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          user.isAdmin ? Icons.admin_panel_settings : Icons.group_rounded,
-          size: 16,
-          color: user.isAdmin ? Colors.orange : Colors.white,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          user.isAdmin ? 'Community Admin' : 'Community Member',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: user.isAdmin ? Colors.orange : Colors.white,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
-    ),
-  ),
+          /// Status badge
+          if (user.communityId != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: user.isAdmin
+                    ? Colors.orange.withOpacity(0.15)
+                    : AppColors.surface(context),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: user.isAdmin
+                      ? Colors.orange.withOpacity(0.4)
+                      : AppColors.border(context),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    user.isAdmin
+                        ? Icons.admin_panel_settings
+                        : Icons.group_rounded,
+                    size: 16,
+                    color: user.isAdmin
+                        ? Colors.orange
+                        : AppColors.textPrimary(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    user.isAdmin
+                        ? 'Community Admin'
+                        : 'Community Member',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: user.isAdmin
+                          ? Colors.orange
+                          : AppColors.textPrimary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     ),
   );
 }
 
-Widget _buildStatisticsCards(int participations, int contributions, double totalAmount) {
-  // Get the same gradient
-  final gradient = AppColors.primaryGradient(context);
-  
+
+Widget _buildStatisticsCards(
+  int participations,
+  int contributions,
+  double totalAmount,
+) {
   return Row(
     children: [
       Expanded(
@@ -602,7 +625,6 @@ Widget _buildStatisticsCards(int participations, int contributions, double total
           title: 'Participations',
           value: participations.toString(),
           icon: Icons.event,
-          gradient: gradient, // Pass gradient here
           onTap: _navigateToParticipationHistory,
         ),
       ),
@@ -612,7 +634,6 @@ Widget _buildStatisticsCards(int participations, int contributions, double total
           title: 'Contributions',
           value: contributions.toString(),
           icon: Icons.attach_money,
-          gradient: gradient, // Pass gradient here
           onTap: _navigateToContributionHistory,
         ),
       ),
@@ -620,28 +641,25 @@ Widget _buildStatisticsCards(int participations, int contributions, double total
   );
 }
 
+
 Widget _buildStatCard({
   required String title,
   required String value,
   required IconData icon,
-  required Gradient gradient,
   required VoidCallback onTap,
 }) {
   return ClipRRect(
     borderRadius: BorderRadius.circular(24),
     child: Container(
       decoration: BoxDecoration(
+        color: AppColors.card(context), // ✅ CARD BG
         borderRadius: BorderRadius.circular(24),
-        // ✅ SAME gradient as AppBar
-        gradient: gradient,
-        // ✅ SAME border weight
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: AppColors.border(context),
         ),
-        // ✅ SAME shadow strength
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -657,41 +675,44 @@ Widget _buildStatCard({
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon container — white overlay
+                /// Icon container
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
+                    color: AppColors.surface(context),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
+                      color: AppColors.border(context),
                     ),
                   ),
                   child: Icon(
                     icon,
                     size: 22,
-                    color: Colors.white,
+                    color: AppColors.primary(context),
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white70,
+                    color: AppColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -704,339 +725,455 @@ Widget _buildStatCard({
 }
 
 
-  // Recent Programs List
-  Widget _buildRecentProgramsList(List<Map<String, dynamic>> programs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Recent Programs',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    if (programs.length >= 3)
-                      TextButton(
-                        onPressed: _navigateToParticipationHistory,
-                        child: Text(
-                          'See All',
-                          style: TextStyle(
-                            color: AppColors.primary(context),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Column(
-                  children: programs.map((program) => _buildProgramListItem(program)).toList(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
-  // Program List Item
-  Widget _buildProgramListItem(Map<String, dynamic> program) {
-    final programTitle = program['programTitle'] ?? 'Unknown Program';
-    final joinedAt = program['joinedAt'] is Timestamp 
-        ? program['joinedAt'].toDate() 
-        : DateTime.now();
-    final hasPaid = program['hasPaidContribution'] ?? false;
-
+// Recent Programs List
+Widget _buildRecentProgramsList(List<Map<String, dynamic>> programs) {
+  if (programs.isEmpty) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: _navigateToParticipationHistory,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary(context).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.event,
-                    size: 20,
-                    color: AppColors.primary(context),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        programTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context),
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Joined ${_formatRelativeDate(joinedAt)}',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(context),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: hasPaid ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: hasPaid ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    hasPaid ? 'Paid' : 'Pending',
-                    style: TextStyle(
-                      color: hasPaid ? Colors.green : Colors.orange,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.event_busy_rounded,
+            size: 36,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'No recent programs',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(context),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // Recent Contributions List
-  Widget _buildRecentContributionsList(List<Map<String, dynamic>> contributions) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
+  return Container(
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.border(context)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// Header (compact)
+          Row(
+            children: [
+              Icon(
+                Icons.event_note_rounded,
+                size: 18,
+                color: AppColors.primary(context),
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Recent Contributions',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    if (contributions.length >= 5)
-                      TextButton(
-                        onPressed: _navigateToContributionHistory,
-                        child: Text(
-                          'See All',
-                          style: TextStyle(
-                            color: AppColors.primary(context),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Column(
-                  children: contributions.map((contribution) => _buildContributionListItem(contribution)).toList(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Contribution List Item
-  Widget _buildContributionListItem(Map<String, dynamic> contribution) {
-    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-    final amount = contribution['amount'] ?? 0.0;
-    final createdAt = contribution['createdAt'] is Timestamp 
-        ? contribution['createdAt'].toDate() 
-        : DateTime.now();
-    final paymentMethod = contribution['paymentMethod'] ?? 'cash';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: _navigateToContributionHistory,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.payments,
-                    size: 20,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        programTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context),
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_formatRelativeDate(createdAt)} • ${_formatPaymentMethod(paymentMethod)}',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(context),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '₹${amount.toStringAsFixed(2)}',
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Recent Programs',
                   style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountInfo(UserModel user) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context).withOpacity(0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Account Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary(context),
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildInfoRow('User ID', user.uid),
-                _buildInfoRow('Member Since', _formatDate(user.createdAt)),
-_buildInfoRow('Role', user.isAdmin ? 'ADMIN' : 'MEMBER'),                _buildInfoRow('Status', user.isApproved ? 'Approved' : 'Pending Approval'),
+              ),
+              if (programs.length >= 3)
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _navigateToParticipationHistory,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text(
+                      'See all',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary(context),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
 
-              ],
+          const SizedBox(height: 8),
+
+          /// Program list
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: programs.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 10,
+              thickness: 0.8,
+              color: AppColors.border(context),
+            ),
+            itemBuilder: (context, index) {
+              return _buildProgramListItem(programs[index]);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+Widget _buildProgramListItem(Map<String, dynamic> program) {
+  final programTitle = program['programTitle'] ?? 'Unknown Program';
+  final joinedAt = program['joinedAt'] is Timestamp
+      ? program['joinedAt'].toDate()
+      : DateTime.now();
+  final hasPaid = program['hasPaidContribution'] ?? false;
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: _navigateToParticipationHistory,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6), // ⬇️ compact
+        child: Row(
+          children: [
+            /// Icon
+            Container(
+              width: 36, // ⬇️
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.event_rounded,
+                size: 18,
+                color: AppColors.primary(context),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            /// Title + date
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    programTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13, // ⬇️
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Joined ${_formatRelativeDate(joinedAt)}',
+                    style: TextStyle(
+                      fontSize: 11, // ⬇️
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            /// Status badge (compact)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: hasPaid
+                    ? Colors.green.withOpacity(0.12)
+                    : Colors.orange.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: hasPaid
+                      ? Colors.green.withOpacity(0.35)
+                      : Colors.orange.withOpacity(0.35),
+                ),
+              ),
+              child: Text(
+                hasPaid ? 'Paid' : 'Pending',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: hasPaid ? Colors.green : Colors.orange,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildRecentContributionsList(
+  List<Map<String, dynamic>> contributions,
+) {
+  if (contributions.isEmpty) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.receipt_long_rounded,
+            size: 36,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'No recent contributions',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(context),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  return Container(
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.border(context)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8), // ⬇️ tighter
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// Header (compact)
+          Row(
+            children: [
+              Icon(
+                Icons.history_rounded,
+                size: 18,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Recent Contributions',
+                  style: TextStyle(
+                    fontSize: 16, // ⬇️
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+              if (contributions.length >= 5)
+                InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _navigateToContributionHistory,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4), // ⬇️
+                    child: Text(
+                      'See all',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary(context),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 4), // ⬇️
+
+          /// List (compact separators)
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: contributions.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 10, // ⬇️
+              thickness: 0.8,
+              color: AppColors.border(context),
+            ),
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2), // ⬇️
+                child: _buildContributionListItem(contributions[index]),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+Widget _buildContributionListItem(Map<String, dynamic> contribution) {
+  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+  final amount = (contribution['amount'] ?? 0).toDouble();
+  final createdAt = contribution['createdAt'] is Timestamp
+      ? contribution['createdAt'].toDate()
+      : DateTime.now();
+  final paymentMethod = contribution['paymentMethod'] ?? 'cash';
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: _navigateToContributionHistory,
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 6, vertical: 8), // ⬇️ compact
+        child: Row(
+          children: [
+            /// Icon
+            Container(
+              width: 34, // ⬇️
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.payments_rounded,
+                size: 18,
+                color: Colors.green,
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            /// Title + meta
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    programTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13, // ⬇️
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_formatRelativeDate(createdAt)} • ${_formatPaymentMethod(paymentMethod)}',
+                    style: TextStyle(
+                      fontSize: 11, // ⬇️
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            /// Amount
+            Text(
+              '₹${amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 13, // ⬇️
+                fontWeight: FontWeight.w800,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+
+ Widget _buildAccountInfo(UserModel user) {
+  return Container(
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.border(context)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// Header
+          Row(
+            children: [
+              Icon(
+                Icons.manage_accounts_rounded,
+                size: 18,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Account Information',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          _buildInfoRow('User ID', user.uid),
+          _buildInfoRow('Member Since', _formatDate(user.createdAt)),
+          _buildInfoRow('Role', user.isAdmin ? 'Admin' : 'Member'),
+        ],
+      ),
+    ),
+  );
+}
+
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(

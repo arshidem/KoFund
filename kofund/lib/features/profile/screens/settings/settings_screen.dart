@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/developer/screens/developer_dashboard_screen.dart';
 import 'package:kofund/features/developer/screens/add_developer_screen.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/services/network_service.dart';
 import 'dart:ui';
 import 'package:kofund/core/utils/app_info.dart';
  
@@ -517,185 +518,137 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
     );
   }
 
-  void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Leave Community?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        content: Text(
-          'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
+void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        'Leave Community?',
+        style: TextStyle(color: AppColors.textPrimary(context)),
+      ),
+      backgroundColor: AppColors.card(context),
+      content: Text(
+        'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
+        style: TextStyle(color: AppColors.textSecondary(context)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary(context)),
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
+        ),
+        TextButton(
+          onPressed: () async {
+            // Check internet connection first
+            final bool isConnected = await NetworkService().isConnected;
+            
+            if (!isConnected) {
+              // Show snackbar and keep dialog open
+              SnackbarHelper.showError(
+                context,
+                'No internet connection. Please check your network and try again.'
+              );
+              return; // Don't close dialog or proceed
+            }
+            
+            // If connected, proceed with leaving
+            Navigator.pop(context);
+            
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Leaving community...'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+
+            final success = await profileProvider.leaveCommunity();
+            
+            if (success) {
               scaffoldMessenger.showSnackBar(
                 const SnackBar(
-                  content: Text('Leaving community...'),
-                  backgroundColor: Colors.orange,
+                  content: Text('Successfully left community'),
+                  backgroundColor: Colors.green,
                 ),
               );
-
-              final success = await profileProvider.leaveCommunity();
               
-              if (success) {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Successfully left community'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  RouteNames.login,
-                  (route) => false,
-                );
-              } else {
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to leave community: ${profileProvider.error}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error(context),
-            ),
-            child: const Text('Leave'),
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                RouteNames.login,
+                (route) => false,
+              );
+            } else {
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text('Failed to leave community: ${profileProvider.error}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.error(context),
           ),
-        ],
-      ),
-    );
+          child: const Text('Leave'),
+        ),
+      ],
+    ),
+  );
+}
+void _showDeleteAccountDialog(AppAuthProvider authProvider) {
+  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+  final user = FirebaseAuth.instance.currentUser;
+  
+  if (user == null) {
+    SnackbarHelper.showError(context, 'No user found');
+    return;
   }
 
-  void _showDeleteAccountDialog(AppAuthProvider authProvider) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final user = FirebaseAuth.instance.currentUser;
-    
-    if (user == null) {
-      SnackbarHelper.showError(context, 'No user found');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Delete Account?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'This action cannot be undone.\n\n'
-              'All your data will be permanently deleted.',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-            const SizedBox(height: 10),
-            
-            if (_getUserProvider(user) == 'google') ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.account_circle, color: Colors.blue, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Google Account User',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          Text(
-                            'You will need to sign in again with Google',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-            
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        'Delete Account?',
+        style: TextStyle(color: AppColors.textPrimary(context)),
+      ),
+      backgroundColor: AppColors.card(context),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'This action cannot be undone.\n\n'
+            'All your data will be permanently deleted.',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
+          const SizedBox(height: 10),
+          
+          if (_getUserProvider(user) == 'google') ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange),
+                border: Border.all(color: Colors.blue),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'If deletion fails:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 26),
+                  Icon(Icons.account_circle, color: Colors.blue, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '1. Sign out',
+                          'Google Account User',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
                           ),
                         ),
                         Text(
-                          '2. Sign in again',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
-                        ),
-                        Text(
-                          '3. Delete immediately',
+                          'You will need to sign in again with Google',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary(context),
@@ -707,39 +660,111 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
                 ],
               ),
             ),
+            const SizedBox(height: 10),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
+          
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange),
             ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'If deletion fails:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 26),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '1. Sign out',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                      Text(
+                        '2. Sign in again',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                      Text(
+                        '3. Delete immediately',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            onPressed: () async {
-              Navigator.pop(context);
-              final providerType = _getUserProvider(user);
-              
-              if (providerType == 'google') {
-                await _attemptAccountDeletion(profileProvider);
-              } else if (providerType == 'email') {
-                _showPasswordDialog(profileProvider);
-              } else {
-                await _attemptAccountDeletion(profileProvider);
-              }
-            },
-            child: const Text('Delete Account'),
           ),
         ],
       ),
-    );
-  }
-
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.error(context),
+          ),
+          onPressed: () async {
+            // Check internet connection first
+            final bool isConnected = await NetworkService().isConnected;
+            
+            if (!isConnected) {
+              // Show snackbar and keep dialog open
+              SnackbarHelper.showError(
+                context,
+                'No internet connection. Please check your network and try again.'
+              );
+              return; // Don't close dialog or proceed
+            }
+            
+            // If connected, proceed with deletion
+            Navigator.pop(context);
+            final providerType = _getUserProvider(user);
+            
+            if (providerType == 'google') {
+              await _attemptAccountDeletion(profileProvider);
+            } else if (providerType == 'email') {
+              _showPasswordDialog(profileProvider);
+            } else {
+              await _attemptAccountDeletion(profileProvider);
+            }
+          },
+          child: const Text('Delete Account'),
+        ),
+      ],
+    ),
+  );
+}
 
 
 // New method to show password dialog for email users
@@ -931,7 +956,7 @@ void _showReauthenticationRequiredDialog() {
   );
 }
 
-  void _showLogoutDialog(AppAuthProvider authProvider) {
+void _showLogoutDialog(AppAuthProvider authProvider) {
   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
   final memberProvider = Provider.of<MemberProvider>(context, listen: false);
   
@@ -947,6 +972,19 @@ void _showReauthenticationRequiredDialog() {
         ),
         TextButton(
           onPressed: () async {
+            // Check internet connection first
+            final bool isConnected = await NetworkService().isConnected;
+            
+            if (!isConnected) {
+              // Show snackbar and close dialog
+              Navigator.pop(context);
+              SnackbarHelper.showError(
+                context, 
+                'No internet connection. Please check your network and try again.'
+              );
+              return;
+            }
+            
             Navigator.pop(context); // close the dialog
             
             // 1. Clear ALL provider data first

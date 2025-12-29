@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/program_service.dart';
+import '../../../core/services/network_service.dart';
 import '../../../core/services/expense_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -34,6 +35,7 @@ class _AddExpenseModalState extends State<AddExpenseModal> {
   double _amount = 0;
   String _category = 'other';
   DateTime _expenseDate = DateTime.now();
+  bool _isLoading = false; // Add this line
   
   // For character counters
   int _titleLength = 0;
@@ -519,28 +521,91 @@ Future<void> _loadPrograms() async {
                       const SizedBox(height: 32),
 
                       // Submit button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _submitExpense,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
+                   SizedBox(
+  width: double.infinity,
+  child: FutureBuilder<bool>(
+    future: NetworkService().isConnected,
+    builder: (context, snapshot) {
+      final bool isOnline = snapshot.data ?? true;
+      
+      return StreamBuilder<bool>(
+        stream: NetworkService().onConnectionChanged,
+        builder: (context, streamSnapshot) {
+          final bool currentIsOnline = streamSnapshot.data ?? isOnline;
+          final bool isDisabled = _isLoading || !currentIsOnline;
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: isDisabled ? null : _submitExpense,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  disabledForegroundColor: Colors.white70,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            currentIsOnline ? Icons.add : Icons.wifi_off,
+                            size: 20,
                           ),
-                          child: Text(
-                            'Add Expense',
+                          const SizedBox(width: 10),
+                          Text(
+                            currentIsOnline ? 'Add Expense' : 'Offline',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                        ],
+                      ),
+              ),
+              
+              if (!currentIsOnline)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: const [
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.redAccent,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Internet connection required',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.redAccent,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+)
                     ],
                   ),
                 ),

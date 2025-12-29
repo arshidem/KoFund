@@ -282,99 +282,88 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  Future<void> _saveChanges() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+Future<void> _saveChanges() async {
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
 
-    if (_expense == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Expense data not loaded'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  if (_expense == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Expense data not loaded'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
 
-    // Parse amount
-    final amountText = _amountController.text;
-    final newAmount = double.tryParse(amountText) ?? 0.0;
+  // Get current user info
+  final authProvider = context.read<AppAuthProvider>();
+  final currentUser = authProvider.user;
+  
+  if (currentUser == null) {
+    throw Exception('User not authenticated');
+  }
 
-    // Check if there are actual changes
-    bool hasChanges = newAmount != _expense!.amount ||
-        _titleController.text.trim() != _expense!.title ||
-        _descriptionController.text.trim() != _expense!.description ||
-        _selectedProgramId != _expense!.programId ||
-        _selectedCategory != _expense!.category ||
-        _selectedPaymentMethod != _expense!.paymentMethod ||
-        _selectedDate != _expense!.expenseDate ||
-        _vendorController.text.trim() != (_expense!.vendorName ?? '') ||
-        _referenceController.text.trim() != (_expense!.referenceNumber ?? '');
+  // Check if user is admin
+  final bool isAdmin = currentUser.isAdmin == true && currentUser.isApproved == true;
 
-    if (!hasChanges) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No changes detected'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      widget.onSave(null);
-      return;
-    }
+  print('👤 User is Admin: $isAdmin');
+  print('📊 Current expense status: ${_expense!.status}');
 
-    // Show confirmation dialog if amount or program changed
-    if (newAmount != _expense!.amount || _selectedProgramId != _expense!.programId) {
-      String changes = '';
+  // Parse amount
+  final amountText = _amountController.text;
+  final newAmount = double.tryParse(amountText) ?? 0.0;
+
+  // Check if there are actual changes (excluding status for now)
+  bool hasChanges = newAmount != _expense!.amount ||
+      _titleController.text.trim() != _expense!.title ||
+      _descriptionController.text.trim() != _expense!.description ||
+      _selectedProgramId != _expense!.programId ||
+      _selectedCategory != _expense!.category ||
+      _selectedPaymentMethod != _expense!.paymentMethod ||
+      _selectedDate != _expense!.expenseDate ||
+      _vendorController.text.trim() != (_expense!.vendorName ?? '') ||
+      _referenceController.text.trim() != (_expense!.referenceNumber ?? '');
+
+  if (!hasChanges) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No changes detected'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    widget.onSave(null);
+    return;
+  }
+
+  // Get edit reason
+  String editReason = _editReasonController.text.trim();
+  if (editReason.isEmpty) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please provide a reason for editing'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  try {
+    final expenseProvider = context.read<ExpenseProvider>();
+    
+    if (!isAdmin) {
+      // ===================================================
+      // NON-ADMIN USER FLOW (2-step process)
+      // ===================================================
+      print('🔄 Non-admin user detected - using 2-step update');
       
-      if (newAmount != _expense!.amount) {
-        final difference = newAmount - _expense!.amount;
-        changes += 'Amount: ₹${_expense!.amount.toStringAsFixed(2)} → ₹${newAmount.toStringAsFixed(2)} (${difference > 0 ? '+' : ''}₹${difference.abs().toStringAsFixed(2)})\n';
-      }
+      // Step 1: Update all other fields using regular updateExpense
+      print('📝 Step 1: Updating expense fields...');
       
-      if (_selectedProgramId != _expense!.programId) {
-        final oldProgramName = _getProgramNameById(_expense!.programId);
-        final newProgramName = _getProgramNameById(_selectedProgramId!);
-        
-        changes += 'Program: $oldProgramName → $newProgramName\n';
-      }
-      
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirm Changes'),
-          content: Text(
-            'You are making the following changes:\n\n$changes\nPlease provide a reason for these changes:',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirm'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) {
-        return;
-      }
-    }
-
-    try {
-      // Get current user info
-      final authProvider = context.read<AppAuthProvider>();
-      final currentUser = authProvider.user;
-      
-      if (currentUser == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Create updated expense model
+      // Create updated expense but keep original status temporarily
       final updatedExpense = _expense!.copyWith(
         expenseId: widget.expenseId,
         title: _titleController.text.trim(),
@@ -384,49 +373,129 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         category: _selectedCategory ?? _expense!.category,
         paymentMethod: _selectedPaymentMethod,
         expenseDate: _selectedDate,
-        vendorName: _vendorController.text.trim().isNotEmpty ? _vendorController.text.trim() : null,
-        referenceNumber: _referenceController.text.trim().isNotEmpty ? _referenceController.text.trim() : null,
-        editReason: _editReasonController.text.trim(),
+        vendorName: _vendorController.text.trim().isNotEmpty 
+            ? _vendorController.text.trim() 
+            : null,
+        referenceNumber: _referenceController.text.trim().isNotEmpty 
+            ? _referenceController.text.trim() 
+            : null,
+        // Keep current status temporarily - will be updated in step 2
+        status: _expense!.status,
+        editReason: editReason,
         isEdited: true,
         lastEditedByUserId: currentUser.uid,
-        lastEditedByUserName: currentUser.displayName ?? 'Admin User',
+        lastEditedByUserName: currentUser.displayName ?? 'User',
         lastEditedAt: Timestamp.now(),
       );
-
-      // Call provider to update expense
-      final expenseProvider = context.read<ExpenseProvider>();
+      
       await expenseProvider.updateExpense(
         updatedExpense,
         editedByUserId: currentUser.uid,
-        editedByUserName: currentUser.displayName ?? 'Admin User',
-        editReason: _editReasonController.text.trim(),
-      );
-
-      // Call onSave callback
-      widget.onSave(updatedExpense);
-      
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Expense updated successfully'),
-          backgroundColor: Colors.green,
-        ),
+        editedByUserName: currentUser.displayName ?? 'User',
+        editReason: editReason,
       );
       
-      // Navigate back
-      Navigator.pop(context);
+      // Step 2: Update status to "pending" using updateExpenseStatus
+      print('🔄 Step 2: Changing status to "pending"...');
+      await expenseProvider.updateExpenseStatus(widget.expenseId, 'pending');
       
-    } catch (e) {
+      // Create final expense model with pending status
+      final finalExpense = updatedExpense.copyWith(
+        status: 'pending',
+      );
+      
+      widget.onSave(finalExpense);
+      
+      // Show success message
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          content: Row(
+            children: [
+              const Icon(Icons.schedule, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Expense updated. Status changed to "Pending" for admin approval.',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
+    } else {
+      // ===================================================
+      // ADMIN USER FLOW (regular update)
+      // ===================================================
+      print('👑 Admin user - keeping current status');
+      
+      // Admin keeps current status
+      final updatedExpense = _expense!.copyWith(
+        expenseId: widget.expenseId,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        amount: newAmount,
+        programId: _selectedProgramId ?? _expense!.programId,
+        category: _selectedCategory ?? _expense!.category,
+        paymentMethod: _selectedPaymentMethod,
+        expenseDate: _selectedDate,
+        vendorName: _vendorController.text.trim().isNotEmpty 
+            ? _vendorController.text.trim() 
+            : null,
+        referenceNumber: _referenceController.text.trim().isNotEmpty 
+            ? _referenceController.text.trim() 
+            : null,
+        // Admin keeps current status
+        status: _expense!.status,
+        editReason: editReason,
+        isEdited: true,
+        lastEditedByUserId: currentUser.uid,
+        lastEditedByUserName: currentUser.displayName ?? 'Admin',
+        lastEditedAt: Timestamp.now(),
+      );
+      
+      await expenseProvider.updateExpense(
+        updatedExpense,
+        editedByUserId: currentUser.uid,
+        editedByUserName: currentUser.displayName ?? 'Admin',
+        editReason: editReason,
+      );
+      
+      widget.onSave(updatedExpense);
+      
+      // Show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Expense updated successfully'),
+            ],
+          ),
+          backgroundColor: Colors.green,
         ),
       );
     }
+    
+    // Navigate back
+    if (mounted) Navigator.pop(context);
+    
+  } catch (e) {
+    print('❌ Error in _saveChanges: $e');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

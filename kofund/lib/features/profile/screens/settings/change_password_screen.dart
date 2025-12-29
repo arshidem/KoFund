@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/services/network_service.dart';
 import 'package:flutter/services.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -355,16 +356,32 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             const SizedBox(height: 30),
             
             // Change Password Button
-            Consumer<AppAuthProvider>(
-              builder: (context, authProvider, child) {
-                return SizedBox(
+          Consumer<AppAuthProvider>(
+  builder: (context, authProvider, child) {
+    return FutureBuilder<bool>(
+      future: NetworkService().isConnected,
+      builder: (context, snapshot) {
+        final bool isOnline = snapshot.data ?? true;
+        
+        return StreamBuilder<bool>(
+          stream: NetworkService().onConnectionChanged,
+          builder: (context, streamSnapshot) {
+            final bool currentIsOnline = streamSnapshot.data ?? isOnline;
+            final bool isDisabled = authProvider.isLoading || !currentIsOnline;
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _changePassword,
+                    onPressed: isDisabled ? null : _changePassword,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppColors.primary(context),
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.primary(context).withOpacity(0.5),
+                      disabledForegroundColor: Colors.white70,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -379,14 +396,55 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text(
-                            'Change Password',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                currentIsOnline ? Icons.lock_reset : Icons.wifi_off,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                currentIsOnline ? 'Change Password' : 'Offline',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                   ),
-                );
-              },
-            ),
+                ),
+                
+                if (!currentIsOnline)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: Colors.redAccent,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Internet connection required',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  },
+),
             
             // Error Message
             Consumer<AppAuthProvider>(

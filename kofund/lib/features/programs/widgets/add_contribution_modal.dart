@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/program_service.dart';
+import '../../../core/services/network_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../core/services/contribution_service.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -193,154 +194,240 @@ final program = programs.firstWhere(
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<AppAuthProvider>(context);
-    final communityId = auth.user?.communityId ?? '';
-return Scaffold(
-  backgroundColor: Colors.transparent,
+@override
+Widget build(BuildContext context) {
+  final auth = Provider.of<AppAuthProvider>(context);
+  final communityId = auth.user?.communityId ?? '';
 
-  bottomNavigationBar: _currentStep == 2
-      ? SafeArea(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: BoxDecoration(
-              color: AppColors.card(context),
-              border: Border(
-                top: BorderSide(color: AppColors.border(context)),
+  return Scaffold(
+    backgroundColor: Colors.transparent,
+   
+    body: Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const SizedBox(height: 30),
+          
+          // Header
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
               ),
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _amount > 0 ? _submitContribution : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isMonthlyProgram
-                      ? AppColors.primary(context)
-                      : AppColors.primary(context),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 2,
-                ),
-                child: Text(
-                  _isMonthlyProgram
-                      ? 'Add Monthly Contribution'
-                      : 'Add Contribution',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                'Add Contribution',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-            ),
-          ),
-        )
-      : null,
-
-      body: Container(
-        height: MediaQuery.of(context).size.height * 0.9,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-            
-            // Header
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
+              const Spacer(),
+              if (_currentStep > 0)
+                TextButton(
+                  onPressed: _goToPreviousStep,
+                  child: const Text('Back'),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Add Contribution',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const Spacer(),
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: _goToPreviousStep,
-                    child: const Text('Back'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-            // Progress bar
-      Column(
-  children: [
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '${_displayCurrentStep}/$_totalSteps', // Use dynamic step count
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        Text(
-          '$_totalSteps/$_totalSteps', // Use dynamic step count
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 8),
-    Row(
-      children: List.generate(_totalSteps, (index) {
-        return Expanded(
-          child: Container(
-            height: 6,
-            decoration: BoxDecoration(
-              color: _displayCurrentStep > index 
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey[200],
-              borderRadius: index == 0 
-                  ? const BorderRadius.only(
-                      topLeft: Radius.circular(3),
-                      bottomLeft: Radius.circular(3),
-                    )
-                  : index == _totalSteps - 1
-                      ? const BorderRadius.only(
-                          topRight: Radius.circular(3),
-                          bottomRight: Radius.circular(3),
-                        )
-                      : BorderRadius.zero,
-            ),
-          ),
-        );
-      }),
-    ),
-  ],
-),
-            const SizedBox(height: 20),
-
-            Expanded(
-              child: IndexedStack(
-                index: _currentStep,
+          // Progress bar
+          Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildProgramSelectionStep(communityId),
-                  _buildUserSelectionStep(),
-                  _buildContributionDetailsStep(),
+                  Text(
+                    '${_displayCurrentStep}/$_totalSteps',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  Text(
+                    '$_totalSteps/$_totalSteps',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              Row(
+                children: List.generate(_totalSteps, (index) {
+                  return Expanded(
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _displayCurrentStep > index 
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[200],
+                        borderRadius: index == 0 
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(3),
+                                bottomLeft: Radius.circular(3),
+                              )
+                            : index == _totalSteps - 1
+                                ? const BorderRadius.only(
+                                    topRight: Radius.circular(3),
+                                    bottomRight: Radius.circular(3),
+                                  )
+                                : BorderRadius.zero,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+         Expanded(
+  child: Column(
+    children: [
+      Expanded(
+        child: IndexedStack(
+          index: _currentStep,
+          children: [
+            _buildProgramSelectionStep(communityId),
+            _buildUserSelectionStep(),
+            _buildContributionDetailsStep(),
           ],
         ),
       ),
-    );
-  }
+      _buildBottomActionSection(),
+    ],
+  ),
+),
+
+          
+        ],
+      ),
+    ),
+  );
+}
+/// 🔒 Fixed Bottom Action Section (Modal-safe)
+Widget _buildBottomActionSection() {
+  if (_currentStep != 2) return const SizedBox.shrink();
+
+  return SafeArea(
+    top: false,
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        border: Border(
+          top: BorderSide(color: AppColors.border(context)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: FutureBuilder<bool>(
+        future: NetworkService().isConnected,
+        builder: (context, snapshot) {
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
+          final initialOnline = snapshot.data ?? true;
+
+          return StreamBuilder<bool>(
+            stream: NetworkService().onConnectionChanged,
+            initialData: initialOnline,
+            builder: (context, streamSnapshot) {
+              final isOnline = streamSnapshot.data ?? initialOnline;
+              final isDisabled = _amount <= 0 || !isOnline || isLoading;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: isDisabled ? null : _submitContribution,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isOnline
+                            ? AppColors.primary(context)
+                            : Colors.grey[600],
+                        disabledBackgroundColor:
+                            Colors.grey.withOpacity(0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isOnline
+                                ? (_isMonthlyProgram
+                                    ? Icons.calendar_month
+                                    : Icons.add)
+                                : Icons.wifi_off,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            isOnline
+                                ? (_isMonthlyProgram
+                                    ? 'Add Monthly Contribution'
+                                    : 'Add Contribution')
+                                : 'Offline',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (!isOnline)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: Colors.redAccent,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Internet connection required',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    ),
+  );
+}
+
+
 Widget _buildLoadingState() {
   return const Center(
     child: CircularProgressIndicator(),

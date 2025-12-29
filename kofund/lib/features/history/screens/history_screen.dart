@@ -901,6 +901,16 @@ class _HistoryTile extends StatelessWidget {
           );
         },
         child: Container(
+            decoration: BoxDecoration(
+      color: AppColors.card(context),
+      // boxShadow: [
+      //   BoxShadow(
+      //     color: Colors.black.withOpacity(0.05),
+      //     blurRadius: 12,
+      //     offset: const Offset(0, 4),
+      //   ),
+      // ],
+    ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
@@ -928,7 +938,7 @@ class _HistoryTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      item.subtitle,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -939,7 +949,7 @@ class _HistoryTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.subtitle,
+                      item.title,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary(context),
