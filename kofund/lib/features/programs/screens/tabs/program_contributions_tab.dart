@@ -12,7 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../features/programs/widgets/add_contribution_modal.dart';
 import 'package:kofund/features/history/screens/edit_contribution_screen.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
-
+import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 class ProgramContributionsTab extends StatefulWidget {
   final ProgramModel program;
 
@@ -138,14 +138,12 @@ final Map<String, String> _localUserNameCache = {};
               child: StreamBuilder<List<ContributionModel>>(
                 stream: Provider.of<ContributionProvider>(context, listen: false)
                     .streamProgramContributions(widget.program.programId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary(context),
-                      ),
-                    );
-                  }
+         builder: (context, snapshot) {
+  if (snapshot.connectionState == ConnectionState.waiting) {
+    // Use skeleton loader instead of spinner
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return HistoryListSkeleton(isDarkMode: isDarkMode);
+  }
 
                   if (snapshot.hasError) {
                     return Center(
@@ -359,6 +357,66 @@ final Map<String, String> _localUserNameCache = {};
       },
     );
   }
+Widget _buildSkeletonLoader(BuildContext context) {
+  return ListView.builder(
+    itemCount: 5,
+    itemBuilder: (context, index) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Skeleton avatar
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Skeleton text
+                  Container(
+                    width: double.infinity,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    margin: const EdgeInsets.only(bottom: 8),
+                  ),
+                  Container(
+                    width: 100,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Skeleton amount
+            Container(
+              width: 60,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   Widget _buildSearchFilterBar(BuildContext context) {
     return Padding(

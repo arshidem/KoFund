@@ -6,6 +6,7 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/skeleton/profile_screen_skeleton.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import './edit_profile_screen.dart';
@@ -230,36 +231,25 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       }
     });
 
-    if (_isInitialLoad || authProvider.user == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background(context),
-        appBar: _buildAppBar(showBackButton),
-        body: const Center(child: LoadingIndicator()),
-      );
-    }
+   // With this:
+if (_isInitialLoad || authProvider.user == null) {
+  return ProfileScreenSkeleton(
+    isDarkMode: Theme.of(context).brightness == Brightness.dark,
+    showBackButton: showBackButton,
+  );
+}
 
     final user = authProvider.user!;
     
     // TEMPORARY FIX: Show loading only if we're actively loading
     // Remove the profileProvider.isDataForCurrentUser check for now
-    if (_isLoadingProfile) {
-      return Scaffold(
-        backgroundColor: AppColors.background(context),
-        appBar: _buildAppBar(showBackButton),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading ${user.displayName}\'s profile...'),
-              SizedBox(height: 8),
-              Text('User ID: ${user.uid.substring(0, 10)}...'),
-            ],
-          ),
-        ),
-      );
-    }
+  // Also replace the _isLoadingProfile state:
+if (_isLoadingProfile) {
+  return ProfileScreenSkeleton(
+    isDarkMode: Theme.of(context).brightness == Brightness.dark,
+    showBackButton: showBackButton,
+  );
+}
 
     // Get stats - even if check fails, show what we have
     final stats = profileProvider.getUserStatistics();

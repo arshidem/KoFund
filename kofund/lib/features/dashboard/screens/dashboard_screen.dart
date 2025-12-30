@@ -530,22 +530,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(10.0),
+                          padding: const EdgeInsets.all(12.0),
                           children: [
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 8),
                             _buildStatsCard(stats, isDarkMode),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
                          
                             
                             ProgramCarouselWidget(
                               communityId: cid!,
                               isAdmin: user?.isAdmin ?? false,
                             ),
-                               PollDashboardWidget(
-                              communityId: cid!,
-                              isAdmin: user?.isAdmin ?? false,
-                            ),
-                            const SizedBox(height: 24),
+                            //    PollDashboardWidget(
+                            //   communityId: cid!,
+                            //   isAdmin: user?.isAdmin ?? false,
+                            // ),
+                            // const SizedBox(height: 24),
                          if (user?.isAdmin ?? false) ...[
                         PendingRequestsWidget(),
                       ],

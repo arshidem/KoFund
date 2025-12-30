@@ -151,7 +151,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
     final user = authProvider.user;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/routing/route_names.dart';
 import './tabs/dashboard_tab.dart';
@@ -11,6 +10,8 @@ import './tabs/programs_tab.dart';
 import './tabs/history_tab.dart';
 import './tabs/members_tab.dart';
 import './tabs/profile_tab.dart';
+// Import your skeleton
+import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 
 class CommunityDashboard extends StatefulWidget {
   const CommunityDashboard({super.key});
@@ -51,15 +52,14 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AppAuthProvider>();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Show loading while checking initial auth status
+    // 🧩 1️⃣ Show Skeleton while checking auth status
     if (_isCheckingAuth) {
-      return const Scaffold(
-        body: LoadingIndicator(message: 'Loading dashboard...'),
-      );
+      return DashboardSkeleton(isDarkMode: isDarkMode);
     }
 
-    // 🧩 1️⃣ If the user is logged out
+    // 🧩 2️⃣ If the user is logged out
     if (authProvider.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -70,12 +70,10 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           );
         }
       });
-      return const Scaffold(
-        body: LoadingIndicator(message: 'Redirecting to login...'),
-      );
+      return DashboardSkeleton(isDarkMode: isDarkMode);
     }
 
-    // 🧩 2️⃣ If the user hasn't joined a community
+    // 🧩 3️⃣ If the user hasn't joined a community
     if (authProvider.user?.communityId == null || 
         authProvider.user!.communityId!.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -86,12 +84,10 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           );
         }
       });
-      return const Scaffold(
-        body: LoadingIndicator(message: 'Redirecting to community...'),
-      );
+      return DashboardSkeleton(isDarkMode: isDarkMode);
     }
 
-    // 🧩 3️⃣ If user is not yet approved
+    // 🧩 4️⃣ If user is not yet approved
     if (authProvider.user?.isApproved == false) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -101,14 +97,10 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           );
         }
       });
-      return const Scaffold(
-        body: LoadingIndicator(message: 'Waiting for admin approval...'),
-      );
+      return DashboardSkeleton(isDarkMode: isDarkMode);
     }
 
-    // 🧩 4️⃣ User is authenticated and approved - show dashboard
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
+    // 🧩 5️⃣ User is authenticated and approved - show dashboard
     return Scaffold(
       body: Column(
         children: [
@@ -130,7 +122,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     );
   }
 
-  // Bottom Navigation Bar
+  // Bottom Navigation Bar (unchanged)
   Widget _buildBottomNavigationBar(bool isDarkMode) {
     return Container(
       decoration: BoxDecoration(

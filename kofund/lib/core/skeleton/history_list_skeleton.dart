@@ -1,103 +1,103 @@
 // lib/core/skeleton/history_list_skeleton.dart
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HistoryListSkeleton extends StatelessWidget {
-  final bool isDarkMode;
+  final bool? isDarkMode;
 
-  const HistoryListSkeleton({super.key, required this.isDarkMode});
+  const HistoryListSkeleton({super.key, this.isDarkMode});
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: 8, // Show 8 skeleton items
-      itemBuilder: (context, index) {
-        return _buildHistoryItemSkeleton();
-      },
+  Widget _line(
+    BuildContext context, {
+    double width = double.infinity,
+    double height = 12,
+    BorderRadius? radius,
+  }) {
+    final bool dark =
+        isDarkMode ?? Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: dark ? Colors.grey[700] : Colors.grey[300],
+        borderRadius: radius ?? BorderRadius.circular(4),
+      ),
     );
   }
 
-  Widget _buildHistoryItemSkeleton() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 6,
-            spreadRadius: 1,
-            color: Colors.black.withOpacity(0.05),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
-          children: [
-            // Avatar skeleton
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                shape: BoxShape.circle,
+  Widget _buildTransactionSkeleton(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              // Leading circular icon
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey.withOpacity(0.4),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            
-            // Content skeleton
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 12),
+
+              // Title & subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _line(context, width: 140, height: 14),
+                    const SizedBox(height: 6),
+                    _line(context, width: 90, height: 12),
+                  ],
+                ),
+              ),
+
+              // Time & amount (right aligned)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Title skeleton
-                  Container(
-                    width: double.infinity,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Subtitle skeleton
-                  Container(
-                    width: 150,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  _line(context, width: 48, height: 12),
                   const SizedBox(height: 6),
-                  
-                  // Time skeleton
-                  Container(
-                    width: 80,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  _line(context, width: 80, height: 16),
                 ],
               ),
-            ),
-            
-            // Amount skeleton
-            Container(
-              width: 70,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
+
+        // Divider like screenshot
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.border(context),
+          indent: 16,
+          endIndent: 16,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark =
+        isDarkMode ?? Theme.of(context).brightness == Brightness.dark;
+
+    final baseColor = dark ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = dark ? Colors.grey[700]! : Colors.grey[100]!;
+
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: ListView.builder(
+        itemCount: 10,
+        itemBuilder: (context, index) {
+          return _buildTransactionSkeleton(context);
+        },
       ),
     );
   }

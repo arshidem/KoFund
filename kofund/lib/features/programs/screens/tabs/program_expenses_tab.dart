@@ -11,6 +11,7 @@ import '../../../auth/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
 import 'package:kofund/features/history/screens/edit_expense_screen.dart';
+import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 
 // Add this class at the top of your file, after the imports
 class ChangeEntry {
@@ -2359,14 +2360,12 @@ return AlertDialog(
                 // Network status and submit button
                 FutureBuilder<bool>(
                   future: NetworkService().isConnected,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Container(
-                        margin: const EdgeInsets.only(top: 16),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: const CircularProgressIndicator(),
-                      );
-                    }
+                        builder: (context, snapshot) {
+  if (snapshot.connectionState == ConnectionState.waiting) {
+    // Use skeleton loader instead of spinner
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return HistoryListSkeleton(isDarkMode: isDarkMode);
+  }
 
                     final bool isOnline = snapshot.data ?? true;
 
