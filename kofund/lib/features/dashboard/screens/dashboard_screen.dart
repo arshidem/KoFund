@@ -12,7 +12,7 @@ import '../widgets/members_widget.dart';
 import '../widgets/history_widget.dart';
 import '../widgets/pending_requests_widget.dart';
 import 'package:kofund/routing/route_names.dart';
-
+import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import '../../../features/programs/providers/program_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -21,7 +21,6 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/dashboard/widgets/program_carousel_widget.dart';
 import 'package:kofund/features/polls/widgets/poll_dashboard_widget.dart';
-
 import 'package:kofund/features/notifications/widgets/notification_badge.dart';
 import 'package:kofund/features/programs/screens/program_details_screen.dart';
 import 'dart:ui';
@@ -73,52 +72,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _inviteLink = '';
   bool _inviteLoading = false;
 
-  void _onRefresh() async {
-    print('🔄 DEBUG: Pull to refresh triggered in Dashboard');
+void _onRefresh() async {
+  print('🔄 DEBUG: Pull to refresh triggered in Dashboard');
+  
+  try {
+    final user = context.read<AppAuthProvider>().user;
+    final cid = user?.communityId;
     
-    try {
-      final user = context.read<AppAuthProvider>().user;
-      final cid = user?.communityId;
+    if (cid != null && cid.isNotEmpty && user != null) {
+      await context.read<DashboardProvider>().refreshDashboard(cid);
+      await context.read<ProgramProvider>().loadCommunityPrograms(cid);
+      await context.read<ProgramProvider>().loadMyParticipations(user.uid, cid);
       
-      if (cid != null && cid.isNotEmpty && user != null) {
-        await context.read<DashboardProvider>().refreshDashboard(cid);
-        await context.read<ProgramProvider>().loadCommunityPrograms(cid);
-        await context.read<ProgramProvider>().loadMyParticipations(user.uid, cid);
-        
-        // ✅ RESET PROVIDERS FOR FRESH DATA
-        _resetWidgetProviders(user.uid, cid);
-        
-        // 🆕 Refresh invite info
-        await _refreshInviteInfo(cid, user.uid);
-      }
+      // ✅ RESET PROVIDERS FOR FRESH DATA
+      _resetWidgetProviders(user.uid, cid);
       
-      _refreshController.refreshCompleted();
-      print('✅ DEBUG: Dashboard refresh completed successfully');
-    } catch (e) {
-      _refreshController.refreshFailed();
-      print('❌ DEBUG: Dashboard refresh failed: $e');
+      // ✅ REFRESH USER PROVIDER FOR PENDING REQUESTS
+      await context.read<UserProvider>().loadCommunityMembers(cid);
+      
+      // 🆕 Refresh invite info
+      await _refreshInviteInfo(cid, user.uid);
     }
+    
+    _refreshController.refreshCompleted();
+    print('✅ DEBUG: Dashboard refresh completed successfully');
+  } catch (e) {
+    _refreshController.refreshFailed();
+    print('❌ DEBUG: Dashboard refresh failed: $e');
   }
+}
 
-  void _resetWidgetProviders(String userId, String communityId) {
-    print('🔄 DEBUG: Resetting widget providers for user $userId, community $communityId');
+void _resetWidgetProviders(String userId, String communityId) {
+  print('🔄 DEBUG: Resetting widget providers for user $userId, community $communityId');
+  
+  try {
+    // Reset MemberProvider
+    final memberProvider = context.read<MemberProvider>();
+    memberProvider.clearDataForUserChange();
+    memberProvider.refreshForUser(communityId);
     
-    try {
-      // Reset MemberProvider
-      final memberProvider = context.read<MemberProvider>();
-      memberProvider.clearDataForUserChange();
-      memberProvider.refreshForUser(communityId);
-      
-      // Reset HistoryProvider
-      final historyProvider = context.read<HistoryProvider>();
-      historyProvider.clearDataForUserChange();
-      historyProvider.setUserCommunity(communityId);
-      
-      print('✅ DEBUG: Widget providers reset successfully');
-    } catch (e) {
-      print('❌ DEBUG: Error resetting widget providers: $e');
-    }
+    // Reset HistoryProvider
+    final historyProvider = context.read<HistoryProvider>();
+    historyProvider.clearDataForUserChange();
+    historyProvider.setUserCommunity(communityId);
+    
+    // ✅ RESET USER PROVIDER
+    final userProvider = context.read<UserProvider>();
+    userProvider.clearData();
+    
+    print('✅ DEBUG: Widget providers reset successfully');
+  } catch (e) {
+    print('❌ DEBUG: Error resetting widget providers: $e');
   }
+}
 
   @override
   void dispose() {
@@ -226,23 +232,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _initializeWidgetProviders(String userId, String communityId) {
-    print('🔄 DEBUG: Initializing widget providers');
+void _initializeWidgetProviders(String userId, String communityId) {
+  print('🔄 DEBUG: Initializing widget providers');
+  
+  try {
+    // Initialize HistoryProvider
+    final historyProvider = context.read<HistoryProvider>();
+    historyProvider.setUserCommunity(communityId);
     
-    try {
-      // Initialize HistoryProvider
-      final historyProvider = context.read<HistoryProvider>();
-      historyProvider.setUserCommunity(communityId);
-      
-      // Initialize MemberProvider
-      final memberProvider = context.read<MemberProvider>();
-      memberProvider.refreshForUser(communityId);
-      
-      print('✅ DEBUG: Widget providers initialized successfully');
-    } catch (e) {
-      print('❌ DEBUG: Error initializing widget providers: $e');
-    }
+    // Initialize MemberProvider
+    final memberProvider = context.read<MemberProvider>();
+    memberProvider.refreshForUser(communityId);
+    
+    // ✅ INITIALIZE USER PROVIDER
+    final userProvider = context.read<UserProvider>();
+    userProvider.loadCommunityMembers(communityId);
+    
+    print('✅ DEBUG: Widget providers initialized successfully');
+  } catch (e) {
+    print('❌ DEBUG: Error initializing widget providers: $e');
   }
+}
 
   // 🆕 Check admin permissions and load invite info
   void _checkAdminPermissions(String userId, String communityId) async {
@@ -348,11 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           communityName: communityName,
           inviteCode: _inviteCode,
           inviteLink: _inviteLink,
-          onRegenerateCode: () async {
-            await _regenerateInviteCode(cid);
-            Navigator.pop(context);
-            _showInviteDialog(); // Reopen dialog with new code
-          },
+      
         ),
       );
     } catch (e) {
@@ -369,39 +375,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // 🆕 Regenerate invite code
-  Future<void> _regenerateInviteCode(String communityId) async {
-    try {
-      setState(() {
-        _inviteLoading = true;
-      });
-      
-      final communityProvider = context.read<CommunityProvider>();
-      await communityProvider.regenerateInviteCode(communityId);
-      
-      // Refresh invite info
-      await _loadInviteInfo(communityId);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invite code regenerated successfully!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error regenerating code: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _inviteLoading = false;
-      });
-    }
-  }
 
   // 🆕 Copy invite code to clipboard
   void _copyInviteCode() async {
@@ -452,34 +425,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildNoCommunity(isDarkMode);
     }
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => HistoryProvider(
-            contributionService: ContributionService(),
-            expenseService: ExpenseService(),
-            programService: ProgramService(),
-            userService: UserService(),
-            authProvider: auth,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => MemberProvider(
-            userService: UserService(),
-            authProvider: auth,
-            participantService: ParticipantService(),
-            contributionService: ContributionService(),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => CommunityProvider(
-            CommunityFirestoreService(),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => PollProvider(),
-        ),
-      ],
+   return MultiProvider(
+  providers: [
+    ChangeNotifierProvider(
+      create: (_) => HistoryProvider(
+        contributionService: ContributionService(),
+        expenseService: ExpenseService(),
+        programService: ProgramService(),
+        userService: UserService(),
+        authProvider: auth,
+      ),
+    ),
+    ChangeNotifierProvider(
+      create: (_) => MemberProvider(
+        userService: UserService(),
+        authProvider: auth,
+        participantService: ParticipantService(),
+        contributionService: ContributionService(),
+      ),
+    ),
+    ChangeNotifierProvider(
+      create: (_) => CommunityProvider(
+        CommunityFirestoreService(),
+      ),
+    ),
+    ChangeNotifierProvider(
+      create: (_) => PollProvider(),
+    ),
+    // ✅ FIXED: Pass UserService parameter
+    ChangeNotifierProvider(
+      create: (_) => UserProvider(
+        UserService(), // Add this
+      ),
+    ),
+  ],
       child: Consumer<DashboardProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && !_hasLoadedData) {
@@ -546,9 +525,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             //   isAdmin: user?.isAdmin ?? false,
                             // ),
                             // const SizedBox(height: 24),
-                         if (user?.isAdmin ?? false) ...[
-                        PendingRequestsWidget(),
-                      ],
+                      //    if (user?.isAdmin ?? false) ...[
+                      //   PendingRequestsWidget(),
+                      // ],
                       
                       // const SizedBox(height: 24),
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
@@ -596,7 +575,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
 // 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
+// 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
 Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
+  final auth = Provider.of<AppAuthProvider>(context, listen: false);
+  final isAdmin = auth.user?.isAdmin ?? false;
+  
   return Container(
     height: 150, // ⬅ Reduced to avoid overflow
     decoration: BoxDecoration(
@@ -665,8 +648,6 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
 
                   // MEMBERS COUNT CHIP
                   Container(
-                 
-                
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -693,32 +674,140 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
 
             const SizedBox(width: 12),
 
-            // RIGHT ACTION – GLASS NOTIFICATION
-            ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
+            // RIGHT ACTION – GLASS NOTIFICATION (COMMENTED OUT)
+            // ClipRRect(
+            //   borderRadius: BorderRadius.circular(30),
+            //   child: BackdropFilter(
+            //     filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            //     child: Container(
+            //       width: 56,
+            //       height: 56,
+            //       decoration: BoxDecoration(
+            //         color: Colors.white.withOpacity(0.18),
+            //         borderRadius: BorderRadius.circular(30),
+            //         border: Border.all(
+            //           color: Colors.white.withOpacity(0.35),
+            //           width: 1.2,
+            //         ),
+            //       ),
+            //       child: const Center(
+            //         child: NotificationBadge(
+            //           iconSize: 22,
+            //           badgeColor: Colors.redAccent,
+            //           textColor: Colors.white,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            
+            // NEW: ADMIN PENDING REQUESTS ICON (SHOWS ONLY FOR ADMINS)
+            if (isAdmin) ...[
+              Consumer<UserProvider>(
+                builder: (context, userProvider, child) {
+                  final pendingCount = userProvider.pendingMembers.length;
+                  
+                  return ClipRRect(
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.35),
-                      width: 1.2,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Navigate to approval requests screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ApprovalRequestsScreen(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.35),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Main icon
+                              Icon(
+                                Icons.person_add_alt_1,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                              
+                              // Badge for pending count
+                              if (pendingCount > 0)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warning(context),
+                                      shape: BoxShape.circle,
+                                    
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        pendingCount > 9 ? '9+' : pendingCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: const Center(
-                    child: NotificationBadge(
-                      iconSize: 22,
-                      badgeColor: Colors.redAccent,
-                      textColor: Colors.white,
+                  );
+                },
+              ),
+            ] else ...[
+              // For non-admin users, you can show notification icon or nothing
+              // Here I'm keeping it empty, but you can uncomment notification icon below:
+              
+              // NOTIFICATION ICON FOR NON-ADMINS (OPTIONAL - UNCOMMENT IF NEEDED)
+              /*
+              ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: const Center(
+                      child: NotificationBadge(
+                        iconSize: 22,
+                        badgeColor: Colors.redAccent,
+                        textColor: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+              */
+            ],
           ],
         ),
       ),

@@ -308,11 +308,12 @@ Future<void> removeUser(String uid) async {
     notifyListeners();
   }
 
-  void clearData() {
-    _approvedMembers.clear();
-    _pendingMembers.clear();
-    _message = null;
-    _isLoading = false;
-    notifyListeners();
-  }
+void clearData() {
+  _approvedMembers.clear(); // Changed from _members.clear()
+  _pendingMembers.clear();
+  _message = null;
+  _isLoading = false;
+  notifyListeners();
+}
+
 }

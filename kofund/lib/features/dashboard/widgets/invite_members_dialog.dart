@@ -4,13 +4,13 @@
 import 'package:flutter/material.dart';
 import 'package:clipboard/clipboard.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:share_plus/share_plus.dart'; // Add this import for sharing
 
 class InviteMembersDialog extends StatefulWidget {
   final String communityId;
   final String communityName;
   final String inviteCode;
   final String inviteLink;
-  final Future<void> Function() onRegenerateCode;
 
   const InviteMembersDialog({
     super.key,
@@ -18,7 +18,6 @@ class InviteMembersDialog extends StatefulWidget {
     required this.communityName,
     required this.inviteCode,
     required this.inviteLink,
-    required this.onRegenerateCode,
   });
 
   @override
@@ -29,7 +28,6 @@ class _InviteMembersDialogState extends State<InviteMembersDialog>
     with SingleTickerProviderStateMixin {
   bool _copiedCode = false;
   bool _copiedLink = false;
-  bool _regenerating = false;
 
   late final AnimationController _pulseController = AnimationController(
     vsync: this,
@@ -63,26 +61,11 @@ class _InviteMembersDialogState extends State<InviteMembersDialog>
   }
 
   Future<void> _shareInviteLink() async {
-    // Replace with share_plus if needed
-    await _copyInviteLink();
-  }
-
-  Future<void> _handleRegenerateCode() async {
-    setState(() => _regenerating = true);
-    try {
-      await widget.onRegenerateCode();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to regenerate code: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _regenerating = false);
-    }
+    // Actually share using share_plus
+    await Share.share(
+      'Join my community "${widget.communityName}" on KoFund!\n\nInvite Code: ${widget.inviteCode}\n\nOr use this link: ${widget.inviteLink}',
+      subject: 'Join my community on KoFund',
+    );
   }
 
   @override
@@ -124,13 +107,6 @@ class _InviteMembersDialogState extends State<InviteMembersDialog>
                   copied: _copiedLink,
                   onCopy: _copyInviteLink,
                   onShare: _shareInviteLink,
-                ),
-
-                const SizedBox(height: 28),
-
-                _RegenerateSection(
-                  regenerating: _regenerating,
-                  onRegenerate: _handleRegenerateCode,
                 ),
 
                 const SizedBox(height: 24),
@@ -282,26 +258,24 @@ class _InviteLinkCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-  padding: const EdgeInsets.all(20),
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(24),
-    gradient: LinearGradient(
-      colors: [
-        secondary.withOpacity(0.15),
-        secondary.withOpacity(0.05),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-    border: Border.all(
-      color: secondary.withOpacity(0.25),
-    ),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // rest of your widget stays EXACTLY the same
-
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            secondary.withOpacity(0.15),
+            secondary.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: secondary.withOpacity(0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
             'Invite Link',
             style: TextStyle(
@@ -314,7 +288,7 @@ class _InviteLinkCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade300),
             ),
@@ -371,57 +345,6 @@ color: Colors.white.withOpacity(0.1),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RegenerateSection extends StatelessWidget {
-  final bool regenerating;
-  final VoidCallback onRegenerate;
-
-  const _RegenerateSection({
-    required this.regenerating,
-    required this.onRegenerate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (regenerating) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Text('Regenerating invite code...'),
-          ],
-        ),
-      );
-    }
-
-    return OutlinedButton.icon(
-      onPressed: onRegenerate,
-      icon: const Icon(Icons.refresh_rounded),
-      label: const Text('Regenerate Invite Code'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.orange,
-        side: BorderSide(color: Colors.orange.withOpacity(0.4)),
-        minimumSize: const Size(double.infinity, 52),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
       ),
     );
   }
