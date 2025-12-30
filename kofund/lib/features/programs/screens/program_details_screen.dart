@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
 import 'package:shimmer/shimmer.dart';
 
 import '../models/program_model.dart';
@@ -41,12 +42,20 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
 
   bool _isProgramLoading = true;
   ProgramModel? _cachedProgram;
+  final RefreshController _refreshController = RefreshController(); // Add this
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabTitles.length, vsync: this);
     _loadProgramData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _refreshController.dispose(); // Dispose refresh controller
+    super.dispose();
   }
 
   Future<void> _loadProgramData() async {
@@ -68,209 +77,102 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  // Join program method
-  Future<void> _joinProgram(BuildContext context) async {
-    try {
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final participantProvider =
-          Provider.of<ParticipantProvider>(context, listen: false);
-      final programProvider =
-          Provider.of<ProgramProvider>(context, listen: false);
-
-      final currentUser = authProvider.user;
-      if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please sign in to join the program'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
-        return;
-      }
-
-      // Get program data
-      final program = await programProvider.getProgramById(widget.programId).first;
-      if (program == null) return;
-
-      // Check if program is full
-      final participants = await participantProvider
-          .streamProgramParticipants(widget.programId)
-          .first;
-      final participantCount = participants.length;
-
-      final isFull = program.participantType == 'fixed' &&
-          participantCount >= program.maxParticipants;
-
-      if (isFull) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Program is full!'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
-        return;
-      }
-
-      // Check if user already joined
-      final hasJoined = participants.any(
-        (p) => p.userId == currentUser.uid && p.status == 'joined',
-      );
-
-      if (hasJoined) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You have already joined this program'),
-            backgroundColor: AppColors.warning(context),
-          ),
-        );
-        return;
-      }
-
-      // Create participant model
-      final participant = ParticipantModel(
-        participantId: '',
-        programId: widget.programId,
-        userId: currentUser.uid,
-        userName: currentUser.displayName ?? 'User',
-        userEmail: currentUser.email ?? '',
-        communityId: program.communityId,
-        joinedAt: DateTime.now(),
-        status: 'joined',
-        contributionPaid: program.suggestedContribution != null ? 0 : null,
-        hasPaidContribution: program.suggestedContribution == null,
-      );
-
-      await participantProvider.joinProgram(participant);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully joined the program!'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to join program: $e'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+// Replace your _refreshAllData method with this:
+Future<void> _refreshAllData() async {
+  print('🔄 DEBUG: Refreshing all program details data...');
+  
+  try {
+    // Show loading state
+    if (mounted) {
+      setState(() {
+        _isProgramLoading = true;
+      });
     }
-  }
-
-  // Leave program method
-  Future<void> _leaveProgram(BuildContext context) async {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final participantProvider =
-        Provider.of<ParticipantProvider>(context, listen: false);
-
-    final currentUser = authProvider.user;
-    if (currentUser == null) return;
-
-    // Show confirmation dialog
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Leave Program?',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to leave this program? '
-          'This action cannot be undone.',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary(context),
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          // Cancel Button
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(context),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            child: const Text('Cancel'),
-          ),
-          // Leave Button
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error(context),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Leave Program'),
-          ),
-        ],
+    
+    // Get providers
+    final programProvider = Provider.of<ProgramProvider>(context, listen: false);
+    
+    // Clear the cached program to force re-fetch
+    setState(() {
+      _cachedProgram = null;
+    });
+    
+    // Method 1: Use refreshProgramData if you added it to ProgramProvider
+    try {
+      await programProvider.refreshProgramData(widget.programId);
+    } catch (e) {
+      print('⚠️ Could not call refreshProgramData: $e');
+    }
+    
+    // Method 2: Force re-fetch the program from Firestore
+    // This is the most reliable way
+    await programProvider.loadCommunityPrograms(_cachedProgram?.communityId ?? '');
+    
+    // Wait a bit for Firestore to update
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Get fresh program data
+    final freshProgram = await programProvider.getProgramById(widget.programId).first;
+    
+    if (mounted) {
+      setState(() {
+        _cachedProgram = freshProgram;
+        _isProgramLoading = false;
+      });
+    }
+    
+    // Complete the refresh
+    _refreshController.refreshCompleted();
+    print('✅ DEBUG: All program details refreshed successfully');
+    
+  } catch (e) {
+    print('❌ DEBUG: Error refreshing program details: $e');
+    
+    if (mounted) {
+      setState(() {
+        _isProgramLoading = false;
+      });
+    }
+    
+    _refreshController.refreshFailed();
+    
+    // Show error to user
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to refresh: ${e.toString()}'),
+        backgroundColor: AppColors.error(context),
       ),
     );
-
-    if (result == true) {
-      try {
-        await participantProvider.leaveProgram(widget.programId, currentUser.uid);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Left the program successfully!'),
-            backgroundColor: AppColors.success(context),
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to leave program: $e'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
-      }
-    }
-  }
-
-// Update your ProgramDetailsScreen's _buildTabSkeleton method:
-// Update your ProgramDetailsScreen's _buildTabSkeleton method:
-Widget _buildTabSkeleton(int tabIndex) {
-  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-  
-  // Use the cached program if available, otherwise assume false
-  final isMonthlyProgram = _cachedProgram?.isMonthlyPaymentProgram ?? false;
-  
-  switch (tabIndex) {
-    case 0: // Overview
-      return ProgramOverviewSkeleton(isDarkMode: isDarkMode);
-    case 1: // Participants
-      return ProgramParticipantsSkeleton(
-        isDarkMode: isDarkMode,
-        isMonthlyProgram: isMonthlyProgram,
-      );
-    case 2: // Contributions
-      return ProgramContributionsSkeleton(isDarkMode: isDarkMode);
-    case 3: // Expenses
-      return ProgramExpensesSkeleton(isDarkMode: isDarkMode);
-    default:
-      return ProgramOverviewSkeleton(isDarkMode: isDarkMode);
   }
 }
+
+  void _onRefresh() {
+    _refreshAllData();
+  }
+
+  // ... rest of your existing methods (joinProgram, leaveProgram, buildTabSkeleton)
+
+  Widget _buildTabSkeleton(int tabIndex) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    final isMonthlyProgram = _cachedProgram?.isMonthlyPaymentProgram ?? false;
+    
+    switch (tabIndex) {
+      case 0:
+        return ProgramOverviewSkeleton(isDarkMode: isDarkMode);
+      case 1:
+        return ProgramParticipantsSkeleton(
+          isDarkMode: isDarkMode,
+          isMonthlyProgram: isMonthlyProgram,
+        );
+      case 2:
+        return ProgramContributionsSkeleton(isDarkMode: isDarkMode);
+      case 3:
+        return ProgramExpensesSkeleton(isDarkMode: isDarkMode);
+      default:
+        return ProgramOverviewSkeleton(isDarkMode: isDarkMode);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -383,15 +285,15 @@ Widget _buildTabSkeleton(int tabIndex) {
               ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: false,
           dividerColor: Colors.transparent,
           dividerHeight: 0,
-          isScrollable: true,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white.withOpacity(0.7),
           indicatorColor: Colors.white,
           indicatorWeight: 3,
-          indicatorPadding: const EdgeInsets.symmetric(horizontal: 0),
-          labelPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          indicatorPadding: EdgeInsets.zero,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14),
           labelStyle: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -402,58 +304,271 @@ Widget _buildTabSkeleton(int tabIndex) {
             fontWeight: FontWeight.w500,
             letterSpacing: 0.3,
           ),
-          tabs: _tabTitles.map((title) => Tab(text: title)).toList(),
+          tabs: _tabTitles
+              .map(
+                (title) => Tab(
+                  child: Center(
+                    child: Text(title),
+                  ),
+                ),
+              )
+              .toList(),
         ),
       ),
       body: _isProgramLoading
           ? _buildTabSkeleton(_tabController.index)
           : _cachedProgram != null
-              ? TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 1: Overview
-                    ProgramOverviewTab(program: _cachedProgram!),
-                    
-                    // Tab 2: Participants
-                    ProgramParticipantsTab(program: _cachedProgram!),
-                    
-                    // Tab 3: Contributions
-                    ProgramContributionsTab(program: _cachedProgram!),
-                    
-                    // Tab 4: Expenses
-                    ProgramExpensesTab(program: _cachedProgram!),
-                    
-                  ],
-                )
-              : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+              ? SmartRefresher( // Wrap with SmartRefresher
+                  controller: _refreshController,
+                  onRefresh: _onRefresh,
+                  enablePullDown: true,
+                  enablePullUp: false,
+                  physics: const BouncingScrollPhysics(),
+                  header: ClassicHeader(
+                    idleText: 'Pull down to refresh',
+                    releaseText: 'Release to refresh',
+                    refreshingText: 'Refreshing program data...',
+                    completeText: 'Refresh complete',
+                    failedText: 'Refresh failed',
+                    idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+                    releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+                    refreshingIcon: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+                      ),
+                    ),
+                    completeIcon: Icon(Icons.check, color: Colors.green),
+                    failedIcon: Icon(Icons.error, color: Colors.red),
+                  ),
+                  child: TabBarView(
+                    controller: _tabController,
                     children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: AppColors.error(context),
-                        size: 48,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Program not found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'The program you are looking for does not exist',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
+                      ProgramOverviewTab(program: _cachedProgram!),
+                      ProgramParticipantsTab(program: _cachedProgram!),
+                      ProgramContributionsTab(program: _cachedProgram!),
+                      ProgramExpensesTab(program: _cachedProgram!),
                     ],
+                  ),
+                )
+              : SmartRefresher( // Also wrap error state with SmartRefresher
+                  controller: _refreshController,
+                  onRefresh: _onRefresh,
+                  enablePullDown: true,
+                  enablePullUp: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: AppColors.error(context),
+                          size: 48,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Program not found',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'The program you are looking for does not exist',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _onRefresh,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary(context),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
     );
+  }
+
+  // Join program method (keep existing)
+  Future<void> _joinProgram(BuildContext context) async {
+    try {
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final participantProvider =
+          Provider.of<ParticipantProvider>(context, listen: false);
+      final programProvider =
+          Provider.of<ProgramProvider>(context, listen: false);
+
+      final currentUser = authProvider.user;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please sign in to join the program'),
+            backgroundColor: AppColors.error(context),
+          ),
+        );
+        return;
+      }
+
+      final program = await programProvider.getProgramById(widget.programId).first;
+      if (program == null) return;
+
+      final participants = await participantProvider
+          .streamProgramParticipants(widget.programId)
+          .first;
+      final participantCount = participants.length;
+
+      final isFull = program.participantType == 'fixed' &&
+          participantCount >= program.maxParticipants;
+
+      if (isFull) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Program is full!'),
+            backgroundColor: AppColors.error(context),
+          ),
+        );
+        return;
+      }
+
+      final hasJoined = participants.any(
+        (p) => p.userId == currentUser.uid && p.status == 'joined',
+      );
+
+      if (hasJoined) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You have already joined this program'),
+            backgroundColor: AppColors.warning(context),
+          ),
+        );
+        return;
+      }
+
+      final participant = ParticipantModel(
+        participantId: '',
+        programId: widget.programId,
+        userId: currentUser.uid,
+        userName: currentUser.displayName ?? 'User',
+        userEmail: currentUser.email ?? '',
+        communityId: program.communityId,
+        joinedAt: DateTime.now(),
+        status: 'joined',
+        contributionPaid: program.suggestedContribution != null ? 0 : null,
+        hasPaidContribution: program.suggestedContribution == null,
+      );
+
+      await participantProvider.joinProgram(participant);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully joined the program!'),
+          backgroundColor: AppColors.success(context),
+        ),
+      );
+      
+      // Refresh data after joining
+      _refreshAllData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to join program: $e'),
+          backgroundColor: AppColors.error(context),
+        ),
+      );
+    }
+  }
+
+  // Leave program method (keep existing)
+  Future<void> _leaveProgram(BuildContext context) async {
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final participantProvider =
+        Provider.of<ParticipantProvider>(context, listen: false);
+
+    final currentUser = authProvider.user;
+    if (currentUser == null) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card(context),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Leave Program?',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to leave this program? '
+          'This action cannot be undone.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary(context),
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary(context),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error(context),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Leave Program'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        await participantProvider.leaveProgram(widget.programId, currentUser.uid);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Left the program successfully!'),
+            backgroundColor: AppColors.success(context),
+          ),
+        );
+        
+        // Refresh data after leaving
+        _refreshAllData();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to leave program: $e'),
+            backgroundColor: AppColors.error(context),
+          ),
+        );
+      }
+    }
   }
 }

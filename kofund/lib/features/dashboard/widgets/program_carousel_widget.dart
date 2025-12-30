@@ -2,26 +2,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kofund/features/programs/providers/program_provider.dart';
-import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'package:kofund/features/programs/models/program_model.dart';
-import 'package:kofund/features/programs/screens/program_details_screen.dart';
-import 'package:kofund/features/programs/screens/all_programs_screen.dart'; // Add import for navigation
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
-
-// ✅ IMPORT PROGRAM TYPES
+import 'package:kofund/features/auth/providers/app_auth_provider.dart';
+import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
+import 'package:kofund/features/programs/providers/program_provider.dart';
+import 'package:kofund/features/programs/models/program_model.dart';
+import 'package:kofund/features/programs/screens/program_details_screen.dart';
+import 'package:kofund/features/programs/screens/all_programs_screen.dart';
 
 class ProgramCarouselWidget extends StatefulWidget {
-  final String communityId;
   final bool isAdmin;
 
   const ProgramCarouselWidget({
     super.key,
-    required this.communityId,
-    this.isAdmin = false,
+    required this.isAdmin, // Changed from isAdmin = false to required
   });
 
   @override
@@ -29,7 +26,7 @@ class ProgramCarouselWidget extends StatefulWidget {
 }
 
 class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
-  final PageController _pageController = PageController(viewportFraction: 0.92);
+  final PageController _pageController = PageController(viewportFraction: 0.94);
   bool _isLoading = true;
   bool _hasError = false;
   String? _errorMessage;
@@ -39,7 +36,6 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
     super.initState();
     print('🔄 DEBUG: ProgramCarouselWidget initState called');
     
-    // Initial load after a short delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadData();
     });
@@ -62,12 +58,10 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
         });
       }
       
-      // Clear provider data when no user
       programProvider.clearAllData();
       return;
     }
     
-    // Check if user has community
     if (user.communityId == null || user.communityId!.isEmpty) {
       print('❌ DEBUG: User has no community');
       if (mounted) {
@@ -97,7 +91,6 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
       final programProvider = context.read<ProgramProvider>();
       final authProvider = context.read<AppAuthProvider>();
       
-      // ✅ EXACT SAME LOGIC AS ALL PROGRAMS SCREEN
       await programProvider.loadCommunityPrograms(communityId);
       
       if (authProvider.user != null) {
@@ -118,7 +111,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = 'Failed to load programs: $error';
+          _errorMessage = 'Failed to load programs';
         });
       }
     }
@@ -132,79 +125,47 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header with "Active Programs" and "View All"
-        _buildHeaderSection(context, isDarkMode),
-        const SizedBox(height: 6),
-        
-        // Programs content
-        _buildProgramsContent(isDarkMode),
-      ],
-    );
-  }
-
-  Widget _buildHeaderSection(BuildContext context, bool isDarkMode) {
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            "Active Programs",
-            style: TextStyle(
-              fontSize: 20, // ✅ Match header size (20px)
-              fontWeight: FontWeight.bold,
-              color: isDarkMode
-                  ? AppColors.darkTextPrimary
-                  : AppColors.lightTextPrimary,
-            ),
-          ),
-          TextButton(
-            onPressed: user != null ? () => _navigateToAllPrograms(context) : null,
-            style: TextButton.styleFrom(
-              foregroundColor: user != null 
-                ? (isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary)
-                : (isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-            ),
-            child: const Text("See All"), // ✅ Match button text
-          ),
-        ],
-      ),
-    );
-  }
-
-// Update the navigation method in ProgramCarouselWidget
-void _navigateToAllPrograms(BuildContext context) {
-  final authProvider = context.read<AppAuthProvider>();
-  final user = authProvider.user;
-  
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AllProgramsScreen(
-        isAdmin: widget.isAdmin, // Pass the isAdmin from carousel widget
-      ),
-    ),
-  );
-}
-  Widget _buildProgramsContent(bool isDarkMode) {
     final authProvider = context.watch<AppAuthProvider>();
     final user = authProvider.user;
+    
+    return _buildProgramsContent(user, isDarkMode);
+  }
 
+  void _navigateToAllPrograms(BuildContext context) {
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
+    
+    if (user == null) return;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AllProgramsScreen(
+          isAdmin: widget.isAdmin,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgramsContent(UserModel? user, bool isDarkMode) {
     // If no user is logged in
     if (user == null) {
-      return _buildNoUserState(isDarkMode);
+      return _buildEmptyState(
+        icon: Icons.person_outline,
+        title: 'Sign in to View Programs',
+        message: 'Please sign in to see community programs',
+        isDarkMode: isDarkMode,
+      );
     }
     
     // If user has no community
     if (user.communityId == null || user.communityId!.isEmpty) {
-      return _buildNoCommunityState(isDarkMode);
+      return _buildEmptyState(
+        icon: Icons.group_outlined,
+        title: 'No Community',
+        message: 'Join a community to view programs',
+        isDarkMode: isDarkMode,
+      );
     }
     
     // If loading
@@ -219,215 +180,267 @@ void _navigateToAllPrograms(BuildContext context) {
     
     // Show programs from provider
     return Consumer<ProgramProvider>(
-      builder: (context, programProvider, child) {
-        // ✅ EXACT SAME FILTER LOGIC AS ALL PROGRAMS SCREEN
-        final activePrograms = programProvider.programs
-            .where((program) => 
-                program.isOngoing && 
-                !program.isMonthlyPaymentProgram &&
-                program.communityId == user.communityId)
-            .toList();
+    builder: (context, programProvider, child) {
+      final activePrograms = programProvider.programs
+          .where((program) => 
+              program.isOngoing && 
+              !program.isMonthlyPaymentProgram &&
+              program.communityId == user.communityId)
+          .toList();
 
-        // If no active programs
-        if (activePrograms.isEmpty) {
-          return _buildNoProgramsState(isDarkMode);
-        }
-
-        return SizedBox(
-          height: 320,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: activePrograms.length,
-            itemBuilder: (context, index) {
-              final program = activePrograms[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                child: _DashboardProgramCard(
-                  program: program,
-                  isDarkMode: isDarkMode,
-                  isAdmin: widget.isAdmin,
-                ),
-              );
-            },
-          ),
+      // If no active programs
+      if (activePrograms.isEmpty) {
+        return _buildEmptyState(
+          icon: Icons.event_note,
+          title: 'No Active Programs',
+          message: 'Check back later for new programs',
+          isDarkMode: isDarkMode,
         );
-      },
-    );
-  }
+      }
 
-  Widget _buildNoUserState(bool isDarkMode) {
+      return Container(
+      
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with icon and "See all" link
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_note_rounded,
+                    size: 18,
+                    color: AppColors.primary(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Active Programs',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                  ),
+                  if (activePrograms.length >= 2 && user != null)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => _navigateToAllPrograms(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          'See all',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Program carousel - CENTER THIS
+// Program carousel with wider cards
+// Program carousel with wider cards - UPDATE THE HEIGHT
+SizedBox(
+  height: 280, // Keep this or reduce slightly to 310 if needed
+  child: PageView.builder(
+    controller: _pageController,
+    itemCount: activePrograms.length,
+    padEnds: true,
+    physics: const BouncingScrollPhysics(),
+    itemBuilder: (context, index) {
+      final program = activePrograms[index];
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: _DashboardProgramCard(
+          program: program,
+          isAdmin: widget.isAdmin,
+          isDarkMode: isDarkMode,
+        ),
+      );
+    },
+  ),
+),
+
+          ],
+        ),
+      );
+    },
+  );
+}
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+    required bool isDarkMode,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24), // ✅ Match (24px)
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12), // ✅ Match (12px)
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
-          Icon(Icons.person_outline,
-              size: 48,
-              color: isDarkMode
-                  ? AppColors.darkTextSecondary
-                  : AppColors.lightTextSecondary),
-          const SizedBox(height: 12),
-          Text("Sign in to View Programs",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode
-                    ? AppColors.darkTextPrimary
-                    : AppColors.lightTextPrimary,
-              )),
-          const SizedBox(height: 8),
-          Text("Please sign in to see community programs",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDarkMode
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoCommunityState(bool isDarkMode) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24), // ✅ Match (24px)
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12), // ✅ Match (12px)
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.group_outlined,
-              size: 48,
-              color: isDarkMode
-                  ? AppColors.darkTextSecondary
-                  : AppColors.lightTextSecondary),
-          const SizedBox(height: 12),
-          Text("No Community",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode
-                    ? AppColors.darkTextPrimary
-                    : AppColors.lightTextPrimary,
-              )),
-          const SizedBox(height: 8),
-          Text("Join a community to view programs",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDarkMode
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              )),
+          Icon(
+            icon,
+            size: 36,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildLoadingState(bool isDarkMode) {
-    return SizedBox(
-      height: 320,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.92),
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6.0),
-            child: ProgramCardSkeleton(isDarkMode: isDarkMode),
-          );
-        },
+    return Container(
+  
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header skeleton
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  width: 120,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 40,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+       // Carousel skeleton with wider cards
+SizedBox(
+  height: 320,
+  child: PageView.builder(
+    controller: PageController(viewportFraction: 0.94), // Match the viewportFraction
+    itemCount: 2,
+    padEnds: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemBuilder: (context, index) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: ProgramCardSkeleton(isDarkMode: isDarkMode),
+      );
+    },
+  ),
+),
+        ],
       ),
     );
   }
 
   Widget _buildErrorState(bool isDarkMode) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16), // ✅ Match (16px)
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12), // ✅ Match (12px)
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
-          Icon(Icons.error_outline,
-              size: 32,
-              color: isDarkMode ? AppColors.darkError : AppColors.lightError),
-          const SizedBox(height: 8),
+          Icon(
+            Icons.error_outline_rounded,
+            size: 36,
+            color: AppColors.error(context),
+          ),
+          const SizedBox(height: 6),
           Text(
             _errorMessage ?? 'Failed to load programs',
-            textAlign: TextAlign.center,
             style: TextStyle(
-              color: isDarkMode ? AppColors.darkError : AppColors.lightError,
-              fontSize: 14,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.error(context),
             ),
           ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _retryLoading,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Retry"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoProgramsState(bool isDarkMode) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24), // ✅ Match (24px)
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12), // ✅ Match (12px)
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.event_note,
-              size: 48,
-              color: isDarkMode
-                  ? AppColors.darkTextSecondary
-                  : AppColors.lightTextSecondary),
-          const SizedBox(height: 12),
-          Text("No Active Programs",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode
-                    ? AppColors.darkTextPrimary
-                    : AppColors.lightTextPrimary,
-              )),
           const SizedBox(height: 8),
-          Text("Check back later for new programs",
-              style: TextStyle(
-                color: isDarkMode
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              )),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: _retryLoading,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+              ),
+              child: Text(
+                'Retry',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary(context),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// 🎯 REUSABLE DASHBOARD PROGRAM CARD (Same logic as All Programs Screen)
+// Reusable Dashboard Program Card
 class _DashboardProgramCard extends StatefulWidget {
   final ProgramModel program;
-  final bool isDarkMode;
   final bool isAdmin;
+  final bool isDarkMode;
 
   const _DashboardProgramCard({
     required this.program,
-    required this.isDarkMode,
     required this.isAdmin,
+    required this.isDarkMode,
   });
 
   @override
@@ -444,7 +457,6 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     final authProvider = context.watch<AppAuthProvider>();
     final user = authProvider.user;
     
-    // ✅ EXACT SAME LOGIC AS ALL PROGRAMS SCREEN
     final hasJoined = user != null 
         ? programProvider.hasUserJoined(widget.program.programId, user.uid)
         : false;
@@ -452,291 +464,431 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     final canJoin = widget.program.canJoin && !hasJoined;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: widget.isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            blurRadius: 6,
-            spreadRadius: 1,
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(
+          color: AppColors.border(context).withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HEADER - Title + Real-time Participants + Joined Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
+          // Program header
+          Padding(
+            padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 12), // Reduced bottom padding
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // ✅ ONLY CHANGE: Use ProgramTypes.getIconData
-                    CircleAvatar(
-                      backgroundColor: (widget.isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary).withOpacity(0.12),
-                      radius: 16,
+                    // Program type icon
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary(context).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Icon(
-                        ProgramTypes.getIconData(widget.program.programType), // ✅ Updated
-                        color: widget.isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary,
+                        ProgramTypes.getIconData(widget.program.programType),
                         size: 18,
+                        color: AppColors.primary(context),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
+                    
+                    // Title and participants
                     Expanded(
-                      child: Text(
-                        widget.program.title,
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                          color: widget.isDarkMode
-                              ? AppColors.darkTextPrimary
-                              : AppColors.lightTextPrimary,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.program.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.group_rounded,
+                                size: 12,
+                                color: AppColors.textSecondary(context),
+                              ),
+                              const SizedBox(width: 4),
+                              StreamBuilder<int>(
+                                stream: programProvider.streamProgramParticipantCount(widget.program.programId),
+                                builder: (context, snapshot) {
+                                  final participantCount = snapshot.data ?? widget.program.currentParticipants;
+                                  final maxParticipants = widget.program.maxParticipants;
+                                  final isFull = widget.program.isFixedParticipants && participantCount >= maxParticipants;
+                                  
+                                  return Text(
+                                    "$participantCount/${widget.program.isFixedParticipants ? maxParticipants : '∞'} participants",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isFull 
+                                          ? AppColors.error(context)
+                                          : AppColors.textSecondary(context),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Joined badge
+                    if (hasJoined)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.green.withOpacity(0.35),
+                          ),
+                        ),
+                        child: Text(
+                          'Joined',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.green,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-              
-              // Real-time Participant Count
-              StreamBuilder<int>(
-                stream: programProvider.streamProgramParticipantCount(widget.program.programId),
-                builder: (context, snapshot) {
-                  final participantCount = snapshot.data ?? widget.program.currentParticipants;
-                  final maxParticipants = widget.program.maxParticipants;
-                  final isFull = widget.program.isFixedParticipants && participantCount >= maxParticipants;
-                  
-                  return Row(
-                    children: [
-                      Icon(
-                        Icons.group,
-                        size: 16,
-                        color: widget.isDarkMode
-                            ? AppColors.darkTextSecondary
-                            : AppColors.lightTextSecondary,
+                
+                const SizedBox(height: 12),
+                
+                // Date and location
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary(context),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _formatDate(widget.program.programDate),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary(context),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "$participantCount/${widget.program.isFixedParticipants ? maxParticipants : '∞'}",
-                        style: TextStyle(
-                          color: isFull 
-                            ? (widget.isDarkMode ? AppColors.darkError : AppColors.lightError)
-                            : (widget.isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
-                          fontWeight: isFull ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    if (widget.program.location != null && widget.program.location!.isNotEmpty) ...[
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          widget.program.location!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary(context),
+                          ),
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // DATE
-          Text(
-            _formatDate(widget.program.programDate),
-            style: TextStyle(
-              color: widget.isDarkMode
-                  ? AppColors.darkTextSecondary
-                  : AppColors.lightTextSecondary,
-              fontSize: 13,
+                  ],
+                ),
+              ],
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // REAL-TIME: Financial data with streams
-          _buildFinancialSection(programProvider),
-
-          const SizedBox(height: 18),
-
-          // REAL-TIME: Progress with stream
-          _buildProgressSection(programProvider),
-
-          const SizedBox(height: 20),
-
-          // ✅ ACTION BUTTONS - EXACT SAME LOGIC AS ALL PROGRAMS SCREEN
-          _buildActionButtons(hasJoined, canJoin, programProvider, authProvider),
+          
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.border(context).withOpacity(0.3),
+          ),
+          
+          // Financial stats
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Reduced vertical padding
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatItem(
+                  'Collected',
+                  Icons.account_balance_wallet_rounded,
+                  Colors.green,
+                  (collected) => '₹${collected.toStringAsFixed(0)}',
+                  widget.program.programId,
+                ),
+                _buildStatItem(
+                  'Expenses',
+                  Icons.money_off_rounded,
+                  Colors.orange,
+                  (expenses) => '₹${expenses.toStringAsFixed(0)}',
+                  widget.program.programId,
+                ),
+                _buildStatItem(
+                  'Balance',
+                  Icons.savings_rounded,
+                  Colors.blue,
+                  (balance) => '₹${balance.toStringAsFixed(0)}',
+                  widget.program.programId,
+                ),
+              ],
+            ),
+          ),
+          
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.border(context).withOpacity(0.3),
+          ),
+          
+          // Progress bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Reduced vertical padding
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Progress',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    StreamBuilder<double>(
+                      stream: programProvider.streamProgramTotalContributions(widget.program.programId),
+                      builder: (context, contribSnap) {
+                        final collected = contribSnap.data ?? 0.0;
+                        final target = widget.program.totalProgramAmount ?? 0.0;
+                        final progress = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
+                        
+                        return Text(
+                          '${(progress * 100).toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary(context),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6), // Reduced from 8
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: StreamBuilder<double>(
+                    stream: programProvider.streamProgramTotalContributions(widget.program.programId),
+                    builder: (context, contribSnap) {
+                      final collected = contribSnap.data ?? 0.0;
+                      final target = widget.program.totalProgramAmount ?? 0.0;
+                      final progress = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
+                      
+                      return LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: AppColors.progressBackground(context),
+                        color: AppColors.progressFill(context),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+                StreamBuilder<double>(
+                  stream: programProvider.streamProgramTotalContributions(widget.program.programId),
+                  builder: (context, contribSnap) {
+                    final collected = contribSnap.data ?? 0.0;
+                    final target = widget.program.totalProgramAmount ?? 0.0;
+                    
+                    return Text(
+                      '₹${collected.toStringAsFixed(0)} of ₹${target.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          
+          // Action buttons - ADD THIS TO FILL REMAINING SPACE
+          const Spacer(),
+          
+          // Action buttons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // Added bottom padding
+            child: Row(
+              children: [
+                // View Details button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _viewProgramDetails(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary(context),
+                      side: BorderSide(
+                        color: AppColors.border(context),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text(
+                      'View Details',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Join/Leave button
+                if (hasJoined)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.red.withOpacity(0.3),
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: _isLeaving
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.exit_to_app_rounded,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                      onPressed: _isLeaving ? null : () => _leaveProgram(programProvider, authProvider),
+                      padding: EdgeInsets.zero,
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: canJoin ? () => _joinProgram(programProvider, authProvider) : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canJoin
+                            ? AppColors.primary(context)
+                            : AppColors.textTertiary(context),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: _isJoining
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              !canJoin && widget.program.isFixedParticipants && 
+                              widget.program.currentParticipants >= widget.program.maxParticipants
+                                  ? 'Program Full'
+                                  : 'Join Now',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // ✅ EXACT SAME BUTTON LOGIC AS ALL PROGRAMS SCREEN
-  Widget _buildActionButtons(bool hasJoined, bool canJoin, ProgramProvider programProvider, AppAuthProvider authProvider) {
-    final user = authProvider.user;
-    
-    return Row(
-      children: [
-        // View Details Button
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () => _viewProgramDetails(widget.program),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: widget.isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-              foregroundColor: widget.isDarkMode ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              side: BorderSide(
-                color: widget.isDarkMode ? AppColors.darkBorder : AppColors.lightBorder,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: const Text("View Details"),
-          ),
-        ),
-
-        const SizedBox(width: 8),
-
-        // Join/Leave Button
-        if (hasJoined) ...[
-          IconButton(
-            icon: _isLeaving
-                ? SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
-                    ),
-                  )
-                : const Icon(Icons.exit_to_app, color: Colors.red),
-            onPressed: _isLeaving ? null : () => _leaveProgram(programProvider, authProvider),
-          ),
-        ] else ...[
-          Expanded(
-            child: ElevatedButton(
-              onPressed: canJoin ? () => _joinProgram(programProvider, authProvider) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canJoin
-                    ? (widget.isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary)
-                    : Colors.grey.shade400,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: _isJoining
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      !canJoin && widget.program.isFixedParticipants && widget.program.currentParticipants >= widget.program.maxParticipants
-                          ? 'Program Full'
-                          : 'Join Now',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // Financial Section
-  Widget _buildFinancialSection(ProgramProvider programProvider) {
+  Widget _buildStatItem(
+    String label,
+    IconData icon,
+    Color color,
+    String Function(double) formatValue,
+    String programId,
+  ) {
     return StreamBuilder<double>(
-      stream: programProvider.streamProgramTotalContributions(widget.program.programId),
-      builder: (context, contribSnap) {
-        final collected = contribSnap.data ?? 0.0;
-
-        return FutureBuilder<double>(
-          future: _getProgramExpenses(widget.program.programId),
-          builder: (context, expenseSnap) {
-            final expenses = expenseSnap.data ?? 0.0;
-            final balance = collected - expenses;
-
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                // ✅ ONLY CHANGE: Use consistent icon colors
-                _buildStatWithIcon(
-                  Icons.account_balance_wallet,
-                  "Collected",
-                  "₹${collected.toStringAsFixed(2)}",
-                  widget.isDarkMode ? AppColors.darkRevenue : AppColors.lightRevenue,
-                ),
-                _buildStatWithIcon(
-                  Icons.money_off,
-                  "Expenses",
-                  "₹${expenses.toStringAsFixed(2)}",
-                  widget.isDarkMode ? AppColors.darkExpense : AppColors.lightExpense,
-                ),
-                _buildStatWithIcon(
-                  Icons.savings,
-                  "Balance",
-                  "₹${balance.toStringAsFixed(2)}",
-                  widget.isDarkMode ? AppColors.darkBalance : AppColors.lightBalance,
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Progress Section
-  Widget _buildProgressSection(ProgramProvider programProvider) {
-    final target = widget.program.totalProgramAmount ?? 0.0;
-
-    return StreamBuilder<double>(
-      stream: programProvider.streamProgramTotalContributions(widget.program.programId),
-      builder: (context, contribSnap) {
-        final collected = contribSnap.data ?? 0.0;
-        final rawProgress = target > 0 ? (collected / target) : 0.0;
-        final progress = (rawProgress.clamp(0.0, 1.0) as double);
-
+      stream: _getStreamForLabel(label, programId),
+      builder: (context, snapshot) {
+        final value = snapshot.data ?? 0.0;
+        
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: widget.isDarkMode
-                    ? AppColors.darkProgressBackground
-                    : AppColors.lightProgressBackground,
-                color: widget.isDarkMode ? AppColors.darkProgressFill : AppColors.lightProgressFill,
-              ),
-            ),
-            const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  "₹${collected.toStringAsFixed(2)} / ₹${target.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: widget.isDarkMode
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary,
-                  ),
+                Icon(
+                  icon,
+                  size: 14,
+                  color: color,
                 ),
+                const SizedBox(width: 4),
                 Text(
-                  "${(progress * 100).toStringAsFixed(1)}%",
+                  label,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: widget.isDarkMode
-                        ? AppColors.darkPrimary
-                        : AppColors.lightPrimary,
+                    fontSize: 10,
+                    color: AppColors.textSecondary(context),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formatValue(value),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         );
@@ -744,7 +896,88 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     );
   }
 
-  // ✅ JOIN PROGRAM - EXACT SAME AS ALL PROGRAMS SCREEN
+  Stream<double> _getStreamForLabel(String label, String programId) {
+    final programProvider = context.read<ProgramProvider>();
+    
+    switch (label) {
+      case 'Collected':
+        return programProvider.streamProgramTotalContributions(programId);
+      case 'Expenses':
+        return _getExpensesStream(programId);
+      case 'Balance':
+        return _getBalanceStream(programId);
+      default:
+        return Stream.value(0.0);
+    }
+  }
+
+  Stream<double> _getExpensesStream(String programId) async* {
+    while (true) {
+      await Future.delayed(const Duration(seconds: 5));
+      try {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('expenses')
+            .where('programId', isEqualTo: programId)
+            .get();
+
+        double total = 0.0;
+        for (var doc in snapshot.docs) {
+          final data = doc.data();
+          final status = data['status'] ?? 'pending';
+          if (status == 'approved' || status == 'completed') {
+            total += (data['amount'] ?? 0).toDouble();
+          }
+        }
+        yield total;
+      } catch (e) {
+        yield 0.0;
+      }
+    }
+  }
+
+  Stream<double> _getBalanceStream(String programId) async* {
+    final programProvider = context.read<ProgramProvider>();
+    
+    while (true) {
+      await Future.delayed(const Duration(seconds: 5));
+      try {
+        // Use streamProgramTotalContributions instead of getTotalContributionsForProgram
+        double contributions = 0.0;
+        final contributionsStream = programProvider.streamProgramTotalContributions(programId);
+        await for (final value in contributionsStream.take(1)) {
+          contributions = value;
+        }
+        
+        final expenses = await _getLatestExpenses(programId);
+        final balance = contributions - expenses;
+        yield balance > 0 ? balance : 0.0;
+      } catch (e) {
+        yield 0.0;
+      }
+    }
+  }
+
+  Future<double> _getLatestExpenses(String programId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('expenses')
+          .where('programId', isEqualTo: programId)
+          .get();
+
+      double total = 0.0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final status = data['status'] ?? 'pending';
+        if (status == 'approved' || status == 'completed') {
+          total += (data['amount'] ?? 0).toDouble();
+        }
+      }
+      return total;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
   Future<void> _joinProgram(ProgramProvider programProvider, AppAuthProvider authProvider) async {
     final user = authProvider.user;
     if (user == null) return;
@@ -761,21 +994,25 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Joined ${widget.program.title} successfully')),
+        SnackBar(
+          content: Text('Joined ${widget.program.title} successfully'),
+          backgroundColor: Colors.green,
+        ),
       );
       
-      // ✅ Force UI update
       setState(() {});
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to join: $e')),
+        SnackBar(
+          content: Text('Failed to join: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => _isJoining = false);
     }
   }
 
-  // ✅ LEAVE PROGRAM - EXACT SAME AS ALL PROGRAMS SCREEN
   Future<void> _leaveProgram(ProgramProvider programProvider, AppAuthProvider authProvider) async {
     final user = authProvider.user;
     if (user == null) return;
@@ -804,14 +1041,19 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
       try {
         await programProvider.leaveProgram(widget.program.programId, user.uid);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Left ${widget.program.title}')),
+          SnackBar(
+            content: Text('Left ${widget.program.title}'),
+            backgroundColor: Colors.green,
+          ),
         );
         
-        // ✅ Force UI update
         setState(() {});
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to leave: $e')),
+          SnackBar(
+            content: Text('Failed to leave: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       } finally {
         setState(() => _isLeaving = false);
@@ -819,75 +1061,27 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     }
   }
 
-  // Helper Methods
-  Future<double> _getProgramExpenses(String programId) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('expenses')
-          .where('programId', isEqualTo: programId)
-          .get();
-
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final status = data['status'] ?? 'pending';
-        if (status == 'approved' || status == 'completed') {
-          total += (data['amount'] ?? 0).toDouble();
-        }
-      }
-      return total;
-    } catch (e) {
-      return 0.0;
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
-  }
-
-  void _viewProgramDetails(ProgramModel program) {
+  void _viewProgramDetails() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProgramDetailsScreen(programId: program.programId),
+        builder: (context) => ProgramDetailsScreen(programId: widget.program.programId),
       ),
     );
   }
 
-  Widget _buildStatWithIcon(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: widget.isDarkMode
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        )
-      ],
-    );
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = date.difference(now);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Tomorrow';
+    } else if (difference.inDays < 7) {
+      return 'In ${difference.inDays} days';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }

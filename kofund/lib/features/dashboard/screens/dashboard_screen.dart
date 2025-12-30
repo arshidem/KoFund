@@ -517,9 +517,11 @@ void _initializeWidgetProviders(String userId, String communityId) {
                          
                             
                             ProgramCarouselWidget(
-                              communityId: cid!,
+                              // communityId: cid!,
                               isAdmin: user?.isAdmin ?? false,
                             ),
+                                                        const SizedBox(height: 16),
+
                             //    PollDashboardWidget(
                             //   communityId: cid!,
                             //   isAdmin: user?.isAdmin ?? false,
@@ -531,7 +533,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
                       
                       // const SizedBox(height: 24),
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
                             HistoryWidget(key: ValueKey('history-$userId-$cid')),
                             const SizedBox(height: 20),
                           ],

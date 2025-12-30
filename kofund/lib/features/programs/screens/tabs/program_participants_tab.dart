@@ -187,7 +187,7 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
           ),
         
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
           child: _buildSearchFilterBar(context),
         ),
         
@@ -282,59 +282,114 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     );
   }
 
-  // Shimmer stats widget
-  Widget _buildShimmerStats() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.surface(context),
-            AppColors.surface(context).withOpacity(0.8),
+Widget _buildShimmerStats() {
+  final skeletonColor = AppColors.textCards(context).withOpacity(0.25);
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.all(12),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+          color: Colors.black.withOpacity(0.06),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        /// 🔒 RESERVED HEADER SPACE (invisible)
+        const SizedBox(height: 28),
+
+        /// AMOUNT
+        Container(
+          width: 170,
+          height: 26,
+          decoration: BoxDecoration(
+            color: skeletonColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+
+        const SizedBox(height: 2),
+
+        /// 🔒 RESERVED "expected" TEXT SPACE
+        const SizedBox(height: 11),
+
+        const SizedBox(height: 8),
+
+        /// PROGRESS BAR
+        Container(
+          height: 6,
+          decoration: BoxDecoration(
+            color: skeletonColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        /// STATS CHIPS
+        Row(
+          children: [
+            _buildShimmerChip(),
+            const SizedBox(width: 8),
+            _buildShimmerChip(),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-            color: Colors.black.withOpacity(0.06),
-          ),
-        ],
+      ],
+    ),
+  );
+}
+
+
+Widget _buildShimmerChip() {
+  return Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(
+        vertical: 6,   // ⬅ match real chip height
+        horizontal: 10,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: BoxDecoration(
+        color: AppColors.surface(context).withOpacity(0.35),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Icon placeholder
+          Container(
+            width: 16,   // ⬅ match Icons.check_circle size
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppColors.surface(context).withOpacity(0.6),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Text placeholders
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 100,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface(context).withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 120,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface(context).withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
               Container(
-                width: 40,
-                height: 18,
+                width: 28,
+                height: 12, // ⬅ label text size
+                decoration: BoxDecoration(
+                  color: AppColors.surface(context).withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                width: 18,
+                height: 14, // ⬅ value text size
                 decoration: BoxDecoration(
                   color: AppColors.surface(context).withOpacity(0.6),
                   borderRadius: BorderRadius.circular(4),
@@ -342,97 +397,12 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
               ),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          Container(
-            width: 150,
-            height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.surface(context).withOpacity(0.6),
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: 120,
-            height: 12,
-            decoration: BoxDecoration(
-              color: AppColors.surface(context).withOpacity(0.6),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              color: AppColors.surface(context).withOpacity(0.6),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Row(
-            children: [
-              _buildShimmerChip(),
-              const SizedBox(width: 12),
-              _buildShimmerChip(),
-            ],
-          ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildShimmerChip() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface(context).withOpacity(0.4),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: AppColors.surface(context).withOpacity(0.6),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 30,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface(context).withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  width: 40,
-                  height: 11,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface(context).withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // Participants list with shimmer
   Widget _buildParticipantsListForScrollView(BuildContext context) {
@@ -1172,6 +1142,7 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     final isMonthlyProgram = widget.program.isMonthlyPaymentProgram;
 
     return Column(
+      
       children: [
         Material(
           color: Colors.transparent,
@@ -1180,6 +1151,16 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
               _showParticipantActions(participant, context);
             },
             child: Container(
+                                       decoration: BoxDecoration(
+      color: AppColors.card(context),
+      // boxShadow: [
+      //   BoxShadow(
+      //     color: Colors.black.withOpacity(0.05),
+      //     blurRadius: 12,
+      //     offset: const Offset(0, 4),
+      //   ),
+      // ],
+    ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [

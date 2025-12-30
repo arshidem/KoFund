@@ -21,6 +21,31 @@ class ProgramContributionsTab extends StatefulWidget {
   @override
   State<ProgramContributionsTab> createState() => _ProgramContributionsTabState();
 }
+/// Simple SliverPersistentHeaderDelegate that pins a provided child.
+class _PinnedStatsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minExtent;
+  final double maxExtent;
+  final Widget child;
+
+  _PinnedStatsHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // You can optionally animate scale/opacity based on shrinkOffset here.
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedStatsHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.maxExtent != maxExtent ||
+        oldDelegate.minExtent != minExtent;
+  }
+}
 
 class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
   final TextEditingController _searchController = TextEditingController();
@@ -119,107 +144,127 @@ final Map<String, String> _localUserNameCache = {};
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isAdmin = _isAdmin(context);
-    
-    return Stack(
-      children: [
-        Column(
-          children: [
-            // Contribution Summary Card (Progress Bar)
-            _buildContributionSummary(context),
-            
-            // Search and Filter Bar
-            _buildSearchFilterBar(context),
-            
-            // Contributions List
-            Expanded(
-              child: StreamBuilder<List<ContributionModel>>(
-                stream: Provider.of<ContributionProvider>(context, listen: false)
-                    .streamProgramContributions(widget.program.programId),
-         builder: (context, snapshot) {
-  if (snapshot.connectionState == ConnectionState.waiting) {
-    // Use skeleton loader instead of spinner
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return HistoryListSkeleton(isDarkMode: isDarkMode);
-  }
+@override
+Widget build(BuildContext context) {
+  final isAdmin = _isAdmin(context);
 
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error,
-                            color: AppColors.error(context),
-                            size: 48,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Error loading contributions',
-                            style: TextStyle(
-                              color: AppColors.textPrimary(context),
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${snapshot.error}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+  // Use the contributions stream here (we'll listen below in StreamBuilder)
+  final contributionsStream = Provider.of<ContributionProvider>(context, listen: false)
+      .streamProgramContributions(widget.program.programId);
 
-                  final contributions = snapshot.data ?? [];
-                  final filteredContributions = _filterContributions(contributions);
+  return Stack(
+    children: [
+      // Main scroll area with pinned stats
+      StreamBuilder<List<ContributionModel>>(
+        stream: contributionsStream,
+        builder: (context, snapshot) {
+          // Determine common states
+          final connectionWaiting = snapshot.connectionState == ConnectionState.waiting;
+          final hasError = snapshot.hasError;
+          final allContributions = snapshot.data ?? <ContributionModel>[];
+          final filtered = _filterContributions(allContributions);
 
-                  if (filteredContributions.isEmpty) {
-                    return _buildEmptyState(contributions.isEmpty, context);
-                  }
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ======= PINNED STATS HEADER =======
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _PinnedStatsHeaderDelegate(
+                  minExtent: 120, // adjust as needed
+                  maxExtent: 185, // adjust as needed
+                  child: _buildContributionSummary(context),
+                ),
+              ),
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                    itemCount: filteredContributions.length,
-                    itemBuilder: (context, index) {
-                      final contribution = filteredContributions[index];
+              // ======= Search & Filter (scrolling) =======
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildSearchFilterBar(context),
+                ),
+              ),
+
+              // ======= Content: skeleton / error / empty / list =======
+              if (connectionWaiting) ...[
+                // Show skeleton as a sliver
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 8,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    // show your existing skeleton (HistoryListSkeleton) inside a sliver
+                    height: 400,
+                    child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
+                  ),
+                ),
+              ] else if (hasError) ...[
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.error, color: AppColors.error(context), size: 48),
+                        const SizedBox(height: 8),
+                        Text('Error loading contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
+                        const SizedBox(height: 8),
+                        Text('${snapshot.error}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                      ],
+                    ),
+                  ),
+                )
+              ] else if (filtered.isEmpty) ...[
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildEmptyState(allContributions.isEmpty, context),
+                ),
+              ] else ...[
+                // Sliver list for contributions (keeps items performant)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final contribution = filtered[index];
                       final showMenu = isAdmin || _isContributor(contribution, context);
                       return _buildContributionCard(contribution, context, showMenu);
                     },
-                  );
-                },
-              ),
+                    childCount: filtered.length,
+                  ),
+                ),
+                // Add bottom padding so last item isn't hidden by FAB or bottom sheet
+                SliverToBoxAdapter(
+                  child: const SizedBox(height: 88),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+
+      // Floating Action Button - pinned above scroll content
+      Positioned(
+        bottom: 16,
+        right: 16,
+        child: Visibility(
+          visible: isAdmin,
+          child: FloatingActionButton(
+            onPressed: () => _showAddContributionModal(context),
+            backgroundColor: AppColors.primary(context),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
-        ),
-        
-        // ✅ ADD: Floating Action Button for adding contributions
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: Visibility(
-            visible: isAdmin, // Only show if user is admin
-            child: FloatingActionButton(
-              onPressed: () => _showAddContributionModal(context),
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 4,
-              child: const Icon(Icons.add),
-            ),
+            elevation: 4,
+            child: const Icon(Icons.add),
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 
   Widget _buildContributionSummary(BuildContext context) {
     return StreamBuilder<double>(
@@ -543,6 +588,16 @@ Widget _buildSkeletonLoader(BuildContext context) {
               _showContributionDetails(contribution, context);
             },
             child: Container(
+                                                     decoration: BoxDecoration(
+      color: AppColors.card(context),
+      // boxShadow: [
+      //   BoxShadow(
+      //     color: Colors.black.withOpacity(0.05),
+      //     blurRadius: 12,
+      //     offset: const Offset(0, 4),
+      //   ),
+      // ],
+    ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
                 children: [

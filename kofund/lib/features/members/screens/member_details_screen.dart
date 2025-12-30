@@ -205,26 +205,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
-        appBar: AppBar(
-          title: const Text('Member Details'),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, size: 24),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+      
         body: MemberDetailsSkeleton(),
       );
     }

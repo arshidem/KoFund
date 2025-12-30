@@ -673,10 +673,8 @@ Widget _buildProgramCard(
                     .streamProgramTotalContributions(program.programId),
                 builder: (context, contribSnap) {
                   final collectedAmount = contribSnap.data ?? 0.0;
-
                   final suggestedAmount = program.suggestedContribution ?? 0.0;
                   
-                  // Get participant count from ParticipantProvider stream
                   return StreamBuilder<List<ParticipantModel>>(
                     stream: participantProvider.streamProgramParticipants(program.programId),
                     builder: (context, participantSnapshot) {
@@ -702,154 +700,137 @@ Widget _buildProgramCard(
                       final programColor =
                           _getProgramColor(program.programType);
 
+                      final hasDescription = program.description.isNotEmpty;
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // ───────── HEADER ─────────
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Stack(
                             children: [
-                              Container(
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  color: programColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(
-                                  _getProgramIcon(program.programType),
-                                  color: programColor,
-                                  size: 26,
-                                ),
-                              ),
+                              // Content Row (Icon + Title + Description)
+                              Row(
+                                crossAxisAlignment: hasDescription 
+                                    ? CrossAxisAlignment.start 
+                                    : CrossAxisAlignment.center, // Center when no description
+                                children: [
+                                  // Program Icon
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: programColor.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Icon(
+                                      ProgramTypes.getIconData(program.programType),
+                                      color: programColor,
+                                      size: 26,
+                                    ),
+                                  ),
 
-                              const SizedBox(width: 14),
+                                  const SizedBox(width: 14),
 
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                                  // Title and Description Column
+                                  Expanded(
+                                    child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: hasDescription 
+                                          ? MainAxisAlignment.start 
+                                          : MainAxisAlignment.center, // Center when no description
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            program.title,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w700,
-                                              color:
-                                                  AppColors.textPrimary(context),
-                                            ),
+                                        // Title
+                                        Text(
+                                          program.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary(context),
                                           ),
                                         ),
-                                        if (widget.isAdmin)
-                                          _buildAdminMenu(
-                                              program, programProvider),
-                                      ],
-                                    ),
 
-                                    const SizedBox(height: 6),
-
-                                    Row(
-                                      children: [
-                                        _buildProgramStatus(program),
-
-                                        if (program.enableAutoReminders) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.blue.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                              border: Border.all(
-                                                color: Colors.blue
-                                                    .withOpacity(0.3),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Reminders',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.blue,
-                                              ),
+                                        // Description (if exists)
+                                        if (hasDescription) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            program.description,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              height: 1.4,
+                                              color: AppColors.textSecondary(context),
                                             ),
                                           ),
                                         ],
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  
+                                  // Empty SizedBox to balance the admin menu in Stack
+                                  if (widget.isAdmin)
+                                    const SizedBox(width: 40), // Width of admin menu
+                                ],
                               ),
+                              
+                              // Admin Menu (fixed top-right)
+                              if (widget.isAdmin)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: _buildAdminMenu(program, programProvider),
+                                ),
                             ],
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // ───────── DESCRIPTION ─────────
-                          Text(
-                            program.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.4,
-                              color: AppColors.textSecondary(context),
-                            ),
                           ),
 
                           const SizedBox(height: 18),
 
                           // ───────── PROGRESS ─────────
-                     // ───────── PROGRESS ─────────
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    const Text(
-      'Progress',
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-    Text(
-      '${(progress * 100).toStringAsFixed(1)}%',
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: programColor,
-      ),
-    ),
-  ],
-),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Progress',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                              Text(
+                                '${(progress * 100).toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: programColor,
+                                ),
+                              ),
+                            ],
+                          ),
 
-const SizedBox(height: 8),
+                          const SizedBox(height: 8),
 
-// 🔧 UPDATED PROGRESS BAR WITH GRAY 300 BACKGROUND
-Container(
-  height: 7,
-  width: double.infinity,
-  decoration: BoxDecoration(
-    color: Colors.grey[300], // ← CHANGED TO GRAY 300
-    borderRadius: BorderRadius.circular(4),
-  ),
-  child: FractionallySizedBox(
-    alignment: Alignment.centerLeft,
-    widthFactor: progress.clamp(0.0, 1.0),
-    child: Container(
-      decoration: BoxDecoration(
-        color: programColor,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    ),
-  ),
-),
+                          // PROGRESS BAR
+                          Container(
+                            height: 7,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: progress.clamp(0.0, 1.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: programColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                          ),
 
                           const SizedBox(height: 18),
 
@@ -859,30 +840,27 @@ Container(
                             children: [
                               _buildStatItem(
                                 icon: Icons.currency_rupee,
-                                value:
-                                    '₹${collectedAmount.toStringAsFixed(0)}',
+                                value: '₹${collectedAmount.toStringAsFixed(0)}',
                                 label: 'Collected',
-                                color: Colors.green,
+                                color: programColor,
                               ),
                               _buildStatItem(
                                 icon: Icons.track_changes,
-                                value:
-                                    '₹${programAmount.toStringAsFixed(0)}',
+                                value: '₹${programAmount.toStringAsFixed(0)}',
                                 label: 'Target',
-                                color: AppColors.primary(context),
+                                color: programColor,
                               ),
                               _buildStatItem(
                                 icon: Icons.people,
                                 value: '$totalParticipants',
                                 label: 'Members',
-                                color: Colors.blue,
+                                color: programColor,
                               ),
                               _buildStatItem(
                                 icon: Icons.schedule,
                                 value: '$daysLeft',
                                 label: 'Days',
-                                color:
-                                    isUrgent ? Colors.red : Colors.orange,
+                                color: isUrgent ? Colors.red : programColor,
                               ),
                             ],
                           ),
@@ -894,30 +872,52 @@ Container(
                             children: [
                               Expanded(
                                 child: OutlinedButton(
-                                  onPressed: () =>
-                                      _viewProgramDetails(program),
+                                  onPressed: () => _viewProgramDetails(program),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
+                                    foregroundColor: AppColors.textPrimary(context),
+                                    side: BorderSide(
+                                      color: AppColors.border(context),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                   ),
-                                  child: const Text('View Details'),
+                                  child: Text(
+                                    'View Details',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
 
                               const SizedBox(width: 10),
 
                               if (hasJoined)
-                                IconButton(
-                                  icon: const Icon(Icons.exit_to_app,
-                                      color: Colors.red),
-                                  onPressed: () => _leaveProgram(
-                                      program,
-                                      programProvider,
-                                      authProvider),
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.red.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.exit_to_app,
+                                      size: 20,
+                                    ),
+                                    color: Colors.red,
+                                    onPressed: () => _leaveProgram(
+                                        program,
+                                        programProvider,
+                                        authProvider),
+                                    padding: EdgeInsets.zero,
+                                  ),
                                 )
                               else
                                 Expanded(
@@ -929,21 +929,25 @@ Container(
                                             authProvider)
                                         : null,
                                     style: ElevatedButton.styleFrom(
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 12),
+                                      backgroundColor: canJoin
+                                          ? programColor
+                                          : Colors.grey[400],
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                     ),
                                     child: Text(
                                       !canJoin &&
                                               program.isFixedParticipants &&
-                                              totalParticipants >=
-                                                  maxParticipants
+                                              totalParticipants >= maxParticipants
                                           ? 'Full'
                                           : 'Join Now',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -962,6 +966,50 @@ Container(
     },
   );
 }
+
+// Your existing _buildStatItem method (unchanged)
+Widget _buildStatItem({
+  required IconData icon,
+  required String value,
+  required String label,
+  required Color color,
+}) {
+  return Column(
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 2),
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: Colors.grey,
+        ),
+      ),
+    ],
+  );
+}
+
+
 Widget _buildProgramStatus(ProgramModel program) {
   Color color;
   String text;
@@ -996,6 +1044,12 @@ Widget _buildProgramStatus(ProgramModel program) {
 }
 
 
+// Add these methods to your file (outside the widget class)
+IconData _getProgramIcon(String programType) {
+  // Use the centralized ProgramTypes class
+  return ProgramTypes.getIconData(programType);
+}
+
   Color _getProgramColor(String type) {
     switch (type.toLowerCase()) {
       case 'savings':
@@ -1011,49 +1065,7 @@ Widget _buildProgramStatus(ProgramModel program) {
     }
   }
 
-  IconData _getProgramIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'savings':
-        return Icons.account_balance_wallet;
-      case 'investment':
-        return Icons.trending_up;
-      case 'loan':
-        return Icons.currency_exchange;
-      case 'emergency':
-        return Icons.medical_services;
-      default:
-        return Icons.assignment;
-    }
-  }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildActionButton({
     required String text,

@@ -84,87 +84,55 @@ Widget build(BuildContext context) {
   
   return Stack(
     children: [
-      // Main content (Column)
-      Column(
+      // Change from Column to ListView to make everything scrollable
+      ListView(
         children: [
-          // Expense Summary
+          // Expense Summary (Now scrollable)
           _buildExpenseSummary(context),
           
-          const SizedBox(height: 0), // 8px gap
+          const SizedBox(height: 0),
           
           // Search and Filter Bar
           _buildSearchFilterBar(context),
           
-          const SizedBox(height: 0), // 8px gap
+          const SizedBox(height: 8),
           
-          // Expenses List
-          Expanded(
-            child: StreamBuilder<List<ExpenseModel>>(
-              stream: Provider.of<ExpenseProvider>(context, listen: false)
-                  .streamProgramExpenses(widget.program.programId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary(context),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error,
-                          color: AppColors.error(context),
-                          size: 48,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Error loading expenses',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${snapshot.error}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final expenses = snapshot.data ?? [];
-                final filteredExpenses = _filterExpenses(expenses);
-
-                if (filteredExpenses.isEmpty) {
-                  return _buildEmptyState(expenses.isEmpty, isAdmin, context);
-                }
-
-                return ListView.builder(
-                  itemCount: filteredExpenses.length,
-                  itemBuilder: (context, index) {
-                    final expense = filteredExpenses[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 0), // 8px gap between cards
-                      child: _buildExpenseCard(expense, context, isAdmin),
-                    );
-                  },
+          // Expenses List - No longer needs Expanded
+          StreamBuilder<List<ExpenseModel>>(
+            stream: Provider.of<ExpenseProvider>(context, listen: false)
+                .streamProgramExpenses(widget.program.programId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary(context),
+                  ),
                 );
-              },
-            ),
-          ),
+              }
 
-          // Not Approved Message only (no button here anymore)
+              if (snapshot.hasError) {
+                return _buildErrorState(snapshot.error, context);
+              }
+
+              final expenses = snapshot.data ?? [];
+              final filteredExpenses = _filterExpenses(expenses);
+
+              if (filteredExpenses.isEmpty) {
+                return _buildEmptyState(expenses.isEmpty, isAdmin, context);
+              }
+
+              return Column(
+                children: filteredExpenses.map((expense) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: _buildExpenseCard(expense, context, isAdmin),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          
+          // Not Approved Message (inside ListView)
           if (currentUser != null && !currentUser.isApproved)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
@@ -173,7 +141,7 @@ Widget build(BuildContext context) {
         ],
       ),
 
-      // Floating Add Button - Positioned like your contribution modal
+      // Floating Add Button (stays same)
       if (isAdmin || (currentUser != null && currentUser.isApproved))
         Positioned(
           bottom: 16,
@@ -192,7 +160,40 @@ Widget build(BuildContext context) {
     ],
   );
 }
-
+Widget _buildErrorState(dynamic error, BuildContext context) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error,
+            color: AppColors.error(context),
+            size: 48,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Error loading expenses',
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$error',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(context),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
+}
 Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmin) {
   return Column(
     children: [
@@ -203,6 +204,16 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
             _showExpenseDetails(expense, context);
           },
           child: Container(
+                                                                 decoration: BoxDecoration(
+      color: AppColors.card(context),
+      // boxShadow: [
+      //   BoxShadow(
+      //     color: Colors.black.withOpacity(0.05),
+      //     blurRadius: 12,
+      //     offset: const Offset(0, 4),
+      //   ),
+      // ],
+    ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -835,41 +846,42 @@ Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
     );
   }
 
-  Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            noExpenses ? Icons.receipt_long_outlined : Icons.search_off,
-            size: 60,
-            color: AppColors.textTertiary(context),
+Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          noExpenses ? Icons.receipt_long_outlined : Icons.search_off,
+          size: 60,
+          color: AppColors.textTertiary(context),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          noExpenses ? 'No Expenses Yet' : 'No Matching Expenses',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
           ),
-          const SizedBox(height: 8),
-          Text(
-            noExpenses ? 'No Expenses Yet' : 'No Matching Expenses',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
-            ),
-            textAlign: TextAlign.center,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          noExpenses 
+              ? (isAdmin ? 'Add your first expense to get started' : 'No expenses have been added yet')
+              : 'Try adjusting your search or filters',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+            fontSize: 12,
           ),
-          const SizedBox(height: 8),
-          Text(
-            noExpenses 
-                ? (isAdmin ? 'Add your first expense to get started' : 'No expenses have been added yet')
-                : 'Try adjusting your search or filters',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildStatChip(
     BuildContext context, {

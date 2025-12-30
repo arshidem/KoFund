@@ -153,40 +153,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     final authProvider = context.watch<AppAuthProvider>();
     final user = authProvider.user;
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header with "Recent Transactions" and "See all"
-        _buildHeaderSection(context, user),
-        const SizedBox(height: 8),
-        
-        // History list with proper user context
-        _buildHistoryContent(user),
-      ],
-    );
-  }
-
-  Widget _buildHeaderSection(BuildContext context, UserModel? user) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          "Recent Transactions",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        TextButton(
-          onPressed: user != null ? () => _navigateToHistoryScreen(context) : null,
-          style: TextButton.styleFrom(
-            foregroundColor: user != null ? AppColors.primary(context) : AppColors.textSecondary(context),
-          ),
-          child: const Text("See all"),
-        ),
-      ],
-    );
+    return _buildHistoryContent(user);
   }
 
   void _navigateToHistoryScreen(BuildContext context) {
@@ -201,12 +168,20 @@ class _HistoryWidgetState extends State<HistoryWidget> {
   Widget _buildHistoryContent(UserModel? user) {
     // If no user is logged in
     if (user == null) {
-      return _buildNoUserState(context);
+      return _buildEmptyState(
+        icon: Icons.person_outline,
+        title: 'Sign in to View History',
+        message: 'Please sign in to see your transaction history',
+      );
     }
     
     // If user has no community
     if (user.communityId == null || user.communityId!.isEmpty) {
-      return _buildNoCommunityState(context);
+      return _buildEmptyState(
+        icon: Icons.group_outlined,
+        title: 'No Community',
+        message: 'Join a community to see transaction history',
+      );
     }
     
     // If loading
@@ -232,331 +207,321 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         
         // If no transactions
         if (items.isEmpty) {
-          return _buildNoHistoryState(context);
+          return _buildEmptyState(
+            icon: Icons.history_outlined,
+            title: 'No Transactions Found',
+            message: 'Transactions will appear here once contributions or expenses are added',
+          );
         }
 
         // Show first 3-4 history items
         final displayItems = items.take(4).toList();
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.card(context),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              ...displayItems.map((item) => _buildHistoryItem(
-                item: item,
-                context: context,
-              )),
-              // Add spacing after last item
-              if (displayItems.isNotEmpty) const SizedBox(height: 8),
-            ],
-          ),
-        );
+        return _buildRecentTransactionsList(displayItems, context, user);
       },
     );
   }
 
-  Widget _buildNoUserState(BuildContext context) {
+  Widget _buildRecentTransactionsList(List<HistoryItem> items, BuildContext context, UserModel? user) {
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.person_outline,
-            size: 48,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Sign in to View History",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Please sign in to see your transaction history",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-            ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildNoCommunityState(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.group_outlined,
-            size: 48,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "No Community",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Join a community to see transaction history",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-Widget _buildHistoryItem({
-  required HistoryItem item,
-  required BuildContext context,
-}) {
-  final bool isContribution = item.type == HistoryItemType.contribution;
-  final iconColor = isContribution ? AppColors.revenue(context) : AppColors.expense(context);
-  final amountText = (isContribution ? '+ ' : '- ') + _formatAmount(item.amount);
-
-  return Column(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// Header (compact - matching programs widget style)
+          Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 12),
+  child: Row(
     children: [
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // Add onTap functionality if needed
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Row(
-              children: [
-                // Circular icon with wallet + arrow
-Container(
-  width: 40,
-  height: 40,
-  decoration: BoxDecoration(
-    shape: BoxShape.circle,
-    color: iconColor.withOpacity(0.1),
+      Icon(
+        Icons.history_rounded,
+        size: 18,
+        color: AppColors.primary(context),
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          'Recent Transactions',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+      ),
+      if (items.length >= 3 && user != null)
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _navigateToHistoryScreen(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              'See all',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary(context),
+              ),
+            ),
+          ),
+        ),
+    ],
   ),
-  child: isContribution
-      ? Stack(
-          children: [
-            // Wallet icon (centered)
-            Center(
-              child: Icon(
-                Icons.account_balance_wallet,
-                color: iconColor,
-                size: 20,
-              ),
-            ),
-            // Arrow DOWN at top center for contribution (money coming in from above)
-            Positioned(
-              top: 4,  // Position at top center
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(1),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.arrow_downward, // Arrow DOWN for contribution
-                  color: iconColor,
-                  size: 10,
-                ),
-              ),
-            ),
-          ],
-        )
-      : Stack(
-          children: [
-            // Wallet icon (centered)
-            Center(
-              child: Icon(
-                Icons.account_balance_wallet,
-                color: iconColor,
-                size: 20,
-              ),
-            ),
-            // Arrow UP at top center for expense (money going out to above)
-            Positioned(
-              top: 4,  // Position at top center
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(1),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.arrow_upward, // Arrow UP for expense
-                  color: iconColor,
-                  size: 10,
-                ),
-              ),
-            ),
+),
+SizedBox(height: 4),
+
+            /// Transaction list
+        MediaQuery.removePadding(
+  context: context,
+  removeTop: true,
+  child: ListView.separated(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: items.length,
+    separatorBuilder: (_, __) => Divider(
+      height: 2,
+      thickness: 0.8,
+      color: AppColors.border(context),
+    ),
+    itemBuilder: (context, index) {
+      return _buildTransactionListItem(items[index]);
+    },
+  ),
+),
+
           ],
         ),
-),
-                const SizedBox(width: 12),
-                
-                // Main content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: AppColors.textPrimary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionListItem(HistoryItem item) {
+    final bool isContribution = item.type == HistoryItemType.contribution;
+    final iconColor = isContribution ? AppColors.revenue(context) : AppColors.expense(context);
+    final amountText = (isContribution ? '+ ' : '- ') + _formatAmount(item.amount);
+    final statusText = isContribution ? 'Received' : 'Paid';
+    final statusColor = isContribution ? Colors.green : Colors.orange;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+       onTap: () {
+  final messenger = ScaffoldMessenger.of(context);
+
+  // Clear previous snackbars
+  messenger.clearSnackBars();
+
+  messenger.showSnackBar(
+    SnackBar(
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(12),
+      duration: const Duration(seconds: 3),
+      content: const Text(
+        'To see more details about this transaction, go to the History tab',
+        style: TextStyle(fontSize: 13),
+      ),
+      action: SnackBarAction(
+        label: 'Go',
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const HistoryScreen(),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+},
+
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          child: Row(
+            children: [
+              /// Icon container (square, matching programs widget)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                
-                // Time and amount
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 18,
+                  color: iconColor,
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              /// Title + date (compact layout)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatTime(item.date),
+                      item.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      amountText,
+                      item.title,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: iconColor,
+                        fontSize: 11,
+                        color: AppColors.textSecondary(context),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 8),
+
+              /// Right side: Amount and status badge
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  /// Amount (compact)
+                  Text(
+                    amountText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: iconColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  
+                  /// Status badge (compact - matching programs widget)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.35),
+                      ),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-      
-      // Horizontal divider
-      Divider(
-        height: 1,
-        thickness: 1,
-        color: AppColors.border(context),
-        indent: 16,
-        endIndent: 16,
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
       ),
-    ],
-  );
-}
-
- Widget _buildLoadingState(BuildContext context) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-    decoration: BoxDecoration(
-      color: AppColors.card(context),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      children: [
-        // Show 3 skeleton items for loading
-        for (int i = 0; i < 3; i++) ...[
-          _buildHistoryItemSkeleton(context),
-          if (i < 2) // Add divider between items (except last one)
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.border(context).withOpacity(0.3),
-              indent: 16,
-              endIndent: 16,
-            ),
-        ],
-      ],
-    ),
-  );
-}
-
-Widget _buildHistoryItemSkeleton(BuildContext context) {
-  return Material(
-    color: Colors.transparent,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Row(
+      child: Column(
         children: [
-          // Skeleton circular icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.textTertiary(context).withOpacity(0.1),
-              shape: BoxShape.circle,
+          Icon(
+            icon,
+            size: 36,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary(context),
             ),
           ),
-          const SizedBox(width: 12),
-          
-          // Skeleton text content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// Header skeleton
+            Row(
               children: [
-                // Title skeleton
                 Container(
-                  width: double.infinity,
-                  height: 16,
-                  margin: const EdgeInsets.only(bottom: 6),
+                  width: 18,
+                  height: 18,
                   decoration: BoxDecoration(
                     color: AppColors.textTertiary(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                
-                // Subtitle skeleton
+                const SizedBox(width: 6),
                 Container(
-                  width: double.infinity,
-                  height: 14,
-                  margin: const EdgeInsets.only(bottom: 2),
+                  width: 120,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 40,
+                  height: 16,
                   decoration: BoxDecoration(
                     color: AppColors.textTertiary(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -564,27 +529,52 @@ Widget _buildHistoryItemSkeleton(BuildContext context) {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            
+            /// Skeleton items
+            for (int i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              _buildTransactionSkeletonItem(context),
+              if (i < 2) 
+                const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionSkeletonItem(BuildContext context) {
+    return Row(
+      children: [
+        /// Icon skeleton
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.textTertiary(context).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-          
-          // Skeleton time and amount
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+        ),
+        const SizedBox(width: 10),
+        
+        /// Text content skeleton
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Time skeleton
               Container(
-                width: 60,
-                height: 12,
-                margin: const EdgeInsets.only(bottom: 6),
+                width: 100,
+                height: 14,
                 decoration: BoxDecoration(
                   color: AppColors.textTertiary(context).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              
-              // Amount skeleton
+              const SizedBox(height: 6),
               Container(
                 width: 80,
-                height: 16,
+                height: 12,
                 decoration: BoxDecoration(
                   color: AppColors.textTertiary(context).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
@@ -592,78 +582,78 @@ Widget _buildHistoryItemSkeleton(BuildContext context) {
               ),
             ],
           ),
-        ],
-      ),
-    ),
-  );
-}
+        ),
+        
+        /// Amount and status skeleton
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              width: 60,
+              height: 14,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary(context).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: 50,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary(context).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _buildErrorState(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
           Icon(
-            Icons.error_outline,
-            size: 32,
+            Icons.error_outline_rounded,
+            size: 36,
             color: AppColors.error(context),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             _errorMessage ?? 'Failed to load transactions',
-            textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.error(context),
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _retryLoading,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Retry"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoHistoryState(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.history_outlined,
-            size: 48,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "No Transactions Found",
-            style: TextStyle(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(context),
+              color: AppColors.error(context),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            "Transactions will appear here once contributions or expenses are added",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: _retryLoading,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+              ),
+              child: Text(
+                'Retry',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary(context),
+                ),
+              ),
             ),
           ),
         ],
@@ -680,24 +670,5 @@ Widget _buildHistoryItemSkeleton(BuildContext context) {
     final minute = dt.minute.toString().padLeft(2, '0');
     final amPm = dt.hour < 12 ? 'AM' : 'PM';
     return '$hour:$minute $amPm';
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final transactionDate = DateTime(date.year, date.month, date.day);
-
-    if (transactionDate == today) {
-      return 'Today';
-    } else if (transactionDate == today.subtract(const Duration(days: 1))) {
-      return 'Yesterday';
-    } else {
-      final difference = now.difference(date);
-      if (difference.inDays < 7) {
-        return '${difference.inDays} days ago';
-      } else {
-        return '${date.day}/${date.month}/${date.year}';
-      }
-    }
   }
 }

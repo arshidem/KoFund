@@ -70,16 +70,6 @@ class ProgramTypes {
     }
   }
 
-  // ✅ Optional: Get emoji icons (if you prefer these)
-  static String getEmojiIcon(String type) {
-    switch (type) {
-      case football: return '⚽';
-      case trip: return '✈️';
-      case charity: return '❤️';
-      case festival: return '🎉';
-      case sports: return '🏆';
-      case meeting: return '👥';
-      default: return '📅';
-    }
-  }
+
+  
 }

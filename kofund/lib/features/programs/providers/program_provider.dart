@@ -53,7 +53,30 @@ void clearUserData() {
   notifyListeners();
   print('🔄 ProgramProvider: User data cleared');
 }
-
+// Add this to your ProgramProvider class
+Future<void> refreshProgramData(String programId) async {
+  try {
+    print('🔄 ProgramProvider: Refreshing program data for $programId');
+    
+    // Clear this specific program from cache to force re-fetch
+    final index = _programs.indexWhere((p) => p.programId == programId);
+    if (index != -1) {
+      _programs.removeAt(index);
+    }
+    
+    // Force a re-fetch by triggering notifyListeners
+    // This will cause streams to re-fetch from Firestore
+    notifyListeners();
+    
+    // Optional: Force re-fetch the program
+    await _programService.getProgramById(programId);
+    
+    print('✅ ProgramProvider: Program data refreshed for $programId');
+  } catch (e) {
+    print('❌ ProgramProvider: Error refreshing program data: $e');
+    rethrow;
+  }
+}
 // Add this for compatibility
 void clearAllData() {
   clearUserData();
