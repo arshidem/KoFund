@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -301,31 +302,42 @@ Widget build(BuildContext context) {
 
   return Scaffold(
     extendBodyBehindAppBar: false,
-    appBar: AppBar(
-      title: const Text(
-        'Edit Community',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(32),
-            bottomRight: Radius.circular(32),
-          ),
-        ),
+appBar: AppBar(
+      toolbarHeight: 80, // Set your desired height here (default is 56)
+
+  title: const Text(
+    'Edit Community',
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      color: Colors.white,
+    ),
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () => Navigator.pop(context),
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20), // Changed to 20 to match reference
+        bottomRight: Radius.circular(20), // Changed to 20 to match reference
       ),
     ),
+  ),
+),
     body: SafeArea(
       child: Stack(
         children: [

@@ -11,6 +11,7 @@ import '../../../core/services/user_service.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../../contributions/models/contribution_model.dart';
 import '../../expenses/models/expense_model.dart';
+import '../../programs/models/program_model.dart';
 
 // ===== ENUMS =====
 enum HistoryItemType { contribution, expense }
@@ -519,8 +520,8 @@ void setUserCommunity(String communityId) {
     itemsMap[id] = HistoryItem(
       id: id,
       type: HistoryItemType.contribution,
-      title: programTitle ?? 'Contribution',
-      subtitle: '${userName ?? contribution.userId ?? 'Unknown'}',
+      title: '${userName ?? contribution.userId ?? 'Unknown'}',
+      subtitle: programTitle ?? 'Contribution',
       amount: contribution.amount,
       date: date,
       userId: contribution.userId,
@@ -531,27 +532,40 @@ void setUserCommunity(String communityId) {
     );
   }
 
-  Future<void> _processSingleExpense(
-    ExpenseModel expense,
-    Map<String, HistoryItem> itemsMap,
-  ) async {
-    final id = 'expense_${expense.expenseId}';
-    final paidByName = await _getUserName(expense.paidBy);
+ Future<void> _processSingleExpense(
+  ExpenseModel expense,
+  Map<String, HistoryItem> itemsMap,
+) async {
+  final id = 'expense_${expense.expenseId}';
+  final paidByName = await _getUserName(expense.paidBy);
+  final programName = await _getProgramName(expense.programId); // Add this
 
-    itemsMap[id] = HistoryItem(
-      id: id,
-      type: HistoryItemType.expense,
-      title: expense.title.isNotEmpty ? expense.title : 'Expense',
-      subtitle: '${paidByName ?? expense.paidBy ?? 'Unknown'} • Category: ${expense.category}',
-      amount: expense.amount,
-      date: expense.expenseDate,
-      userId: expense.paidBy,
-      programId: expense.programId,
-      category: expense.category,
-      rawStatus: expense.status,
-      original: expense,
-    );
+  itemsMap[id] = HistoryItem(
+    id: id,
+    type: HistoryItemType.expense,
+    title: expense.title.isNotEmpty ? expense.title : 'Expense',
+    subtitle: '${programName ?? expense.programId} • Paid by ${paidByName ?? expense.paidBy ?? 'Unknown'}',
+    amount: expense.amount,
+    date: expense.expenseDate,
+    userId: expense.paidBy,
+    programId: expense.programId,
+    category: expense.category,
+    rawStatus: expense.status,
+    original: expense,
+  );
+}
+
+// Add this helper method
+Future<String?> _getProgramName(String programId) async {
+  try {
+    // Assuming you have a ProgramService class
+    final program = await ProgramService().getProgramById(programId);
+    return program?.title;
+  } catch (e) {
+    print('Error fetching program name: $e');
+    return null;
   }
+}
 
   // ================= FILTER LOGIC ==================
   void setFilter(HistoryFilterType type) {

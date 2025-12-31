@@ -919,13 +919,13 @@ class _HistoryTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(8),
                   color: isContribution 
                     ? AppColors.revenue(context).withOpacity(0.1)
                     : AppColors.expense(context).withOpacity(0.1),
                 ),
                 child: Icon(
-                  isContribution ? Icons.arrow_upward : Icons.arrow_downward,
+                  isContribution ? Icons.payments : Icons.receipt_long_outlined,
                   size: 20,
                   color: iconColor,
                 ),
@@ -938,7 +938,7 @@ class _HistoryTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.subtitle,
+                      item.title,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -949,7 +949,7 @@ class _HistoryTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.title,
+                      item.subtitle,
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary(context),
