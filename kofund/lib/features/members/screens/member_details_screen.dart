@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -14,6 +15,7 @@ import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/contribution_service.dart';
+import 'package:kofund/core/services/virtual_user_service.dart';
 // =================== MAIN SCREEN ===================
 class MemberDetailsScreen extends StatelessWidget {
   final UserModel? member;
@@ -33,6 +35,7 @@ class MemberDetailsScreen extends StatelessWidget {
         authProvider: auth,
         participantService: ParticipantService(),
         contributionService: ContributionService(),
+        virtualUserService: VirtualUserService(), // Add this
       ),
       child: _MemberDetailsScreenBody(member: member),
     );
@@ -205,7 +208,6 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
-      
         body: MemberDetailsSkeleton(),
       );
     }
@@ -214,7 +216,14 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          title: const Text('Member Details'),
+          title: const Text(
+            'Member Details',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
@@ -267,42 +276,42 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
 
     final isAdmin = currentUser?.isAdmin == true;
     final canSeeDetails = isAdmin || member.showDetailedProfile;
+    final isVirtualUser = member.isVirtualUser;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-  appBar: AppBar(
-        toolbarHeight: 80, // Set your desired height here (default is 56)
-
-  title: const Text(
-    'Member Details', // Added TextStyle here
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+      appBar: AppBar(
+        toolbarHeight: 80,
+        title: const Text(
+          'Member Details',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            size: 24,
+            color: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-    ),
-  ),
-  leading: IconButton(
-    icon: const Icon(
-      Icons.arrow_back,
-      size: 24,
-      color: Colors.white, // Added explicit white color
-    ),
-    onPressed: () => Navigator.pop(context),
-  ),
-),
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,
@@ -332,35 +341,42 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              // Profile Header Card (Horizontal Rectangle)
+              // Profile Header Card
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: _buildProfileHeaderCard(member, isAdmin),
+                child: _buildProfileHeaderCard(member, isAdmin, isVirtualUser),
               ),
+
+              // Virtual User Info Card (if virtual user)
+              if (isVirtualUser)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: _buildVirtualUserInfoCard(member),
+                ),
 
               // Member Information
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildMemberInfoCard(member, canSeeDetails, isAdmin),
+                child: _buildMemberInfoCard(member, canSeeDetails, isAdmin, isVirtualUser),
               ),
               const SizedBox(height: 16),
 
-              // Participation History (Only if detailed profile enabled)
-              if (canSeeDetails) 
+              // Participation History (Only if detailed profile enabled and not virtual user)
+              if (canSeeDetails && !isVirtualUser) 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildParticipationHistoryCard(memberProvider),
                 ),
               
-              // Contribution History (Only if detailed profile enabled)
-              if (canSeeDetails) 
+              // Contribution History (Only if detailed profile enabled and not virtual user)
+              if (canSeeDetails && !isVirtualUser) 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16,vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: _buildContributionHistoryCard(memberProvider),
                 ),
 
               // Privacy Notice (if details are hidden)
-              if (!canSeeDetails && !isAdmin) 
+              if (!canSeeDetails && !isAdmin && !isVirtualUser) 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildPrivacyNotice(),
@@ -375,16 +391,22 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   }
 
   // Profile Header Card (Horizontal Rectangle)
-  Widget _buildProfileHeaderCard(UserModel member, bool isAdmin) {
+  Widget _buildProfileHeaderCard(UserModel member, bool isAdmin, bool isVirtualUser) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient(context),
+        gradient: isVirtualUser 
+            ? LinearGradient(
+                colors: [Colors.purple[800]!, Colors.purple[600]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : AppColors.primaryGradient(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary(context).withOpacity(0.2),
+            color: (isVirtualUser ? Colors.purple : AppColors.primary(context)).withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 1),
           ),
@@ -401,17 +423,42 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(35),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    member.displayName?.substring(0, 1).toUpperCase() ?? '?',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  border: Border.all(
+                    color: isVirtualUser ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.3), 
+                    width: 2
                   ),
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Text(
+                        member.displayName?.substring(0, 1).toUpperCase() ?? '?',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (isVirtualUser)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            size: 14,
+                            color: Colors.purple[800],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 20),
@@ -435,6 +482,23 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (isVirtualUser)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'VIRTUAL',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -470,6 +534,17 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                               color: Colors.white.withOpacity(0.9),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: Icon(
+                              Icons.phone_outlined,
+                              size: 20,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                            onPressed: () => _makePhoneCall(member.phoneNumber!),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
                         ],
                       ),
                     ],
@@ -486,51 +561,70 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
               right: -10,
               child: PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: Colors.white.withOpacity(0.8)),
-                onSelected: (value) => _handleMenuAction(value, member),
-                itemBuilder: (context) => [
-                  if (!member.isAdmin)
-                    const PopupMenuItem<String>(
-                      value: 'make_admin',
-                      child: Row(
-                        children: [
-                          Icon(Icons.admin_panel_settings, size: 20),
-                          SizedBox(width: 8),
-                          Text('Make Admin'),
-                        ],
+                onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
+                itemBuilder: (context) {
+                  if (isVirtualUser) {
+                    // Virtual user menu - only "Remove from Community"
+                    return [
+                      const PopupMenuItem<String>(
+                        value: 'remove',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 20, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Remove from Community'),
+                          ],
+                        ),
                       ),
-                    ),
-                  if (member.isAdmin)
-                    const PopupMenuItem<String>(
-                      value: 'remove_admin',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person_remove, size: 20),
-                          SizedBox(width: 8),
-                          Text('Remove Admin'),
-                        ],
+                    ];
+                  } else {
+                    // Regular user menu
+                    return [
+                      if (!member.isAdmin)
+                        const PopupMenuItem<String>(
+                          value: 'make_admin',
+                          child: Row(
+                            children: [
+                              Icon(Icons.admin_panel_settings, size: 20, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text('Make Admin'),
+                            ],
+                          ),
+                        ),
+                      if (member.isAdmin)
+                        const PopupMenuItem<String>(
+                          value: 'remove_admin',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_remove, size: 20, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text('Remove Admin'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem<String>(
+                        value: 'unapprove',
+                        child: Row(
+                          children: [
+                            Icon(Icons.block, size: 20, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Unapprove User'),
+                          ],
+                        ),
                       ),
-                    ),
-                  const PopupMenuItem<String>(
-                    value: 'unapprove',
-                    child: Row(
-                      children: [
-                        Icon(Icons.block, size: 20),
-                        SizedBox(width: 8),
-                        Text('Unapprove User'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'remove',
-                    child: Row(
-                      children: [
-                        Icon(Icons.exit_to_app, size: 20),
-                        SizedBox(width: 8),
-                        Text('Remove from Community'),
-                      ],
-                    ),
-                  ),
-                ],
+                      const PopupMenuItem<String>(
+                        value: 'remove',
+                        child: Row(
+                          children: [
+                            Icon(Icons.exit_to_app, size: 20, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Remove from Community'),
+                          ],
+                        ),
+                      ),
+                    ];
+                  }
+                },
               ),
             ),
         ],
@@ -538,28 +632,140 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     );
   }
 
+  // Virtual User Info Card
+  Widget _buildVirtualUserInfoCard(UserModel member) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person_outline, color: Colors.purple, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                'Virtual Member Information',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.purple[800],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          if (member.createdBy != null && member.createdBy!.isNotEmpty) ...[
+            _buildVirtualInfoItem('Created By Admin', member.createdBy!, Icons.person_add),
+            const SizedBox(height: 12),
+          ],
+          
+          if (member.createdAt != null) ...[
+            _buildVirtualInfoItem('Created On', _formatDateFromTimestamp(member.createdAt), Icons.calendar_today),
+            const SizedBox(height: 12),
+          ],
+          
+          // Note about virtual users
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info, size: 18, color: Colors.purple),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Virtual members don\'t have app access. They are managed by community admins.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.purple[800],
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVirtualInfoItem(String label, String value, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.purple),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.purple.withOpacity(0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.purple[800],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   // Handle menu actions
-  void _handleMenuAction(String action, UserModel member) {
+  void _handleMenuAction(String action, UserModel member, bool isVirtualUser) {
     final memberProvider = context.read<MemberProvider>();
     
     switch (action) {
       case 'make_admin':
-        _makeAdmin(member, memberProvider);
+        if (!isVirtualUser) {
+          _makeAdmin(member, memberProvider);
+        }
         break;
       case 'remove_admin':
-        _removeAdmin(member, memberProvider);
+        if (!isVirtualUser) {
+          _removeAdmin(member, memberProvider);
+        }
         break;
       case 'unapprove':
-        _showUnapproveConfirmation(member);
+        if (!isVirtualUser) {
+          _showUnapproveConfirmation(member);
+        }
         break;
       case 'remove':
-        _showRemoveConfirmation(member);
+        if (isVirtualUser) {
+          _showDeleteVirtualUserConfirmation(member);
+        } else {
+          _showRemoveConfirmation(member);
+        }
         break;
     }
   }
 
   // Member Information Card
-  Widget _buildMemberInfoCard(UserModel member, bool canSeeDetails, bool isAdmin) {
+  Widget _buildMemberInfoCard(UserModel member, bool canSeeDetails, bool isAdmin, bool isVirtualUser) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -579,14 +785,18 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
         children: [
           Row(
             children: [
-              Icon(Icons.person_outline, color: AppColors.primary(context), size: 22),
+              Icon(
+                isVirtualUser ? Icons.person_outline : Icons.person_outline,
+                color: isVirtualUser ? Colors.purple : AppColors.primary(context),
+                size: 22,
+              ),
               const SizedBox(width: 10),
               Text(
-                'Member Information',
+                isVirtualUser ? 'Virtual Member Information' : 'Member Information',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
+                  color: isVirtualUser ? Colors.purple[800] : AppColors.textPrimary(context),
                 ),
               ),
             ],
@@ -594,11 +804,12 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
           const SizedBox(height: 16),
           
           _buildInfoItem('Email', member.email ?? 'Not provided', Icons.email_outlined),
-          _buildInfoItem('Role', member.role?.toUpperCase() ?? 'MEMBER', Icons.verified_user_outlined),
+          _buildInfoItem('Role', isVirtualUser ? 'VIRTUAL MEMBER' : (member.role?.toUpperCase() ?? 'MEMBER'), 
+              isVirtualUser ? Icons.person_outline : Icons.verified_user_outlined),
           _buildInfoItem('Status', member.isApproved ? 'Approved' : 'Pending', Icons.check_circle_outline),
           _buildInfoItem('Joined', _formatDateFromTimestamp(member.createdAt), Icons.calendar_today_outlined),
           
-          if (canSeeDetails) ...[
+          if (canSeeDetails || isVirtualUser) ...[
             const SizedBox(height: 12),
             Divider(color: AppColors.border(context)),
             const SizedBox(height: 12),
@@ -620,7 +831,8 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
             ),
             const SizedBox(height: 8),
             _buildInfoItem('User ID', member.uid.substring(0, 8) + '...', Icons.fingerprint_outlined),
-            _buildInfoItem('Privacy', member.showDetailedProfile ? 'Detailed Profile' : 'Basic Profile', Icons.visibility_outlined),
+            if (!isVirtualUser)
+              _buildInfoItem('Privacy', member.showDetailedProfile ? 'Detailed Profile' : 'Basic Profile', Icons.visibility_outlined),
           ],
         ],
       ),
@@ -893,107 +1105,106 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       ),
     );
   }
-// Add this method to the _MemberDetailsScreenBodyState class in member_details_screen.dart
-// Put it after the _buildParticipationItem method and before the _buildContributionHistoryCard method
 
-// Contribution Item
-Widget _buildContributionItem(Map<String, dynamic> contribution) {
-  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-  final amount = (contribution['amount'] ?? 0).toDouble();
-  final paymentMethod = contribution['paymentMethod'] ?? 'cash';
-  final paidAt = (contribution['paidAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-  final programType = contribution['programType'] ?? ProgramTypes.general;
+  // Contribution Item
+  Widget _buildContributionItem(Map<String, dynamic> contribution) {
+    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+    final amount = (contribution['amount'] ?? 0).toDouble();
+    final paymentMethod = contribution['paymentMethod'] ?? 'cash';
+    final paidAt = (contribution['paidAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final programType = contribution['programType'] ?? ProgramTypes.general;
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: AppColors.card(context),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.border(context)),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              ProgramTypes.getIconData(programType),
+              color: Colors.green,
+              size: 20,
+            ),
           ),
-          child: Icon(
-            ProgramTypes.getIconData(programType),
-            color: Colors.green,
-            size: 20,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  programTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 12, color: AppColors.textSecondary(context)),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(paidAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildPaymentMethodChip(paymentMethod),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                programTitle,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(context),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 12, color: AppColors.textSecondary(context)),
-                  const SizedBox(width: 4),
-                  Text(
-                    _formatDate(paidAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary(context),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildPaymentMethodChip(paymentMethod),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '₹${amount.toStringAsFixed(0)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'PAID',
-                style: TextStyle(
-                  fontSize: 10,
+                '₹${amount.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.green,
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'PAID',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // Contribution History Card
   Widget _buildContributionHistoryCard(MemberProvider memberProvider) {
     final contributionHistory = memberProvider.memberContributionHistory;
@@ -1382,6 +1593,46 @@ Widget _buildContributionItem(Map<String, dynamic> contribution) {
     );
   }
 
+  void _showDeleteVirtualUserConfirmation(UserModel member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Virtual User?',
+          style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Are you sure you want to delete virtual user "${member.displayName}"? '
+          'This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary(context), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteVirtualUser(member);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _removeFromCommunity(UserModel member) async {
     try {
       final memberProvider = context.read<MemberProvider>();
@@ -1395,6 +1646,60 @@ Widget _buildContributionItem(Map<String, dynamic> contribution) {
       if (mounted) {
         SnackbarHelper.showError(context, 'Failed to remove user: $e');
       }
+    }
+  }
+
+  void _deleteVirtualUser(UserModel member) async {
+    try {
+      final memberProvider = context.read<MemberProvider>();
+      // You need to implement deleteVirtualUser in MemberProvider
+      final success = await memberProvider.deleteVirtualUser(member.uid);
+      
+      if (success && mounted) {
+        SnackbarHelper.showSuccess(context, 'Virtual user ${member.displayName} has been deleted');
+        _navigateToMembersList();
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to delete virtual user: $e');
+      }
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    try {
+      final cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      
+      if (cleanedNumber.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid phone number'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      final url = Uri.parse('tel:$cleanedNumber');
+      
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot make calls from this device'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

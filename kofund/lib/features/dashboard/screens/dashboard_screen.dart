@@ -39,6 +39,7 @@ import 'package:kofund/core/services/contribution_service.dart';
 import 'package:kofund/core/services/expense_service.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/program_service.dart';
+import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
 
@@ -442,6 +443,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         authProvider: auth,
         participantService: ParticipantService(),
         contributionService: ContributionService(),
+         virtualUserService: VirtualUserService(), // Add this
       ),
     ),
     ChangeNotifierProvider(

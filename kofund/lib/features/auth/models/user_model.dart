@@ -10,7 +10,9 @@ class UserModel {
   final String role;
   final bool isApproved;
   final bool isAdmin;
-  final bool isDeveloper; // 🆕 ADD THIS FIELD
+  final bool isDeveloper;
+  final bool isVirtualUser; // 🆕 ADD THIS FIELD
+  final String? createdBy; // 🆕 Who created this virtual user (admin UID)
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
   final Timestamp? approvedAt;
@@ -26,7 +28,9 @@ class UserModel {
     this.role = 'member',
     this.isApproved = false,
     this.isAdmin = false,
-    this.isDeveloper = false, // 🆕 ADD THIS - default false
+    this.isDeveloper = false,
+    this.isVirtualUser = false, // 🆕 ADD THIS - default false
+    this.createdBy, // 🆕 ADD THIS
     this.createdAt,
     this.updatedAt,
     this.approvedAt,
@@ -44,7 +48,9 @@ class UserModel {
       'role': role,
       'isApproved': isApproved,
       'isAdmin': isAdmin,
-      'isDeveloper': isDeveloper, // 🆕 ADD THIS
+      'isDeveloper': isDeveloper,
+      'isVirtualUser': isVirtualUser, // 🆕 ADD THIS
+      'createdBy': createdBy, // 🆕 ADD THIS
       'createdAt': createdAt ?? Timestamp.now(),
       'updatedAt': updatedAt ?? FieldValue.serverTimestamp(),
       'approvedAt': approvedAt,
@@ -78,7 +84,9 @@ class UserModel {
       role: map['role'] ?? 'member',
       isApproved: map['isApproved'] ?? false,
       isAdmin: map['isAdmin'] ?? false,
-      isDeveloper: map['isDeveloper'] ?? false, // 🆕 ADD THIS
+      isDeveloper: map['isDeveloper'] ?? false,
+      isVirtualUser: map['isVirtualUser'] ?? false, // 🆕 ADD THIS
+      createdBy: map['createdBy'], // 🆕 ADD THIS
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
       approvedAt: _parseTimestamp(map['approvedAt']),
@@ -86,7 +94,6 @@ class UserModel {
     );
   }
 
-  // ✅ UPDATED copyWith method with isDeveloper
   UserModel copyWith({
     String? uid,
     String? email,
@@ -97,7 +104,9 @@ class UserModel {
     String? role,
     bool? isApproved,
     bool? isAdmin,
-    bool? isDeveloper, // 🆕 ADD THIS
+    bool? isDeveloper,
+    bool? isVirtualUser, // 🆕 ADD THIS
+    String? createdBy, // 🆕 ADD THIS
     Timestamp? createdAt,
     Timestamp? updatedAt,
     Timestamp? approvedAt,
@@ -113,7 +122,9 @@ class UserModel {
       role: role ?? this.role,
       isApproved: isApproved ?? this.isApproved,
       isAdmin: isAdmin ?? this.isAdmin,
-      isDeveloper: isDeveloper ?? this.isDeveloper, // 🆕 ADD THIS
+      isDeveloper: isDeveloper ?? this.isDeveloper,
+      isVirtualUser: isVirtualUser ?? this.isVirtualUser, // 🆕 ADD THIS
+      createdBy: createdBy ?? this.createdBy, // 🆕 ADD THIS
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       approvedAt: approvedAt ?? this.approvedAt,
@@ -121,27 +132,23 @@ class UserModel {
     );
   }
 
-  // Helper method to check if user can access the app
+  // Helper methods
   bool get canAccessApp {
+    // Virtual users cannot access app
+    if (isVirtualUser) return false;
     return isApproved && communityId != null && communityId!.isNotEmpty;
   }
 
-  // Helper method to check if user is waiting for community approval
-  bool get waitingForApproval {
-    return communityId != null && communityId!.isNotEmpty && !isApproved;
-  }
-
-  // Helper method to check if user needs to join community
-  bool get needsToJoinCommunity {
-    return (communityId == null || communityId!.isEmpty);
-  }
-
-  // 🆕 ADD THESE HELPER METHODS FOR DEVELOPER ACCESS
-  bool get canAccessDeveloperTools => isDeveloper;
-  bool get isSuperUser => isDeveloper; // Developer has all access
-  bool get canManageDevelopers => isDeveloper; // Only developers can manage developers
+  // 🆕 ADD THESE HELPER METHODS FOR VIRTUAL USERS
+  bool get canBeDeleted => isVirtualUser; // Only virtual users can be deleted
+  bool get canBeEditedByAdmin => isVirtualUser; // Admin can edit virtual users
+  bool get requiresNoAuth => isVirtualUser; // No login required
   
   // Combined permissions
   bool get canManageUsers => isAdmin || isDeveloper;
   bool get canAccessAdminFeatures => isAdmin || isDeveloper;
+  bool get canManageVirtualUsers => isAdmin; // Only admins can manage virtual users
+  
+  // Check if this is a real registered user
+  bool get isRealUser => !isVirtualUser;
 }

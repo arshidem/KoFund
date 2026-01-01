@@ -989,7 +989,7 @@ void _showLogoutDialog(AppAuthProvider authProvider) {
             
             // 1. Clear ALL provider data first
             profileProvider.clearAllData();
-            memberProvider.clearAllData();
+            memberProvider.clearDataForUserChange();
             // Add other providers as needed
             
             // 2. Sign out from auth

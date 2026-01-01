@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'member_details_screen.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
 import 'package:kofund/core/skeleton/member_list_skeleton.dart';
+import 'package:kofund/features/virtual_users/screens/create_virtual_users_screen.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/contribution_service.dart';
+import 'package:kofund/core/services/virtual_user_service.dart';
+import 'dart:ui';
+
 // =================== MAIN SCREEN ===================
 class AllMembersScreen extends StatelessWidget {
   final bool? forceBackButton;
@@ -29,11 +31,11 @@ class AllMembersScreen extends StatelessWidget {
 
     return ChangeNotifierProvider(
       create: (_) => MemberProvider(
-        userService: UserService(),
+        userService: Provider.of<UserService>(context, listen: false),
         authProvider: auth,
-        participantService: ParticipantService(),
-        contributionService: ContributionService(),
-      ),
+        participantService: Provider.of<ParticipantService>(context, listen: false), // ✅ FIXED
+        contributionService: Provider.of<ContributionService>(context, listen: false), // ✅ FIXED
+virtualUserService: VirtualUserService(),      ),
       child: _AllMembersScreenBody(forceBackButton: forceBackButton),
     );
   }
@@ -53,26 +55,40 @@ class _AllMembersScreenBody extends StatefulWidget {
 class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  
-  // Selection mode variables
+  // Add this getter in your state class (around line 40-50 after other variables)
+List<UserModel> get _members {
+  final memberProvider = context.read<MemberProvider>();
+  return memberProvider.members;
+}
+  // Selection mode
   bool _isSelectionMode = false;
   final Set<String> _selectedMemberIds = <String>{};
   
-  // Pull to refresh controller
+  // Refresh controller
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
   
-  // Add these to track authentication state
+  // Loading states
   bool _isInitialLoad = true;
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Track current user ID to detect user changes
+  // Track user
   String? _currentUserId;
+// Add this to your state class
+bool _useTabs = true; // Set to false to use chips
+  // Filter state
+  String _selectedFilter = 'all'; // 'all', 'real', 'virtual'
+
+  // Pagination controller
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: AllMembersScreen initState called');
+    
+    // Setup scroll listener for pagination
+    _scrollController.addListener(_scrollListener);
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadMembers();
@@ -83,33 +99,28 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   void dispose() {
     _searchController.dispose();
     _refreshController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print('🔄 DEBUG: didChangeDependencies called');
     
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
     
     // Check if user has changed
     if (user != null && user.uid != _currentUserId) {
-      print('👤 DEBUG: User changed from $_currentUserId to ${user.uid}');
       _currentUserId = user.uid;
-      
-      // Reset screen state for new user
       _resetScreenForNewUser();
       
-      // Load members for new user
       if (mounted) {
         _checkAuthAndLoadMembers();
       }
     }
     
     if (user != null && _isInitialLoad && _currentUserId == null) {
-      print('👤 DEBUG: First load for user ${user.uid}');
       _currentUserId = user.uid;
       _checkAuthAndLoadMembers();
     }
@@ -117,8 +128,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
 
   void _resetScreenForNewUser() {
     if (!mounted) return;
-    
-    print('🔄 DEBUG: Resetting screen for new user');
     
     setState(() {
       _searchController.clear();
@@ -128,11 +137,12 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       _isInitialLoad = true;
       _isLoading = false;
       _errorMessage = null;
+      _selectedFilter = 'all';
+      _isLoadingMore = false;
     });
     
-    // Reset the provider as well
     final memberProvider = context.read<MemberProvider>();
-    memberProvider.resetForNewUser();
+    memberProvider.resetPagination();
   }
 
   void _checkAuthAndLoadMembers() {
@@ -141,10 +151,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
     
-    print('🔍 DEBUG: Checking auth state - UID: ${user?.uid}, Community: ${user?.communityId}, Approved: ${user?.isApproved}');
-    
     if (user == null) {
-      print('❌ DEBUG: No user found, waiting for authentication...');
       setState(() {
         _isInitialLoad = false;
         _isLoading = false;
@@ -154,7 +161,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
     
     if (user.communityId == null) {
-      print('❌ DEBUG: No communityId found for user');
       setState(() {
         _isInitialLoad = false;
         _isLoading = false;
@@ -163,49 +169,53 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       return;
     }
     
-    print('✅ DEBUG: User and community found, loading members...');
     _loadMembers();
   }
 
-  Future<void> _loadMembers() async {
+  Future<void> _loadMembers({bool loadMore = false}) async {
     if (!mounted) return;
     
-    print('🔄 DEBUG: Loading members...');
     setState(() {
-      _isLoading = true;
+      if (!loadMore) {
+        _isLoading = true;
+      } else {
+        _isLoadingMore = true;
+      }
       _errorMessage = null;
     });
     
     try {
       final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadApprovedMembers();
+      
+      if (loadMore) {
+        await memberProvider.loadMoreMembers(filterType: _selectedFilter);
+      } else {
+        await memberProvider.loadMembers(filterType: _selectedFilter);
+      }
       
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
           _isLoading = false;
+          _isLoadingMore = false;
         });
-        print('✅ DEBUG: Members loaded successfully: ${memberProvider.members.length}');
       }
     } catch (error) {
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
           _isLoading = false;
+          _isLoadingMore = false;
           _errorMessage = 'Failed to load members: $error';
         });
-        print('❌ DEBUG: Error loading members: $error');
       }
     }
   }
 
-  // Pull to refresh handler
   void _onRefresh() async {
-    print('🔄 DEBUG: Pull to refresh triggered');
-    
     try {
       final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadApprovedMembers();
+      await memberProvider.loadMembers(filterType: _selectedFilter);
       
       _refreshController.refreshCompleted();
       
@@ -214,10 +224,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
           _isLoading = false;
         });
       }
-      print('✅ DEBUG: Refresh completed successfully');
     } catch (e) {
       _refreshController.refreshFailed();
-      print('❌ DEBUG: Refresh failed: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -226,7 +234,84 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
   }
 
-  // ✅ SELECTION MODE METHODS
+  void _scrollListener() {
+    final memberProvider = context.read<MemberProvider>();
+    
+    if (_scrollController.position.pixels == 
+        _scrollController.position.maxScrollExtent &&
+        memberProvider.hasMoreData &&
+        !_isLoadingMore &&
+        !memberProvider.isLoading) {
+      _loadMembers(loadMore: true);
+    }
+  }
+
+void _navigateToCreateVirtualUsers() {
+  final authProvider = context.read<AppAuthProvider>();
+  final user = authProvider.user;
+  
+  if (user == null || user.communityId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('You need to be in a community'),
+      ),
+    );
+    return;
+  }
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => CreateVirtualUsersScreen(
+        communityId: user.communityId!,
+        communityName: user.communityName ?? 'Community',
+      ),
+    ),
+  ).then((createdCount) {
+    if (createdCount != null && createdCount > 0) {
+      // Refresh members list
+      context.read<MemberProvider>().loadMembers(reset: true);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Successfully added $createdCount virtual members'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  });
+}
+
+  List<UserModel> _getFilteredMembers(List<UserModel> allMembers) {
+    List<UserModel> filteredBySearch = _searchQuery.isEmpty
+        ? allMembers
+        : allMembers.where((user) {
+            return user.displayName?.toLowerCase().contains(_searchQuery.toLowerCase()) == true ||
+                   user.phoneNumber?.contains(_searchQuery) == true ||
+                   user.email?.toLowerCase().contains(_searchQuery.toLowerCase()) == true;
+          }).toList();
+    
+    switch (_selectedFilter) {
+      case 'real':
+        return filteredBySearch.where((user) => !user.isVirtualUser).toList();
+      case 'virtual':
+        return filteredBySearch.where((user) => user.isVirtualUser).toList();
+      default:
+        return filteredBySearch;
+    }
+  }
+
+  Map<String, int> _getMemberCounts(List<UserModel> allMembers) {
+    final realCount = allMembers.where((m) => !m.isVirtualUser).length;
+    final virtualCount = allMembers.where((m) => m.isVirtualUser).length;
+    
+    return {
+      'all': allMembers.length,
+      'real': realCount,
+      'virtual': virtualCount,
+    };
+  }
+
   void _toggleSelectionMode() {
     setState(() {
       _isSelectionMode = !_isSelectionMode;
@@ -237,7 +322,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   }
 
   void _toggleMemberSelection(String memberId, bool isCurrentUser) {
-    if (isCurrentUser) return; // Prevent selecting current user
+    if (isCurrentUser) return;
     
     setState(() {
       if (_selectedMemberIds.contains(memberId)) {
@@ -273,206 +358,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     });
   }
 
-
-
-  void _showBulkMakeAdminConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Make Users Admin?', style: TextStyle(color: AppColors.textPrimary(context))),
-        content: Text(
-          'Are you sure you want to make ${members.length} user${members.length > 1 ? 's' : ''} admin?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkMakeAdmin(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.primary(context)),
-            child: const Text('Make Admin'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
-    );
-  }
-
-  void _showBulkRemoveAdminConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Remove Admin Role?', style: TextStyle(color: AppColors.textPrimary(context))),
-        content: Text(
-          'Are you sure you want to remove admin role from ${members.length} user${members.length > 1 ? 's' : ''}?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkRemoveAdmin(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.orange),
-            child: const Text('Remove Admin'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
-    );
-  }
-
-  void _showBulkUnapproveConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Unapprove Users?', style: TextStyle(color: AppColors.textPrimary(context))),
-        content: Text(
-          'Are you sure you want to unapprove ${members.length} user${members.length > 1 ? 's' : ''}?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkUnapproveUsers(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Unapprove'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
-    );
-  }
-
-  void _showBulkRemoveConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Remove from Community?', style: TextStyle(color: AppColors.textPrimary(context))),
-        content: Text(
-          'Are you sure you want to remove ${members.length} user${members.length > 1 ? 's' : ''} from the community?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkRemoveFromCommunity(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
-    );
-  }
-
-  // ✅ BULK ACTION IMPLEMENTATIONS
-  void _bulkMakeAdmin(List<UserModel> members) async {
-    final memberProvider = context.read<MemberProvider>();
-    final uids = members.map((m) => m.uid).toList();
-    
-    final success = await memberProvider.bulkUpdateMemberRoles(uids, true);
-    
-    if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Made ${members.length} users admin'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadMembers();
-    }
-  }
-
-  void _bulkRemoveAdmin(List<UserModel> members) async {
-    final memberProvider = context.read<MemberProvider>();
-    final uids = members.map((m) => m.uid).toList();
-    
-    final success = await memberProvider.bulkUpdateMemberRoles(uids, false);
-    
-    if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed admin role from ${members.length} users'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadMembers();
-    }
-  }
-
-  void _bulkUnapproveUsers(List<UserModel> members) async {
-    final memberProvider = context.read<MemberProvider>();
-    final uids = members.map((m) => m.uid).toList();
-    
-    final success = await memberProvider.bulkUnapproveUsers(uids);
-    
-    if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unapproved ${members.length} users'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadMembers();
-    }
-  }
-
-  void _bulkRemoveFromCommunity(List<UserModel> members) async {
-    final memberProvider = context.read<MemberProvider>();
-    final uids = members.map((m) => m.uid).toList();
-    
-    final success = await memberProvider.bulkRemoveFromCommunity(uids);
-    
-    if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed ${members.length} users from community'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadMembers();
-    }
-  }
-
-  // ✅ NAVIGATION METHOD
   void _navigateToMemberDetails(UserModel member) async {
     await Navigator.push(
       context,
@@ -486,111 +371,133 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // 🏢 ENTERPRISE-GRADE BACK BUTTON DETECTION
-    final bool showBackButton;
-    
-    if (widget.forceBackButton != null) {
-      // Manual override if provided
-      showBackButton = widget.forceBackButton!;
-    } else {
-      // Smart detection - preferred by large companies
-      final route = ModalRoute.of(context);
-      showBackButton = route?.canPop ?? false;
-    }
 
-    final memberProvider = context.watch<MemberProvider>();
-    final currentUser = context.watch<AppAuthProvider>().user;
-    final isAdmin = currentUser?.isAdmin == true;
 
-    final displayedMembers = _searchQuery.isEmpty
-        ? memberProvider.members
-        : memberProvider.searchMembers(_searchQuery);
+@override
+Widget build(BuildContext context) {
+  final bool showBackButton = widget.forceBackButton ?? 
+      (ModalRoute.of(context)?.canPop ?? false);
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      // 🎯 SMART APP BAR WITH SEARCH BAR
-      appBar: AppBar(
-         title: const Text(
-    'Members',
-    style: TextStyle(
-      color: Colors.white, // Moved style here
-      fontSize: 18, // Add font size if needed
-      fontWeight: FontWeight.w600, // Add font weight if needed
-    ),
-  ),
-        centerTitle: true,
-        leading: showBackButton 
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
-        automaticallyImplyLeading: showBackButton,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
+  final memberProvider = context.watch<MemberProvider>();
+  final currentUser = context.watch<AppAuthProvider>().user;
+  final isAdmin = currentUser?.isAdmin == true;
+
+  final allMembers = memberProvider.members;
+  final filteredMembers = _getFilteredMembers(allMembers);
+  final memberCounts = _getMemberCounts(allMembers);
+
+  return Scaffold(
+    backgroundColor: AppColors.background(context),
+    appBar: AppBar(
+      title: const Text(
+        'Members',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: _isSelectionMode
-                ? _buildSelectionControls(displayedMembers, isAdmin, currentUser)
-                : _buildModernSearchBar(),
+      ),
+      centerTitle: true,
+      leading: showBackButton 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
+      automaticallyImplyLeading: showBackButton,
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AppColors.background(context),
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient(context),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
           ),
         ),
       ),
-
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing members...',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-            ),
-          ),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(50),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          child: _isSelectionMode
+              ? _buildSelectionControls(filteredMembers, isAdmin, currentUser)
+              : _buildSearchBar(),
         ),
-        child: _buildContentWithoutSearch(memberProvider, currentUser, displayedMembers, isAdmin),
+      ),
+    ),
+
+    body: Column(
+      children: [
+        // Fixed filter tabs below AppBar (always visible)
+        _buildFilterTabs(),
+        
+        // Scrollable content
+        Expanded(
+          child: SmartRefresher(
+            controller: _refreshController,
+            onRefresh: _onRefresh,
+            enablePullDown: true,
+            enablePullUp: false,
+            physics: const BouncingScrollPhysics(),
+            header: ClassicHeader(
+              idleText: 'Pull down to refresh',
+              releaseText: 'Release to refresh',
+              refreshingText: 'Refreshing members...',
+              completeText: 'Refresh complete',
+              failedText: 'Refresh failed',
+              idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+              releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+              refreshingIcon: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+                ),
+              ),
+              completeIcon: const Icon(Icons.check, color: Colors.green),
+              failedIcon: const Icon(Icons.error, color: Colors.red),
+            ),
+            child: _buildContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
+          ),
+        ),
+      ],
+    ),
+    
+    floatingActionButton: isAdmin ? _buildVirtualUserFAB() : null,
+  );
+}
+
+  Widget _buildVirtualUserFAB() {
+    return FloatingActionButton.extended(
+      onPressed: _navigateToCreateVirtualUsers,
+      backgroundColor: Colors.purple,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      icon: const Icon(Icons.person_add, size: 22),
+      label: const Text('Add Virtual'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }
 
-  Widget _buildContentWithoutSearch(MemberProvider memberProvider, UserModel? currentUser, 
-                      List<UserModel> displayedMembers, bool isAdmin) {
-    // Show skeleton when loading and no members to display
+Widget _buildContent(
+    MemberProvider memberProvider,
+    UserModel? currentUser,
+    List<UserModel> displayedMembers,
+    bool isAdmin,
+    Map<String, int> memberCounts
+  ) {
     if (_isInitialLoad || (_isLoading && displayedMembers.isEmpty)) {
       return MemberListSkeleton(
         isDarkMode: Theme.of(context).brightness == Brightness.dark,
@@ -602,11 +509,11 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
-              style: TextStyle(fontSize: 16, color: Colors.red),
+              style: const TextStyle(fontSize: 16, color: Colors.red),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -623,167 +530,326 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       );
     }
 
-    // Use a simple ListView instead of Column + Expanded + ListView
-    return _buildMembersListContent(displayedMembers, currentUser, memberProvider);
-  }
+    return ListView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      shrinkWrap: true,
+      children: [
+        // REMOVED: Toggle button and filter tabs (now placed above in Column)
+        
+        // Search Header
+        if (_searchQuery.isNotEmpty) _buildSearchHeader(displayedMembers.length),
 
-  Widget _buildMembersListContent(List<UserModel> displayedMembers, UserModel? currentUser, MemberProvider memberProvider) {
-  return ListView(
-    physics: const AlwaysScrollableScrollPhysics(),
-    shrinkWrap: true, // Add this
-    children: [
-      // Search Header (like history screen)
-      if (_searchQuery.isNotEmpty) _buildSearchHeader(displayedMembers.length),
-
-      // Provider Error Message
-      if (memberProvider.error != null) ...[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Card(
-            color: Colors.red[50],
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(Icons.error, color: Colors.red),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      memberProvider.error!,
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: Colors.red),
-                    onPressed: () => memberProvider.clearError(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-
-      // Show loading indicator during refresh (optional)
-      if (_isLoading && _refreshController.isRefresh) ...[
-        Container(
-          height: 4,
-          child: LinearProgressIndicator(
-            color: AppColors.primary(context),
-            backgroundColor: AppColors.primary(context).withOpacity(0.2),
-          ),
-        ),
-      ],
-
-      // Members List
-      if (displayedMembers.isEmpty && !_refreshController.isRefresh)
-        _buildEmptyState()
-      else
-        ...displayedMembers.map((member) => _buildMemberCard(member, currentUser)).toList(),
-    ],
-  );
-}
-
-Widget _buildModernSearchBar() {
-  return Container(
-    height: 56,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(
-        color: Colors.white.withOpacity(0.5),
-        width: 1.5,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.08),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ],
-      color: Colors.transparent,
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: TextField(
-          controller: _searchController,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
-          cursorColor: Colors.white,
-          cursorWidth: 2,
-          cursorHeight: 20,
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.fromLTRB(10, 18, 6, 2), // Changed: Increased left padding to 60
-            hintText: 'Search members...',
-            hintStyle: const TextStyle(
-              color: Colors.white70,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-            border: InputBorder.none,
-            filled: false,
-            prefixIcon: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                ),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 0,
-                ),
-              ),
-              child: const Icon(
-                Icons.search,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 0),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                   
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          FocusScope.of(context).unfocus();
-                        },
+        // Provider Error
+        if (memberProvider.error != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Card(
+              color: Colors.red[50],
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error, color: Colors.red),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        memberProvider.error!,
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
-                  )
-                : null,
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () => memberProvider.clearError(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          onChanged: (value) {
-            setState(() => _searchQuery = value);
-          },
+        ],
+
+        // Members List
+        if (displayedMembers.isEmpty && !_refreshController.isRefresh)
+          _buildEmptyState()
+        else ...[
+          ...displayedMembers.map((member) => _buildMemberCard(member, currentUser)).toList(),
+          
+          // Pagination Loader
+          if (_isLoadingMore || memberProvider.isLoadingMore)
+            _buildPaginationLoader(),
+            
+          // No More Data
+          if (!memberProvider.hasMoreData && displayedMembers.isNotEmpty)
+            _buildNoMoreData(),
+        ],
+      ],
+    );
+  }
+
+
+  Widget _buildStatItem(int count, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChips(Map<String, int> memberCounts) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildFilterChip('All (${memberCounts['all']})', 'all'),
+          _buildFilterChip('Real (${memberCounts['real']})', 'real'),
+          _buildFilterChip('Virtual (${memberCounts['virtual']})', 'virtual'),
+        ],
+      ),
+    );
+  }
+// In your _AllMembersScreenBodyState class
+
+Widget _buildFilterTabs() {
+  return Container(
+    margin: const EdgeInsets.only(right: 16, left: 16, top: 16),
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: _buildMemberTab("All", 'all'),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: _buildMemberTab("Real", 'real'),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: _buildMemberTab("Virtual", 'virtual'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildMemberTab(String label, String value) {
+  final isSelected = _selectedFilter == value;
+  
+  return GestureDetector(
+    onTap: () {
+      setState(() {
+        _selectedFilter = value;
+      });
+      _loadMembers();
+    },
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.primary(context) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.textPrimary(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _buildTabCount(value, isSelected),
+        ],
       ),
     ),
   );
 }
 
-  // ✅ SEARCH HEADER
+Widget _buildTabCount(String value, bool isSelected) {
+  final memberCounts = _getMemberCounts(_members);
+  int count = 0;
+  
+  switch (value) {
+    case 'all':
+      count = memberCounts['all'] ?? 0;
+      break;
+    case 'real':
+      count = memberCounts['real'] ?? 0;
+      break;
+    case 'virtual':
+      count = memberCounts['virtual'] ?? 0;
+      break;
+  }
+  
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.card(context),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Text(
+      count.toString(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: isSelected ? Colors.white : AppColors.textSecondary(context),
+      ),
+    ),
+  );
+}
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _selectedFilter == value;
+    Color chipColor;
+    
+    switch (value) {
+      case 'real':
+        chipColor = Colors.blue;
+        break;
+      case 'virtual':
+        chipColor = Colors.purple;
+        break;
+      default:
+        chipColor = AppColors.primary(context);
+    }
+    
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: isSelected ? Colors.white : AppColors.textPrimary(context),
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _selectedFilter = selected ? value : 'all';
+        });
+        _loadMembers();
+      },
+      selectedColor: chipColor,
+      backgroundColor: AppColors.card(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? chipColor : AppColors.border(context),
+          width: isSelected ? 0 : 1,
+        ),
+      ),
+      elevation: isSelected ? 2 : 0,
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        color: Colors.transparent,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+            cursorColor: Colors.white,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.fromLTRB(10, 18, 6, 2),
+              hintText: 'Search members...',
+              hintStyle: const TextStyle(
+                color: Colors.white70,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              border: InputBorder.none,
+              prefixIcon: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    bottomLeft: Radius.circular(18),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.search,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                        FocusScope.of(context).unfocus();
+                      },
+                    )
+                  : null,
+            ),
+            onChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSearchHeader(int resultCount) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -824,571 +890,388 @@ Widget _buildModernSearchBar() {
     );
   }
 
-// ✅ SELECTION CONTROLS WIDGET
-Widget _buildSelectionControls(List<UserModel> displayedMembers, bool isAdmin, UserModel? currentUser) {
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: AppColors.card(context).withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.4),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Cancel Button
-            IconButton(
-              icon: Icon(Icons.close, color: AppColors.primary(context), size: 22),
-              onPressed: _toggleSelectionMode,
-              tooltip: 'Cancel selection',
-            ),
-            
-            // Selection Count
-            Expanded(
-              child: Text(
-                '${_selectedMemberIds.length} selected',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: AppColors.primary(context),
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            
-            // Select All / Deselect All
-            IconButton(
-              icon: Icon(
-                _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
-                    ? Icons.check_box
-                    : Icons.check_box_outline_blank,
-                color: AppColors.primary(context),
-                size: 22,
-              ),
-              onPressed: _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
-                  ? _clearSelection
-                  : () => _selectAllMembers(displayedMembers, currentUser),
-              tooltip: _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
-                  ? 'Deselect all'
-                  : 'Select all',
-            ),
-            
-            // Actions Menu (three-dot icon) - DIRECT BULK ACTIONS
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: AppColors.primary(context), size: 22),
-              onSelected: (value) {
-                _handleBulkActionDirect(value);
-              },
-              itemBuilder: (context) {
-                final memberProvider = context.read<MemberProvider>();
-                final currentMembers = List<UserModel>.from(memberProvider.members);
-                final selectedMembers = currentMembers.where((m) => _selectedMemberIds.contains(m.uid)).toList();
-                
-                // Filter out current user from selected members
-                final filteredSelectedMembers = selectedMembers.where((m) => m.uid != currentUser?.uid).toList();
-                
-                if (filteredSelectedMembers.isEmpty) {
-                  return [
-                    PopupMenuItem<String>(
-                      value: 'no_selection',
-                      enabled: false,
-                      child: Text(
-                        'No valid members selected',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(context),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ];
-                }
-
-                final hasNonAdmins = filteredSelectedMembers.any((m) => !m.isAdmin);
-                final hasAdmins = filteredSelectedMembers.any((m) => m.isAdmin);
-
-                return [
-                  // Make Admin
-                  PopupMenuItem<String>(
-                    value: 'make_admin',
-                    enabled: hasNonAdmins,
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.admin_panel_settings, 
-                          color: hasNonAdmins ? AppColors.primary(context) : Colors.grey),
-                      title: Text(
-                        'Make Admin',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: hasNonAdmins ? AppColors.textPrimary(context) : Colors.grey,
-                        ),
-                      ),
-                    
-                    ),
-                  ),
-                  
-                  // Remove Admin
-                  PopupMenuItem<String>(
-                    value: 'remove_admin',
-                    enabled: hasAdmins,
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.person_remove_alt_1, 
-                          color: hasAdmins ? Colors.orange : Colors.grey),
-                      title: Text(
-                        'Remove Admin',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: hasAdmins ? AppColors.textPrimary(context) : Colors.grey,
-                        ),
-                      ),
-                   
-                    ),
-                  ),
-                  
-                  // Unapprove Users
-                  PopupMenuItem<String>(
-                    value: 'unapprove',
-                    enabled: true,
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.block, color: Colors.red),
-                      title: Text(
-                        'Unapprove Users',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                   
-                    ),
-                  ),
-                  
-                  // Remove from Community
-                  PopupMenuItem<String>(
-                    value: 'remove',
-                    enabled: true,
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(Icons.exit_to_app, color: Colors.purple),
-                      title: Text(
-                        'Remove from Community',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                  
-                    ),
-                  ),
-                ];
-              },
-            ),
-          ],
+  Widget _buildSelectionControls(List<UserModel> displayedMembers, bool isAdmin, UserModel? currentUser) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: AppColors.card(context).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.4),
+          width: 1.2,
         ),
       ),
-    ),
-  );
-}
-
-// ✅ HANDLE DIRECT BULK ACTIONS
-void _handleBulkActionDirect(String action) {
-  final memberProvider = context.read<MemberProvider>();
-  final currentUser = context.read<AppAuthProvider>().user;
-  
-  final currentMembers = List<UserModel>.from(memberProvider.members);
-  final selectedMembers = currentMembers.where((m) => _selectedMemberIds.contains(m.uid)).toList();
-  
-  // Filter out current user from selected members
-  final filteredSelectedMembers = selectedMembers.where((m) => m.uid != currentUser?.uid).toList();
-  
-  if (filteredSelectedMembers.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('You cannot perform actions on yourself'),
-        backgroundColor: Colors.orange,
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.close, color: AppColors.primary(context), size: 22),
+            onPressed: _toggleSelectionMode,
+          ),
+          
+          Expanded(
+            child: Text(
+              '${_selectedMemberIds.length} selected',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: AppColors.primary(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          
+          IconButton(
+            icon: Icon(
+              _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
+                  ? Icons.check_box
+                  : Icons.check_box_outline_blank,
+              color: AppColors.primary(context),
+              size: 22,
+            ),
+            onPressed: _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
+                ? _clearSelection
+                : () => _selectAllMembers(displayedMembers, currentUser),
+          ),
+        ],
       ),
     );
-    return;
   }
-
-  switch (action) {
-    case 'make_admin':
-      _showBulkMakeAdminConfirmation(filteredSelectedMembers);
-      break;
-    case 'remove_admin':
-      _showBulkRemoveAdminConfirmation(filteredSelectedMembers);
-      break;
-    case 'unapprove':
-      _showBulkUnapproveConfirmation(filteredSelectedMembers);
-      break;
-    case 'remove':
-      _showBulkRemoveConfirmation(filteredSelectedMembers);
-      break;
-  }
-}
 
   Widget _buildEmptyState() {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    final isAdmin = context.read<AppAuthProvider>().user?.isAdmin == true;
+    
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const SizedBox(height: 120),
-        if (_searchQuery.isNotEmpty)
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: 1.0,
-            child: Icon(
-              Icons.search_off, 
-              size: 64, 
-              color: AppColors.primary(context).withOpacity(0.5)
-            ),
-          )
-        else
-          Icon(
-            Icons.people_outline,
-            size: 64,
-            color: AppColors.primary(context).withOpacity(0.5),
-          ),
+        Icon(
+          _searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
+          size: 64,
+          color: AppColors.primary(context).withOpacity(0.5),
+        ),
         const SizedBox(height: 16),
-        Center(
-          child: Text(
-            _searchQuery.isNotEmpty ? 'No results found' : 'No members available',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.primary(context).withOpacity(0.7),
-              fontWeight: FontWeight.w500,
-            ),
+        Text(
+          _searchQuery.isNotEmpty ? 'No results found' : 'No members available',
+          style: TextStyle(
+            fontSize: 18,
+            color: AppColors.primary(context).withOpacity(0.7),
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 8),
-        Center(
-          child: Text(
-            _searchQuery.isNotEmpty 
-                ? 'No matches for "$_searchQuery"'
-                : 'When members join and get approved,\nthey will appear here.',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-            ),
-            textAlign: TextAlign.center,
+        Text(
+          _searchQuery.isNotEmpty 
+              ? 'No matches for "$_searchQuery"'
+              : 'When members join and get approved,\nthey will appear here.',
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
           ),
+          textAlign: TextAlign.center,
         ),
+        if (_searchQuery.isEmpty && isAdmin) ...[
+          const SizedBox(height: 24),
+          _buildAddVirtualUserButton(),
+        ],
         if (_searchQuery.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Clear Search'),
+          ElevatedButton(
+            onPressed: () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
             ),
+            child: const Text('Clear Search'),
           ),
         ],
       ],
     );
   }
 
-Widget _buildMemberCard(UserModel member, UserModel? currentUser) {
-  final isCurrentUser = currentUser?.uid == member.uid;
-  final isSelected = _selectedMemberIds.contains(member.uid);
-  final isAdmin = currentUser?.isAdmin == true;
-  final hasPhoneNumber = member.phoneNumber != null && member.phoneNumber!.isNotEmpty;
-  
-  // Pre-calculate contact info
-  final String contactInfo;
-  if (member.phoneNumber != null && member.phoneNumber!.isNotEmpty) {
-    contactInfo = member.phoneNumber!;
-  } else if (member.email != null && member.email!.isNotEmpty) {
-    contactInfo = member.email!;
-  } else {
-    contactInfo = 'No contact info';
-  }
-
-  return Column(
-    children: [
-      Material(
-        color: isSelected 
-            ? AppColors.primary(context).withOpacity(0.12) 
-            : Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (_isSelectionMode && isAdmin && !isCurrentUser) {
-              setState(() {
-                _toggleMemberSelection(member.uid, isCurrentUser);
-              });
-            } else {
-              _navigateToMemberDetails(member);
-            }
-          },
-          onLongPress: isAdmin && !isCurrentUser ? () {
-            setState(() {
-              if (!_isSelectionMode) {
-                _isSelectionMode = true;
-              }
-              _toggleMemberSelection(member.uid, isCurrentUser);
-            });
-          } : null,
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.card(context),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Row(
-              children: [
-                // Avatar container with consistent size
-                Container(
-                  width: 40,
-                  height: 40,
-                  margin: const EdgeInsets.only(right: 12),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Avatar
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                          color: AppColors.primary(context).withOpacity(0.12),
-                        ),
-                        child: Center(
-                          child: Text(
-                            (member.displayName?.isNotEmpty == true 
-                                ? member.displayName![0].toUpperCase() 
-                                : '?'),
-                            style: TextStyle(
-                              color: AppColors.primary(context), 
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      // Selection overlay (doesn't affect layout)
-                     if (_isSelectionMode && isAdmin && !isCurrentUser)
-  Positioned(
-    right: -4,
-    top: -4,
-    child: GestureDetector(
-      onTap: () {
-        setState(() {
-          _toggleMemberSelection(member.uid, isCurrentUser);
-        });
-      },
-      child: Container(
-        width: 18,
-        height: 18,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary(context)
-              : AppColors.card(context),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary(context)
-                : Colors.grey[400]!,
-            width: 2,
+  Widget _buildAddVirtualUserButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      child: ElevatedButton.icon(
+        onPressed: _navigateToCreateVirtualUsers,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.purple,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: isSelected
-            ? const Icon(
-                Icons.check,
-                size: 14,
-                color: Colors.white,
-              )
-            : null,
-      ),
-    ),
-  ),
-
-                    ],
-                  ),
-                ),
-                
-                // Main content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              member.displayName ?? 'No Name',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: AppColors.textPrimary(context),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (isCurrentUser)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: Colors.blue.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Text(
-                                'You',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          if (member.isAdmin && !isCurrentUser) 
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: Colors.orange.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Text(
-                                'Admin',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        contactInfo,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context)
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Action buttons area - maintains consistent width
-                SizedBox(
-  width: 48, // 🔒 fixed width prevents overflow
-  child: Align(
-    alignment: Alignment.centerRight,
-    child: (!_isSelectionMode && hasPhoneNumber)
-        ? InkResponse(
-            radius: 20,
-            onTap: () {
-              _makePhoneCall(member.phoneNumber!);
-            },
-            child: Icon(
-              Icons.phone,
-              size: 20,
-              color: AppColors.primary(context),
-            ),
-          )
-        : const SizedBox.shrink(),
-  ),
-),
-
-              ],
-            ),
+        icon: const Icon(Icons.person_add, size: 22),
+        label: const Text(
+          'Add Virtual Members',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
         ),
-      ),
-      
-      // Horizontal divider
-      Divider(
-        height: 1,
-        thickness: 1,
-        color: AppColors.border(context),
-      ),
-    ],
-  );
-}
-// Helper method to make phone call
-
-Future<void> _makePhoneCall(String phoneNumber) async {
-  try {
-    final cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-    
-    if (cleanedNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid phone number: $phoneNumber'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    
-    // Use 'telprompt:' for iOS or 'tel:' for both platforms
-    final url = Uri.parse('tel:$cleanedNumber');
-    
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
-      // Fallback for web/unsupported platforms
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cannot make calls from this device'),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-    
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: $e'),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 2),
       ),
     );
   }
-}
-  
-  String _formatDate(Timestamp? timestamp) {
-    if (timestamp == null) return 'Unknown';
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
+
+  Widget _buildPaginationLoader() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildNoMoreData() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: Text(
+          'No more members',
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberCard(UserModel member, UserModel? currentUser) {
+    final isCurrentUser = currentUser?.uid == member.uid;
+    final isSelected = _selectedMemberIds.contains(member.uid);
+    final isAdmin = currentUser?.isAdmin == true;
+    final hasPhoneNumber = member.phoneNumber != null && member.phoneNumber!.isNotEmpty;
+    final isVirtualUser = member.isVirtualUser;
+    
+    final contactInfo = member.phoneNumber ?? member.email ?? 'No contact info';
+
+    return Column(
+      children: [
+        Material(
+          color: isSelected 
+              ? AppColors.primary(context).withOpacity(0.12) 
+              : Colors.transparent,
+          child: InkWell(
+         onTap: () {
+  if (_isSelectionMode && isAdmin && !isCurrentUser) {
+    setState(() => _toggleMemberSelection(member.uid, isCurrentUser));
+  } else {
+    _navigateToMemberDetails(member);
+  }
+},
+            onLongPress: isAdmin && !isCurrentUser ? () {
+              setState(() {
+                if (!_isSelectionMode) _isSelectionMode = true;
+                _toggleMemberSelection(member.uid, isCurrentUser);
+              });
+            } : null,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: isVirtualUser 
+                                ? Colors.purple.withOpacity(0.12)
+                                : AppColors.primary(context).withOpacity(0.12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              (member.displayName?.isNotEmpty == true 
+                                  ? member.displayName![0].toUpperCase() 
+                                  : '?'),
+                              style: TextStyle(
+                                color: isVirtualUser 
+                                    ? Colors.purple[800]
+                                    : AppColors.primary(context),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        if (_isSelectionMode && isAdmin && !isCurrentUser)
+                          Positioned(
+                            right: -4,
+                            top: -4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _toggleMemberSelection(member.uid, isCurrentUser));
+                              },
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary(context)
+                                      : AppColors.card(context),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary(context)
+                                        : Colors.grey[400]!,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: Colors.white,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                member.displayName ?? 'No Name',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            
+                            if (isCurrentUser)
+                              _buildChip('You', Colors.blue),
+                            
+                            if (member.isAdmin && !isCurrentUser) 
+                              _buildChip('Admin', Colors.orange[800]!),
+                            
+                            if (isVirtualUser)
+                              _buildChip('Virtual', Colors.purple),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          contactInfo,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(context)
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(
+                    width: 48,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: (!_isSelectionMode && hasPhoneNumber && !isVirtualUser)
+                          ? InkResponse(
+                              radius: 20,
+                              onTap: () => _makePhoneCall(member.phoneNumber!),
+                              child: Icon(
+                                Icons.phone,
+                                size: 20,
+                                color: AppColors.primary(context),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.border(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      margin: const EdgeInsets.only(left: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    try {
+      final cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+      
+      if (cleanedNumber.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid phone number'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      final url = Uri.parse('tel:$cleanedNumber');
+      
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot make calls from this device'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

@@ -41,19 +41,102 @@ class UserService {
     }
   }
 
-  /// Fetch all users in a specific community
-  Future<List<UserModel>> getUsersByCommunity(String communityId) async {
-    try {
-      final snapshot = await usersCollection
+/// Fetch all users in a specific community with optional pagination
+Future<List<UserModel>> getUsersByCommunity(
+  String communityId, {
+  String filterType = 'all', // 'all', 'real', 'virtual'
+  int limit = 100, // Default to 100 for backward compatibility
+  DocumentSnapshot? lastDocument, // For pagination
+  bool loadMore = false, // Whether to load next page
+}) async {
+  try {
+    print('🔍 DEBUG: Fetching $filterType users for community $communityId');
+    
+    if (filterType == 'real') {
+      print('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
+      
+      // For real users, we need to get ALL users first, then filter
+      // because real users might not have the isVirtualUser field
+      Query query = usersCollection
           .where('communityId', isEqualTo: communityId)
-          .get();
-      return snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      throw 'Failed to fetch community members: $e';
+          .orderBy('displayName')
+          .limit(limit * 3); // Get more to account for filtering
+      
+      if (loadMore && lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+        print('📄 DEBUG: Loading next page from cursor');
+      }
+      
+      print('📊 DEBUG: Executing query with limit ${limit * 3} for real users (will filter)');
+      
+      final snapshot = await query.get();
+      print('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
+      
+      // Convert and filter in code
+      final users = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // IMPORTANT: Default isVirtualUser to false if field is missing
+        // Missing field means it's a real user
+        data['isVirtualUser'] = data['isVirtualUser'] ?? false;
+        data['isApproved'] = data['isApproved'] ?? true;
+        
+        return UserModel.fromMap(data);
+      }).where((user) => !user.isVirtualUser) // Filter out virtual users
+        .take(limit) // Apply limit after filtering
+        .toList();
+      
+      print('✅ DEBUG: After filtering - got ${users.length} real users');
+      return users;
+      
+    } else {
+      // For 'all' and 'virtual' users, we can query directly
+      print('🎯 $filterType.toUpperCase() USERS: Querying directly');
+      
+      Query query = usersCollection
+          .where('communityId', isEqualTo: communityId)
+          .orderBy('displayName')
+          .limit(limit);
+      
+      // Apply server-side filtering for virtual users
+      if (filterType == 'virtual') {
+        query = query.where('isVirtualUser', isEqualTo: true);
+        print('🎯 Added isVirtualUser = true filter');
+      }
+      // For 'all', no additional filter
+      
+      // Apply pagination if loading more
+      if (loadMore && lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+        print('📄 DEBUG: Loading next page from cursor');
+      }
+      
+      print('📊 DEBUG: Executing query with limit $limit for $filterType users');
+      
+      final snapshot = await query.get();
+      print('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
+      
+      // Convert documents to UserModel
+      final users = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Ensure required fields exist
+        // For 'all' query: default isVirtualUser to false if missing
+        // For 'virtual' query: should already have isVirtualUser = true
+        data['isVirtualUser'] = data['isVirtualUser'] ?? false;
+        data['isApproved'] = data['isApproved'] ?? true;
+        
+        return UserModel.fromMap(data);
+      }).toList();
+      
+      return users;
     }
+    
+  } catch (e) {
+    print('❌ DEBUG: Error fetching community members: $e');
+    throw 'Failed to fetch community members: $e';
   }
+}
 
   /// Get pending users (not approved yet)
   Future<List<UserModel>> getPendingUsers(String communityId) async {
@@ -314,3 +397,28 @@ Future<void> removeFromCommunity(String uid, String communityId) async {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

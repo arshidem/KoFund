@@ -21,6 +21,7 @@ import 'core/services/contribution_service.dart';
 import 'core/services/expense_service.dart';
 import 'core/services/user_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/virtual_user_service.dart';
 import 'core/services/issue_service.dart';
 import 'core/services/notification_storage_service.dart';
 import 'core/services/fcm_token_service.dart';
@@ -40,7 +41,8 @@ import 'features/history/providers/history_provider.dart';
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
 import 'features/issues/providers/issue_provider.dart';
-
+// Add this import in your main.dart
+import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
 
@@ -281,6 +283,7 @@ class _AppProvidersState extends State<AppProviders> {
     fcmTokenService = FCMTokenService();
     notificationService = NotificationService();
     
+    
     // Create auth provider
     _authProvider = AppAuthProvider(authService);
     
@@ -475,22 +478,25 @@ class _AppProvidersState extends State<AppProviders> {
         ),
 
         // 👥 Member Provider - FIXED: Use the existing auth provider
-        ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
-          create: (_) => MemberProvider(
-            userService: userService,
-            authProvider: _authProvider,
-            participantService: participantService,
-            contributionService: contributionService,
-          ),
-          update: (_, authProvider, userService, previousMemberProvider) {
-            return previousMemberProvider ?? MemberProvider(
-              userService: userService,
-              authProvider: authProvider,
-              participantService: participantService,
-              contributionService: contributionService,
-            );
-          },
-        ),
+    // In main.dart - Update the ChangeNotifierProxyProvider2
+ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
+  create: (_) => MemberProvider(
+    userService: userService,
+    authProvider: _authProvider,
+    participantService: participantService,
+    contributionService: contributionService,
+    virtualUserService: VirtualUserService(), // Add this
+  ),
+  update: (_, authProvider, userService, previousMemberProvider) {
+    return previousMemberProvider ?? MemberProvider(
+      userService: userService,
+      authProvider: authProvider,
+      participantService: participantService,
+      contributionService: contributionService,
+      virtualUserService: VirtualUserService(), // Add this
+    );
+  },
+),
 
         // 📊 Dashboard Provider
         ChangeNotifierProvider(
@@ -510,6 +516,9 @@ class _AppProvidersState extends State<AppProviders> {
         ChangeNotifierProvider(
           create: (context) => IssueProvider(),
         ),
+        ChangeNotifierProvider<VirtualUserProvider>(
+  create: (_) => VirtualUserProvider(VirtualUserService()),
+),
 
         // 🌗 Theme Provider
         ChangeNotifierProvider(
