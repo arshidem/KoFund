@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
+import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 
 class VirtualUserProvider extends ChangeNotifier {
@@ -16,15 +17,20 @@ class VirtualUserProvider extends ChangeNotifier {
   bool _isDeleting = false;
   String? _deleteError;
   
+  // Add these for edit operations
+  bool _isEditing = false;
+  String? _editError; // Add this line
+  
   bool get isLoading => _isLoading;
   bool get isDeleting => _isDeleting;
+  bool get isEditing => _isEditing; // Add this getter
   List<String> get errorMessages => _errorMessages;
   String? get deleteError => _deleteError;
+  String? get editError => _editError; // Add this getter
   int get successfulCreations => _successfulCreations;
   List<UserModel> get virtualUsers => _virtualUsers;
   
   VirtualUserProvider(this._service);
-  
   // ==================== BULK CREATION METHODS ====================
   
   /// Create multiple virtual users at once
@@ -172,6 +178,78 @@ class VirtualUserProvider extends ChangeNotifier {
     }
   }
   
+
+   Future<bool> editVirtualUser({
+    required String userId,
+    required String displayName,
+    String? phoneNumber,
+    String? email,
+  }) async {
+    _isEditing = true;
+    _editError = null;
+    notifyListeners();
+
+    try {
+      // Validation
+      if (displayName.trim().isEmpty) {
+        _editError = 'Display name is required';
+        _isEditing = false;
+        notifyListeners();
+        return false;
+      }
+      
+      if (displayName.length < 2) {
+        _editError = 'Display name must be at least 2 characters';
+        _isEditing = false;
+        notifyListeners();
+        return false;
+      }
+      
+      if (phoneNumber != null && phoneNumber.isNotEmpty && !_isValidPhoneNumber(phoneNumber)) {
+        _editError = 'Invalid phone number format';
+        _isEditing = false;
+        notifyListeners();
+        return false;
+      }
+      
+      if (email != null && email.isNotEmpty && !_isValidEmail(email)) {
+        _editError = 'Invalid email format';
+        _isEditing = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Call service method
+      await _service.updateVirtualUser(
+        userId: userId,
+        displayName: displayName.trim(),
+        phoneNumber: phoneNumber?.trim(),
+        email: email?.trim(),
+      );
+      
+      // Update local list
+      final index = _virtualUsers.indexWhere((user) => user.uid == userId);
+      if (index != -1) {
+        _virtualUsers[index] = _virtualUsers[index].copyWith(
+          displayName: displayName.trim(),
+          phoneNumber: phoneNumber?.trim(),
+          email: email?.trim(),
+        );
+      }
+      
+      _isEditing = false;
+      notifyListeners();
+      return true;
+      
+    } catch (e) {
+      _editError = 'Failed to edit virtual user: $e';
+      _isEditing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  
   // ==================== DELETE METHODS ====================
   
   /// Delete a virtual user
@@ -315,77 +393,8 @@ class VirtualUserProvider extends ChangeNotifier {
     return _service.getVirtualUserCountStream(communityId);
   }
   
-  // ==================== UPDATE METHODS ====================
   
-  /// Update a virtual user
-  Future<bool> updateVirtualUser({
-    required String userId,
-    required String displayName,
-    String? phoneNumber,
-    String? email,
-  }) async {
-    _isLoading = true;
-    _errorMessages.clear();
-    notifyListeners();
 
-    try {
-      // Validate inputs
-      if (displayName.trim().isEmpty) {
-        _errorMessages.add('Display name is required');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (displayName.length < 2) {
-        _errorMessages.add('Display name must be at least 2 characters');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (phoneNumber != null && phoneNumber.isNotEmpty && !_isValidPhoneNumber(phoneNumber)) {
-        _errorMessages.add('Invalid phone number format');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (email != null && email.isNotEmpty && !_isValidEmail(email)) {
-        _errorMessages.add('Invalid email format');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      await _service.updateVirtualUser(
-        userId: userId,
-        displayName: displayName.trim(),
-        phoneNumber: phoneNumber?.trim(),
-        email: email?.trim(),
-      );
-      
-      // Update local list
-      final index = _virtualUsers.indexWhere((user) => user.uid == userId);
-      if (index != -1) {
-        _virtualUsers[index] = _virtualUsers[index].copyWith(
-          displayName: displayName.trim(),
-          phoneNumber: phoneNumber?.trim(),
-          email: email?.trim(),
-        );
-      }
-      
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessages.add('Failed to update user: $e');
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-  
   // ==================== UTILITY METHODS ====================
   
   /// Reset creation state
@@ -426,5 +435,9 @@ class VirtualUserProvider extends ChangeNotifier {
 
   bool _isValidEmail(String email) {
     return _service.isValidEmail(email);
+  }
+    void clearEditError() {
+    _editError = null;
+    notifyListeners();
   }
 }

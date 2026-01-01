@@ -224,7 +224,7 @@ appBar: AppBar(
   bottom: PreferredSize(
     preferredSize: const Size.fromHeight(50),
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       child: _buildModernSearchBar(),
     ),
   ),
@@ -255,17 +255,30 @@ appBar: AppBar(
           completeIcon: Icon(Icons.check, color: Colors.green),
           failedIcon: Icon(Icons.error, color: Colors.red),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildFilterTabs(),
-              if (_searchQuery.isNotEmpty) _buildSearchHeader(filteredPrograms.length),
-              Expanded(
-                child: _buildBodyContent(programProvider, filteredPrograms),
-              ),
-            ],
-          ),
+      child: SafeArea(
+  child: Column(
+    children: [
+      // PROGRAM FILTER TABS — STRUCTURAL, NOT FLOATING
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: _buildFilterTabs(),
+      ),
+
+      // SEARCH HEADER
+      if (_searchQuery.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: _buildSearchHeader(filteredPrograms.length),
         ),
+
+      // MAIN CONTENT
+      Expanded(
+        child: _buildBodyContent(programProvider, filteredPrograms),
+      ),
+    ],
+  ),
+),
+
       ),
 
       floatingActionButton: isAdmin
@@ -593,7 +606,6 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
 
   Widget _buildFilterTabs() {
     return Container(
-      margin: const EdgeInsets.only(right: 16, left: 16, top: 16),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.card(context),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
@@ -246,7 +247,54 @@ Future<void> _launchEmail(BuildContext context) async {
       ),
     );
   }
-
+Widget _buildWhatsAppContactCard({
+  required BuildContext context,
+  required VoidCallback onTap,
+}) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    color: AppColors.card(context),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: FaIcon(
+            FontAwesomeIcons.whatsapp,
+            size: 24,
+            color: Colors.green,
+          ),
+        ),
+      ),
+      title: Text(
+        'WhatsApp Support',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      subtitle: Text(
+        'Message us on WhatsApp',
+        style: TextStyle(
+          color: AppColors.textSecondary(context),
+        ),
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: AppColors.textSecondary(context),
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -368,14 +416,10 @@ Future<void> _launchEmail(BuildContext context) async {
                 color: Colors.blue,
                 onTap: () => _launchEmail(context),
               ),
-              _buildContactCard(
-                context: context,
-                icon: Icons.chat_outlined,
-                title: 'WhatsApp Support',
-                subtitle: 'Message us on WhatsApp',
-                color: Colors.green,
-                onTap: () => _openWhatsApp(context),
-              ),
+_buildWhatsAppContactCard( // Use the custom method
+  context: context,
+  onTap: () => _openWhatsApp(context),
+),
               _buildContactCard(
                 context: context,
                 icon: Icons.phone_outlined,

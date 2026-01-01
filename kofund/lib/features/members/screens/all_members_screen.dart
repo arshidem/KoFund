@@ -33,9 +33,10 @@ class AllMembersScreen extends StatelessWidget {
       create: (_) => MemberProvider(
         userService: Provider.of<UserService>(context, listen: false),
         authProvider: auth,
-        participantService: Provider.of<ParticipantService>(context, listen: false), // ✅ FIXED
-        contributionService: Provider.of<ContributionService>(context, listen: false), // ✅ FIXED
-virtualUserService: VirtualUserService(),      ),
+        participantService: Provider.of<ParticipantService>(context, listen: false),
+        contributionService: Provider.of<ContributionService>(context, listen: false),
+        virtualUserService: VirtualUserService(),
+      ),
       child: _AllMembersScreenBody(forceBackButton: forceBackButton),
     );
   }
@@ -55,11 +56,13 @@ class _AllMembersScreenBody extends StatefulWidget {
 class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  // Add this getter in your state class (around line 40-50 after other variables)
-List<UserModel> get _members {
-  final memberProvider = context.read<MemberProvider>();
-  return memberProvider.members;
-}
+  
+  // Add this getter in your state class
+  List<UserModel> get _members {
+    final memberProvider = context.read<MemberProvider>();
+    return memberProvider.members;
+  }
+  
   // Selection mode
   bool _isSelectionMode = false;
   final Set<String> _selectedMemberIds = <String>{};
@@ -74,8 +77,7 @@ List<UserModel> get _members {
 
   // Track user
   String? _currentUserId;
-// Add this to your state class
-bool _useTabs = true; // Set to false to use chips
+
   // Filter state
   String _selectedFilter = 'all'; // 'all', 'real', 'virtual'
 
@@ -246,41 +248,41 @@ bool _useTabs = true; // Set to false to use chips
     }
   }
 
-void _navigateToCreateVirtualUsers() {
-  final authProvider = context.read<AppAuthProvider>();
-  final user = authProvider.user;
-  
-  if (user == null || user.communityId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('You need to be in a community'),
-      ),
-    );
-    return;
-  }
-  
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => CreateVirtualUsersScreen(
-        communityId: user.communityId!,
-        communityName: user.communityName ?? 'Community',
-      ),
-    ),
-  ).then((createdCount) {
-    if (createdCount != null && createdCount > 0) {
-      // Refresh members list
-      context.read<MemberProvider>().loadMembers(reset: true);
-      
+  void _navigateToCreateVirtualUsers() {
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
+    
+    if (user == null || user.communityId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Successfully added $createdCount virtual members'),
-          backgroundColor: Colors.green,
+        const SnackBar(
+          content: Text('You need to be in a community'),
         ),
       );
+      return;
     }
-  });
-}
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateVirtualUsersScreen(
+          communityId: user.communityId!,
+          communityName: user.communityName ?? 'Community',
+        ),
+      ),
+    ).then((createdCount) {
+      if (createdCount != null && createdCount > 0) {
+        // Refresh members list
+        context.read<MemberProvider>().loadMembers(reset: true);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Successfully added $createdCount virtual members'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
+  }
 
   List<UserModel> _getFilteredMembers(List<UserModel> allMembers) {
     List<UserModel> filteredBySearch = _searchQuery.isEmpty
@@ -371,9 +373,319 @@ void _navigateToCreateVirtualUsers() {
     }
   }
 
+  // =================== BULK ACTION METHODS ===================
+  void _showBulkMakeAdminConfirmation(List<UserModel> members) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Make Users Admin?', style: TextStyle(color: AppColors.textPrimary(context))),
+        content: Text(
+          'Are you sure you want to make ${members.length} user${members.length > 1 ? 's' : ''} admin?',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        backgroundColor: AppColors.card(context),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
+              _bulkMakeAdmin(members);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary(context)),
+            child: const Text('Make Admin'),
+          ),
+        ],
+      ),
+      useRootNavigator: true,
+    );
+  }
 
+  void _showBulkRemoveAdminConfirmation(List<UserModel> members) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove Admin Role?', style: TextStyle(color: AppColors.textPrimary(context))),
+        content: Text(
+          'Are you sure you want to remove admin role from ${members.length} user${members.length > 1 ? 's' : ''}?',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        backgroundColor: AppColors.card(context),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
+              _bulkRemoveAdmin(members);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Remove Admin'),
+          ),
+        ],
+      ),
+      useRootNavigator: true,
+    );
+  }
 
-@override
+  void _showBulkUnapproveConfirmation(List<UserModel> members) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Unapprove Users?', style: TextStyle(color: AppColors.textPrimary(context))),
+        content: Text(
+          'Are you sure you want to unapprove ${members.length} user${members.length > 1 ? 's' : ''}?',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        backgroundColor: AppColors.card(context),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
+              _bulkUnapproveUsers(members);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Unapprove'),
+          ),
+        ],
+      ),
+      useRootNavigator: true,
+    );
+  }
+
+  void _showBulkRemoveConfirmation(List<UserModel> members, {bool forVirtualUsers = false}) {
+    final title = forVirtualUsers ? 'Delete Virtual Users?' : 'Remove from Community?';
+    final actionText = forVirtualUsers ? 'Delete' : 'Remove';
+    final message = forVirtualUsers 
+        ? 'Are you sure you want to delete ${members.length} virtual user${members.length > 1 ? 's' : ''}? This action cannot be undone.'
+        : 'Are you sure you want to remove ${members.length} user${members.length > 1 ? 's' : ''} from the community?';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: TextStyle(color: AppColors.textPrimary(context))),
+        content: Text(
+          message,
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        backgroundColor: AppColors.card(context),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).pop();
+              if (forVirtualUsers) {
+                _bulkDeleteVirtualUsers(members);
+              } else {
+                _bulkRemoveFromCommunity(members);
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(actionText),
+          ),
+        ],
+      ),
+      useRootNavigator: true,
+    );
+  }
+
+  void _bulkMakeAdmin(List<UserModel> members) async {
+    final memberProvider = context.read<MemberProvider>();
+    final uids = members.map((m) => m.uid).toList();
+    
+    final success = await memberProvider.bulkUpdateMemberRoles(uids, true);
+    
+    if (success && mounted) {
+      setState(() {
+        _clearSelection();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Made ${members.length} users admin'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMembers();
+    }
+  }
+
+  void _bulkRemoveAdmin(List<UserModel> members) async {
+    final memberProvider = context.read<MemberProvider>();
+    final uids = members.map((m) => m.uid).toList();
+    
+    final success = await memberProvider.bulkUpdateMemberRoles(uids, false);
+    
+    if (success && mounted) {
+      setState(() {
+        _clearSelection();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed admin role from ${members.length} users'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMembers();
+    }
+  }
+
+  void _bulkUnapproveUsers(List<UserModel> members) async {
+    final memberProvider = context.read<MemberProvider>();
+    final uids = members.map((m) => m.uid).toList();
+    
+    final success = await memberProvider.bulkUnapproveUsers(uids);
+    
+    if (success && mounted) {
+      setState(() {
+        _clearSelection();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unapproved ${members.length} users'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMembers();
+    }
+  }
+
+  void _bulkRemoveFromCommunity(List<UserModel> members) async {
+    final memberProvider = context.read<MemberProvider>();
+    final uids = members.map((m) => m.uid).toList();
+    
+    final success = await memberProvider.bulkRemoveFromCommunity(uids);
+    
+    if (success && mounted) {
+      setState(() {
+        _clearSelection();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed ${members.length} users from community'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMembers();
+    }
+  }
+
+  void _bulkDeleteVirtualUsers(List<UserModel> members) async {
+    final memberProvider = context.read<MemberProvider>();
+    final uids = members.map((m) => m.uid).toList();
+    
+    final success = await memberProvider.bulkDeleteVirtualUsers(uids);
+    
+    if (success && mounted) {
+      setState(() {
+        _clearSelection();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deleted ${members.length} virtual users'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMembers();
+    }
+  }
+
+  // Handle bulk action selection
+  void _handleBulkAction(String action) {
+    final memberProvider = context.read<MemberProvider>();
+    final currentUser = context.read<AppAuthProvider>().user;
+    
+    final allMembers = List<UserModel>.from(memberProvider.members);
+    final selectedMembers = allMembers.where((m) => _selectedMemberIds.contains(m.uid)).toList();
+    
+    // Filter out current user from selected members
+    final filteredSelectedMembers = selectedMembers.where((m) => m.uid != currentUser?.uid).toList();
+    
+    if (filteredSelectedMembers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No valid members selected'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Check selection type
+    final hasVirtualUsers = filteredSelectedMembers.any((m) => m.isVirtualUser);
+    final hasRealUsers = filteredSelectedMembers.any((m) => !m.isVirtualUser);
+    final hasNonAdmins = filteredSelectedMembers.any((m) => !m.isAdmin && !m.isVirtualUser);
+    final hasAdmins = filteredSelectedMembers.any((m) => m.isAdmin && !m.isVirtualUser);
+
+    switch (action) {
+      case 'make_admin':
+        if (!hasNonAdmins) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No non-admin real users selected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        _showBulkMakeAdminConfirmation(filteredSelectedMembers.where((m) => !m.isAdmin && !m.isVirtualUser).toList());
+        break;
+        
+      case 'remove_admin':
+        if (!hasAdmins) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No admin users selected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        _showBulkRemoveAdminConfirmation(filteredSelectedMembers.where((m) => m.isAdmin && !m.isVirtualUser).toList());
+        break;
+        
+      case 'unapprove':
+        // Filter out virtual users (can't unapprove virtual users)
+        final realUsersToUnapprove = filteredSelectedMembers.where((m) => !m.isVirtualUser).toList();
+        if (realUsersToUnapprove.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Virtual users cannot be unapproved'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        _showBulkUnapproveConfirmation(realUsersToUnapprove);
+        break;
+        
+      case 'remove':
+        // Check if selection has mixed users
+        if (hasVirtualUsers && hasRealUsers) {
+          // Show combined remove action for both types
+          _showBulkRemoveConfirmation(filteredSelectedMembers);
+        } else if (hasVirtualUsers) {
+          // Only virtual users - show delete confirmation
+          _showBulkRemoveConfirmation(filteredSelectedMembers, forVirtualUsers: true);
+        } else {
+          // Only real users - show remove from community
+          _showBulkRemoveConfirmation(filteredSelectedMembers);
+        }
+        break;
+    }
+  }
+
+  @override
 Widget build(BuildContext context) {
   final bool showBackButton = widget.forceBackButton ?? 
       (ModalRoute.of(context)?.canPop ?? false);
@@ -435,42 +747,67 @@ Widget build(BuildContext context) {
       ),
     ),
 
-    body: Column(
-      children: [
-        // Fixed filter tabs below AppBar (always visible)
-        _buildFilterTabs(),
-        
-        // Scrollable content
-        Expanded(
-          child: SmartRefresher(
-            controller: _refreshController,
-            onRefresh: _onRefresh,
-            enablePullDown: true,
-            enablePullUp: false,
-            physics: const BouncingScrollPhysics(),
-            header: ClassicHeader(
-              idleText: 'Pull down to refresh',
-              releaseText: 'Release to refresh',
-              refreshingText: 'Refreshing members...',
-              completeText: 'Refresh complete',
-              failedText: 'Refresh failed',
-              idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-              releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-              refreshingIcon: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-                ),
-              ),
-              completeIcon: const Icon(Icons.check, color: Colors.green),
-              failedIcon: const Icon(Icons.error, color: Colors.red),
+    body: SafeArea(
+      child: Column(
+        children: [
+          // Fixed filter tabs below AppBar
+          Container(
+            margin: const EdgeInsets.only(right: 16, left: 16, top: 8),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.card(context),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: _buildContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _buildMemberTab("All", 'all'),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildMemberTab("Real", 'real'),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: _buildMemberTab("Virtual", 'virtual'),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          
+          // Scrollable content
+          Expanded(
+            child: SmartRefresher(
+              controller: _refreshController,
+              onRefresh: _onRefresh,
+              enablePullDown: true,
+              enablePullUp: false,
+              physics: const BouncingScrollPhysics(),
+              header: ClassicHeader(
+                idleText: 'Pull down to refresh',
+                releaseText: 'Release to refresh',
+                refreshingText: 'Refreshing members...',
+                completeText: 'Refresh complete',
+                failedText: 'Refresh failed',
+                idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+                releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+                refreshingIcon: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+                  ),
+                ),
+                completeIcon: const Icon(Icons.check, color: Colors.green),
+                failedIcon: const Icon(Icons.error, color: Colors.red),
+              ),
+              child: _buildContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
+            ),
+          ),
+        ],
+      ),
     ),
     
     floatingActionButton: isAdmin ? _buildVirtualUserFAB() : null,
@@ -480,7 +817,7 @@ Widget build(BuildContext context) {
   Widget _buildVirtualUserFAB() {
     return FloatingActionButton.extended(
       onPressed: _navigateToCreateVirtualUsers,
-      backgroundColor: Colors.purple,
+      backgroundColor: AppColors.primary(context),
       foregroundColor: Colors.white,
       elevation: 4,
       icon: const Icon(Icons.person_add, size: 22),
@@ -491,7 +828,7 @@ Widget build(BuildContext context) {
     );
   }
 
-Widget _buildContent(
+  Widget _buildContent(
     MemberProvider memberProvider,
     UserModel? currentUser,
     List<UserModel> displayedMembers,
@@ -535,8 +872,6 @@ Widget _buildContent(
       physics: const AlwaysScrollableScrollPhysics(),
       shrinkWrap: true,
       children: [
-        // REMOVED: Toggle button and filter tabs (now placed above in Column)
-        
         // Search Header
         if (_searchQuery.isNotEmpty) _buildSearchHeader(displayedMembers.length),
 
@@ -587,184 +922,74 @@ Widget _buildContent(
     );
   }
 
-
-  Widget _buildStatItem(int count, String label, Color color) {
-    return Column(
-      children: [
-        Text(
-          count.toString(),
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChips(Map<String, int> memberCounts) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _buildFilterChip('All (${memberCounts['all']})', 'all'),
-          _buildFilterChip('Real (${memberCounts['real']})', 'real'),
-          _buildFilterChip('Virtual (${memberCounts['virtual']})', 'virtual'),
-        ],
-      ),
-    );
-  }
-// In your _AllMembersScreenBodyState class
-
-Widget _buildFilterTabs() {
-  return Container(
-    margin: const EdgeInsets.only(right: 16, left: 16, top: 16),
-    padding: const EdgeInsets.all(6),
-    decoration: BoxDecoration(
-      color: AppColors.card(context),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: _buildMemberTab("All", 'all'),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: _buildMemberTab("Real", 'real'),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: _buildMemberTab("Virtual", 'virtual'),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildMemberTab(String label, String value) {
-  final isSelected = _selectedFilter == value;
-  
-  return GestureDetector(
-    onTap: () {
-      setState(() {
-        _selectedFilter = value;
-      });
-      _loadMembers();
-    },
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary(context) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textPrimary(context),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 4),
-          _buildTabCount(value, isSelected),
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildTabCount(String value, bool isSelected) {
-  final memberCounts = _getMemberCounts(_members);
-  int count = 0;
-  
-  switch (value) {
-    case 'all':
-      count = memberCounts['all'] ?? 0;
-      break;
-    case 'real':
-      count = memberCounts['real'] ?? 0;
-      break;
-    case 'virtual':
-      count = memberCounts['virtual'] ?? 0;
-      break;
-  }
-  
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.card(context),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      count.toString(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        color: isSelected ? Colors.white : AppColors.textSecondary(context),
-      ),
-    ),
-  );
-}
-  Widget _buildFilterChip(String label, String value) {
+  Widget _buildMemberTab(String label, String value) {
     final isSelected = _selectedFilter == value;
-    Color chipColor;
     
-    switch (value) {
-      case 'real':
-        chipColor = Colors.blue;
-        break;
-      case 'virtual':
-        chipColor = Colors.purple;
-        break;
-      default:
-        chipColor = AppColors.primary(context);
-    }
-    
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: isSelected ? Colors.white : AppColors.textPrimary(context),
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
+    return GestureDetector(
+      onTap: () {
         setState(() {
-          _selectedFilter = selected ? value : 'all';
+          _selectedFilter = value;
         });
         _loadMembers();
       },
-      selectedColor: chipColor,
-      backgroundColor: AppColors.card(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? chipColor : AppColors.border(context),
-          width: isSelected ? 0 : 1,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary(context) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textPrimary(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            _buildTabCount(value, isSelected),
+          ],
         ),
       ),
-      elevation: isSelected ? 2 : 0,
+    );
+  }
+
+  Widget _buildTabCount(String value, bool isSelected) {
+    final memberCounts = _getMemberCounts(_members);
+    int count = 0;
+    
+    switch (value) {
+      case 'all':
+        count = memberCounts['all'] ?? 0;
+        break;
+      case 'real':
+        count = memberCounts['real'] ?? 0;
+        break;
+      case 'virtual':
+        count = memberCounts['virtual'] ?? 0;
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.card(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        count.toString(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: isSelected ? Colors.white : AppColors.textSecondary(context),
+        ),
+      ),
     );
   }
 
@@ -790,25 +1015,10 @@ Widget _buildTabCount(String value, bool isSelected) {
         borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-            cursorColor: Colors.white,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.fromLTRB(10, 18, 6, 2),
-              hintText: 'Search members...',
-              hintStyle: const TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              prefixIcon: Container(
+          child: Row(
+            children: [
+              // Search Icon Container
+              Container(
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
@@ -817,6 +1027,10 @@ Widget _buildTabCount(String value, bool isSelected) {
                     topLeft: Radius.circular(18),
                     bottomLeft: Radius.circular(18),
                   ),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.5),
+                    width: 0,
+                  ),
                 ),
                 child: const Icon(
                   Icons.search,
@@ -824,24 +1038,59 @@ Widget _buildTabCount(String value, bool isSelected) {
                   size: 22,
                 ),
               ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                        FocusScope.of(context).unfocus();
-                      },
-                    )
-                  : null,
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
+              
+              // Text Field
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                  cursorColor: Colors.white,
+                  cursorWidth: 2,
+                  cursorHeight: 20,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    hintText: 'Search members...',
+                    hintStyle: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    border: InputBorder.none,
+                    filled: false,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.only(right: 0),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                  FocusScope.of(context).unfocus();
+                                },
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() => _searchQuery = value);
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -903,11 +1152,13 @@ Widget _buildTabCount(String value, bool isSelected) {
       ),
       child: Row(
         children: [
+          // Cancel Button
           IconButton(
             icon: Icon(Icons.close, color: AppColors.primary(context), size: 22),
             onPressed: _toggleSelectionMode,
           ),
           
+          // Selection Count
           Expanded(
             child: Text(
               '${_selectedMemberIds.length} selected',
@@ -920,6 +1171,7 @@ Widget _buildTabCount(String value, bool isSelected) {
             ),
           ),
           
+          // Select All / Deselect All
           IconButton(
             icon: Icon(
               _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
@@ -932,6 +1184,116 @@ Widget _buildTabCount(String value, bool isSelected) {
                 ? _clearSelection
                 : () => _selectAllMembers(displayedMembers, currentUser),
           ),
+          
+          // Bulk Actions Menu
+          if (isAdmin)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: AppColors.primary(context), size: 22),
+              onSelected: _handleBulkAction,
+              itemBuilder: (context) {
+                final memberProvider = context.read<MemberProvider>();
+                final allMembers = List<UserModel>.from(memberProvider.members);
+                final selectedMembers = allMembers.where((m) => _selectedMemberIds.contains(m.uid)).toList();
+                
+                // Filter out current user
+                final filteredSelectedMembers = selectedMembers.where((m) => m.uid != currentUser?.uid).toList();
+                
+                if (filteredSelectedMembers.isEmpty) {
+                  return [
+                    const PopupMenuItem<String>(
+                      value: 'no_selection',
+                      enabled: false,
+                      child: Text(
+                        'No valid members selected',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  ];
+                }
+                
+                final hasVirtualUsers = filteredSelectedMembers.any((m) => m.isVirtualUser);
+                final hasRealUsers = filteredSelectedMembers.any((m) => !m.isVirtualUser);
+                final hasNonAdmins = filteredSelectedMembers.any((m) => !m.isAdmin && !m.isVirtualUser);
+                final hasAdmins = filteredSelectedMembers.any((m) => m.isAdmin && !m.isVirtualUser);
+                final hasOnlyVirtualUsers = hasVirtualUsers && !hasRealUsers;
+                final hasOnlyRealUsers = hasRealUsers && !hasVirtualUsers;
+                final hasMixedUsers = hasVirtualUsers && hasRealUsers;
+                
+                // Build menu items
+                final menuItems = <PopupMenuItem<String>>[];
+                
+                // Make Admin (only for real non-admin users)
+                if (hasNonAdmins) {
+                  menuItems.add(
+                    PopupMenuItem<String>(
+                      value: 'make_admin',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.admin_panel_settings, color: Colors.orange),
+                        title: const Text('Make Admin'),
+                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
+                      ),
+                    ),
+                  );
+                }
+                
+                // Remove Admin (only for real admin users)
+                if (hasAdmins) {
+                  menuItems.add(
+                    PopupMenuItem<String>(
+                      value: 'remove_admin',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.person_remove, color: Colors.orange[800]),
+                        title: const Text('Remove Admin'),
+                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
+                      ),
+                    ),
+                  );
+                }
+                
+                // Unapprove (only for real users)
+                if (hasRealUsers) {
+                  menuItems.add(
+                    PopupMenuItem<String>(
+                      value: 'unapprove',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.block, color: Colors.red),
+                        title: const Text('Unapprove Users'),
+                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
+                      ),
+                    ),
+                  );
+                }
+                
+                // Remove/Delete action
+                menuItems.add(
+                  PopupMenuItem<String>(
+                    value: 'remove',
+                    child: ListTile(
+                      dense: true,
+                      leading: Icon(
+                        hasOnlyVirtualUsers ? Icons.delete : Icons.exit_to_app,
+                        color: Colors.red,
+                      ),
+                      title: Text(
+                        hasOnlyVirtualUsers 
+                            ? 'Delete Virtual Users'
+                            : hasOnlyRealUsers
+                                ? 'Remove from Community'
+                                : 'Remove/Delete Users',
+                      ),
+                      subtitle: hasMixedUsers 
+                          ? const Text('Virtual users: Delete, Real users: Remove')
+                          : null,
+                    ),
+                  ),
+                );
+                
+                return menuItems;
+              },
+            ),
         ],
       ),
     );
@@ -1054,13 +1416,13 @@ Widget _buildTabCount(String value, bool isSelected) {
               ? AppColors.primary(context).withOpacity(0.12) 
               : Colors.transparent,
           child: InkWell(
-         onTap: () {
-  if (_isSelectionMode && isAdmin && !isCurrentUser) {
-    setState(() => _toggleMemberSelection(member.uid, isCurrentUser));
-  } else {
-    _navigateToMemberDetails(member);
-  }
-},
+            onTap: () {
+              if (_isSelectionMode && isAdmin && !isCurrentUser) {
+                setState(() => _toggleMemberSelection(member.uid, isCurrentUser));
+              } else {
+                _navigateToMemberDetails(member);
+              }
+            },
             onLongPress: isAdmin && !isCurrentUser ? () {
               setState(() {
                 if (!_isSelectionMode) _isSelectionMode = true;
@@ -1076,6 +1438,7 @@ Widget _buildTabCount(String value, bool isSelected) {
                     height: 40,
                     margin: const EdgeInsets.only(right: 12),
                     child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         Container(
                           width: 40,
@@ -1187,7 +1550,7 @@ Widget _buildTabCount(String value, bool isSelected) {
                     width: 48,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: (!_isSelectionMode && hasPhoneNumber && !isVirtualUser)
+                      child: (!_isSelectionMode && hasPhoneNumber)
                           ? InkResponse(
                               radius: 20,
                               onTap: () => _makePhoneCall(member.phoneNumber!),

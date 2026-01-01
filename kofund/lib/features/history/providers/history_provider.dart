@@ -520,7 +520,7 @@ void setUserCommunity(String communityId) {
     itemsMap[id] = HistoryItem(
       id: id,
       type: HistoryItemType.contribution,
-      title: '${userName ?? contribution.userId ?? 'Unknown'}',
+      title: '${ contribution.contributorName ?? 'Unknown'}',
       subtitle: programTitle ?? 'Contribution',
       amount: contribution.amount,
       date: date,

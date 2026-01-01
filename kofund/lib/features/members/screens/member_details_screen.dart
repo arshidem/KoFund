@@ -16,6 +16,10 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/contribution_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
+import 'package:kofund/features/virtual_users/screens/edit_virtual_user_screen.dart';
+import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 // =================== MAIN SCREEN ===================
 class MemberDetailsScreen extends StatelessWidget {
   final UserModel? member;
@@ -343,37 +347,40 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
             children: [
               // Profile Header Card
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: _buildProfileHeaderCard(member, isAdmin, isVirtualUser),
               ),
 
               // Virtual User Info Card (if virtual user)
               if (isVirtualUser)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: _buildVirtualUserInfoCard(member),
                 ),
+              const SizedBox(height: 12),
 
               // Member Information
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: _buildMemberInfoCard(member, canSeeDetails, isAdmin, isVirtualUser),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // Participation History (Only if detailed profile enabled and not virtual user)
-              if (canSeeDetails && !isVirtualUser) 
+              if (canSeeDetails) 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: _buildParticipationHistoryCard(memberProvider),
                 ),
-              
+                            const SizedBox(height: 12),
+
               // Contribution History (Only if detailed profile enabled and not virtual user)
-              if (canSeeDetails && !isVirtualUser) 
+              if (canSeeDetails) 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: _buildContributionHistoryCard(memberProvider),
                 ),
+              const SizedBox(height: 12),
 
               // Privacy Notice (if details are hidden)
               if (!canSeeDetails && !isAdmin && !isVirtualUser) 
@@ -396,17 +403,11 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: isVirtualUser 
-            ? LinearGradient(
-                colors: [Colors.purple[800]!, Colors.purple[600]!],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : AppColors.primaryGradient(context),
+        gradient: AppColors.primaryGradient(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isVirtualUser ? Colors.purple : AppColors.primary(context)).withOpacity(0.2),
+            color: ( AppColors.primary(context)).withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 1),
           ),
@@ -440,24 +441,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                         ),
                       ),
                     ),
-                    if (isVirtualUser)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            size: 14,
-                            color: Colors.purple[800],
-                          ),
-                        ),
-                      ),
+                
                   ],
                 ),
               ),
@@ -482,23 +466,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isVirtualUser)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'VIRTUAL',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
+                     
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -534,17 +502,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                               color: Colors.white.withOpacity(0.9),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          IconButton(
-                            icon: Icon(
-                              Icons.phone_outlined,
-                              size: 20,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                            onPressed: () => _makePhoneCall(member.phoneNumber!),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
+                        
                         ],
                       ),
                     ],
@@ -563,21 +521,34 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 icon: Icon(Icons.more_vert, color: Colors.white.withOpacity(0.8)),
                 onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
                 itemBuilder: (context) {
-                  if (isVirtualUser) {
-                    // Virtual user menu - only "Remove from Community"
-                    return [
-                      const PopupMenuItem<String>(
-                        value: 'remove',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Remove from Community'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  } else {
+                 // In _buildProfileHeaderCard method, update the PopupMenuButton for virtual users:
+
+if (isVirtualUser) {
+  // Virtual user menu
+  return [
+    // Add Edit option
+    const PopupMenuItem<String>(
+      value: 'edit',
+      child: Row(
+        children: [
+          Icon(Icons.edit, size: 20, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Edit Virtual User'),
+        ],
+      ),
+    ),
+    const PopupMenuItem<String>(
+      value: 'remove',
+      child: Row(
+        children: [
+          Icon(Icons.delete, size: 20, color: Colors.red),
+          SizedBox(width: 8),
+          Text('Remove from Community'),
+        ],
+      ),
+    ),
+  ];
+}else {
                     // Regular user menu
                     return [
                       if (!member.isAdmin)
@@ -638,23 +609,23 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.08),
+        color: AppColors.primary(context).withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.person_outline, color: Colors.purple, size: 22),
+              Icon(Icons.person_outline, color: AppColors.primary(context), size: 22),
               const SizedBox(width: 10),
               Text(
                 'Virtual Member Information',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.purple[800],
+                  color: AppColors.primary(context).withOpacity(.8),
                 ),
               ),
             ],
@@ -675,19 +646,19 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.05),
+              color: AppColors.primary(context).withOpacity(0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                Icon(Icons.info, size: 18, color: Colors.purple),
+                Icon(Icons.info, size: 18, color: AppColors.primary(context)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Virtual members don\'t have app access. They are managed by community admins.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.purple[800],
+                      color: AppColors.primary(context).withOpacity(0.8),
                       height: 1.4,
                     ),
                   ),
@@ -704,7 +675,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.purple),
+        Icon(icon, size: 18, color: AppColors.primary(context)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -714,7 +685,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.purple.withOpacity(0.7),
+                  color: AppColors.primary(context).withOpacity(0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -723,7 +694,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 value,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.purple[800],
+                  color: AppColors.primary(context).withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -735,35 +706,60 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   }
 
   // Handle menu actions
-  void _handleMenuAction(String action, UserModel member, bool isVirtualUser) {
-    final memberProvider = context.read<MemberProvider>();
-    
-    switch (action) {
-      case 'make_admin':
-        if (!isVirtualUser) {
-          _makeAdmin(member, memberProvider);
-        }
-        break;
-      case 'remove_admin':
-        if (!isVirtualUser) {
-          _removeAdmin(member, memberProvider);
-        }
-        break;
-      case 'unapprove':
-        if (!isVirtualUser) {
-          _showUnapproveConfirmation(member);
-        }
-        break;
-      case 'remove':
-        if (isVirtualUser) {
-          _showDeleteVirtualUserConfirmation(member);
-        } else {
-          _showRemoveConfirmation(member);
-        }
-        break;
-    }
+void _handleMenuAction(String action, UserModel member, bool isVirtualUser) {
+  final memberProvider = context.read<MemberProvider>();
+  
+  switch (action) {
+    case 'edit':
+      if (isVirtualUser) {
+        _navigateToEditVirtualUser(member);
+      }
+      break;
+    case 'make_admin':
+      if (!isVirtualUser) {
+        _makeAdmin(member, memberProvider);
+      }
+      break;
+    case 'remove_admin':
+      if (!isVirtualUser) {
+        _removeAdmin(member, memberProvider);
+      }
+      break;
+    case 'unapprove':
+      if (!isVirtualUser) {
+        _showUnapproveConfirmation(member);
+      }
+      break;
+    case 'remove':
+      if (isVirtualUser) {
+        _showDeleteVirtualUserConfirmation(member);
+      } else {
+        _showRemoveConfirmation(member);
+      }
+      break;
   }
+}
+// Alternative: Pass provider via constructor
 
+// In member_details_screen.dart:
+
+void _navigateToEditVirtualUser(UserModel member) async {
+  final virtualUserProvider = context.read<VirtualUserProvider>();
+  
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ChangeNotifierProvider.value(  // CHANGED HERE
+        value: virtualUserProvider,
+        child: EditVirtualUserScreen(virtualUser: member),
+      ),
+    ),
+  );
+  
+  if (result == true && mounted) {
+    _refreshMemberData();
+  }
+}
   // Member Information Card
   Widget _buildMemberInfoCard(UserModel member, bool canSeeDetails, bool isAdmin, bool isVirtualUser) {
     return Container(
@@ -786,8 +782,8 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
           Row(
             children: [
               Icon(
-                isVirtualUser ? Icons.person_outline : Icons.person_outline,
-                color: isVirtualUser ? Colors.purple : AppColors.primary(context),
+                Icons.person_outline,
+                color:  AppColors.primary(context),
                 size: 22,
               ),
               const SizedBox(width: 10),
@@ -796,49 +792,91 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: isVirtualUser ? Colors.purple[800] : AppColors.textPrimary(context),
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           
-          _buildInfoItem('Email', member.email ?? 'Not provided', Icons.email_outlined),
-          _buildInfoItem('Role', isVirtualUser ? 'VIRTUAL MEMBER' : (member.role?.toUpperCase() ?? 'MEMBER'), 
-              isVirtualUser ? Icons.person_outline : Icons.verified_user_outlined),
-          _buildInfoItem('Status', member.isApproved ? 'Approved' : 'Pending', Icons.check_circle_outline),
-          _buildInfoItem('Joined', _formatDateFromTimestamp(member.createdAt), Icons.calendar_today_outlined),
-          
-          if (canSeeDetails || isVirtualUser) ...[
-            const SizedBox(height: 12),
-            Divider(color: AppColors.border(context)),
-            const SizedBox(height: 12),
-            _buildInfoItem('Phone', member.phoneNumber ?? 'Not provided', Icons.phone_outlined),
-            _buildInfoItem('Community', member.communityName ?? 'Not set', Icons.group_outlined),
-          ],
-          
-          if (isAdmin) ...[
-            const SizedBox(height: 12),
-            Divider(color: AppColors.border(context)),
-            const SizedBox(height: 12),
-            Text(
-              'Admin View',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildInfoItem('User ID', member.uid.substring(0, 8) + '...', Icons.fingerprint_outlined),
-            if (!isVirtualUser)
-              _buildInfoItem('Privacy', member.showDetailedProfile ? 'Detailed Profile' : 'Basic Profile', Icons.visibility_outlined),
-          ],
+_buildInfoItem('Email', member.email ?? 'Not provided', Icons.email_outlined),
+_buildInfoItem('Phone', member.phoneNumber ?? 'Not provided', Icons.phone_outlined), // This will show call icon
+_buildInfoItem('Role', isVirtualUser ? 'VIRTUAL MEMBER' : (member.role?.toUpperCase() ?? 'MEMBER'), 
+    isVirtualUser ? Icons.person_outline : Icons.verified_user_outlined),
+_buildInfoItem('Status', member.isApproved ? 'Approved' : 'Pending', Icons.check_circle_outlined),
+_buildInfoItem('Joined', _formatDateFromTimestamp(member.createdAt), Icons.calendar_today_outlined),     
+       
         ],
       ),
     );
   }
-
+// Add this new method to create phone info with call icon
+Widget _buildPhoneInfoItem(UserModel member) {
+  final phoneNumber = member.phoneNumber;
+  
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.phone_outlined, size: 18, color: AppColors.textSecondary(context)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Phone',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              if (phoneNumber != null && phoneNumber.isNotEmpty)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        phoneNumber,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.phone_outlined,
+                        size: 18,
+                        color: AppColors.primary(context),
+                      ),
+                      onPressed: () => _makePhoneCall(phoneNumber),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Call',
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  'Not provided',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
   // Participation History Card
   Widget _buildParticipationHistoryCard(MemberProvider memberProvider) {
     final participationHistory = memberProvider.memberParticipationHistory;
@@ -1348,43 +1386,98 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     );
   }
 
-  // Helper Widgets
-  Widget _buildInfoItem(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary(context)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary(context),
-                    fontWeight: FontWeight.w500,
-                  ),
+Widget _buildInfoItem(String label, String value, IconData icon) {
+  final isPhone =
+      label.toLowerCase() == 'phone' && value.toLowerCase() != 'not provided';
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: AppColors.textSecondary(context),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary(context),
-                    fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  if (isPhone) ...[
+                    InkWell(
+                      onTap: () => _makePhoneCall(value),
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.phone_outlined,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: () => _openWhatsApp(value),
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                      child: FaIcon(  // ✅ Just use FaIcon directly
+  FontAwesomeIcons.whatsapp,
+  size: 18,
+  color: Colors.black,
+),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _openWhatsApp(String phone) async {
+  // remove spaces, +, dashes
+  final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+  final uri = Uri.parse('https://wa.me/$cleanPhone');
+
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } else {
+    // optional: show snackbar / toast
+    debugPrint('WhatsApp not installed or cannot launch');
   }
+}
+
 
   Widget _buildStatBadge(String label, String value, Color color) {
     return Container(

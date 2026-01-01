@@ -212,7 +212,57 @@ class VirtualUserService {
       rethrow;
     }
   }
+  Future<void> updateVirtualUser({
+    required String userId,
+    required String displayName,
+    String? phoneNumber,
+    String? email,
+  }) async {
+    try {
+      // First, check if it's actually a virtual user
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        throw Exception('User not found');
+      }
+      
+      final userData = userDoc.data();
+      if (userData?['isVirtualUser'] != true) {
+        throw Exception('Only virtual users can be updated through this service');
+      }
 
+      // Prepare update data
+      final updateData = {
+        'displayName': displayName.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      
+      // Add optional fields if provided
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        updateData['phoneNumber'] = phoneNumber.trim();
+      }
+      
+      if (email != null && email.isNotEmpty) {
+        updateData['email'] = email.trim();
+      }
+      
+      // Update in users collection
+      await _firestore.collection('users').doc(userId).update(updateData);
+      
+      // Also update in virtual_users collection if it exists
+      final virtualUserRef = _firestore.collection('virtual_users').doc(userId);
+      final virtualUserDoc = await virtualUserRef.get();
+      
+      if (virtualUserDoc.exists) {
+        await virtualUserRef.update(updateData);
+      }
+      
+      print('✅ DEBUG: Virtual user $userId updated successfully');
+    } catch (e) {
+      print('❌ DEBUG: Error updating virtual user: $e');
+      throw Exception('Failed to update virtual user: $e');
+    }
+  }
   // Get all virtual users in a community (with optional caching)
   Stream<List<UserModel>> getVirtualUsersStream(String communityId) {
     return _firestore
@@ -285,85 +335,6 @@ class VirtualUserService {
     return count;
   }
 
-  // Update virtual user
-  Future<void> updateVirtualUser({
-    required String userId,
-    required String displayName,
-    String? phoneNumber,
-    String? email,
-  }) async {
-    developer.log('Updating virtual user: $userId');
-
-    try {
-      _validateUserInputs(
-        displayName: displayName,
-        phoneNumber: phoneNumber,
-        email: email,
-      );
-
-      await _firestore.runTransaction((transaction) async {
-        // Get current user data to check community
-        final userDoc = await transaction.get(_firestore.collection('users').doc(userId));
-        if (!userDoc.exists) {
-          throw Exception('User not found');
-        }
-
-        final userData = userDoc.data()!;
-        final communityId = userData['communityId'] as String?;
-        
-        if (communityId == null) {
-          throw Exception('Community ID not found for user');
-        }
-
-        // Check for duplicate name (excluding current user)
-        final query = _firestore
-            .collection('users')
-            .where('communityId', isEqualTo: communityId)
-            .where('displayName', isEqualTo: displayName.trim())
-            .where('isVirtualUser', isEqualTo: true)
-            .limit(1);
-        
-        final duplicateCheck = await query.get();
-
-        if (duplicateCheck.docs.isNotEmpty && duplicateCheck.docs.first.id != userId) {
-          throw Exception('Another virtual user with name "$displayName" already exists in this community');
-        }
-
-        // Update user document
-        transaction.update(_firestore.collection('users').doc(userId), {
-          'displayName': displayName.trim(),
-          'phoneNumber': phoneNumber?.trim(),
-          'email': email?.trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        // Update community subcollection
-        transaction.update(
-          _firestore
-              .collection('communities')
-              .doc(communityId)
-              .collection('virtualUsers')
-              .doc(userId),
-          {
-            'displayName': displayName.trim(),
-            'phoneNumber': phoneNumber?.trim(),
-            'email': email?.trim(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
-        );
-
-        // Clear cache for this community
-        _clearCacheForCommunity(communityId);
-      });
-
-      developer.log('Successfully updated virtual user: $userId');
-    } catch (e, stackTrace) {
-      developer.log('Failed to update virtual user: $e', 
-                    error: e, 
-                    stackTrace: stackTrace);
-      rethrow;
-    }
-  }
 
   // Delete virtual user
   Future<void> deleteVirtualUser(String userId) async {

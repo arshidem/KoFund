@@ -624,7 +624,7 @@ class _FilterTabs extends StatelessWidget {
     final p = Provider.of<HistoryProvider>(context);
 
     return Container(
-      margin: const EdgeInsets.only(right: 12, left: 12, top: 12),
+      margin: const EdgeInsets.only(right: 12, left: 12, top: 8),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: AppColors.card(context),

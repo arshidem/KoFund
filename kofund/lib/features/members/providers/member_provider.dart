@@ -649,6 +649,29 @@ void resetPagination() {
       _setLoading(false);
     }
   }
+ Future<bool> bulkDeleteVirtualUsers(List<String> userIds) async {
+    try {
+      final currentUser = _authProvider.user;
+      if (currentUser == null || !currentUser.isAdmin) {
+        throw Exception('Only admins can delete virtual users');
+      }
+
+      // Delete each virtual user
+      for (final userId in userIds) {
+        await _virtualUserService.deleteVirtualUser(userId);
+      }
+
+      // Refresh the members list
+      await loadMembers(reset: true);
+      
+      return true;
+    } catch (e) {
+      print('❌ DEBUG: Error deleting virtual users: $e');
+      _error = 'Failed to delete virtual users: $e';
+      notifyListeners();
+      return false;
+    }
+  }
 
   // ==================== UTILITY METHODS ====================
 
