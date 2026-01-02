@@ -328,7 +328,57 @@ Future<void> leaveProgram(String programId, String userId) async {
     throw Exception('Failed to leave program: $e');
   }
 }
+// Add this method to your ParticipantService class:
 
+// ✅ Add participant directly (admin function)
+Future<String> addParticipant(ParticipantModel participant) async {
+  try {
+    // Check if participant already exists with status 'joined'
+    final existingSnapshot = await _firestore
+        .collection('participants')
+        .where('programId', isEqualTo: participant.programId)
+        .where('userId', isEqualTo: participant.userId)
+        .where('status', isEqualTo: 'joined')
+        .get();
+
+    if (existingSnapshot.docs.isNotEmpty) {
+      throw Exception('User is already a participant in this program');
+    }
+
+    // Check for cancelled status to reuse
+    final cancelledSnapshot = await _firestore
+        .collection('participants')
+        .where('programId', isEqualTo: participant.programId)
+        .where('userId', isEqualTo: participant.userId)
+        .where('status', isEqualTo: 'cancelled')
+        .get();
+
+    if (cancelledSnapshot.docs.isNotEmpty) {
+      // Reuse cancelled document
+      final docToReuse = cancelledSnapshot.docs.first;
+      final existingData = docToReuse.data();
+      
+      await docToReuse.reference.update({
+        'status': 'joined',
+        'joinedAt': Timestamp.fromDate(participant.joinedAt),
+        'userName': participant.userName,
+        'userEmail': participant.userEmail,
+        'contributionPaid': existingData['contributionPaid'] ?? 0.0,
+        'hasPaidContribution': existingData['hasPaidContribution'] ?? false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      return docToReuse.id;
+    }
+
+    // Create new participant document
+    final docRef = await _firestore.collection('participants').add(participant.toMap());
+    return docRef.id;
+    
+  } catch (e) {
+    throw Exception('Failed to add participant: $e');
+  }
+}
   // Get user's program participations
   Future<List<ParticipantModel>> getUserProgramParticipations(String userId, String communityId) async {
     try {

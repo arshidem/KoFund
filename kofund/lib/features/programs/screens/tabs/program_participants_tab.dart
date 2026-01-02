@@ -13,8 +13,12 @@ import '../../../participants/providers/participant_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/features/members/screens/member_details_screen.dart';
+import 'package:kofund/features/programs/screens/add_participant_screen.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
+import '../../../auth/models/user_model.dart';
+import '../../../auth/providers/app_auth_provider.dart';
+
 // Add this at the top of your file or in a separate file
 class SafeAsyncOperation {
   static Future<T?> execute<T>({
@@ -167,34 +171,119 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
       default: return '???';
     }
   }
+@override
+Widget build(BuildContext context) {
+  final isAdmin = _isAdmin(context);
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        _buildParticipantsStats(context),
-        
-        if (widget.program.isMonthlyPaymentProgram) 
+  return Stack(
+    children: [
+      ListView(
+        children: [
+          _buildParticipantsStats(context),
+
+          if (widget.program.isMonthlyPaymentProgram)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _buildMonthSelectorHeader(context),
+            ),
+
+          if (_showMonthSelector && widget.program.isMonthlyPaymentProgram)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _buildMonthGridSelector(context),
+            ),
+
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _buildMonthSelectorHeader(context),
+            padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
+            child: _buildSearchFilterBar(context),
           ),
-        
-        if (_showMonthSelector && widget.program.isMonthlyPaymentProgram)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _buildMonthGridSelector(context),
+
+          _buildParticipantsListForScrollView(context),
+
+          // Bottom padding so FAB never overlaps content
+          const SizedBox(height: 88),
+        ],
+      ),
+
+      // ✅ FAB layer (same pattern as your working file)
+      Positioned(
+        bottom: 16,
+        right: 16,
+        child: Visibility(
+          visible: isAdmin,
+          child: FloatingActionButton(
+            onPressed: () => _navigateToAddParticipantScreen(context),
+            backgroundColor: AppColors.primary(context),
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.add),
           ),
-        
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
-          child: _buildSearchFilterBar(context),
         ),
-        
-        _buildParticipantsListForScrollView(context),
-      ],
-    );
+      ),
+    ],
+  );
+}
+Future<void> _navigateToAddParticipantScreen(BuildContext context) async {
+  final result = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AddParticipantScreen(
+        program: widget.program,
+      ),
+    ),
+  );
+
+  if (!mounted) return;
+
+  if (result == true) {
+    setState(() {
+      _streamKey++;
+    });
   }
+}
+
+// ✅ Add this method - Check if current user is admin
+// Update your import
+
+// Update your _isAdmin method:
+bool _isAdmin(BuildContext context) {
+  final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+  final currentUser = authProvider.user;
+  
+  print('🔧 _isAdmin called:');
+  print('   - User from authProvider: ${currentUser?.uid}');
+  print('   - User isAdmin: ${currentUser?.isAdmin}');
+  
+  if (currentUser == null) {
+    print('   ❌ User is null - returning false');
+    return false;
+  }
+  
+  // 1. Program creator is always admin
+  if (currentUser.uid == widget.program.createdBy) {
+    print('   ✅ User is program creator - returning true');
+    return true;
+  }
+  
+  // 2. User with 'admin' role
+  if (currentUser.role == 'admin') {
+    print('   ✅ User has admin role - returning true');
+    return true;
+  }
+  
+  // 3. User with isAdmin flag and approved
+  if (currentUser.isAdmin == true) {
+    print('   ✅ User has isAdmin flag - returning true');
+    return true;
+  }
+  
+  print('   ❌ User is not admin - returning false');
+  return false;
+}
+
 
   // Shimmer skeleton widget
   Widget _buildShimmerSkeleton() {
@@ -1976,7 +2065,7 @@ Future<void> _createContribution({
   contributorName: participantName, // ADD THIS REQUIRED FIELD
   communityId: communityId,
   amount: amount,
-  paymentMethod: 'manual',
+  paymentMethod: 'cash',
   isMonthlyContribution: isMonthlyProgram,
   monthId: monthId,
 );

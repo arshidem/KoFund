@@ -650,9 +650,12 @@ Widget _buildInputField({
           onPressed: () => Navigator.pop(context),
         ),
         automaticallyImplyLeading: true,
-        actions: [
-          if (_isLoading)
-            Padding(
+      actions: [
+  // Use StatefulBuilder to show/hide based on loading state
+  StatefulBuilder(
+    builder: (context, setState) {
+      return _isLoading
+          ? Padding(
               padding: const EdgeInsets.only(right: 16),
               child: SizedBox(
                 width: 20,
@@ -662,8 +665,32 @@ Widget _buildInputField({
                   valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               ),
-            ),
-        ],
+            )
+          : Padding(
+              padding: const EdgeInsets.only(right: 8), // Add right padding here
+              child: StreamBuilder<bool>(
+                stream: NetworkService().onConnectionChanged,
+                initialData: true,
+                builder: (context, snapshot) {
+                  final bool isOnline = snapshot.data ?? true;
+                  
+                  return IconButton(
+                    icon: isOnline
+                        ? const Icon(Icons.check, color: Colors.white, size: 26)
+                        : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                    tooltip: isOnline 
+                        ? (widget.program.isCompleted || widget.program.isCancelled)
+                            ? 'Reactivate Program'
+                            : 'Save Changes'
+                        : 'Offline - No Connection',
+                    onPressed: isOnline ? _updateProgram : null,
+                  );
+                },
+              ),
+            );
+    },
+  ),
+],
       ),
       body: SafeArea(
         child: Padding(

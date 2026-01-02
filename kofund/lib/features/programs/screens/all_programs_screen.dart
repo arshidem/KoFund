@@ -124,23 +124,23 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     }
   }
 
-  List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
-    return programs.where((program) {
-      if (_filters.statusFilter != ProgramStatusFilter.all) {
-        switch (_filters.statusFilter) {
-          case ProgramStatusFilter.ongoing:
-            if (!program.isOngoing) return false;
-            break;
-          case ProgramStatusFilter.completed:
-            if (!program.isCompleted) return false;
-            break;
-          case ProgramStatusFilter.cancelled:
-            if (!program.isCancelled) return false;
-            break;
-          default:
-            break;
-        }
+List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
+  return programs.where((program) {
+    if (_filters.statusFilter != ProgramStatusFilter.all) {
+      switch (_filters.statusFilter) {
+        case ProgramStatusFilter.ongoing:
+          if (!program.isOngoing) return false; // This now uses computedStatus
+          break;
+        case ProgramStatusFilter.completed:
+          if (!program.isCompleted) return false; // This now uses computedStatus
+          break;
+        case ProgramStatusFilter.cancelled:
+          if (!program.isCancelled) return false; // This now uses computedStatus
+          break;
+        default:
+          break;
       }
+    }
 
       if (_filters.programType != null && _filters.programType != 'all') {
         if (program.programType != _filters.programType) return false;
@@ -604,28 +604,27 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
     );
   }
 
-  Widget _buildFilterTabs() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _tab("All", _filters.statusFilter == ProgramStatusFilter.all,
-              () => _setFilter(ProgramStatusFilter.all)),
-          _tab("Ongoing", _filters.statusFilter == ProgramStatusFilter.ongoing,
-              () => _setFilter(ProgramStatusFilter.ongoing)),
-          _tab("Completed", _filters.statusFilter == ProgramStatusFilter.completed,
-              () => _setFilter(ProgramStatusFilter.completed)),
-          _tab("Cancelled", _filters.statusFilter == ProgramStatusFilter.cancelled,
-              () => _setFilter(ProgramStatusFilter.cancelled)),
-        ],
-      ),
-    );
-  }
+Widget _buildFilterTabs() {
+  return Container(
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: AppColors.card(context),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _tab("All", _filters.statusFilter == ProgramStatusFilter.all,
+            () => _setFilter(ProgramStatusFilter.all)),
+        _tab("Ongoing", _filters.statusFilter == ProgramStatusFilter.ongoing,
+            () => _setFilter(ProgramStatusFilter.ongoing)),
+        _tab("Completed", _filters.statusFilter == ProgramStatusFilter.completed,
+            () => _setFilter(ProgramStatusFilter.completed)),
+        // REMOVED: Cancelled tab
+      ],
+    ),
+  );
+}
 
   Widget _tab(String text, bool active, VoidCallback onTap) {
     return GestureDetector(
@@ -705,10 +704,10 @@ Widget _buildProgramCard(
                       final progress =
                           programAmount > 0 ? collectedAmount / programAmount : 0.0;
 
-                      final daysLeft =
-                          program.programDate.difference(DateTime.now()).inDays;
-
-                      final isUrgent = daysLeft <= 3 && daysLeft >= 0;
+final now = DateTime.now();
+final daysLeft = program.programDate.difference(now).inDays;
+final isEnding = daysLeft <= 3 && daysLeft >= 0;
+final hasEnded = daysLeft < 0;
                       final programColor =
                           _getProgramColor(program.programType);
 
@@ -868,12 +867,12 @@ Widget _buildProgramCard(
                                 label: 'Members',
                                 color: programColor,
                               ),
-                              _buildStatItem(
-                                icon: Icons.schedule,
-                                value: '$daysLeft',
-                                label: 'Days',
-                                color: isUrgent ? Colors.red : programColor,
-                              ),
+                             _buildStatItem(
+  icon: Icons.schedule,
+  value: hasEnded ? 'End' : (isEnding ? '$daysLeft' : '$daysLeft'),
+  label: 'Days',
+  color: hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor),
+),
                             ],
                           ),
 
@@ -1117,26 +1116,27 @@ IconData _getProgramIcon(String programType) {
     );
   }
 
-  Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
-    String statusText;
-    Color statusColor;
-    
-    if (progress >= 1.0) {
-      statusText = 'Completed';
-      statusColor = Colors.green;
-    } else if (daysLeft < 0) {
-      statusText = 'Expired';
-      statusColor = Colors.grey;
-    } else if (daysLeft <= 3) {
-      statusText = 'Urgent';
-      statusColor = Colors.red;
-    } else if (progress >= 0.8) {
-      statusText = 'Almost There';
-      statusColor = Colors.orange;
-    } else {
-      statusText = 'Active';
-      statusColor = Colors.blue;
-    }
+Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
+  String statusText;
+  Color statusColor;
+  
+  // Use computedStatus instead of status
+  if (program.isCompleted) {
+    statusText = 'Completed';
+    statusColor = Colors.green;
+  } else if (daysLeft < 0) {
+    statusText = 'Expired';
+    statusColor = Colors.grey;
+  } else if (daysLeft <= 3) {
+    statusText = 'Urgent';
+    statusColor = Colors.red;
+  } else if (progress >= 0.8) {
+    statusText = 'Almost There';
+    statusColor = Colors.orange;
+  } else {
+    statusText = 'Active';
+    statusColor = Colors.blue;
+  }
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

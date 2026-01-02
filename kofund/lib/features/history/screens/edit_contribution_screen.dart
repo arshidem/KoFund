@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-
+import 'dart:collection';
 import '../../contributions/models/contribution_model.dart';
 import '../../contributions/providers/contribution_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -124,25 +124,26 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
     }
   }
 
-  Future<void> _fetchAvailablePrograms(String communityId) async {
-    try {
-      print('📋 Fetching programs for community: $communityId');
-      
-      // Use the FirebaseFirestore directly since ProgramProvider doesn't have getProgramsByCommunity
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(communityId)
-          .collection('programs')
-          .where('status', whereIn: ['active', 'ongoing'])
-          .get();
-      
-      _availablePrograms = querySnapshot.docs.map((doc) {
-        // Use ProgramModel.fromMap with the data
-        return ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      }).toList();
-      
-      print('✅ Found ${_availablePrograms.length} programs');
-      
+Future<void> _fetchAvailablePrograms(String communityId) async {
+  try {
+    print('📋 Fetching programs for community: $communityId');
+    
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('communities')
+        .doc(communityId)
+        .collection('programs')
+        .where('status', whereIn: ['active', 'ongoing'])
+        .get();
+    
+    _availablePrograms = querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      print('📝 Program data: $data'); // Debug print
+      return ProgramModel.fromMap(data, doc.id);
+    }).toList();
+    
+    print('✅ Found ${_availablePrograms.length} programs');
+
+
       // If no programs found in subcollection, try root programs collection
       if (_availablePrograms.isEmpty) {
         print('⚠️ No programs in subcollection, trying root collection...');
@@ -193,23 +194,53 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
         }
       }
       
-      // Sort programs by name
-      _availablePrograms.sort((a, b) => a.title.compareTo(b.title));
-      
-    } catch (e) {
-      print('❌ Error fetching programs: $e');
-      _availablePrograms = [];
+       // Sort programs by name
+    _availablePrograms.sort((a, b) => a.title.compareTo(b.title));
+    
+    // Debug: Print program types
+    for (var program in _availablePrograms) {
+      print('📋 Program: ${program.title}, Monthly: ${program.isMonthlyPaymentProgram}');
     }
+    
+  } catch (e) {
+    print('❌ Error fetching programs: $e');
+    _availablePrograms = [];
+  }
+}
+// Check if currently selected program is a monthly payment program
+bool get _isSelectedProgramMonthly {
+  if (_selectedProgramId == null) return false;
+  
+  try {
+    final program = _availablePrograms.firstWhere(
+      (p) => p.programId == _selectedProgramId,
+    );
+    return program.isMonthlyPaymentProgram;
+  } catch (e) {
+    // If program not found, check the contribution's original program
+    if (_contribution != null && _selectedProgramId == _contribution!.programId) {
+      return _contribution!.isMonthlyContribution;
+    }
+    return false;
+  }
+}
+void _generateAvailableMonths() {
+  _availableMonths.clear();
+
+  final now = DateTime.now();
+  for (int i = 0; i < 12; i++) {
+    final date = DateTime(now.year, now.month - i, 1);
+    final monthId = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+    _availableMonths.add(monthId);
   }
 
-  void _generateAvailableMonths() {
-    final now = DateTime.now();
-    for (int i = 0; i < 12; i++) {
-      final date = DateTime(now.year, now.month - i, 1);
-      final monthId = '${date.year}-${date.month.toString().padLeft(2, '0')}';
-      _availableMonths.add(monthId);
-    }
-  }
+  // Remove duplicates IN-PLACE
+  final unique = LinkedHashSet<String>.from(_availableMonths);
+  _availableMonths
+    ..clear()
+    ..addAll(unique);
+}
+
 
   String _formatMonthId(String monthId) {
     try {
@@ -488,58 +519,120 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
                         const SizedBox(height: 20),
 
                         // Program Selection Dropdown
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Program *',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              value: _selectedProgramId,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 16,
-                                ),
-                              ),
-                              items: _availablePrograms.map((program) {
-                                return DropdownMenuItem<String>(
-                                  value: program.programId,
-                                  child: Text(program.title),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() => _selectedProgramId = value);
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select a program';
-                                }
-                                return null;
-                              },
-                              hint: const Text('Select Program'),
-                            ),
-                            if (_availablePrograms.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  'No active programs found in this community',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange[700],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        // Program Selection Dropdown
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text(
+      'Program *',
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey,
+      ),
+    ),
+    const SizedBox(height: 8),
+
+    DropdownButtonFormField<String>(
+      value: _selectedProgramId,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
+      ),
+      items: _availablePrograms.map((program) {
+        return DropdownMenuItem<String>(
+          value: program.programId,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4), // 👈 vertical gap
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  program.title,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (program.isMonthlyPaymentProgram) ...[
+                  const SizedBox(width: 8), // 👈 horizontal gap
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Monthly',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+
+     onChanged: (value) {
+  setState(() {
+    _selectedProgramId = value;
+
+    if (value != null) {
+      try {
+        final program = _availablePrograms.firstWhere(
+          (p) => p.programId == value,
+        );
+        _isMonthly = program.isMonthlyPaymentProgram;
+        if (!_isMonthly) {
+          _monthId = null;
+        }
+      } catch (e) {
+        // Program not found in list, use current contribution's monthly status
+        if (_contribution != null && value == _contribution!.programId) {
+          _isMonthly = _contribution!.isMonthlyContribution;
+        } else {
+          _isMonthly = false;
+          _monthId = null;
+        }
+      }
+    }
+  });
+},
+
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select a program';
+        }
+        return null;
+      },
+
+      hint: const Text('Select Program'),
+    ),
+
+    if (_availablePrograms.isEmpty)
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          'No active programs found in this community',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.orange,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ),
+  ],
+),
+
 
                         const SizedBox(height: 16),
 
@@ -563,108 +656,122 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
                         const SizedBox(height: 16),
 
                         // Payment Method Dropdown - AUTO-FILLED
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Payment Method *',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              value: _paymentMethod.isNotEmpty && _paymentMethods.contains(_paymentMethod) 
-                                  ? _paymentMethod 
-                                  : null,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 16,
-                                ),
-                              ),
-                              items: _paymentMethods.map((method) {
-                                return DropdownMenuItem<String>(
-                                  value: method,
-                                  child: Text(method),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() => _paymentMethod = value);
-                                }
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select payment method';
-                                }
-                                return null;
-                              },
-                              hint: const Text('Select Payment Method'),
-                            ),
-                          ],
-                        ),
+                        // Payment Method Dropdown - AUTO-FILLED
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text(
+      'Payment Method *',
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey,
+      ),
+    ),
+    const SizedBox(height: 8),
+    DropdownButtonFormField<String>(
+      // FIX: Always use _paymentMethod if it's in the list, otherwise use first item
+      value: _paymentMethods.contains(_paymentMethod)
+          ? _paymentMethod
+          : (_paymentMethods.isNotEmpty ? _paymentMethods.first : null),
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
+      ),
+      items: _paymentMethods.map((method) {
+        return DropdownMenuItem<String>(
+          value: method,
+          child: Text(method),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() => _paymentMethod = value);
+        }
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select payment method';
+        }
+        return null;
+      },
+      hint: const Text('Select Payment Method'),
+    ),
+  ],
+),
 
                         const SizedBox(height: 16),
 
-                        // Monthly Contribution Toggle
-                        SwitchListTile(
-                          title: const Text('Monthly Contribution'),
-                          subtitle: Text(_isMonthly
-                              ? 'This is a recurring monthly contribution'
-                              : 'This is a one-time contribution'),
-                          value: _isMonthly,
-                          onChanged: (value) {
-                            setState(() => _isMonthly = value ?? false);
-                          },
-                        ),
 
-                        // Month Selection (only for monthly)
-                        if (_isMonthly) ...[
-                          const SizedBox(height: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Month *',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: _monthId,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 16,
-                                  ),
-                                ),
-                                items: _availableMonths.map((monthId) {
-                                  return DropdownMenuItem(
-                                    value: monthId,
-                                    child: Text(_formatMonthId(monthId)),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() => _monthId = value);
-                                },
-                                validator: (value) {
-                                  if (_isMonthly && (value == null || value.isEmpty)) {
-                                    return 'Please select month';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+// Month Selection (only for monthly programs)
+if (_isSelectedProgramMonthly) ...[
+  const SizedBox(height: 16),
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Text(
+            'Month *',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Monthly Program',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.green[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
+        value: _monthId != null && _availableMonths.contains(_monthId)
+            ? _monthId
+            : (_availableMonths.isNotEmpty ? _availableMonths.first : null),
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+          hintText: 'Select Month',
+        ),
+        items: _availableMonths.map((monthId) {
+          return DropdownMenuItem<String>(
+            value: monthId,
+            child: Text(_formatMonthId(monthId)),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() => _monthId = value);
+        },
+        validator: (value) {
+          if (_isSelectedProgramMonthly && (value == null || value.isEmpty)) {
+            return 'Please select month for monthly program';
+          }
+          return null;
+        },
+      ),
+    ],
+  ),
+],
 
         
 

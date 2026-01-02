@@ -67,22 +67,80 @@ Future<String> createProgram(ProgramModel program) async {
   // -------------------------------------------------------------
   // Get all programs by community (one-time)
   // -------------------------------------------------------------
-  Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('programs')
-          .where('communityId', isEqualTo: communityId)
-          .orderBy('programDate')
-          .get();
+Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
+  try {
+    print('📥 Loading programs for community: $communityId');
+    
+    final snapshot = await _firestore
+        .collection('programs')
+        .where('communityId', isEqualTo: communityId)
+        .orderBy('programDate')
+        .get();
 
-      return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
-    } catch (e) {
-      throw Exception('Failed to load programs: $e');
-    }
+    // Convert to ProgramModel
+    final programs = snapshot.docs
+        .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+
+    print('✅ Loaded ${programs.length} programs');
+    
+    // 🔄 NEW: Sync status for programs that need updating
+    await _syncExpiredProgramsStatus(programs);
+    
+    return programs;
+  } catch (e) {
+    print('❌ Error in getProgramsByCommunity: $e');
+    throw Exception('Failed to load programs: $e');
   }
+}
 
+// ✅ NEW: Sync expired programs status (batch update for efficiency)
+Future<void> _syncExpiredProgramsStatus(List<ProgramModel> programs) async {
+  try {
+    int updatedCount = 0;
+    final batch = _firestore.batch();
+    final programsToUpdate = <ProgramModel>[];
+    
+    // Identify programs that need updating
+    for (final program in programs) {
+      if (program.computedStatus != program.status) {
+        programsToUpdate.add(program);
+      }
+    }
+    
+    if (programsToUpdate.isEmpty) {
+      return; // Nothing to update
+    }
+    
+    print('🔄 Found ${programsToUpdate.length} program(s) needing status update');
+    
+    // Create batch updates
+    for (final program in programsToUpdate) {
+      final programRef = _firestore
+          .collection('programs')
+          .doc(program.programId);
+      
+      batch.update(programRef, {
+        'status': program.computedStatus,
+        'updatedAt': Timestamp.now(),
+      });
+      updatedCount++;
+      
+      print('   • "${program.title}": ${program.status} → ${program.computedStatus}');
+    }
+    
+    // Commit batch if there are updates
+    if (updatedCount > 0) {
+      print('🔄 Committing batch update for $updatedCount program(s)...');
+      await batch.commit();
+      print('✅ Successfully synced $updatedCount program(s)');
+    }
+    
+  } catch (e) {
+    print('⚠️ Error syncing program status: $e');
+    // Don't rethrow - this is a background sync that shouldn't break the main flow
+  }
+}
   // -------------------------------------------------------------
   // Get active programs by community (one-time Future)
   // -------------------------------------------------------------

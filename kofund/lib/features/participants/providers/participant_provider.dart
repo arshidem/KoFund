@@ -38,6 +38,33 @@ class ParticipantProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+Future<void> addParticipant(ParticipantModel participant) async {
+  try {
+    await _participantService.addParticipant(participant);
+    await loadProgramParticipants(participant.programId);
+  } catch (e) {
+    rethrow;
+  }
+}
+// Add to ParticipantProvider class:
+
+/// Get participants for a program
+Future<List<ParticipantModel>> getProgramParticipants(String programId) async {
+  await loadProgramParticipants(programId);
+  return _programParticipants;
+}
+// Also add this helper method if needed:
+// ✅ Get participant by userId - FIXED VERSION
+ParticipantModel? getParticipantByUserId(String programId, String userId) {
+  try {
+    return _programParticipants.firstWhere(
+      (p) => p.programId == programId && p.userId == userId,
+    );
+  } catch (_) {
+    return null;
+  }
+}
 // Add to ParticipantProvider class
 Stream<int> streamProgramParticipantCount(String programId) {
   return _participantService.streamProgramParticipantCount(programId);

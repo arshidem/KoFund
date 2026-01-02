@@ -236,6 +236,39 @@ bool get isCompleted => status == 'completed';  // Only explicitly completed
 bool get isCancelled => status == 'cancelled';
 bool get isActive => status == 'active';
 
+// ✅ Computed status that automatically updates based on program date
+String get computedStatus {
+  // If manually set to cancelled or completed, keep that
+  if (status == 'cancelled' || status == 'completed') {
+    return status;
+  }
+  
+  // Check if program date has passed (compare dates only, not time)
+  final now = DateTime.now();
+  final programDateOnly = DateTime(programDate.year, programDate.month, programDate.day);
+  final nowOnly = DateTime(now.year, now.month, now.day);
+  
+  final isDatePassed = programDateOnly.isBefore(nowOnly);
+  
+  if (isDatePassed) {
+    return 'completed';
+  }
+  
+  // Otherwise return the original status
+  return status;
+}
+// Update status only when program is loaded/viewed
+Future<void> syncComputedStatusToFirestore() async {
+  if (computedStatus != status) {
+    await FirebaseFirestore.instance
+        .collection('programs')
+        .doc(programId)
+        .update({
+      'status': computedStatus,
+      'updatedAt': Timestamp.now(),
+    });
+  }
+}
 // Add this new getter for date-based display
 bool get isDatePast => programDate.isBefore(DateTime.now());
 bool get isDateFuture => programDate.isAfter(DateTime.now());

@@ -66,7 +66,22 @@ class ParticipantModel {
       hasPaidContribution: map['hasPaidContribution'] ?? false,
     );
   }
+// Add to your ParticipantModel class:
 
+factory ParticipantModel.empty() {
+  return ParticipantModel(
+    participantId: '',
+    programId: '',
+    userId: '',
+    userName: '',
+    userEmail: '',
+    communityId: '',
+    contributionPaid: 0,
+    hasPaidContribution: false,
+    status: 'active',
+    joinedAt: DateTime.now(),
+  );
+}
   Map<String, dynamic> toMap() {
     return {
       'programId': programId,
