@@ -901,16 +901,7 @@ class _HistoryTile extends StatelessWidget {
           );
         },
         child: Container(
-            decoration: BoxDecoration(
-      color: AppColors.card(context),
-      // boxShadow: [
-      //   BoxShadow(
-      //     color: Colors.black.withOpacity(0.05),
-      //     blurRadius: 12,
-      //     offset: const Offset(0, 4),
-      //   ),
-      // ],
-    ),
+
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
@@ -2404,14 +2395,14 @@ Widget _buildEditHistoryItem(Map<String, dynamic> edit, BuildContext context) {
   return Container(
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF3FAF7),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: const Color(0xFFE1EFEA),
-        width: 1,
-      ),
+  decoration: BoxDecoration(
+    color: AppColors.surface(context),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: AppColors.border(context),
+      width: 0.6,
     ),
+  ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

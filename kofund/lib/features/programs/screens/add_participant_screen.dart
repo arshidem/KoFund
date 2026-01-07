@@ -1,16 +1,18 @@
 // 📁 lib/features/programs/screens/add_participant_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
-
+import 'dart:ui';
 import '../../../../core/constants/app_colors.dart';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/participants/models/participant_model.dart';
 import '../../../features/participants/providers/participant_provider.dart';
 import '../../programs/models/program_model.dart';
 import '../../../features/members/providers/member_provider.dart';
+import 'package:kofund/core/skeleton/add_participants_skeleton.dart';
 
 class AddParticipantScreen extends StatefulWidget {
   final ProgramModel program;
@@ -142,87 +144,85 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     }).toList();
   }
 
-// In _addParticipant method, use this corrected version:
-
-Future<void> _addParticipant(String userId, String userName, String userEmail) async {
-  if (_addingParticipants.contains(userId)) return;
-  
-  developer.log('➕ AddParticipantScreen: Adding participant $userName ($userId)');
-  
-  setState(() {
-    _addingParticipants.add(userId);
-  });
-  
-  try {
-    final participantProvider = context.read<ParticipantProvider>();
+  Future<void> _addParticipant(String userId, String userName, String userEmail) async {
+    if (_addingParticipants.contains(userId)) return;
     
-    // Check if already a participant
-    final isAlreadyParticipant = _currentParticipants.any((p) => p.userId == userId);
-    if (isAlreadyParticipant) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$userName is already a participant'),
-          backgroundColor: AppColors.warning(context),
-          duration: const Duration(seconds: 2),
-        ),
+    developer.log('➕ AddParticipantScreen: Adding participant $userName ($userId)');
+    
+    setState(() {
+      _addingParticipants.add(userId);
+    });
+    
+    try {
+      final participantProvider = context.read<ParticipantProvider>();
+      
+      // Check if already a participant
+      final isAlreadyParticipant = _currentParticipants.any((p) => p.userId == userId);
+      if (isAlreadyParticipant) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$userName is already a participant'),
+            backgroundColor: AppColors.warning(context),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      
+      // Create participant
+      final participant = ParticipantModel(
+        participantId: '${DateTime.now().millisecondsSinceEpoch}_$userId',
+        programId: widget.program.programId,
+        userId: userId,
+        userName: userName,
+        userEmail: userEmail,
+        communityId: widget.program.communityId,
+        contributionPaid: 0,
+        hasPaidContribution: false,
+        status: 'joined',
+        joinedAt: DateTime.now(),
       );
-      return;
-    }
-    
-    // Create participant - CORRECT PARAMETERS
-    final participant = ParticipantModel(
-      participantId: '${DateTime.now().millisecondsSinceEpoch}_$userId',
-      programId: widget.program.programId,
-      userId: userId,
-      userName: userName,
-      userEmail: userEmail,
-      communityId: widget.program.communityId,
-      contributionPaid: 0,
-      hasPaidContribution: false,
-      status: 'joined',
-      joinedAt: DateTime.now(), // Use DateTime, not Timestamp
-    );
-    
-    // Add participant using the new addParticipant method
-    await participantProvider.addParticipant(participant);
-    
-    // Update local state
-    if (mounted) {
-      setState(() {
-        // Add to current participants list
-        _currentParticipants.add(participant);
-        _addingParticipants.remove(userId);
-      });
-    }
-    
-    developer.log('✅ AddParticipantScreen: Added $userName to program');
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added $userName to program'),
-        backgroundColor: AppColors.success(context),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
-  } catch (e, stackTrace) {
-    developer.log('❌ AddParticipantScreen Error adding participant: $e', error: e, stackTrace: stackTrace);
-    
-    if (mounted) {
-      setState(() {
-        _addingParticipants.remove(userId);
-      });
+      
+      // Add participant using the new addParticipant method
+      await participantProvider.addParticipant(participant);
+      
+      // Update local state
+      if (mounted) {
+        setState(() {
+          // Add to current participants list
+          _currentParticipants.add(participant);
+          _addingParticipants.remove(userId);
+        });
+      }
+      
+      developer.log('✅ AddParticipantScreen: Added $userName to program');
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add participant: $e'),
-          backgroundColor: AppColors.error(context),
-          duration: const Duration(seconds: 3),
+          content: Text('Added $userName to program'),
+          backgroundColor: AppColors.success(context),
+          duration: const Duration(seconds: 2),
         ),
       );
+      
+    } catch (e, stackTrace) {
+      developer.log('❌ AddParticipantScreen Error adding participant: $e', error: e, stackTrace: stackTrace);
+      
+      if (mounted) {
+        setState(() {
+          _addingParticipants.remove(userId);
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add participant: $e'),
+            backgroundColor: AppColors.error(context),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
-}
 
   Future<void> _removeParticipant(String userId) async {
     try {
@@ -273,59 +273,105 @@ Future<void> _addParticipant(String userId, String userName, String userEmail) a
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search members...',
-          hintStyle: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 14,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.5),
+            width: 1.5,
           ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: AppColors.primary(context),
-            size: 20,
-          ),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: AppColors.textSecondary(context),
-                    size: 20,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          color: Colors.transparent,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Row(
+              children: [
+                // Search Icon
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      bottomLeft: Radius.circular(18),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.5),
+                      width: 0,
+                    ),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
+                  child: Icon(
+                    Icons.search,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                
+                // Search Field
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                    cursorColor: Colors.white,
+                    cursorWidth: 2,
+                    cursorHeight: 20,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      hintText: 'Search members...',
+                      hintStyle: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                      filled: false,
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(right: 0),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.border(context)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-          ),
-          filled: true,
-          fillColor: AppColors.surface(context),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
       ),
     );
   }
@@ -523,26 +569,11 @@ Future<void> _addParticipant(String userId, String userName, String userEmail) a
     );
   }
 
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            color: AppColors.primary(context),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading members...',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+Widget _buildLoadingState() {
+  return AddParticipantSkeleton(
+    isDarkMode: Theme.of(context).brightness == Brightness.dark,
+  );
+}
 
   Widget _buildEmptyState(String message, IconData icon) {
     return Center(
@@ -551,7 +582,7 @@ Future<void> _addParticipant(String userId, String userName, String userEmail) a
         children: [
           Icon(
             icon,
-            size: 60,
+            size: 40,
             color: AppColors.textTertiary(context),
           ),
           const SizedBox(height: 16),
@@ -572,12 +603,45 @@ Future<void> _addParticipant(String userId, String userName, String userEmail) a
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Add Participants'),
+        toolbarHeight: 80,
+        title: const Text(
+          'Add Participants',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+          systemNavigationBarColor: AppColors.background(context),
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.white,
+          ),
           onPressed: () => Navigator.pop(context, true),
         ),
+        automaticallyImplyLeading: true,
       ),
       body: _isLoading
           ? _buildLoadingState()

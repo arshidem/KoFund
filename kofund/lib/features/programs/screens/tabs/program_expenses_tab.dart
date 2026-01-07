@@ -205,14 +205,7 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
           },
           child: Container(
                                                                  decoration: BoxDecoration(
-      color: AppColors.card(context),
-      // boxShadow: [
-      //   BoxShadow(
-      //     color: Colors.black.withOpacity(0.05),
-      //     blurRadius: 12,
-      //     offset: const Offset(0, 4),
-      //   ),
-      // ],
+  
     ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
@@ -300,12 +293,7 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                     // Amount and status in a column
                 
                     
-                    // Three-dot menu
-                    if (isAdmin || (_isUserPaidBy(expense, context)))
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: _buildThreeDotMenu(expense, context, isAdmin),
-                      ),
+               
     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -336,6 +324,12 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                         ),
                       ],
                     ),
+                         // Three-dot menu
+                    if (isAdmin || (_isUserPaidBy(expense, context)))
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: _buildThreeDotMenu(expense, context, isAdmin),
+                      ),
                       
                   ],
                 ),
@@ -540,7 +534,7 @@ Widget _buildExpenseSummary(BuildContext context) {
 
       return Container(
         width: double.infinity,
-        margin: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
@@ -1616,14 +1610,14 @@ Widget _buildExpenseEditHistoryItem(BuildContext context, Map<String, dynamic> e
   return Container(
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF3FAF7),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: const Color(0xFFE1EFEA),
-        width: 1,
-      ),
+          decoration: BoxDecoration(
+    color: AppColors.surface(context),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: AppColors.border(context),
+      width: 0.6,
     ),
+  ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

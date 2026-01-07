@@ -171,6 +171,100 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
       default: return '???';
     }
   }
+  // Add this method to show dropdown menu
+void _showParticipantMenu(BuildContext context, ParticipantModel participant) async {
+  final bool isPaid = await _checkParticipantPaidStatus(
+    participant.userId,
+    widget.program.programId,
+  );
+  final subtitle = await _getPaymentSubtitleWithRealData(participant);
+  
+  final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+  final RenderBox button = context.findRenderObject() as RenderBox;
+  final RelativeRect position = RelativeRect.fromRect(
+    Rect.fromPoints(
+      button.localToGlobal(Offset.zero, ancestor: overlay),
+      button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+    ),
+    Offset.zero & overlay.size,
+  );
+  
+  showMenu(
+    context: context,
+    position: position,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    items: [
+      PopupMenuItem<String>(
+        value: 'toggle_payment',
+        child: Row(
+          children: [
+            Icon(
+              isPaid ? Icons.payment : Icons.payment_outlined,
+              color: isPaid ? AppColors.success(context) : AppColors.warning(context),
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPaid ? 'Mark as Pending' : 'Mark as Paid',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      PopupMenuItem<String>(
+        value: 'remove',
+        child: Row(
+          children: [
+            Icon(
+              Icons.remove_circle_outline,
+              color: AppColors.error(context),
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Remove from Program',
+              style: TextStyle(
+                color: AppColors.error(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ).then((value) {
+    if (value == 'toggle_payment') {
+      _togglePaymentStatus(participant, context);
+    } else if (value == 'remove') {
+      _showRemoveConfirmation(participant, context);
+    }
+  });
+}
 @override
 Widget build(BuildContext context) {
   final isAdmin = _isAdmin(context);
@@ -183,7 +277,7 @@ Widget build(BuildContext context) {
 
           if (widget.program.isMonthlyPaymentProgram)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
               child: _buildMonthSelectorHeader(context),
             ),
 
@@ -590,8 +684,8 @@ Widget _buildShimmerChip() {
 
         return Container(
           width: double.infinity,
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: BorderRadius.circular(16),
@@ -1223,146 +1317,246 @@ Widget _buildShimmerChip() {
     );
   }
 
-  Widget _buildParticipantCard(ParticipantModel participant, BuildContext context) {
-    final userName = participant.userName.isNotEmpty ? participant.userName : 'Unknown User';
-    final contributionPaid = participant.contributionPaid ?? 0;
-    final suggestedContribution = widget.program.suggestedContribution ?? 0;
-    final hasPaidFull = suggestedContribution > 0 && contributionPaid >= suggestedContribution;
-    final isMonthlyProgram = widget.program.isMonthlyPaymentProgram;
+// Replace the entire _showParticipantMenu method with this:
 
-    return Column(
-      
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              _showParticipantActions(participant, context);
-            },
-            child: Container(
-                                       decoration: BoxDecoration(
-      color: AppColors.card(context),
-      // boxShadow: [
-      //   BoxShadow(
-      //     color: Colors.black.withOpacity(0.05),
-      //     blurRadius: 12,
-      //     offset: const Offset(0, 4),
-      //   ),
-      // ],
-    ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary(context).withOpacity(0.12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        userName.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          color: AppColors.primary(context),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+Widget _buildParticipantCard(ParticipantModel participant, BuildContext context) {
+  final userName = participant.userName.isNotEmpty ? participant.userName : 'Unknown User';
+  final contributionPaid = participant.contributionPaid ?? 0;
+  final suggestedContribution = widget.program.suggestedContribution ?? 0;
+  final hasPaidFull = suggestedContribution > 0 && contributionPaid >= suggestedContribution;
+
+  return Column(
+    children: [
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _navigateToMemberProfile(participant, context);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Column 1: Avatar
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary(context).withOpacity(0.12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      userName.substring(0, 1).toUpperCase(),
+                      style: TextStyle(
+                        color: AppColors.primary(context),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              userName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: AppColors.textPrimary(context),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Column 2: Name and Contribution
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.textPrimary(context),
                         ),
-                        const SizedBox(height: 4),
-                        if (suggestedContribution > 0)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Paid ₹${contributionPaid.toStringAsFixed(0)}/₹${suggestedContribution.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: hasPaidFull ? AppColors.success(context) : AppColors.warning(context),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (!isMonthlyProgram)
-                                const SizedBox(height: 4),
-                              if (!isMonthlyProgram)
-                                LinearProgressIndicator(
-                                  value: suggestedContribution > 0 
-                                    ? (contributionPaid / suggestedContribution).clamp(0.0, 1.0) 
-                                    : 0,
-                                  backgroundColor: AppColors.progressBackground(context),
-                                  color: hasPaidFull ? AppColors.success(context) : AppColors.warning(context),
-                                  minHeight: 4,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                            ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      if (suggestedContribution > 0)
+                        Text(
+                          'Paid ₹${contributionPaid.toStringAsFixed(0)}/₹${suggestedContribution.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
                           ),
-                        if (suggestedContribution == 0)
-                          Text(
-                            'No contribution required',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+               if (suggestedContribution > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: hasPaidFull 
+                          ? AppColors.success(context).withOpacity(0.15)
+                          : AppColors.warning(context).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: hasPaidFull 
+                            ? AppColors.success(context).withOpacity(0.3)
+                            : AppColors.warning(context).withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: hasPaidFull 
+                                ? AppColors.success(context)
+                                : AppColors.warning(context),
                           ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          hasPaidFull ? 'Paid' : 'Pending',
+                          style: TextStyle(
+                            color: hasPaidFull 
+                                ? AppColors.success(context)
+                                : AppColors.warning(context),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: hasPaidFull ? AppColors.success(context) : AppColors.warning(context),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      hasPaidFull ? 'Paid' : 'Pending',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                // Column 4: Three-dot menu - Use PopupMenuButton directly
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: AppColors.textTertiary(context),
+                    size: 20,
                   ),
-                ],
-              ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                  onSelected: (value) async {
+                    if (value == 'toggle_payment') {
+                      // Check current status first
+                      final bool isPaid = await _checkParticipantPaidStatus(
+                        participant.userId,
+                        widget.program.programId,
+                      );
+                      final subtitle = await _getPaymentSubtitleWithRealData(participant);
+                      
+                      // Now call toggle payment
+                      _togglePaymentStatus(participant, context);
+                    } else if (value == 'remove') {
+                      _showRemoveConfirmation(participant, context);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) {
+                    // The items will be built when menu is opened
+                    return [
+                      PopupMenuItem<String>(
+                        value: 'toggle_payment',
+                        child: FutureBuilder<bool>(
+                          future: _checkParticipantPaidStatus(
+                            participant.userId,
+                            widget.program.programId,
+                          ),
+                          builder: (context, snapshot) {
+                            final isPaid = snapshot.data ?? false;
+                            return FutureBuilder<String?>(
+                              future: _getPaymentSubtitleWithRealData(participant),
+                              builder: (context, subtitleSnapshot) {
+                                final subtitle = subtitleSnapshot.data;
+                                return Row(
+                                  children: [
+                                    Icon(
+                                      isPaid ? Icons.payment : Icons.payment_outlined,
+                                      color: isPaid ? AppColors.success(context) : AppColors.warning(context),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isPaid ? 'Mark as Pending' : 'Mark as Paid',
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary(context),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          if (subtitle != null && subtitle.isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 2),
+                                              child: Text(
+                                                subtitle,
+                                                style: TextStyle(
+                                                  color: AppColors.textSecondary(context),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'remove',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.remove_circle_outline,
+                              color: AppColors.error(context),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Remove from Program',
+                              style: TextStyle(
+                                color: AppColors.error(context),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ];
+                  },
+                ),
+              ],
             ),
           ),
         ),
-        
-        Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.border(context),
-        ),
-      ],
-    );
-  }
+      ),
+      
+      Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+      ),
+    ],
+  );
+}
 
   Widget _buildEmptyState(bool noParticipants, BuildContext context) {
     return Center(
@@ -1436,194 +1630,7 @@ Widget _buildShimmerChip() {
     return filtered;
   }
 
-void _showParticipantActions(ParticipantModel participant, BuildContext context) async {
-  // Get payment status BEFORE showing bottom sheet
-  final hasPaid = await _checkParticipantPaidStatus(
-    participant.userId,
-    widget.program.programId,
-  );
-  
-  final subtitle = await _getPaymentSubtitleWithRealData(participant);
-  
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Container(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () {},
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.4,
-              minChildSize: 0.25,
-              maxChildSize: 0.4,
-              builder: (context, scrollController) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.card(context),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.only(right: 16, left: 16, top: 20, bottom: 0),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 20),
-                            decoration: BoxDecoration(
-                              color: AppColors.border(context),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
 
-                        InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                            _navigateToMemberProfile(participant, context);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: AppColors.primary(context).withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.person,
-                                    color: AppColors.primary(context),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        participant.userName,
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary(context),
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (participant.userEmail.isNotEmpty)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 2),
-                                          child: Text(
-                                            participant.userEmail,
-                                            style: TextStyle(
-                                              color: AppColors.textSecondary(context),
-                                              fontSize: 13,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 20,
-                                  color: AppColors.primary(context),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
-
-                        if (widget.program.suggestedContribution != null &&
-                            widget.program.suggestedContribution! > 0)
-                          _buildActionTile(
-                            context: context,
-                            icon: hasPaid
-                                ? Icons.payment
-                                : Icons.payment_outlined,
-                            title: hasPaid ? 'Mark as Pending' : 'Mark as Paid', // Use real status
-                            color: hasPaid
-                                ? AppColors.success(context)
-                                : AppColors.warning(context),
-                            subtitle: subtitle, // Use real subtitle
-                            onTap: () {
-                              Navigator.pop(context);
-                              _togglePaymentStatus(participant, context);
-                            },
-                          ),
-
-                        _buildActionTile(
-                          context: context,
-                          icon: Icons.remove_circle_outline,
-                          title: 'Remove from Program',
-                          color: AppColors.error(context),
-                          isDestructive: true,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _showRemoveConfirmation(participant, context);
-                          },
-                        ),
-
-                        const SizedBox(height: 0),
-
-                        SizedBox(
-                          height: 55,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.card(context),
-                              foregroundColor: AppColors.textPrimary(context),
-                              side: BorderSide(color: AppColors.border(context)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 0),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
 
 
   void _navigateToMemberProfile(ParticipantModel participant, BuildContext context) async {
@@ -1699,104 +1706,7 @@ void _showParticipantActions(ParticipantModel participant, BuildContext context)
     }
   }
 
-  Widget _buildActionTile({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required Color color,
-    String? subtitle,
-    bool isDestructive = false,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: isDestructive 
-                              ? AppColors.error(context) 
-                              : AppColors.textPrimary(context),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (subtitle != null && subtitle.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            subtitle,
-                            style: TextStyle(
-                              color: AppColors.textSecondary(context),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (!isDestructive)
-                  Icon(
-                    Icons.chevron_right,
-                    color: AppColors.textSecondary(context),
-                    size: 20,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
-// Also update the _getPaymentActionText method to use real-time check
-String _getPaymentActionText(ParticipantModel participant) {
-  // Since we can't make this async, we'll use the same logic based on contributionPaid
-  // But the bottom sheet uses real-time check above
-  final contributionPaid = participant.contributionPaid ?? 0;
-  final suggestedAmount = widget.program.suggestedContribution ?? 0.0;
-  
-  if (suggestedAmount > 0 && contributionPaid >= suggestedAmount) {
-    return 'Mark as Pending';
-  } else {
-    return 'Mark as Paid';
-  }
-}
 
 String? _getPaymentSubtitle(ParticipantModel participant) {
   final contributionPaid = participant.contributionPaid ?? 0;

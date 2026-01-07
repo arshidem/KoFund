@@ -704,10 +704,14 @@ Widget _buildProgramCard(
                       final progress =
                           programAmount > 0 ? collectedAmount / programAmount : 0.0;
 
-final now = DateTime.now();
-final daysLeft = program.programDate.difference(now).inDays;
-final isEnding = daysLeft <= 3 && daysLeft >= 0;
-final hasEnded = daysLeft < 0;
+                      // Only calculate days for NON-monthly programs
+                      final now = DateTime.now();
+                      final daysLeft = program.isMonthlyPaymentProgram 
+                          ? null 
+                          : program.programDate.difference(now).inDays;
+                      final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
+                      final hasEnded = daysLeft != null && daysLeft < 0;
+                      
                       final programColor =
                           _getProgramColor(program.programType);
 
@@ -723,7 +727,7 @@ final hasEnded = daysLeft < 0;
                               Row(
                                 crossAxisAlignment: hasDescription 
                                     ? CrossAxisAlignment.start 
-                                    : CrossAxisAlignment.center, // Center when no description
+                                    : CrossAxisAlignment.center,
                                 children: [
                                   // Program Icon
                                   Container(
@@ -748,7 +752,7 @@ final hasEnded = daysLeft < 0;
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       mainAxisAlignment: hasDescription 
                                           ? MainAxisAlignment.start 
-                                          : MainAxisAlignment.center, // Center when no description
+                                          : MainAxisAlignment.center,
                                       children: [
                                         // Title
                                         Text(
@@ -776,13 +780,45 @@ final hasEnded = daysLeft < 0;
                                             ),
                                           ),
                                         ],
+                                        
+                                        // Monthly Badge (if monthly program)
+                                        if (program.isMonthlyPaymentProgram) ...[
+                                          const SizedBox(height: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.calendar_today,
+                                                  size: 12,
+                                                  color: Colors.blue,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'Monthly',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.blue,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
                                   
                                   // Empty SizedBox to balance the admin menu in Stack
                                   if (widget.isAdmin)
-                                    const SizedBox(width: 40), // Width of admin menu
+                                    const SizedBox(width: 40),
                                 ],
                               ),
                               
@@ -867,12 +903,22 @@ final hasEnded = daysLeft < 0;
                                 label: 'Members',
                                 color: programColor,
                               ),
-                             _buildStatItem(
-  icon: Icons.schedule,
-  value: hasEnded ? 'End' : (isEnding ? '$daysLeft' : '$daysLeft'),
-  label: 'Days',
-  color: hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor),
-),
+                              
+                              // Conditionally show days OR monthly indicator
+                              if (program.isMonthlyPaymentProgram)
+                                _buildStatItem(
+                                  icon: Icons.calendar_month,
+                                  value: 'Monthly',
+                                  label: 'Recurring',
+                                  color: Colors.blue,
+                                )
+                              else
+                                _buildStatItem(
+                                  icon: Icons.schedule,
+                                  value: hasEnded ? 'Ended' : (isEnding ? '$daysLeft' : '$daysLeft'),
+                                  label: 'Days',
+                                  color: hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor),
+                                ),
                             ],
                           ),
 
@@ -908,8 +954,8 @@ final hasEnded = daysLeft < 0;
 
                               if (hasJoined)
                                 Container(
-                                  width: 48,
-                                  height: 48,
+                                  width: 42,
+                                  height: 42,
                                   decoration: BoxDecoration(
                                     color: Colors.red.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
@@ -977,7 +1023,6 @@ final hasEnded = daysLeft < 0;
     },
   );
 }
-
 // Your existing _buildStatItem method (unchanged)
 Widget _buildStatItem({
   required IconData icon,

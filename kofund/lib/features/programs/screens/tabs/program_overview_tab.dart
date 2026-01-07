@@ -677,7 +677,7 @@ Widget _buildFinancialSummaryCard(
 
               return Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient(context),
                   borderRadius: BorderRadius.circular(16),
