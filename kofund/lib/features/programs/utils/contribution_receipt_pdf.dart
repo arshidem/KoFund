@@ -674,7 +674,7 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
                   ),
                   child: PdfPreview(
                     build: (format) => widget.pdfBytes,
-                    allowPrinting: true,
+                    allowPrinting: false, // Disable printing
                     allowSharing: false,
                     canChangePageFormat: false,
                     canChangeOrientation: false,
@@ -684,7 +684,7 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
               ),
             ),
 
-            // Action Buttons
+            // Action Buttons - ONLY DOWNLOAD AND SHARE
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
