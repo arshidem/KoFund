@@ -115,6 +115,8 @@ Future<void> _updateVirtualUser() async {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+            toolbarHeight: 80, // Set your desired height here (default is 56)
+
         title: const Text(
           'Edit Virtual User',
           style: TextStyle(
@@ -190,10 +192,10 @@ Future<void> _updateVirtualUser() async {
                       ),
                       const SizedBox(height: 12),
                       
-                      if (widget.virtualUser.createdBy != null && widget.virtualUser.createdBy!.isNotEmpty)
+                      if (widget.virtualUser.createdByName != null && widget.virtualUser.createdByName!.isNotEmpty)
                         _buildInfoItem(
                           'Created By Admin',
-                          widget.virtualUser.createdBy!,
+                          widget.virtualUser.createdByName!,
                           Icons.person_add,
                         ),
                       

@@ -632,8 +632,8 @@ if (isVirtualUser) {
           ),
           const SizedBox(height: 16),
           
-          if (member.createdBy != null && member.createdBy!.isNotEmpty) ...[
-            _buildVirtualInfoItem('Created By Admin', member.createdBy!, Icons.person_add),
+          if (member.createdByName != null && member.createdByName!.isNotEmpty) ...[
+            _buildVirtualInfoItem('Created By Admin', member.createdByName!, Icons.person_add),
             const SizedBox(height: 12),
           ],
           

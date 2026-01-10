@@ -11,8 +11,9 @@ class UserModel {
   final bool isApproved;
   final bool isAdmin;
   final bool isDeveloper;
-  final bool isVirtualUser; // 🆕 ADD THIS FIELD
-  final String? createdBy; // 🆕 Who created this virtual user (admin UID)
+  final bool isVirtualUser;
+  final String? createdBy; // Who created this virtual user (admin UID)
+  final String? createdByName; // 🆕 ADD THIS: admin's display name
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
   final Timestamp? approvedAt;
@@ -29,8 +30,9 @@ class UserModel {
     this.isApproved = false,
     this.isAdmin = false,
     this.isDeveloper = false,
-    this.isVirtualUser = false, // 🆕 ADD THIS - default false
-    this.createdBy, // 🆕 ADD THIS
+    this.isVirtualUser = false,
+    this.createdBy, // 🆕 Keep this for UID reference
+    this.createdByName, // 🆕 ADD THIS - for displaying admin name without extra query
     this.createdAt,
     this.updatedAt,
     this.approvedAt,
@@ -49,8 +51,9 @@ class UserModel {
       'isApproved': isApproved,
       'isAdmin': isAdmin,
       'isDeveloper': isDeveloper,
-      'isVirtualUser': isVirtualUser, // 🆕 ADD THIS
-      'createdBy': createdBy, // 🆕 ADD THIS
+      'isVirtualUser': isVirtualUser,
+      'createdBy': createdBy,
+      'createdByName': createdByName, // 🆕 ADD THIS
       'createdAt': createdAt ?? Timestamp.now(),
       'updatedAt': updatedAt ?? FieldValue.serverTimestamp(),
       'approvedAt': approvedAt,
@@ -85,8 +88,9 @@ class UserModel {
       isApproved: map['isApproved'] ?? false,
       isAdmin: map['isAdmin'] ?? false,
       isDeveloper: map['isDeveloper'] ?? false,
-      isVirtualUser: map['isVirtualUser'] ?? false, // 🆕 ADD THIS
-      createdBy: map['createdBy'], // 🆕 ADD THIS
+      isVirtualUser: map['isVirtualUser'] ?? false,
+      createdBy: map['createdBy'],
+      createdByName: map['createdByName'], // 🆕 ADD THIS
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
       approvedAt: _parseTimestamp(map['approvedAt']),
@@ -105,8 +109,9 @@ class UserModel {
     bool? isApproved,
     bool? isAdmin,
     bool? isDeveloper,
-    bool? isVirtualUser, // 🆕 ADD THIS
-    String? createdBy, // 🆕 ADD THIS
+    bool? isVirtualUser,
+    String? createdBy,
+    String? createdByName, // 🆕 ADD THIS
     Timestamp? createdAt,
     Timestamp? updatedAt,
     Timestamp? approvedAt,
@@ -123,8 +128,9 @@ class UserModel {
       isApproved: isApproved ?? this.isApproved,
       isAdmin: isAdmin ?? this.isAdmin,
       isDeveloper: isDeveloper ?? this.isDeveloper,
-      isVirtualUser: isVirtualUser ?? this.isVirtualUser, // 🆕 ADD THIS
-      createdBy: createdBy ?? this.createdBy, // 🆕 ADD THIS
+      isVirtualUser: isVirtualUser ?? this.isVirtualUser,
+      createdBy: createdBy ?? this.createdBy,
+      createdByName: createdByName ?? this.createdByName, // 🆕 ADD THIS
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       approvedAt: approvedAt ?? this.approvedAt,
@@ -133,16 +139,29 @@ class UserModel {
   }
 
   // Helper methods
+  
+  // 🆕 ADD THIS: Get creator name with fallback
+  String get creatorDisplayName {
+    if (createdByName != null && createdByName!.isNotEmpty) {
+      return createdByName!;
+    }
+    if (createdBy != null) {
+      // Fallback - could be the email or part of UID
+      return 'Admin';
+    }
+    return 'System';
+  }
+
   bool get canAccessApp {
     // Virtual users cannot access app
     if (isVirtualUser) return false;
     return isApproved && communityId != null && communityId!.isNotEmpty;
   }
 
-  // 🆕 ADD THESE HELPER METHODS FOR VIRTUAL USERS
-  bool get canBeDeleted => isVirtualUser; // Only virtual users can be deleted
-  bool get canBeEditedByAdmin => isVirtualUser; // Admin can edit virtual users
-  bool get requiresNoAuth => isVirtualUser; // No login required
+  // Virtual user helper methods
+  bool get canBeDeleted => isVirtualUser;
+  bool get canBeEditedByAdmin => isVirtualUser;
+  bool get requiresNoAuth => isVirtualUser;
   
   // Combined permissions
   bool get canManageUsers => isAdmin || isDeveloper;
@@ -151,4 +170,25 @@ class UserModel {
   
   // Check if this is a real registered user
   bool get isRealUser => !isVirtualUser;
+
+  // 🆕 ADD THIS: Check if this user was created by a specific admin
+  bool wasCreatedBy(String adminUid) {
+    return createdBy == adminUid;
+  }
+
+  // 🆕 ADD THIS: Format for display in UI lists
+  String get displayInfo {
+    if (isVirtualUser) {
+      return '$displayName (Virtual)';
+    }
+    return displayName ?? email;
+  }
+
+  // 🆕 ADD THIS: Get creation info for display
+  String get creationInfo {
+    if (!isVirtualUser || createdByName == null) {
+      return 'Regular user';
+    }
+    return 'Created by $createdByName';
+  }
 }

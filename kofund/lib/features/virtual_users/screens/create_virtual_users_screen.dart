@@ -23,16 +23,26 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
   final List<Map<String, dynamic>> _users = [];
   final TextEditingController _bulkInputController = TextEditingController();
   bool _showBulkInput = false;
+  final FocusNode _bulkFocus = FocusNode();
+  bool _showHeader = true;
 
   @override
   void initState() {
     super.initState();
-    // Add one empty entry by default
     _users.add({'name': '', 'phone': '', 'email': ''});
+
+    _bulkFocus.addListener(() {
+      if (!_showBulkInput) return; // ignore focus when bulk is closed
+
+      setState(() {
+        _showHeader = !_bulkFocus.hasFocus;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _bulkFocus.dispose();
     _bulkInputController.dispose();
     super.dispose();
   }
@@ -74,8 +84,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       final trimmedLine = line.trim();
       if (trimmedLine.isEmpty) continue;
 
-      // Try to parse different formats
-      final parts = trimmedLine.split(RegExp(r'[,|\t]')); // Comma, pipe, or tab separated
+      final parts = trimmedLine.split(RegExp(r'[,|\t]'));
       final name = parts.isNotEmpty ? parts[0].trim() : '';
       final phone = parts.length > 1 ? parts[1].trim() : '';
       final email = parts.length > 2 ? parts[2].trim() : '';
@@ -120,7 +129,10 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       return;
     }
 
-    // Filter out empty users
+    final adminName = currentUser.displayName ?? 
+                      currentUser.email?.split('@').first ?? 
+                      'Admin';
+
     final validUsers = _users.where((user) {
       final name = user['name'] as String;
       return name.trim().isNotEmpty;
@@ -136,7 +148,6 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       return;
     }
 
-    // Validate each user
     final errors = <String>[];
     for (int i = 0; i < validUsers.length; i++) {
       final user = validUsers[i];
@@ -193,17 +204,15 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       return;
     }
 
-    // Use Provider to get the virtual user provider
     final virtualUserProvider = Provider.of<VirtualUserProvider>(context, listen: false);
     
-    // Call the method to create multiple users
-await virtualUserProvider.createMultipleUsers(
-  widget.communityId,
-  currentUser.uid,
-  validUsers,
-);
+    await virtualUserProvider.createMultipleUsers(
+      widget.communityId,
+      currentUser.uid,
+      adminName,
+      validUsers,
+    );
 
-    // Check if there were errors
     if (virtualUserProvider.errorMessages.isNotEmpty) {
       showDialog(
         context: context,
@@ -247,17 +256,12 @@ await virtualUserProvider.createMultipleUsers(
         ),
       );
       
-      // Clear form and reset
       Future.delayed(const Duration(seconds: 1), () {
         setState(() {
           _users.clear();
           _users.add({'name': '', 'phone': '', 'email': ''});
         });
-        
-        // Reset the provider state
         virtualUserProvider.resetCreationState();
-        
-        // Navigate back after success
         Navigator.pop(context, virtualUserProvider.successfulCreations);
       });
     }
@@ -265,17 +269,15 @@ await virtualUserProvider.createMultipleUsers(
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AppAuthProvider>(context);
-    final currentUser = authProvider.user;
-    
     final virtualUserProvider = Provider.of<VirtualUserProvider>(context);
     final isLoading = virtualUserProvider.isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
+        toolbarHeight: 80,
         title: const Text(
-          'Add Virtual Members',
+          'Create Virtual Users',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -293,36 +295,55 @@ await virtualUserProvider.createMultipleUsers(
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
           ),
         ),
-        actions: [
-          if (_users.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.import_export),
-              onPressed: _toggleBulkInput,
-              tooltip: 'Bulk Import/Export',
-            ),
-        ],
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            size: 24,
+            color: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context, false),
+        ),
       ),
       body: Column(
         children: [
-          // Header Info
-          _buildHeaderInfo(),
-          
-          // Divider
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: _showHeader ? _buildHeaderInfo() : const SizedBox.shrink(),
+          ),
           const Divider(height: 1),
-          
-          // Bulk Input Section
           if (_showBulkInput)
             _buildBulkInputSection(),
-          
-          // Users List
+          // Scrollable content area
           Expanded(
-            child: _buildUsersList(),
+            child: _buildScrollableContent(isLoading),
           ),
+          // Fixed bottom actions
+          if (!_showBulkInput) // Only show fixed bottom when NOT in bulk import
+            _buildBottomActions(isLoading),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScrollableContent(bool isLoading) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Users list when NOT in bulk import
+          if (!_showBulkInput) _buildUsersList(),
           
-          // Bottom Actions
-          _buildBottomActions(isLoading),
+          // When in bulk import, show bottom actions here (scrollable)
+          if (_showBulkInput) 
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: _buildBottomActions(isLoading),
+            ),
         ],
       ),
     );
@@ -331,20 +352,39 @@ await virtualUserProvider.createMultipleUsers(
   Widget _buildHeaderInfo() {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: Colors.purple.withOpacity(0.08),
+      color: AppColors.primary(context).withOpacity(0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.group_add, size: 20, color: Colors.purple),
-              const SizedBox(width: 8),
-              Text(
-                'Add Multiple Virtual Members',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: Colors.purple[700],
+              Row(
+                children: [
+                  Icon(Icons.group_add, size: 20, color: AppColors.primary(context)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Add Multiple Virtual Members',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: AppColors.primary(context),
+                    ),
+                  ),
+                ],
+              ),
+              // Bulk Import button in header
+              ElevatedButton.icon(
+                onPressed: _toggleBulkInput,
+                icon: Icon(Icons.upload_file, size: 18, color: Colors.white),
+                label: const Text('Bulk Import'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -404,8 +444,14 @@ await virtualUserProvider.createMultipleUsers(
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               IconButton(
-                icon: const Icon(Icons.close, size: 20),
-                onPressed: _toggleBulkInput,
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  _bulkFocus.unfocus(); // close keyboard
+                  setState(() {
+                    _showBulkInput = false;
+                    _showHeader = true; // force header to reappear
+                  });
+                },
               ),
             ],
           ),
@@ -422,6 +468,7 @@ await virtualUserProvider.createMultipleUsers(
               borderRadius: BorderRadius.circular(8),
             ),
             child: TextField(
+              focusNode: _bulkFocus,
               controller: _bulkInputController,
               maxLines: null,
               expands: true,
@@ -433,40 +480,18 @@ await virtualUserProvider.createMultipleUsers(
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _importFromBulkInput,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.purple,
-                    side: const BorderSide(color: Colors.purple),
-                  ),
-                  child: const Text('Import Users'),
-                ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _importFromBulkInput,
+              icon: const Icon(Icons.upload_file, size: 20),
+              label: const Text('Import Users'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary(context),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    // Export current users to text
-                    final exportText = _users.map((user) {
-                      final name = user['name'] as String;
-                      final phone = user['phone'] as String? ?? '';
-                      final email = user['email'] as String? ?? '';
-                      return '$name,$phone,$email';
-                    }).join('\n');
-                    
-                    _bulkInputController.text = exportText;
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                    side: const BorderSide(color: Colors.blue),
-                  ),
-                  child: const Text('Export Current'),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -475,6 +500,8 @@ await virtualUserProvider.createMultipleUsers(
 
   Widget _buildUsersList() {
     return ListView.builder(
+      shrinkWrap: true, // Important for nested ListView
+      physics: const NeverScrollableScrollPhysics(), // Disable scrolling of nested ListView
       padding: const EdgeInsets.all(16),
       itemCount: _users.length + 1,
       itemBuilder: (context, index) {
@@ -525,7 +552,6 @@ await virtualUserProvider.createMultipleUsers(
               ],
             ),
             const SizedBox(height: 12),
-            // Name Field
             TextFormField(
               initialValue: user['name'] as String,
               decoration: const InputDecoration(
@@ -535,7 +561,6 @@ await virtualUserProvider.createMultipleUsers(
               onChanged: (value) => _updateUserField(index, 'name', value),
             ),
             const SizedBox(height: 12),
-            // Phone Field
             TextFormField(
               initialValue: user['phone'] as String? ?? '',
               decoration: const InputDecoration(
@@ -547,7 +572,6 @@ await virtualUserProvider.createMultipleUsers(
               onChanged: (value) => _updateUserField(index, 'phone', value),
             ),
             const SizedBox(height: 12),
-            // Email Field
             TextFormField(
               initialValue: user['email'] as String? ?? '',
               decoration: const InputDecoration(
@@ -570,7 +594,21 @@ await virtualUserProvider.createMultipleUsers(
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border(context))),
+        color: AppColors.background(context),
+        border: Border(
+          top: _showBulkInput 
+              ? BorderSide.none // No border when in bulk import (scrolling)
+              : BorderSide(color: AppColors.border(context)),
+        ),
+        boxShadow: _showBulkInput
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         children: [
@@ -597,7 +635,7 @@ await virtualUserProvider.createMultipleUsers(
               ElevatedButton.icon(
                 onPressed: validCount > 0 && !isLoading ? _createVirtualUsers : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
+                  backgroundColor: AppColors.primary(context),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),

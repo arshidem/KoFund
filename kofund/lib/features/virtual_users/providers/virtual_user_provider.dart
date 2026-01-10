@@ -32,151 +32,154 @@ class VirtualUserProvider extends ChangeNotifier {
   
   VirtualUserProvider(this._service);
   // ==================== BULK CREATION METHODS ====================
-  
-  /// Create multiple virtual users at once
-  Future<void> createMultipleUsers(
-    String communityId,
-    String adminUid,
-    List<Map<String, dynamic>> users,
-  ) async {
-    _isLoading = true;
-    _errorMessages.clear();
-    _successfulCreations = 0;
-    notifyListeners();
+/// Create multiple virtual users at once
+Future<void> createMultipleUsers(
+  String communityId,
+  String adminUid,
+  String adminName, // Add this parameter
+  List<Map<String, dynamic>> users,
+) async {
+  _isLoading = true;
+  _errorMessages.clear();
+  _successfulCreations = 0;
+  notifyListeners();
 
-    try {
-      // Prepare data in the format your service expects
-      final usersData = <Map<String, dynamic>>[];
+  try {
+    // Prepare data in the format your service expects
+    final usersData = <Map<String, dynamic>>[];
+    
+    for (int i = 0; i < users.length; i++) {
+      final user = users[i];
+      final name = user['name'] as String?;
+      final phone = user['phone'] as String? ?? '';
+      final email = user['email'] as String? ?? '';
+
+      // Validation
+      if (name == null || name.trim().isEmpty) {
+        _errorMessages.add('User ${i + 1}: Name is required');
+        continue;
+      }
       
-      for (int i = 0; i < users.length; i++) {
-        final user = users[i];
-        final name = user['name'] as String?;
-        final phone = user['phone'] as String? ?? '';
-        final email = user['email'] as String? ?? '';
-
-        // Validation
-        if (name == null || name.trim().isEmpty) {
-          _errorMessages.add('User ${i + 1}: Name is required');
-          continue;
-        }
-        
-        if (name.length < 2) {
-          _errorMessages.add('User ${i + 1}: Name must be at least 2 characters');
-          continue;
-        }
-        
-        if (phone.isNotEmpty && !_isValidPhoneNumber(phone)) {
-          _errorMessages.add('User ${i + 1}: Invalid phone number format');
-          continue;
-        }
-        
-        if (email.isNotEmpty && !_isValidEmail(email)) {
-          _errorMessages.add('User ${i + 1}: Invalid email format');
-          continue;
-        }
-
-        usersData.add({
-          'name': name.trim(),
-          'phone': phone.isNotEmpty ? phone : null,
-          'email': email.isNotEmpty ? email : null,
-        });
+      if (name.length < 2) {
+        _errorMessages.add('User ${i + 1}: Name must be at least 2 characters');
+        continue;
+      }
+      
+      if (phone.isNotEmpty && !_isValidPhoneNumber(phone)) {
+        _errorMessages.add('User ${i + 1}: Invalid phone number format');
+        continue;
+      }
+      
+      if (email.isNotEmpty && !_isValidEmail(email)) {
+        _errorMessages.add('User ${i + 1}: Invalid email format');
+        continue;
       }
 
-      if (_errorMessages.isNotEmpty) {
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      if (usersData.isEmpty) {
-        _errorMessages.add('No valid users to create');
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      // Call the service method
-      final createdUsers = await _service.createMultipleVirtualUsers(
-        communityId: communityId,
-        adminUid: adminUid,
-        usersData: usersData,
-      );
-      
-      _successfulCreations = createdUsers.length;
-      _virtualUsers.addAll(createdUsers);
-      
-    } catch (e) {
-      _errorMessages.add('Failed to create users: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      usersData.add({
+        'name': name.trim(),
+        'phone': phone.isNotEmpty ? phone : null,
+        'email': email.isNotEmpty ? email : null,
+      });
     }
-  }
-  
-  /// Alternative: Create single virtual user
-  Future<bool> createVirtualUser({
-    required String displayName,
-    required String communityId,
-    required String adminUid,
-    String? phoneNumber,
-    String? email,
-  }) async {
-    _isLoading = true;
-    _errorMessages.clear();
-    notifyListeners();
 
-    try {
-      // Validate inputs
-      if (displayName.trim().isEmpty) {
-        _errorMessages.add('Display name is required');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (displayName.length < 2) {
-        _errorMessages.add('Display name must be at least 2 characters');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (phoneNumber != null && phoneNumber.isNotEmpty && !_isValidPhoneNumber(phoneNumber)) {
-        _errorMessages.add('Invalid phone number format');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      
-      if (email != null && email.isNotEmpty && !_isValidEmail(email)) {
-        _errorMessages.add('Invalid email format');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // Call the service method
-      final user = await _service.createVirtualUser(
-        communityId: communityId,
-        displayName: displayName.trim(),
-        adminUid: adminUid,
-        phoneNumber: phoneNumber?.trim(),
-        email: email?.trim(),
-      );
-      
-      _successfulCreations++;
-      _virtualUsers.add(user);
+    if (_errorMessages.isNotEmpty) {
       _isLoading = false;
       notifyListeners();
-      return true;
-      
-    } catch (e) {
-      _errorMessages.add('Failed to create user: $e');
+      return;
+    }
+
+    if (usersData.isEmpty) {
+      _errorMessages.add('No valid users to create');
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    // Call the service method - pass adminName
+    final createdUsers = await _service.createMultipleVirtualUsers(
+      communityId: communityId,
+      adminUid: adminUid,
+      adminName: adminName, // Pass admin name here
+      usersData: usersData,
+    );
+    
+    _successfulCreations = createdUsers.length;
+    _virtualUsers.addAll(createdUsers);
+    
+  } catch (e) {
+    _errorMessages.add('Failed to create users: $e');
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+
+/// Alternative: Create single virtual user
+Future<bool> createVirtualUser({
+  required String displayName,
+  required String communityId,
+  required String adminUid,
+  required String adminName, // Add this parameter
+  String? phoneNumber,
+  String? email,
+}) async {
+  _isLoading = true;
+  _errorMessages.clear();
+  notifyListeners();
+
+  try {
+    // Validate inputs
+    if (displayName.trim().isEmpty) {
+      _errorMessages.add('Display name is required');
       _isLoading = false;
       notifyListeners();
       return false;
     }
+    
+    if (displayName.length < 2) {
+      _errorMessages.add('Display name must be at least 2 characters');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+    
+    if (phoneNumber != null && phoneNumber.isNotEmpty && !_isValidPhoneNumber(phoneNumber)) {
+      _errorMessages.add('Invalid phone number format');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+    
+    if (email != null && email.isNotEmpty && !_isValidEmail(email)) {
+      _errorMessages.add('Invalid email format');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+
+    // Call the service method - pass adminName
+    final user = await _service.createVirtualUser(
+      communityId: communityId,
+      displayName: displayName.trim(),
+      adminUid: adminUid,
+      adminName: adminName, // Pass admin name here
+      phoneNumber: phoneNumber?.trim(),
+      email: email?.trim(),
+    );
+    
+    _successfulCreations++;
+    _virtualUsers.add(user);
+    _isLoading = false;
+    notifyListeners();
+    return true;
+    
+  } catch (e) {
+    _errorMessages.add('Failed to create user: $e');
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
+}
   
 
    Future<bool> editVirtualUser({
