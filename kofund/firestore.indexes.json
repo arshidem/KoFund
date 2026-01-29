@@ -212,6 +212,52 @@
         { "fieldPath": "isVirtualUser", "order": "ASCENDING" },
         { "fieldPath": "displayName", "order": "ASCENDING" }
       ]
+    },
+     {
+      "collectionGroup": "deleted_contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "communityId", "order": "ASCENDING"},
+        {"fieldPath": "deletedAt", "order": "DESCENDING"}
+      ]
+    },
+    
+    {
+      "collectionGroup": "deleted_contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "communityId", "order": "ASCENDING"},
+        {"fieldPath": "deletedAt", "order": "DESCENDING"}
+      ]
+    },
+    
+    {
+      "collectionGroup": "deleted_contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "deletedAt", "order": "DESCENDING"}
+      ]
+    },
+    
+    {
+      "collectionGroup": "deleted_contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "ttlExpiresAt", "order": "ASCENDING"},
+        {"fieldPath": "isRestored", "order": "ASCENDING"}
+      ]
+    },
+      {
+      "collectionGroup": "deleted_contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "isRestored", "order": "ASCENDING"},
+        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "deletedAt", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
     }
 
   ],

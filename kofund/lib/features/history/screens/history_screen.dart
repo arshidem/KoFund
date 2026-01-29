@@ -3123,95 +3123,142 @@ Future<String> _getUserName(String userId, BuildContext context) async {
 
   // =================== COMMON ACTIONS ===================
 
-  Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text(
-          'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
+Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirm Delete'),
+      content: Text(
+        'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
       ),
-    );
-
-    if (confirmed == true) {
-      try {
-        if (item.type == HistoryItemType.contribution) {
-          // For contributions: Clean the ID if needed
-          String contributionId = item.id;
-          
-          // DEBUG: Check what ID we have
-          debugPrint('🔍 Original contribution ID from item: $contributionId');
-          
-          // Check if we need to clean the ID
-          if (contributionId.startsWith('contrib_')) {
-            contributionId = contributionId.substring(8); // Remove 'contrib_' prefix
-            debugPrint('🔄 Cleaned contribution ID: $contributionId');
-          }
-          
-          final provider = context.read<ContributionProvider>();
-          await provider.deleteContribution(contributionId);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Contribution deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-        } else if (item.type == HistoryItemType.expense) {
-          // For expenses: Clean the ID if needed
-          String expenseId = item.id;
-          
-          // DEBUG: Check what ID we have
-          debugPrint('🔍 Original expense ID from item: $expenseId');
-          
-          // Check if we need to clean the ID
-          if (expenseId.startsWith('expense_')) {
-            expenseId = expenseId.substring(8); // Remove 'expense_' prefix
-            debugPrint('🔄 Cleaned expense ID: $expenseId');
-          }
-          
-          final expenseProvider = context.read<ExpenseProvider>();
-          await expenseProvider.deleteExpense(expenseId);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Expense deleted successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        
-        // Close bottom sheet
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        }
-        
-      } catch (e) {
-        debugPrint('❌ Error deleting item: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete: ${e.toString()}'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    try {
+      if (item.type == HistoryItemType.contribution) {
+        // For contributions: Clean the ID if needed
+        String contributionId = item.id;
+        
+        // DEBUG: Check what ID we have
+        debugPrint('🔍 Original contribution ID from item: $contributionId');
+        
+        // Check if we need to clean the ID
+        if (contributionId.startsWith('contrib_')) {
+          contributionId = contributionId.substring(8); // Remove 'contrib_' prefix
+          debugPrint('🔄 Cleaned contribution ID: $contributionId');
+        }
+        
+        final provider = context.read<ContributionProvider>();
+        
+        // ✅ FIX: Ask for delete reason
+        final reason = await _showDeleteReasonDialog(context, 'contribution');
+        if (reason == null) return; // User cancelled
+        
+        // ✅ FIX: Now call with 2 parameters
+        await provider.deleteContribution(contributionId, reason);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contribution deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+      } else if (item.type == HistoryItemType.expense) {
+        // For expenses: Clean the ID if needed
+        String expenseId = item.id;
+        
+        // DEBUG: Check what ID we have
+        debugPrint('🔍 Original expense ID from item: $expenseId');
+        
+        // Check if we need to clean the ID
+        if (expenseId.startsWith('expense_')) {
+          expenseId = expenseId.substring(8); // Remove 'expense_' prefix
+          debugPrint('🔄 Cleaned expense ID: $expenseId');
+        }
+        
+        final expenseProvider = context.read<ExpenseProvider>();
+        await expenseProvider.deleteExpense(expenseId);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Expense deleted successfully'),
+            backgroundColor: Colors.green,
           ),
         );
       }
+      
+      // Close bottom sheet
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Error deleting item: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+}
+
+// ✅ ADD THIS HELPER METHOD
+Future<String?> _showDeleteReasonDialog(BuildContext context, String itemType) async {
+  final reasonController = TextEditingController();
+  
+  return await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Delete $itemType'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Please provide a reason for deleting this $itemType:'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: reasonController,
+            decoration: const InputDecoration(
+              hintText: 'Enter reason...',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final reason = reasonController.text.trim();
+            Navigator.pop(context, reason.isNotEmpty ? reason : 'Deleted from history screen');
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+}
 
   // =================== HELPER METHODS ===================
 

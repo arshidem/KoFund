@@ -30,7 +30,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   bool _isInitializing = true;
-  String _status = 'Starting app...';
+  String _status = '';
   String? _pendingInviteCode;
 
   @override

@@ -432,19 +432,46 @@ Stream<Map<String, dynamic>> streamProgramFinancialSummary(String programId) {
   }
 
   // ✅ Load community programs
-  Future<void> loadCommunityPrograms(String communityId) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      _programs = await _programService.getProgramsByCommunity(communityId);
-    } catch (e) {
-      print('Error loading programs: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+// ✅ Load community programs - MODIFIED to include status sync
+Future<void> loadCommunityPrograms(String communityId) async {
+  _isLoading = true;
+  notifyListeners();
+  try {
+    // Get programs from service
+    _programs = await _programService.getProgramsByCommunity(communityId);
+    
+    // ✅ CRITICAL: SYNC STATUS FOR ALL LOADED PROGRAMS
+    for (final program in _programs) {
+      try {
+        await program.syncComputedStatusToFirestore();
+      } catch (e) {
+        print('❌ Error syncing status for program ${program.programId}: $e');
+        // Continue with other programs even if one fails
+      }
     }
+    
+  } catch (e) {
+    print('Error loading programs: $e');
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
-
+}
+// ✅ ADD THIS METHOD to your ProgramProvider class
+Future<void> syncAllProgramsStatus() async {
+  try {
+    for (final program in _programs) {
+      try {
+        await program.syncComputedStatusToFirestore();
+      } catch (e) {
+        print('❌ Error syncing status for program ${program.programId}: $e');
+      }
+    }
+    print('✅ Program status sync completed for ${_programs.length} programs');
+  } catch (e) {
+    print('❌ Error in syncAllProgramsStatus: $e');
+  }
+}
   // ✅ Join program - UPDATED for monthly payment program
   Future<void> joinProgram(
     ProgramModel program,

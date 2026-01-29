@@ -248,7 +248,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
 // Program carousel with wider cards
 // Program carousel with wider cards - UPDATE THE HEIGHT
 SizedBox(
-  height: 280, // Keep this or reduce slightly to 310 if needed
+  height: 310, // Keep this or reduce slightly to 310 if needed
   child: PageView.builder(
     controller: _pageController,
     itemCount: activePrograms.length,

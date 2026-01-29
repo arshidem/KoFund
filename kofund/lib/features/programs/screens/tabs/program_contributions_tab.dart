@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/program_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
+import '../../../contributions/screens/program_deleted_contributions_screen.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -463,65 +464,123 @@ Widget _buildSkeletonLoader(BuildContext context) {
 }
 
 
-  Widget _buildSearchFilterBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search contributions...',
-                hintStyle: TextStyle(
-                  color: AppColors.textTertiary(context),
-                  fontSize: 13,
+Widget _buildSearchFilterBar(BuildContext context) {
+  final isAdmin = _isAdmin(context);
+  
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+    child: Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search contributions...',
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 13,
+              ),
+              prefixIcon: Icon(
+                Icons.search,
+                color: AppColors.textSecondary(context),
+                size: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.border(context),
                 ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary(context),
-                  size: 18,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.border(context),
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppColors.border(context),
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppColors.border(context),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppColors.primary(context),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
                     width: 2,
-                  ),
                 ),
-                filled: true,
-                fillColor: AppColors.surface(context),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              ),
+              filled: true,
+              fillColor: AppColors.surface(context),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            ),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 13,
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        
+        const SizedBox(width: 8),
+        
+        Container(
+          width: 120,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: AppColors.border(context),
+            ),
+            borderRadius: BorderRadius.circular(12),
+            color: AppColors.surface(context),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _filterMethod,
+              isExpanded: true,
+              icon: Icon(
+                Icons.filter_list,
+                color: AppColors.textSecondary(context),
+                size: 18,
               ),
               style: TextStyle(
                 color: AppColors.textPrimary(context),
-                fontSize: 13,
+                fontSize: 12,
               ),
+              dropdownColor: AppColors.card(context),
+              items: const [
+                DropdownMenuItem(
+                  value: 'all', 
+                  child: Text('All Methods'),
+                ),
+                DropdownMenuItem(
+                  value: 'cash', 
+                  child: Text('Cash'),
+                ),
+                DropdownMenuItem(
+                  value: 'online', 
+                  child: Text('Online'),
+                ),
+                DropdownMenuItem(
+                  value: 'upi', 
+                  child: Text('UPI'),
+                ),
+                DropdownMenuItem(
+                  value: 'bank_transfer', 
+                  child: Text('Bank'),
+                ),
+              ],
               onChanged: (value) {
                 setState(() {
-                  _searchQuery = value;
+                  _filterMethod = value!;
                 });
               },
             ),
           ),
-          
+        ),
+        
+        // ✅ ADD THIS: Deleted Contributions Button (Only for Admin)
+        if (isAdmin) ...[
           const SizedBox(width: 8),
-          
           Container(
-            width: 120,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               border: Border.all(
                 color: AppColors.border(context),
@@ -529,55 +588,37 @@ Widget _buildSkeletonLoader(BuildContext context) {
               borderRadius: BorderRadius.circular(12),
               color: AppColors.surface(context),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _filterMethod,
-                isExpanded: true,
-                icon: Icon(
-                  Icons.filter_list,
-                  color: AppColors.textSecondary(context),
-                  size: 18,
-                ),
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 12,
-                ),
-                dropdownColor: AppColors.card(context),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'all', 
-                    child: Text('All Methods'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'cash', 
-                    child: Text('Cash'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'online', 
-                    child: Text('Online'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'upi', 
-                    child: Text('UPI'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'bank_transfer', 
-                    child: Text('Bank'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _filterMethod = value!;
-                  });
-                },
+            child: IconButton(
+              onPressed: () => _navigateToProgramDeletedContributions(context),
+              icon: Icon(
+                Icons.delete_outline,
+                color: AppColors.error(context),
+                size: 18,
+              ),
+              tooltip: 'View Deleted Contributions',
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
               ),
             ),
           ),
         ],
+      ],
+    ),
+  );
+}
+void _navigateToProgramDeletedContributions(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ProgramDeletedContributionsScreen(
+        programId: widget.program.programId,
+        programName: widget.program.title,
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildContributionCard(ContributionModel contribution, BuildContext context, bool showMenu) {
     return Column(
       children: [
@@ -1853,26 +1894,71 @@ Future<void> _generateReceipt(
     );
   }
 
-  void _deleteContribution(ContributionModel contribution, BuildContext context) async {
-    try {
-      final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
-      await contributionProvider.deleteContribution(contribution.contributionId);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Contribution deleted successfully!'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete contribution: $e'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
-    }
+// Update line 1899:
+void _deleteContribution(ContributionModel contribution, BuildContext context) async {
+  try {
+    final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
+    
+    // Show reason dialog first
+    final reason = await _showDeleteReasonDialog(context);
+    if (reason == null || reason.isEmpty) return; // User cancelled
+    
+    await contributionProvider.deleteContribution(
+      contribution.contributionId,
+      reason, // Add this parameter
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Contribution deleted successfully!'),
+        backgroundColor: AppColors.success(context),
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Failed to delete contribution: $e'),
+        backgroundColor: AppColors.error(context),
+      ),
+    );
   }
+}
+
+// Add this helper method
+Future<String?> _showDeleteReasonDialog(BuildContext context) async {
+  final reasonController = TextEditingController();
+  
+  return await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Delete Contribution'),
+      content: TextField(
+        controller: reasonController,
+        decoration: InputDecoration(
+          hintText: 'Enter reason for deletion...',
+          border: OutlineInputBorder(),
+        ),
+        maxLines: 3,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final reason = reasonController.text.trim();
+            if (reason.isNotEmpty) {
+              Navigator.pop(context, reason);
+            }
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: Text('Delete'),
+        ),
+      ],
+    ),
+  );
+}
 
   String _formatPaymentMethod(String method) {
     switch (method) {

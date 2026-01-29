@@ -1,9 +1,11 @@
 // lib/features/contributions/providers/contribution_provider.dart
 import 'package:flutter/material.dart';
 import '../../../core/services/contribution_service.dart';
+import '../../../core/services/deleted_contribution_service.dart';
 import '../models/contribution_model.dart';
+import '../models/deleted_contribution_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
   // Cache entry class
   class CacheEntry {
@@ -15,6 +17,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ContributionProvider with ChangeNotifier {
   final ContributionService _contributionService = ContributionService();
+  final DeletedContributionService _deletedContributionService = DeletedContributionService();
  final Map<String, CacheEntry> _cache = {}; // Simplified cache structure
   final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Add this
   List<ContributionModel> _contributions = [];
@@ -252,24 +255,122 @@ Future<void> updateContribution(
     }
   }
 
-  // Delete contribution
-  Future<void> deleteContribution(String contributionId) async {
-    try {
-      // Get contribution details before deletion to clear correct cache
-      final contribution = await getContributionById(contributionId);
-      
-      await _contributionService.deleteContribution(contributionId);
-      
-      // Clear relevant cache if we have contribution details
-      if (contribution != null) {
-        clearCacheForUser(contribution.programId, contribution.userId);
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      rethrow;
+Future<void> deleteContribution(String contributionId, String reason) async {
+  try {
+    _isLoading = true;
+    notifyListeners();
+    
+    print('🔄 Starting secure deletion for: $contributionId');
+    
+    // 1. Get current user (admin)
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not authenticated');
     }
+    
+    // 2. Get contribution details
+    final contribution = await getContributionById(contributionId);
+    if (contribution == null) {
+      throw Exception('Contribution not found');
+    }
+    
+    print('📋 Found contribution: ${contribution.contributionId} for user: ${contribution.userId}');
+    
+    // 3. Get admin user info (you might need to fetch from users collection)
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+    
+    final adminName = userDoc.data()?['displayName'] ?? 'Admin';
+    
+    // 4. Move to deleted_contributions collection
+    await _deletedContributionService.moveToDeletedContributions(
+      contribution: contribution,
+      adminId: currentUser.uid,
+      adminName: adminName,
+      reason: reason,
+    );
+    
+    // 5. Clear relevant cache
+    clearCacheForUser(contribution.programId, contribution.userId);
+    
+    // 6. Remove from local lists
+    _removeContributionFromLists(contributionId);
+    
+    print('✅ Contribution securely deleted and archived');
+    
+  } catch (e) {
+    print('❌ Error in deleteContribution: $e');
+    rethrow;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
+
+// 🔹 NEW: Helper method to remove from local lists
+void _removeContributionFromLists(String contributionId) {
+  _contributions.removeWhere((c) => c.contributionId == contributionId);
+  _userContributions.removeWhere((c) => c.contributionId == contributionId);
+  _communityContributions.removeWhere((c) => c.contributionId == contributionId);
+}
+
+// 🔹 NEW: Get deleted contributions for current user
+Stream<List<DeletedContributionModel>> getMyDeletedContributions(String communityId) {
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  if (currentUserId == null) {
+    return Stream.value([]);
+  }
+  
+  return _deletedContributionService.getUserDeletedContributions(
+    userId: currentUserId,
+    communityId: communityId,
+  );
+}
+
+// 🔹 NEW: Get all deleted contributions (admin only)
+Stream<List<DeletedContributionModel>> getAllDeletedContributions(String communityId) {
+  return _deletedContributionService.getAllDeletedContributions(
+    communityId: communityId,
+  );
+}
+
+// 🔹 NEW: Restore a deleted contribution
+Future<void> restoreDeletedContribution({
+  required String deletedRecordId,
+  required String adminName,
+}) async {
+  try {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not authenticated');
+    }
+    
+    await _deletedContributionService.restoreDeletedContribution(
+      deletedRecordId: deletedRecordId,
+      adminId: currentUser.uid,
+      adminName: adminName,
+    );
+    
+    notifyListeners();
+    
+  } catch (e) {
+    print('❌ Error restoring contribution: $e');
+    rethrow;
+  }
+}
+
+// 🔹 NEW: Check if user has deleted contributions
+Future<bool> hasDeletedContributions(String communityId) async {
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  if (currentUserId == null) return false;
+  
+  return await _deletedContributionService.hasDeletedContributions(
+    userId: currentUserId,
+    communityId: communityId,
+  );
+}
 
   // ✅ REMOVED: bulkMarkPayments (not needed - all contributions are completed)
 

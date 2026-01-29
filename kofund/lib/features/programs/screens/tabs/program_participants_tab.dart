@@ -1832,11 +1832,15 @@ Future<void> _togglePaymentStatus(
         await _removeContributions(
           contributionProvider: contributionProvider,
           scaffoldMessenger: scaffoldMessenger,
+          context: context, // ✅ ADDED: Required parameter
           programId: programId,
           userId: participant.userId,
           participantName: participant.userName,
           monthId: _selectedMonth,
           isMonthlyProgram: true,
+          reason: totalPaid > suggestedAmount 
+            ? 'Marking as pending: Overpaid for ${_formatMonthDisplay(_selectedMonth!)}' 
+            : 'Marking as pending: Fully paid for ${_formatMonthDisplay(_selectedMonth!)}', // ✅ ADDED: Required parameter
         );
       } else {
         // ⚠️ Not fully paid → add remaining amount
@@ -1873,11 +1877,15 @@ Future<void> _togglePaymentStatus(
       await _removeContributions(
         contributionProvider: contributionProvider,
         scaffoldMessenger: scaffoldMessenger,
+        context: context, // ✅ ADDED: Required parameter
         programId: programId,
         userId: participant.userId,
         participantName: participant.userName,
         monthId: null,
         isMonthlyProgram: false,
+        reason: totalPaid > suggestedAmount 
+          ? 'Marking as pending: Overpaid' 
+          : 'Marking as pending: Fully paid', // ✅ ADDED: Required parameter
       );
     } else {
       // ⚠️ Not fully paid → add remaining amount to reach full payment
@@ -1920,6 +1928,8 @@ Future<void> _togglePaymentStatus(
     debugPrint('🔧 _togglePaymentStatus: finished for ${participant.userName}');
   }
 }
+
+
 
 // Update your UI button logic to always show "Mark as Pending" until fully paid
 Widget _buildPaymentButton(ParticipantModel participant) {
@@ -2016,11 +2026,13 @@ Future<void> _createContribution({
 Future<void> _removeContributions({
   required ContributionProvider contributionProvider,
   required ScaffoldMessengerState scaffoldMessenger,
+  required BuildContext context, // Added for dialog if needed
   required String programId,
   required String userId,
   required String participantName,
   required String? monthId,
   required bool isMonthlyProgram,
+  required String reason, // ✅ ADDED: Reason parameter
 }) async {
   try {
     // Get fresh contributions
@@ -2048,9 +2060,9 @@ Future<void> _removeContributions({
     
     debugPrint('🔧 _removeContributions: deleting ${contributionsToDelete.length} contributions');
     
-    // Delete all identified contributions
+    // Delete all identified contributions with reason
     for (final contributionId in contributionsToDelete) {
-      await contributionProvider.deleteContribution(contributionId);
+      await contributionProvider.deleteContribution(contributionId, reason); // ✅ ADDED reason parameter
     }
     
     // Clear cache after deletion
@@ -2082,6 +2094,8 @@ Future<void> _removeContributions({
     rethrow;
   }
 }
+
+
   void _showRemoveConfirmation(ParticipantModel participant, BuildContext context) {
     showDialog(
       context: context,

@@ -59,6 +59,8 @@ dependencies {
     // 📢 Local Notifications rely on this
     implementation("com.google.android.support:wearable:2.9.0")
 
+    compileOnly("com.google.android.wearable:wearable:2.9.0")
+
     // 🟡 AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0")
 

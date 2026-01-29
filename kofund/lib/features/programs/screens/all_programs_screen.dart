@@ -98,18 +98,24 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     });
   }
 
-  Future<void> _loadPrograms() async {
-    final authProvider = context.read<AppAuthProvider>();
-    final programProvider = context.read<ProgramProvider>();
+Future<void> _loadPrograms() async {
+  final authProvider = context.read<AppAuthProvider>();
+  final programProvider = context.read<ProgramProvider>();
+  
+  if (authProvider.user?.communityId != null) {
+    await programProvider.loadCommunityPrograms(authProvider.user!.communityId!);
+    await programProvider.loadMyParticipations(
+      authProvider.user!.uid, 
+      authProvider.user!.communityId!,
+    );
     
-    if (authProvider.user?.communityId != null) {
-      await programProvider.loadCommunityPrograms(authProvider.user!.communityId!);
-      await programProvider.loadMyParticipations(
-        authProvider.user!.uid, 
-        authProvider.user!.communityId!,
-      );
-    }
+    // ✅ Call sync again to ensure it's done
+    // Use unawaited so it doesn't block the UI
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await programProvider.syncAllProgramsStatus();
+    });
   }
+}
 
   void _onRefresh() async {
     print('🔄 DEBUG: Pull to refresh triggered in Programs');

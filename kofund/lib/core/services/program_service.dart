@@ -82,63 +82,76 @@ Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
         .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
 
-    print('✅ Loaded ${programs.length} programs');
+    print('✅ Loaded ${programs.length} programs from Firestore');
     
     // 🔄 NEW: Sync status for programs that need updating
-    await _syncExpiredProgramsStatus(programs);
+    // This now returns updated programs with computed status
+    final updatedPrograms = await _syncExpiredProgramsStatus(programs);
     
-    return programs;
+    return updatedPrograms;
   } catch (e) {
     print('❌ Error in getProgramsByCommunity: $e');
     throw Exception('Failed to load programs: $e');
   }
 }
 
-// ✅ NEW: Sync expired programs status (batch update for efficiency)
-Future<void> _syncExpiredProgramsStatus(List<ProgramModel> programs) async {
+// ✅ UPDATED: Sync expired programs status and return updated programs
+Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> programs) async {
   try {
     int updatedCount = 0;
     final batch = _firestore.batch();
-    final programsToUpdate = <ProgramModel>[];
+    final updatedPrograms = <ProgramModel>[];
+    final programsToUpdateInFirestore = <ProgramModel>[];
     
-    // Identify programs that need updating
+    print('🔄 Checking status for ${programs.length} program(s)');
+    
+    // Process each program
     for (final program in programs) {
-      if (program.computedStatus != program.status) {
-        programsToUpdate.add(program);
+      // Get the computed status from ProgramModel's getter
+      final computedStatus = program.computedStatus;
+      
+      // Create updated program with computed status for memory
+      final updatedProgram = program.copyWith(status: computedStatus);
+      updatedPrograms.add(updatedProgram);
+      
+      // Check if we need to update Firestore
+      if (computedStatus != program.status) {
+        programsToUpdateInFirestore.add(program);
+        updatedCount++;
+        
+        print('   • "${program.title}": ${program.status} → $computedStatus');
       }
     }
     
-    if (programsToUpdate.isEmpty) {
-      return; // Nothing to update
-    }
-    
-    print('🔄 Found ${programsToUpdate.length} program(s) needing status update');
-    
-    // Create batch updates
-    for (final program in programsToUpdate) {
-      final programRef = _firestore
-          .collection('programs')
-          .doc(program.programId);
+    // Batch update Firestore for programs that changed
+    if (programsToUpdateInFirestore.isNotEmpty) {
+      print('🔄 Found $updatedCount program(s) needing Firestore update');
       
-      batch.update(programRef, {
-        'status': program.computedStatus,
-        'updatedAt': Timestamp.now(),
-      });
-      updatedCount++;
+      for (final program in programsToUpdateInFirestore) {
+        final programRef = _firestore
+            .collection('programs')
+            .doc(program.programId);
+        
+        batch.update(programRef, {
+          'status': program.computedStatus, // Use computed status
+          'updatedAt': Timestamp.now(),
+        });
+      }
       
-      print('   • "${program.title}": ${program.status} → ${program.computedStatus}');
-    }
-    
-    // Commit batch if there are updates
-    if (updatedCount > 0) {
       print('🔄 Committing batch update for $updatedCount program(s)...');
       await batch.commit();
-      print('✅ Successfully synced $updatedCount program(s)');
+      print('✅ Successfully updated $updatedCount program(s) in Firestore');
+    } else {
+      print('✅ All programs already have correct status in Firestore');
     }
+    
+    // Return the updated programs (with computed status in memory)
+    return updatedPrograms;
     
   } catch (e) {
     print('⚠️ Error syncing program status: $e');
-    // Don't rethrow - this is a background sync that shouldn't break the main flow
+    // If sync fails, return original programs as fallback
+    return programs;
   }
 }
   // -------------------------------------------------------------

@@ -62,6 +62,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  try {
+    await validateFirebaseConfig();
+    print('✅ Firebase config validated successfully');
+  } catch (e) {
+    print('❌ Firebase config error: $e');
+    // Consider showing an error screen instead of crashing
+  }
   // Set portrait orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -116,7 +123,25 @@ void main() async {
     debugPrint('📌 Stack: $stackTrace');
   });
 }
-
+// In main.dart - Add a Firebase config validation
+Future<void> validateFirebaseConfig() async {
+  try {
+    final options = DefaultFirebaseOptions.currentPlatform;
+    
+    debugPrint('📱 Platform: ${Theme.of(navigatorKey.currentContext!).platform}');
+    debugPrint('🔥 Firebase App ID: ${options.appId}');
+    debugPrint('🌐 Project ID: ${options.projectId}');
+    debugPrint('🔑 API Key: ${options.apiKey}');
+    
+    // Validate required fields
+    if (options.appId.isEmpty || options.projectId.isEmpty) {
+      throw Exception('Firebase configuration is incomplete');
+    }
+  } catch (e) {
+    debugPrint('❌ Firebase config validation failed: $e');
+    rethrow;
+  }
+}
 // =============================
 // 🔰 AdMob Initialization
 // =============================

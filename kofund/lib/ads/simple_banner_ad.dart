@@ -13,7 +13,7 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
   bool _isLoaded = false;
 
   // 🔥 CHANGE THIS TO GOOGLE'S TEST AD UNIT ID
-  final adUnitId = 'ca-app-pub-3940256099942544/6300978111'; // TEST ID
+  final adUnitId = 'ca-app-pub-5527433846571653/3489282899'; // TEST ID
 
   @override
   void initState() {
