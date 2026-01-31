@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  clipboard
   cloud_firestore
   connectivity_plus
   firebase_auth

@@ -233,8 +233,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
+color: Color(Colors.blue.value).withOpacity(0.1),                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               'Current',
@@ -414,8 +413,8 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: hasPaid 
-                      ? Colors.green.withOpacity(0.1) 
-                      : Colors.red.withOpacity(0.1),
+                      ? Color(Colors.green.value).withOpacity(0.1) 
+                      : Color(Colors.red.value).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: hasPaid ? Colors.green : Colors.red,

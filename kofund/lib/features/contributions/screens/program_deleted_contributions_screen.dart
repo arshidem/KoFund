@@ -209,7 +209,7 @@ String _formatTime(DateTime date) {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.1),
+                                      color: Color(Colors.red.value).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -490,7 +490,7 @@ String _formatTime(DateTime date) {
                                     ),
                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                     elevation: 4,
-                                    shadowColor: Colors.green.withOpacity(0.3),
+                                    shadowColor: Color(Colors.green.value).withOpacity(0.3),
                                   ),
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,

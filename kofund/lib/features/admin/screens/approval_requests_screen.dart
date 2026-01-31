@@ -747,10 +747,10 @@ class _MemberCard extends StatelessWidget {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
+                                      color: Color(Colors.blue.value).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
-                                        color: Colors.blue.withOpacity(0.3),
+                                        color: Color(Colors.blue.value).withOpacity(0.3),
                                       ),
                                     ),
                                     child: Text(

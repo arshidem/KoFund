@@ -499,7 +499,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isMonthly 
-                              ? Colors.green.withOpacity(0.1)
+                              ? Color(Colors.green.value).withOpacity(0.1)
                               : Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -595,7 +595,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _isMonthlyProgram 
-                      ? Colors.green.withOpacity(0.1)
+                      ? Color(Colors.green.value).withOpacity(0.1)
                       : Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),

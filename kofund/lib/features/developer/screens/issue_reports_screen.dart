@@ -120,8 +120,7 @@ Map<String, Color> _statusColors = {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+color: Color(Colors.blue.value).withOpacity(0.1),                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue),
                   ),
                   child: Text(
@@ -311,8 +310,7 @@ Map<String, Color> _statusColors = {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+color: Color(Colors.blue.value).withOpacity(0.1),                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.blue),
                     ),
                     child: Text(issue.type.toUpperCase(), style: const TextStyle(color: Colors.blue)),

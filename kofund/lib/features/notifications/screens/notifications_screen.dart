@@ -116,7 +116,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (hasActiveFilters)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.blue.withOpacity(0.1),
+color: Color(Colors.blue.value).withOpacity(0.1),
                   child: Row(
                     children: [
                       const Icon(Icons.filter_alt, size: 16, color: Colors.blue),
@@ -527,8 +527,7 @@ class NotificationTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
+color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   notification.communityId!.substring(0, 6) + '...',

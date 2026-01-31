@@ -58,8 +58,7 @@ Widget _buildInviteBanner() {
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-      color: Colors.blue.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
+color: Color(Colors.blue.value).withOpacity(0.1),      borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
       children: [
@@ -862,9 +861,9 @@ Widget _buildTermsCheckbox() {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Color(Colors.red.value).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
@@ -891,9 +890,9 @@ Widget _buildTermsCheckbox() {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Color(Colors.red.value).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [

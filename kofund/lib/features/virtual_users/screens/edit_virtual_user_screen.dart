@@ -1,11 +1,12 @@
 // lib/features/virtual_users/screens/edit_virtual_user_screen.dart
+// FIXED VERSION
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
-import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'package:kofund/core/services/virtual_user_service.dart';
+// ❌ REMOVE UNUSED IMPORT: import 'package:kofund/features/auth/providers/app_auth_provider.dart';
+// ❌ REMOVE UNUSED IMPORT: import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
@@ -55,68 +56,62 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
     });
   }
 
-// In lib/features/virtual_users/screens/edit_virtual_user_screen.dart
-// Update the _updateVirtualUser method:
-
-// In edit_virtual_user_screen.dart, update the _updateVirtualUser method:
-
-Future<void> _updateVirtualUser() async {
-  if (!_formKey.currentState!.validate()) return;
-  
-  setState(() => _isLoading = true);
-  
-  try {
-    // Get the provider from context
-    final virtualUserProvider = Provider.of<VirtualUserProvider>(context, listen: false);
+  Future<void> _updateVirtualUser() async {
+    if (!_formKey.currentState!.validate()) return;
     
-    final success = await virtualUserProvider.editVirtualUser(
-      userId: widget.virtualUser.uid,
-      displayName: _displayNameController.text.trim(),
-      phoneNumber: _phoneNumberController.text.trim().isEmpty 
-          ? null 
-          : _phoneNumberController.text.trim(),
-      email: widget.virtualUser.email, // Keep original email
-    );
+    setState(() => _isLoading = true);
     
-    if (success) {
-      // Show success message
-      if (mounted) {
-        SnackbarHelper.showSuccess(
-          context, 
-          'Virtual user updated successfully'
-        );
-        Navigator.pop(context, true);
+    try {
+      // Get the provider from context
+      final virtualUserProvider = Provider.of<VirtualUserProvider>(context, listen: false);
+      
+      final success = await virtualUserProvider.editVirtualUser(
+        userId: widget.virtualUser.uid,
+        displayName: _displayNameController.text.trim(),
+        phoneNumber: _phoneNumberController.text.trim().isEmpty 
+            ? null 
+            : _phoneNumberController.text.trim(),
+        email: widget.virtualUser.email, // Keep original email
+      );
+      
+      if (success) {
+        // Show success message
+        if (mounted) {
+          SnackbarHelper.showSuccess(
+            context, 
+            'Virtual user updated successfully'
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        final error = virtualUserProvider.editError;
+        if (mounted && error != null) {
+          SnackbarHelper.showError(
+            context, 
+            error
+          );
+        }
       }
-    } else {
-      final error = virtualUserProvider.editError;
-      if (mounted && error != null) {
+    } catch (e) {
+      if (mounted) {
         SnackbarHelper.showError(
           context, 
-          error
+          'Failed to update virtual user: $e'
         );
       }
-    }
-  } catch (e) {
-    if (mounted) {
-      SnackbarHelper.showError(
-        context, 
-        'Failed to update virtual user: $e'
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-            toolbarHeight: 80, // Set your desired height here (default is 56)
-
+        toolbarHeight: 80,
         title: const Text(
           'Edit Virtual User',
           style: TextStyle(
@@ -169,9 +164,10 @@ Future<void> _updateVirtualUser() async {
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.1),
+                    // ✅ FIXED: Replace .withOpacity() with Color.fromRGBO()
+                    color: Color.fromRGBO(128, 0, 128, 0.1), // Colors.purple.withOpacity(0.1)
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                    border: Border.all(color: Color.fromRGBO(128, 0, 128, 0.3)), // Colors.purple.withOpacity(0.3)
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +276,8 @@ Future<void> _updateVirtualUser() async {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.05),
+                          // ✅ FIXED: Replace .withOpacity() with Color.fromRGBO()
+                          color: AppColors.primary(context).withOpacity(0.05), // Keep this one as it's already a Color property
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -365,7 +362,7 @@ Future<void> _updateVirtualUser() async {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.purple.withOpacity(0.7),
+                    color: Color.fromRGBO(128, 0, 128, 0.7), // ✅ FIXED: Colors.purple.withOpacity(0.7)
                     fontWeight: FontWeight.w500,
                   ),
                 ),

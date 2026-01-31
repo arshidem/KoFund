@@ -695,17 +695,17 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
           ),
         ),
         
-        colorScheme: const ColorScheme.light(
-          primary: AppColors.lightPrimary,
-          secondary: AppColors.lightInfo,
-          error: AppColors.lightError,
-          surface: AppColors.lightSurface,
-          background: AppColors.lightBackground,
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onSurface: AppColors.lightTextPrimary,
-          onBackground: AppColors.lightTextPrimary,
-        ),
+       colorScheme: const ColorScheme.light(
+  primary: AppColors.lightPrimary,
+  secondary: AppColors.lightInfo,
+  error: AppColors.lightError,
+  surface: AppColors.lightBackground,  // This is correct
+  // ❌ REMOVE THIS LINE: background: AppColors.lightBackground,
+  onPrimary: Colors.white,
+  onSecondary: Colors.white,
+  onSurface: AppColors.lightTextPrimary,  // This is correct
+  // ❌ REMOVE THIS LINE: onBackground: AppColors.lightTextPrimary,
+),
         
         textTheme: const TextTheme(
           bodyMedium: TextStyle(color: AppColors.lightTextPrimary),
@@ -752,17 +752,17 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
           ),
         ),
         
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.darkPrimary,
-          secondary: AppColors.darkInfo,
-          error: AppColors.darkError,
-          surface: AppColors.darkSurface,
-          background: AppColors.darkBackground,
-          onPrimary: Colors.black,
-          onSecondary: Colors.black,
-          onSurface: AppColors.darkTextPrimary,
-          onBackground: AppColors.darkTextPrimary,
-        ),
+     colorScheme: const ColorScheme.dark(
+  primary: AppColors.darkPrimary,
+  secondary: AppColors.darkInfo,
+  error: AppColors.darkError,
+  surface: AppColors.darkBackground,  // This is correct
+  // ❌ REMOVE THIS LINE: background: AppColors.darkBackground,
+  onPrimary: Colors.black,
+  onSecondary: Colors.black,
+  onSurface: AppColors.darkTextPrimary,  // This is correct
+  // ❌ REMOVE THIS LINE: onBackground: AppColors.darkTextPrimary,
+),
         
         textTheme: const TextTheme(
           bodyMedium: TextStyle(color: AppColors.darkTextPrimary),

@@ -512,7 +512,7 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
                     shape: BoxShape.circle,
                     color: isEdited 
                       ? Colors.orange.withOpacity(0.1)
-                      : Colors.green.withOpacity(0.1),
+                      : Color(Colors.green.value).withOpacity(0.1),
                   ),
                   child: Icon(
                     Icons.payments,

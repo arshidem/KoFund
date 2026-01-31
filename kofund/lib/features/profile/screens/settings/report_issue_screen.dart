@@ -469,8 +469,7 @@ GestureDetector(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+color: Color(Colors.blue.value).withOpacity(0.1),              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.list_alt,

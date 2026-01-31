@@ -326,10 +326,9 @@ Future<void> _checkForPendingInvite() async {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          shape: BoxShape.circle,
+color: Color(Colors.blue.value).withOpacity(0.1),                          shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: Color(Colors.blue.value).withOpacity(0.3),
                             width: 2,
                           ),
                         ),

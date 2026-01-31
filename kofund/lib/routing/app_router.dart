@@ -30,7 +30,6 @@ import '../features/programs/screens/create_program_screen.dart';
 // import '../features/contributions/screens/all_contribution_screen.dart';
 // import '../features/contributions/screens/update_contribution_screen.dart';
 // import '../features/contributions/screens/add_contribution_screen.dart';
-import '../features/contributions/models/contribution_model.dart';
 
 // PROFILE & SETTINGS SCREENS
 import '../features/profile/screens/profile_screen.dart';

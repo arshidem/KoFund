@@ -780,10 +780,10 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Color(Colors.red.value).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Colors.red.withOpacity(0.3),
+                        color:Color(Colors.red.value).withOpacity(0.3) ,
                       ),
                     ),
                     child: IconButton(

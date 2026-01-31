@@ -2338,9 +2338,9 @@ return AlertDialog(
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+color: Color(Colors.blue.value).withOpacity(0.1),  
+                    borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(Colors.blue.value).withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
@@ -2389,9 +2389,9 @@ return AlertDialog(
                                 margin: const EdgeInsets.only(top: 16),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
+                                  color: Color(Colors.red.value).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                                  border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
                                 ),
                                 child: Row(
                                   children: const [

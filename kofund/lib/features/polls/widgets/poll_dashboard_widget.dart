@@ -677,7 +677,7 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: daysLeft <= 1
-                            ? Colors.red.withOpacity(0.1)
+                            ? Color(Colors.red.value).withOpacity(0.1)
                             : widget.isDarkMode
                                 ? Colors.grey[800]
                                 : Colors.grey[200],

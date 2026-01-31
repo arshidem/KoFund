@@ -241,8 +241,7 @@ Future<void> _loadDevelopers() async {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue, width: 1),
                 ),
                 child: Text(
@@ -261,8 +260,7 @@ Future<void> _loadDevelopers() async {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green, width: 1),
                 ),
                 child: Text(

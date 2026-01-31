@@ -200,7 +200,7 @@ Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async
     
     if (authProvider.isOfflineMode) {
       debugPrint("📱 OFFLINE MODE: Using cached data");
-      _updateStatus('Loading offline data...');
+      _updateStatus('');
       await Future.delayed(const Duration(milliseconds: 500));
       
       // ⭐ Offline mode: Skip email verification check entirely

@@ -250,7 +250,7 @@ Widget _buildInputField({
                   'Select program type *',
                   style: TextStyle(
                     color: _programTypeError != null 
-                        ? Colors.red.withOpacity(0.7) 
+                        ? Color(Colors.red.value).withOpacity(0.7) 
                         : AppColors.textSecondary(context),
                     fontSize: 14,
                   ),

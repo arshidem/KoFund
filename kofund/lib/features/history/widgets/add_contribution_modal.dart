@@ -490,7 +490,7 @@ Expanded(
               Icon(
                 Icons.error_outline,
                 size: 44,
-                color: Colors.red.withOpacity(0.7),
+                color: Color(Colors.red.value).withOpacity(0.7),
               ),
               const SizedBox(height: 16),
               Text(
@@ -619,7 +619,7 @@ Expanded(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isMonthly 
-                                ? Colors.green.withOpacity(0.1)
+                                ? Color(Colors.green.value).withOpacity(0.1)
                                 : AppColors.primary(context).withOpacity(0.1),
                           ),
                           child: Icon(
@@ -659,10 +659,9 @@ Expanded(
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(4),
+color: Color(Colors.green.value).withOpacity(0.1),                                          borderRadius: BorderRadius.circular(4),
                                           border: Border.all(
-                                            color: Colors.green.withOpacity(0.3),
+                                            color: Color(Colors.green.value).withOpacity(0.3),
                                             width: 1,
                                           ),
                                         ),
@@ -942,7 +941,7 @@ Container(
               Icon(
                 Icons.error_outline,
                 size: 44,
-                color: Colors.red.withOpacity(0.7),
+                color: Color(Colors.red.value).withOpacity(0.7),
               ),
               const SizedBox(height: 16),
               Text(

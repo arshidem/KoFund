@@ -256,14 +256,16 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
         ),
       );
       
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _users.clear();
-          _users.add({'name': '', 'phone': '', 'email': ''});
-        });
-        virtualUserProvider.resetCreationState();
-        Navigator.pop(context, virtualUserProvider.successfulCreations);
-      });
+    final currentContext = context; // Store context
+Future.delayed(const Duration(seconds: 1), () {
+  if (!mounted) return; // Check if widget is still mounted
+  setState(() {
+    _users.clear();
+    _users.add({'name': '', 'phone': '', 'email': ''});
+  });
+  virtualUserProvider.resetCreationState();
+  Navigator.of(currentContext).pop(virtualUserProvider.successfulCreations); // ✅ FIXED
+});
     }
   }
 
@@ -415,7 +417,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
               const SizedBox(width: 8),
               Chip(
                 label: Text('${_users.where((u) => (u['name'] as String).isNotEmpty).length} valid'),
-                backgroundColor: Colors.green.withOpacity(0.1),
+                backgroundColor: Color(Colors.green.value).withOpacity(0.1),
                 labelStyle: const TextStyle(color: Colors.green),
               ),
             ],

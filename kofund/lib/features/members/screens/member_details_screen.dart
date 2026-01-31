@@ -1070,7 +1070,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: hasPaid ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  color: hasPaid ? Color(Colors.green.value).withOpacity(0.1) : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: hasPaid ? Colors.green : Colors.orange,
@@ -1166,8 +1166,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+color: Color(Colors.green.value).withOpacity(0.1),              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               ProgramTypes.getIconData(programType),
@@ -1224,8 +1223,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
                   'PAID',
@@ -1285,8 +1283,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '₹${totalAmount.toStringAsFixed(0)}',
@@ -1337,8 +1334,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+color: Color(Colors.green.value).withOpacity(0.1),                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '+ ${contributionHistory.length - 3} more contributions',

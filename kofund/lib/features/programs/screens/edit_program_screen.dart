@@ -243,7 +243,7 @@ Widget _buildInputField({
                   'Select program type *',
                   style: TextStyle(
                     color: _programTypeError != null 
-                        ? Colors.red.withOpacity(0.7) 
+                        ? Color(Colors.red.value).withOpacity(0.7) 
                         : AppColors.textSecondary(context),
                     fontSize: 14,
                   ),
@@ -917,9 +917,8 @@ _buildInputField(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.withOpacity(0.3)),
+color: Color(Colors.green.value).withOpacity(0.1),                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(Colors.green.value).withOpacity(0.3)),
                           ),
                           child: Row(
                             children: [

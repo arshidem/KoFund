@@ -298,7 +298,7 @@ Widget _buildCommunityTypeDropdown() {
                 'Select community type *',
                 style: TextStyle(
                   color: _typeError != null 
-                      ? Colors.red.withOpacity(0.7) 
+                      ? Color(Colors.red.value).withOpacity(0.7) 
                       : AppColors.textSecondary(context),
                   fontSize: 14,
                 ),

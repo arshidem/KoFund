@@ -793,9 +793,8 @@ Widget _buildProgramCard(
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Colors.blue.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Colors.blue.withOpacity(0.3)),
+color: Color(Colors.blue.value).withOpacity(0.1),                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Color(Colors.blue.value).withOpacity(0.3)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -963,10 +962,10 @@ Widget _buildProgramCard(
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
+                                    color: Color(Colors.red.value).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: Colors.red.withOpacity(0.3),
+                                      color: Color(Colors.red.value).withOpacity(0.3),
                                     ),
                                   ),
                                   child: IconButton(

@@ -551,7 +551,7 @@ void _setupPollSubscription() {
               decoration: BoxDecoration(
                 color: isClosed
                     ? Colors.orange.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
+                    : Color(Colors.red.value).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isClosed ? Colors.orange : Colors.red,
@@ -735,8 +735,7 @@ void _setupPollSubscription() {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.green, width: 1),
               ),
               child: Row(
@@ -818,8 +817,7 @@ void _setupPollSubscription() {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(top: 16),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
@@ -1164,7 +1162,7 @@ class _PollOptionDetail extends StatelessWidget {
           boxShadow: isWinning
               ? [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
+                    color: Color(Colors.green.value).withOpacity(0.3),
                     blurRadius: 8,
                     spreadRadius: 2,
                   ),
@@ -1220,7 +1218,7 @@ class _PollOptionDetail extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: isWinning
-                          ? Colors.green.withOpacity(0.2)
+                          ? Color(Colors.green.value).withOpacity(0.2)
                           : (isDarkMode ? Colors.grey[800] : Colors.grey[200]),
                       borderRadius: BorderRadius.circular(20),
                     ),

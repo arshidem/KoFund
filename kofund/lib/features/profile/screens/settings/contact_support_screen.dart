@@ -263,8 +263,7 @@ Widget _buildWhatsAppContactCard({
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
+color: Color(Colors.green.value).withOpacity(0.1),          borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
           child: FaIcon(

@@ -589,7 +589,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: hasChanged
-              ? Colors.blue.withOpacity(0.2)
+              ? Color(Colors.blue.value).withOpacity(0.2)
               : AppColors.border(context).withOpacity(0.3),
           width: 1,
         ),
