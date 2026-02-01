@@ -1,4 +1,4 @@
-// lib/features/developer/screens/issue_reports_screen.dart
+﻿// lib/features/developer/screens/issue_reports_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,7 +81,7 @@ Map<String, Color> _statusColors = {
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: _statusColors[issue.status]!.withOpacity(0.1),
+          backgroundColor: _statusColors[issue.status]!.withValues(alpha: 0.1),
           child: Icon(
             _typeIcons[issue.type] ?? Icons.error,
             color: _statusColors[issue.status],
@@ -103,7 +103,7 @@ Map<String, Color> _statusColors = {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _statusColors[issue.status]!.withOpacity(0.1),
+                    color: _statusColors[issue.status]!.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: _statusColors[issue.status]!),
                   ),
@@ -120,7 +120,7 @@ Map<String, Color> _statusColors = {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                    borderRadius: BorderRadius.circular(12),
+color: Colors.blue.withValues(alpha: 0.1),                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue),
                   ),
                   child: Text(
@@ -300,7 +300,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                    borderRadiu
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _statusColors[issue.status]!.withOpacity(0.1),
+                      color: _statusColors[issue.status]!.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: _statusColors[issue.status]!),
                     ),
@@ -310,7 +310,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                    borderRadiu
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                      borderRadius: BorderRadius.circular(8),
+color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.blue),
                     ),
                     child: Text(issue.type.toUpperCase(), style: const TextStyle(color: Colors.blue)),
@@ -535,7 +535,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                      borderRad
                     ),
                     Chip(
                       label: Text('${_selectedFilter.toUpperCase()} • ${_selectedSort.toUpperCase()}'),
-                      backgroundColor: AppColors.primary(context).withOpacity(0.1),
+                      backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
                       labelStyle: TextStyle(
                         color: AppColors.primary(context),
                         fontWeight: FontWeight.bold,
@@ -627,3 +627,4 @@ color: Color(Colors.blue.value).withOpacity(0.1),                      borderRad
     );
   }
 }
+

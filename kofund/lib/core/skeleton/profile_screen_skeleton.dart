@@ -26,7 +26,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
         title: Text(
           'Profile',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -36,7 +36,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
             ? IconButton(
                 icon: Icon(
                   Icons.arrow_back,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
                 onPressed: null,
               )
@@ -63,7 +63,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
             child: IconButton(
               icon: Icon(
                 Icons.settings,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 size: 22,
               ),
               onPressed: null,
@@ -111,7 +111,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: Colors.white.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: Colors.grey.shade200,
@@ -119,7 +119,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -146,7 +146,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
                       ],
                     ),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       width: 2,
                     ),
                   ),
@@ -248,12 +248,12 @@ class ProfileScreenSkeleton extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: Colors.white.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -301,12 +301,12 @@ class ProfileScreenSkeleton extends StatelessWidget {
   Widget _buildRecentProgramsSkeleton() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -409,12 +409,12 @@ class ProfileScreenSkeleton extends StatelessWidget {
   Widget _buildRecentContributionsSkeleton() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

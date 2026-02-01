@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/polls/models/poll_model.dart';
@@ -296,6 +296,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         );
 
         final success = await pollProvider.updatePoll(updatedPoll);
+        if (!mounted) return;
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -406,7 +407,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: (isDarkMode ? Colors.blue[900] : Colors.blue[50])!.withOpacity(0.3),
+                    color: (isDarkMode ? Colors.blue[900] : Colors.blue[50])!.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: (isDarkMode ? Colors.blue[700] : Colors.blue[200])!,
@@ -723,8 +724,8 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           style: ElevatedButton.styleFrom(
             foregroundColor: isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary,
             backgroundColor: isDarkMode
-                ? AppColors.darkPrimary.withOpacity(0.1)
-                : AppColors.lightPrimary.withOpacity(0.1),
+                ? AppColors.darkPrimary.withValues(alpha: 0.1)
+                : AppColors.lightPrimary.withValues(alpha: 0.1),
           ),
         ),
       ],
@@ -763,7 +764,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: (isDarkMode ? Colors.orange[900] : Colors.orange[50])!.withOpacity(0.3),
+                color: (isDarkMode ? Colors.orange[900] : Colors.orange[50])!.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: (isDarkMode ? Colors.orange[700] : Colors.orange[200])!,

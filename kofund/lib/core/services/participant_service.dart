@@ -1,6 +1,7 @@
-// lib/core/services/participant_service.dart
+﻿// lib/core/services/participant_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/participants/models/participant_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ParticipantService {
   final FirebaseFirestore _firestore;
@@ -10,12 +11,12 @@ class ParticipantService {
 
 Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId) async {
   try {
-    print('🎯 ParticipantService: Getting participation history for member: $memberId');
+    debugPrint('🎯 ParticipantService: Getting participation history for member: $memberId');
     
     // FIRST: Get the user to get their communityId
     final userDoc = await _firestore.collection('users').doc(memberId).get();
     if (!userDoc.exists) {
-      print('❌ ParticipantService: User $memberId not found in users collection');
+      debugPrint('❌ ParticipantService: User $memberId not found in users collection');
       return [];
     }
     
@@ -23,11 +24,11 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
     final communityId = userData['communityId'];
     
     if (communityId == null || communityId.isEmpty) {
-      print('⚠️ ParticipantService: User $memberId has no communityId');
+      debugPrint('⚠️ ParticipantService: User $memberId has no communityId');
       return [];
     }
     
-    print('🏠 ParticipantService: User belongs to community: $communityId');
+    debugPrint('🏠 ParticipantService: User belongs to community: $communityId');
     
     // Get all participants for this user IN THEIR COMMUNITY
     final participationSnapshot = await _firestore
@@ -36,11 +37,11 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
         .where('communityId', isEqualTo: communityId) // ✅ ADD THIS FILTER
         .get();
     
-    print('📊 ParticipantService: Found ${participationSnapshot.docs.length} participant documents');
+    debugPrint('📊 ParticipantService: Found ${participationSnapshot.docs.length} participant documents');
     
     // Debug: Print participant data
     for (final doc in participationSnapshot.docs) {
-      print('   👤 Participant Doc ${doc.id}: ${doc.data()}');
+      debugPrint('   👤 Participant Doc ${doc.id}: ${doc.data()}');
     }
     
     // Get all contributions for this user to calculate totals
@@ -50,7 +51,7 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
         .where('communityId', isEqualTo: communityId) // ✅ ADD THIS FILTER
         .get();
     
-    print('💰 ParticipantService: Found ${contributionsSnapshot.docs.length} contribution documents');
+    debugPrint('💰 ParticipantService: Found ${contributionsSnapshot.docs.length} contribution documents');
     
     // Group contributions by programId
     final contributionsByProgram = <String, double>{};
@@ -71,11 +72,11 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
       final programId = participation['programId'] as String?;
       
       if (programId == null || programId.isEmpty) {
-        print('⚠️ ParticipantService: Skipping participant without programId');
+        debugPrint('⚠️ ParticipantService: Skipping participant without programId');
         continue;
       }
       
-      print('🔍 ParticipantService: Processing program: $programId');
+      debugPrint('🔍 ParticipantService: Processing program: $programId');
       
       try {
         final programDoc = await _firestore
@@ -102,12 +103,12 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
             'communityId': communityId, // ✅ ADD THIS
           });
           
-          print('✅ ParticipantService: Added participation for program: ${programData['title']}');
+          debugPrint('✅ ParticipantService: Added participation for program: ${programData['title']}');
         } else {
-          print('⚠️ ParticipantService: Program $programId not found');
+          debugPrint('⚠️ ParticipantService: Program $programId not found');
         }
       } catch (e) {
-        print('❌ ParticipantService Error fetching program $programId: $e');
+        debugPrint('❌ ParticipantService Error fetching program $programId: $e');
       }
     }
     
@@ -115,11 +116,11 @@ Future<List<Map<String, dynamic>>> getMemberParticipationHistory(String memberId
     participationHistory.sort((a, b) => 
         (b['joinedAt'] as Timestamp).compareTo(a['joinedAt'] as Timestamp));
     
-    print('✅ ParticipantService: Returning ${participationHistory.length} participation history items');
+    debugPrint('✅ ParticipantService: Returning ${participationHistory.length} participation history items');
     return participationHistory;
   } catch (e) {
-    print('❌❌❌ ParticipantService Error in getMemberParticipationHistory: $e');
-    print('❌❌❌ Stack trace: ${e.toString()}');
+    debugPrint('❌❌❌ ParticipantService Error in getMemberParticipationHistory: $e');
+    debugPrint('❌❌❌ Stack trace: ${e.toString()}');
     return [];
   }
 }
@@ -141,19 +142,19 @@ Future<ParticipantModel> getParticipant(String programId, String userId) async {
     final doc = snapshot.docs.first;
     return ParticipantModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
   } catch (e) {
-    print('❌ ParticipantService Error in getParticipant: $e');
+    debugPrint('❌ ParticipantService Error in getParticipant: $e');
     rethrow;
   }
 }
 
 Future<List<Map<String, dynamic>>> getUserParticipationHistoryWithContributions(String userId) async {
   try {
-    print('🎯 ParticipantService.getUserParticipationHistoryWithContributions for: $userId');
+    debugPrint('🎯 ParticipantService.getUserParticipationHistoryWithContributions for: $userId');
     
     // Get user's community first
     final userDoc = await _firestore.collection('users').doc(userId).get();
     if (!userDoc.exists) {
-      print('❌ User not found: $userId');
+      debugPrint('❌ User not found: $userId');
       return []; // ✅ RETURN EMPTY LIST
     }
     
@@ -161,7 +162,7 @@ Future<List<Map<String, dynamic>>> getUserParticipationHistoryWithContributions(
     final communityId = userData['communityId'];
     
     if (communityId == null || communityId.isEmpty) {
-      print('❌ User has no community: $userId');
+      debugPrint('❌ User has no community: $userId');
       return []; // ✅ RETURN EMPTY LIST
     }
     
@@ -231,7 +232,7 @@ Future<List<Map<String, dynamic>>> getUserParticipationHistoryWithContributions(
           });
         }
       } catch (e) {
-        print('❌ ParticipantService Error fetching program: $e');
+        debugPrint('❌ ParticipantService Error fetching program: $e');
       }
     }
     
@@ -241,7 +242,7 @@ Future<List<Map<String, dynamic>>> getUserParticipationHistoryWithContributions(
     
     return participationHistory; // ✅ RETURN THE LIST
   } catch (e) {
-    print('❌ ParticipantService Error: $e');
+    debugPrint('❌ ParticipantService Error: $e');
     return []; // ✅ RETURN EMPTY LIST ON ERROR
   }
 }
@@ -594,3 +595,4 @@ Future<String> addParticipant(ParticipantModel participant) async {
     }
   }
 }
+

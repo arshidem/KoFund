@@ -128,7 +128,7 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(23.76 / 96 * w, 47.01 / 90.59 * h),
         Offset(89.84 / 96 * w, 0),
       ],
-      const Color(0xFF052224).withOpacity(poly1),
+      const Color(0xFF052224).withValues(alpha: poly1),
       Offset(0, 10 * (1 - poly1)),
     );
 
@@ -142,7 +142,7 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(48.04 / 96 * w, 53.24 / 90.59 * h),
         Offset(84.66 / 96 * w, h),
       ],
-      Colors.white.withOpacity(poly2),
+      Colors.white.withValues(alpha: poly2),
       Offset(5 * (1 - poly2), 5 * (1 - poly2)),
     );
 
@@ -155,7 +155,7 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(54.5 / 96 * w, 46.73 / 90.59 * h),
         Offset(96 / 96 * w, 4.88 / 90.59 * h),
       ],
-      Colors.white.withOpacity(poly3),
+      Colors.white.withValues(alpha: poly3),
       Offset(-5 * (1 - poly3), -8 * (1 - poly3)),
     );
   }
@@ -180,3 +180,4 @@ class _SvgLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SvgLogoPainter oldDelegate) => true;
 }
+

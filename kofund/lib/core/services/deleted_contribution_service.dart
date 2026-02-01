@@ -1,8 +1,9 @@
-// 📁 lib/core/services/deleted_contribution_service.dart
+﻿// 📁 lib/core/services/deleted_contribution_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/contributions/models/contribution_model.dart';
 import '../../features/contributions/models/deleted_contribution_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class DeletedContributionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -16,7 +17,7 @@ class DeletedContributionService {
     required String reason,
   }) async {
     try {
-      print('🔄 Starting secure deletion process...');
+      debugPrint('🔄 Starting secure deletion process...');
       
       // 1. Generate unique ID for deleted record
       final deletedId = 'deleted_${contribution.contributionId}_${DateTime.now().millisecondsSinceEpoch}';
@@ -29,7 +30,7 @@ class DeletedContributionService {
         deletionReason: reason,
       );
       
-      print('📝 Created deleted record with TTL expiry: ${deletedRecord.formattedTTLExpiry}');
+      debugPrint('📝 Created deleted record with TTL expiry: ${deletedRecord.formattedTTLExpiry}');
       
       // 3. Save to separate collection
       await _firestore
@@ -37,7 +38,7 @@ class DeletedContributionService {
           .doc(deletedId)
           .set(deletedRecord.toMap());
       
-      print('✅ Saved to deleted_contributions collection');
+      debugPrint('✅ Saved to deleted_contributions collection');
       
       // 4. Delete from original contributions collection
       await _firestore
@@ -45,15 +46,15 @@ class DeletedContributionService {
           .doc(contribution.contributionId)
           .delete();
       
-      print('🗑️ Removed from contributions collection');
+      debugPrint('🗑️ Removed from contributions collection');
       
       // 5. Create notification for member
       await _createDeletionNotification(deletedRecord);
       
-      print('🎯 Deletion process completed successfully');
+      debugPrint('🎯 Deletion process completed successfully');
       
     } catch (e) {
-      print('❌ Error in moveToDeletedContributions: $e');
+      debugPrint('❌ Error in moveToDeletedContributions: $e');
       rethrow;
     }
   }
@@ -132,7 +133,7 @@ class DeletedContributionService {
           .doc(restoredContribution.contributionId)
           .set(restoredContribution.toMap());
       
-      print('✅ Restored to contributions collection');
+      debugPrint('✅ Restored to contributions collection');
       
       // 5. Mark as restored in deleted_contributions
       await deletedDoc.reference.update({
@@ -143,15 +144,15 @@ class DeletedContributionService {
         'ttlExpiresAt': Timestamp.fromDate(DateTime.now().add(Duration(days: 7))), // Short TTL for restored records
       });
       
-      print('📝 Marked as restored in deleted_contributions');
+      debugPrint('📝 Marked as restored in deleted_contributions');
       
       // 6. Create restoration notification
       await _createRestorationNotification(deletedRecord, adminName);
       
-      print('🎯 Restoration completed successfully');
+      debugPrint('🎯 Restoration completed successfully');
       
     } catch (e) {
-      print('❌ Error restoring contribution: $e');
+      debugPrint('❌ Error restoring contribution: $e');
       rethrow;
     }
   }
@@ -171,7 +172,7 @@ class DeletedContributionService {
         doc.id,
       );
     } catch (e) {
-      print('❌ Error getting deleted contribution: $e');
+      debugPrint('❌ Error getting deleted contribution: $e');
       return null;
     }
   }
@@ -197,9 +198,9 @@ class DeletedContributionService {
         },
       });
       
-      print('📢 Created deletion notification for user: ${deletedRecord.userId}');
+      debugPrint('📢 Created deletion notification for user: ${deletedRecord.userId}');
     } catch (e) {
-      print('⚠️ Failed to create notification: $e');
+      debugPrint('⚠️ Failed to create notification: $e');
     }
   }
 
@@ -224,9 +225,9 @@ class DeletedContributionService {
         },
       });
       
-      print('📢 Created restoration notification');
+      debugPrint('📢 Created restoration notification');
     } catch (e) {
-      print('⚠️ Failed to create restoration notification: $e');
+      debugPrint('⚠️ Failed to create restoration notification: $e');
     }
   }
   // 🔹 Get deleted contributions for a specific program
@@ -263,8 +264,9 @@ Stream<List<DeletedContributionModel>> getProgramDeletedContributions({
       
       return snapshot.docs.isNotEmpty;
     } catch (e) {
-      print('❌ Error checking deleted contributions: $e');
+      debugPrint('❌ Error checking deleted contributions: $e');
       return false;
     }
   }
 }
+

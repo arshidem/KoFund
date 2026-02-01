@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
@@ -74,6 +75,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Refresh auth data in background
       await authProvider.refreshUserData();
+      if (!mounted) return;
 
       // ✅ SHOW SUCCESS AFTER UPDATE COMPLETES
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -81,7 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
     } catch (e) {
-      print('Error updating profile: $e');
+      debugPrint('Error updating profile: $e');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         SnackbarHelper.showError(context, 'Failed to update profile.');
       });
@@ -177,7 +179,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       children: [
         CircleAvatar(
           radius: 60,
-          backgroundColor: AppColors.primary(context).withOpacity(0.2),
+          backgroundColor: AppColors.primary(context).withValues(alpha: 0.2),
           child: Text(
             _getAvatarInitials(),
             style: const TextStyle(
@@ -284,7 +286,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             filled: true,
-            fillColor: AppColors.card(context).withOpacity(0.5),
+            fillColor: AppColors.card(context).withValues(alpha: 0.5),
             counterText: '${widget.user.email?.length ?? 0}/100',
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
@@ -445,3 +447,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-// lib/features/auth/screens/verification_pending_screen.dart
+﻿// lib/features/auth/screens/verification_pending_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -104,7 +104,9 @@ Future<void> _checkForPendingInvite() async {
           
           // Save invite code for after splash screen
           final prefs = await SharedPreferences.getInstance();
+          if (!mounted) return;
           await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+          if (!mounted) return;
           
           // Navigate to splash screen which will handle the invite
           Navigator.pushReplacementNamed(
@@ -149,6 +151,7 @@ Future<void> _checkForPendingInvite() async {
     
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     final success = await authProvider.resendVerificationEmail();
+    if (!mounted) return;
     
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,6 +176,7 @@ Future<void> _checkForPendingInvite() async {
   Future<void> _signOut() async {
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     await authProvider.signOut(context);
+    if (!mounted) return;
     
     if (mounted) {
       Navigator.pushReplacementNamed(context, RouteNames.login);
@@ -189,18 +193,18 @@ Future<void> _checkForPendingInvite() async {
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
           colors: [
-            Colors.blue.withOpacity(0.15),
-            Colors.blue.withOpacity(0.05),
+            Colors.blue.withValues(alpha: 0.15),
+            Colors.blue.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border.all(
-          color: Colors.blue.withOpacity(0.25),
+          color: Colors.blue.withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -270,7 +274,7 @@ Future<void> _checkForPendingInvite() async {
             margin: const EdgeInsets.only(top: 4),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -326,9 +330,10 @@ Future<void> _checkForPendingInvite() async {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                          shape: BoxShape.circle,
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
                           border: Border.all(
-                            color: Color(Colors.blue.value).withOpacity(0.3),
+                            color: Colors.blue.withValues(alpha: 0.3),
                             width: 2,
                           ),
                         ),
@@ -404,18 +409,18 @@ color: Color(Colors.blue.value).withOpacity(0.1),                          shape
                           borderRadius: BorderRadius.circular(20),
                           gradient: LinearGradient(
                             colors: [
-                              Colors.blue.withOpacity(0.15),
-                              Colors.blue.withOpacity(0.05),
+                              Colors.blue.withValues(alpha: 0.15),
+                              Colors.blue.withValues(alpha: 0.05),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.25),
+                            color: Colors.blue.withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -603,7 +608,7 @@ Container(
                           color: AppColors.surface(context),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppColors.border(context).withOpacity(0.5),
+                            color: AppColors.border(context).withValues(alpha: 0.5),
                           ),
                         ),
                         child: Column(

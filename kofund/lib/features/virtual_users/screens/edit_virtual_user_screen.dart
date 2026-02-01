@@ -164,10 +164,10 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    // ✅ FIXED: Replace .withOpacity() with Color.fromRGBO()
-                    color: Color.fromRGBO(128, 0, 128, 0.1), // Colors.purple.withOpacity(0.1)
+                    // ✅ FIXED: Replace .withValues(alpha: ) with Color.fromRGBO()
+                    color: Color.fromRGBO(128, 0, 128, 0.1), // Colors.purple.withValues(alpha: 0.1)
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color.fromRGBO(128, 0, 128, 0.3)), // Colors.purple.withOpacity(0.3)
+                    border: Border.all(color: Color.fromRGBO(128, 0, 128, 0.3)), // Colors.purple.withValues(alpha: 0.3)
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +214,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -276,8 +276,8 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          // ✅ FIXED: Replace .withOpacity() with Color.fromRGBO()
-                          color: AppColors.primary(context).withOpacity(0.05), // Keep this one as it's already a Color property
+                          // ✅ FIXED: Replace .withValues(alpha: ) with Color.fromRGBO()
+                          color: AppColors.primary(context).withValues(alpha: 0.05), // Keep this one as it's already a Color property
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -362,7 +362,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color.fromRGBO(128, 0, 128, 0.7), // ✅ FIXED: Colors.purple.withOpacity(0.7)
+                    color: Color.fromRGBO(128, 0, 128, 0.7), // ✅ FIXED: Colors.purple.withValues(alpha: 0.7)
                     fontWeight: FontWeight.w500,
                   ),
                 ),

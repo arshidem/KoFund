@@ -1,4 +1,4 @@
-// lib/features/profile/screens/participation_history_screen.dart
+﻿// lib/features/profile/screens/participation_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +8,7 @@ import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ParticipationHistoryScreen extends StatefulWidget {
   const ParticipationHistoryScreen({super.key});
@@ -33,15 +34,15 @@ class _ParticipationHistoryScreenState
   }
 
   void _onRefresh() async {
-    print('🔄 Pull to refresh triggered in Participation History');
+    debugPrint('🔄 Pull to refresh triggered in Participation History');
     
     try {
       await _loadParticipationHistory();
       _refreshController.refreshCompleted();
-      print('✅ Participation History refresh completed');
+      debugPrint('✅ Participation History refresh completed');
     } catch (e) {
       _refreshController.refreshFailed();
-      print('❌ Participation History refresh failed: $e');
+      debugPrint('❌ Participation History refresh failed: $e');
     }
   }
 
@@ -198,7 +199,7 @@ appBar: AppBar(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: hasPaid 
-                        ? AppColors.primary(context).withOpacity(0.1) // ✅ Use primary color
+                        ? AppColors.primary(context).withValues(alpha: 0.1) // ✅ Use primary color
                         : Colors.orange[50],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
@@ -249,7 +250,7 @@ appBar: AppBar(
 
     return CircleAvatar(
       radius: 20,
-      backgroundColor: AppColors.primary(context).withOpacity(0.1),
+      backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
       child: Icon(iconData, color: AppColors.primary(context), size: 20),
     );
   }
@@ -477,3 +478,4 @@ appBar: AppBar(
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+

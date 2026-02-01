@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
@@ -88,6 +88,7 @@ Future<void> _createCommunity() async {
   // 2. Check network AFTER form validation passes
   try {
     final hasNetwork = await NetworkService().isConnected;
+    if (!mounted) return;
     if (!hasNetwork) {
       if (mounted) {
         SnackbarHelper.showError(
@@ -141,6 +142,7 @@ Future<void> _createCommunity() async {
       );
 
       await authProvider.refreshUserData();
+      if (!mounted) return;
 
       if (mounted) {
         SnackbarHelper.showSuccess(
@@ -273,12 +275,12 @@ Widget _buildCommunityTypeDropdown() {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _typeError != null 
-                ? Colors.red.withOpacity(0.8) 
+                ? Colors.red.withValues(alpha: 0.8) 
                 : AppColors.border(context),
             width: _typeError != null ? 1.5 : 1,
           ),
           color: _typeError != null 
-              ? Colors.red.withOpacity(0.03) 
+              ? Colors.red.withValues(alpha: 0.03) 
               : AppColors.surface(context),
         ),
         child: DropdownButtonHideUnderline(
@@ -298,7 +300,7 @@ Widget _buildCommunityTypeDropdown() {
                 'Select community type *',
                 style: TextStyle(
                   color: _typeError != null 
-                      ? Color(Colors.red.value).withOpacity(0.7) 
+                      ? Colors.red.withValues(alpha: 0.7) 
                       : AppColors.textSecondary(context),
                   fontSize: 14,
                 ),
@@ -315,7 +317,7 @@ Widget _buildCommunityTypeDropdown() {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.1),
+                          color: AppColors.primary(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
@@ -423,7 +425,7 @@ Widget build(BuildContext context) {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -533,8 +535,8 @@ Container(
     // ✅ Same soft gradient pattern
     gradient: LinearGradient(
       colors: [
-        Colors.blue.withOpacity(0.15),
-        Colors.blue.withOpacity(0.05),
+        Colors.blue.withValues(alpha: 0.15),
+        Colors.blue.withValues(alpha: 0.05),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -542,13 +544,13 @@ Container(
 
     // ✅ Same border style
     border: Border.all(
-      color: Colors.blue.withOpacity(0.25),
+      color: Colors.blue.withValues(alpha: 0.25),
     ),
 
     // ✅ Same soft shadow
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.06),
+        color: Colors.black.withValues(alpha: 0.06),
         blurRadius: 12,
         offset: const Offset(0, 4),
       ),
@@ -624,7 +626,7 @@ FutureBuilder<bool>(
                   backgroundColor: AppColors.primary(context),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      AppColors.primary(context).withOpacity(0.5),
+                      AppColors.primary(context).withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // Add this import
 import 'package:intl/intl.dart';
@@ -216,7 +217,7 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(expense.category).withOpacity(0.1),
+                    color: _getCategoryColor(expense.category).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -543,7 +544,7 @@ Widget _buildExpenseSummary(BuildContext context) {
             BoxShadow(
               blurRadius: 6,
               offset: const Offset(0, 2),
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
             ),
           ],
         ),
@@ -560,7 +561,7 @@ Widget _buildExpenseSummary(BuildContext context) {
                     Text(
                       "Expenses Overview",
                       style: TextStyle(
-                        color: AppColors.textCards(context).withOpacity(0.9),
+                        color: AppColors.textCards(context).withValues(alpha: 0.9),
                         fontSize: 11,
                       ),
                     ),
@@ -603,7 +604,7 @@ Widget _buildExpenseSummary(BuildContext context) {
               child: Text(
                 "Approved Expenses",
                 style: TextStyle(
-                  color: AppColors.textCards(context).withOpacity(0.85),
+                  color: AppColors.textCards(context).withValues(alpha: 0.85),
                   fontSize: 11,
                 ),
               ),
@@ -812,10 +813,10 @@ Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
       margin: const EdgeInsets.only(bottom: 8), // 8px bottom margin
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
+          color: Colors.orange.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -888,7 +889,7 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: AppColors.textCards(context).withOpacity(0.15),
+          color: AppColors.textCards(context).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -909,7 +910,7 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
                 Text(
                   label,
                   style: TextStyle(
-                    color: AppColors.textCards(context).withOpacity(0.85),
+                    color: AppColors.textCards(context).withValues(alpha: 0.85),
                     fontSize: 10,
                   ),
                 ),
@@ -960,11 +961,11 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
   // Get changes description
   final changesDescription = _getExpenseChangesDescription(formattedEditHistory);
   
-  print('🔍 DEBUG Expense Details:');
-  print('  - isEdited: $isEdited');
-  print('  - editHistory length: ${expense.editHistory.length}');
-  print('  - formattedEditHistory length: ${formattedEditHistory.length}');
-  print('  - canViewEditHistory: $canViewEditHistory (admin: $isAdmin, paidBy: ${currentUser?.uid == expense.paidBy})');
+  debugPrint('🔍 DEBUG Expense Details:');
+  debugPrint('  - isEdited: $isEdited');
+  debugPrint('  - editHistory length: ${expense.editHistory.length}');
+  debugPrint('  - formattedEditHistory length: ${formattedEditHistory.length}');
+  debugPrint('  - canViewEditHistory: $canViewEditHistory (admin: $isAdmin, paidBy: ${currentUser?.uid == expense.paidBy})');
 
   showModalBottomSheet(
     context: context,
@@ -993,7 +994,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 32,
                       spreadRadius: 0,
                       offset: const Offset(0, -8),
@@ -1010,7 +1011,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                           width: 48,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.border(context).withOpacity(0.4),
+                            color: AppColors.border(context).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -1041,7 +1042,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary(context).withOpacity(0.08),
+                                    color: AppColors.primary(context).withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -1062,15 +1063,15 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    Colors.orange.withOpacity(0.15),
-                                    Colors.orange.withOpacity(0.08),
+                                    Colors.orange.withValues(alpha: 0.15),
+                                    Colors.orange.withValues(alpha: 0.08),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.orange.withOpacity(0.2),
+                                  color: Colors.orange.withValues(alpha: 0.2),
                                   width: 1.5,
                                 ),
                               ),
@@ -1164,10 +1165,10 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: _getStatusColor(expense.status).withOpacity(0.1),
+                                      color: _getStatusColor(expense.status).withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
-                                        color: _getStatusColor(expense.status).withOpacity(0.3),
+                                        color: _getStatusColor(expense.status).withValues(alpha: 0.3),
                                         width: 0.6,
                                       ),
                                     ),
@@ -1338,7 +1339,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.10),
+                                          color: Colors.orange.withValues(alpha: 0.10),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: const Icon(
@@ -1429,7 +1430,7 @@ Container(
     ),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.1),
+        color: Colors.black.withValues(alpha: 0.1),
         blurRadius: 20,
         spreadRadius: 0,
         offset: const Offset(0, -4),
@@ -1816,7 +1817,7 @@ Widget _buildSectionHeader(BuildContext context, {required String title, require
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withOpacity(0.1),
+          color: AppColors.primary(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -1876,6 +1877,7 @@ String _formatPaymentMethod(String method) {
     try {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
       await expenseProvider.updateExpenseStatus(expense.expenseId, status);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Expense ${status}d successfully!'),
@@ -1948,6 +1950,7 @@ String _formatPaymentMethod(String method) {
     try {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
       await expenseProvider.deleteExpense(expense.expenseId);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Expense deleted successfully!'),
@@ -2338,9 +2341,9 @@ return AlertDialog(
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(top: 8),
                     decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),  
+color: Colors.blue.withValues(alpha: 0.1),  
                     borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(Colors.blue.value).withOpacity(0.3)),
+                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -2389,9 +2392,9 @@ color: Color(Colors.blue.value).withOpacity(0.1),
                                 margin: const EdgeInsets.only(top: 16),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Color(Colors.red.value).withOpacity(0.1),
+                                  color: Colors.red.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
+                                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                                 ),
                                 child: Row(
                                   children: const [
@@ -2451,7 +2454,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),
                         backgroundColor: currentIsOnline
                             ? AppColors.primary(context)
                             : Colors.grey[600],
-                        disabledBackgroundColor: Colors.grey.withOpacity(0.5),
+                        disabledBackgroundColor: Colors.grey.withValues(alpha: 0.5),
                         disabledForegroundColor: Colors.white70,
                       ),
                       child: Row(
@@ -2540,6 +2543,7 @@ Future<void> _createExpense({
     );
 
     await expenseProvider.createExpense(expense);
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2603,3 +2607,4 @@ Future<void> _createExpense({
     }
   }
 }
+

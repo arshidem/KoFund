@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../../../core/services/expense_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../features/auth/providers/app_auth_provider.dart';
@@ -82,7 +83,7 @@ Future<void> updateExpense(
   String? editReason,
 }) async {
   try {
-    print('📱 ExpenseProvider: Updating expense ${expense.expenseId}');
+    debugPrint('📱 ExpenseProvider: Updating expense ${expense.expenseId}');
     
     // First, update in Firestore via service
     await expenseService.updateExpense(
@@ -158,13 +159,13 @@ Future<void> updateExpense(
       _expenseTotalsCache.clear();
       notifyListeners();
       
-      print('✅ ExpenseProvider: Local update successful');
+      debugPrint('✅ ExpenseProvider: Local update successful');
     } else {
-      print('⚠️ Warning: Expense not found in local list');
+      debugPrint('⚠️ Warning: Expense not found in local list');
     }
     
   } catch (e) {
-    print('❌ ExpenseProvider error: $e');
+    debugPrint('❌ ExpenseProvider error: $e');
     rethrow;
   }
 }
@@ -183,7 +184,7 @@ Future<void> updateExpenseWithHistory(
           'updatedAt': Timestamp.now(),
         });
   } catch (e) {
-    print('Error updating expense with history: $e');
+    debugPrint('Error updating expense with history: $e');
     rethrow;
   }
 }
@@ -317,3 +318,4 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   Stream<double> streamProgramTotalExpenses(String programId) =>
       expenseService.streamProgramTotalExpenses(programId);
 }
+

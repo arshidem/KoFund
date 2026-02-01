@@ -1,4 +1,4 @@
-// lib/features/dashboard/widgets/members_widget.dart
+﻿// lib/features/dashboard/widgets/members_widget.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -7,6 +7,7 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/members/screens/all_members_screen.dart';
 import 'package:kofund/features/members/screens/member_details_screen.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class MembersWidget extends StatefulWidget {
   const MembersWidget({
@@ -28,7 +29,7 @@ class _MembersWidgetState extends State<MembersWidget> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: MembersWidget initState called');
+    debugPrint('🔄 DEBUG: MembersWidget initState called');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isInitialized) {
@@ -53,9 +54,9 @@ class _MembersWidgetState extends State<MembersWidget> {
     
     // Check if user or community has ACTUALLY changed
     if (newUserId != _currentUserId || newCommunityId != _currentCommunityId) {
-      print('👤 DEBUG: User/Community actually changed in MembersWidget');
-      print('   Previous user: $_currentUserId, community: $_currentCommunityId');
-      print('   New user: $newUserId, community: $newCommunityId');
+      debugPrint('👤 DEBUG: User/Community actually changed in MembersWidget');
+      debugPrint('   Previous user: $_currentUserId, community: $_currentCommunityId');
+      debugPrint('   New user: $newUserId, community: $newCommunityId');
       
       _currentUserId = newUserId;
       _currentCommunityId = newCommunityId;
@@ -71,7 +72,7 @@ class _MembersWidgetState extends State<MembersWidget> {
   }
 
   void _handleUserLogout() {
-    print('👤 DEBUG: User logged out, clearing MembersWidget');
+    debugPrint('👤 DEBUG: User logged out, clearing MembersWidget');
     
     if (mounted) {
       setState(() {
@@ -87,7 +88,7 @@ class _MembersWidgetState extends State<MembersWidget> {
   void _resetForNewUser() {
     if (!mounted) return;
     
-    print('🔄 DEBUG: Resetting MembersWidget for new user/community');
+    debugPrint('🔄 DEBUG: Resetting MembersWidget for new user/community');
     
     // Reset state
     if (mounted) {
@@ -109,7 +110,7 @@ class _MembersWidgetState extends State<MembersWidget> {
     final user = authProvider.user;
     
     if (user == null) {
-      print('❌ DEBUG: No user found in MembersWidget');
+      debugPrint('❌ DEBUG: No user found in MembersWidget');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -122,7 +123,7 @@ class _MembersWidgetState extends State<MembersWidget> {
     
     // Check if user has community
     if (user.communityId == null || user.communityId!.isEmpty) {
-      print('❌ DEBUG: User has no community');
+      debugPrint('❌ DEBUG: User has no community');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -133,7 +134,7 @@ class _MembersWidgetState extends State<MembersWidget> {
       return;
     }
     
-    print('✅ DEBUG: User found with community ${user.communityId}, loading members...');
+    debugPrint('✅ DEBUG: User found with community ${user.communityId}, loading members...');
     _loadMembersData(user.communityId!);
   }
 
@@ -161,7 +162,7 @@ class _MembersWidgetState extends State<MembersWidget> {
         });
       }
     } catch (error) {
-      print('❌ DEBUG: Error loading members data: $error');
+      debugPrint('❌ DEBUG: Error loading members data: $error');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -228,10 +229,10 @@ class _MembersWidgetState extends State<MembersWidget> {
         final members = memberProvider.members;
         
         // Debug: Print current members
-        print('📊 MembersWidget: Showing ${members.length} members');
+        debugPrint('📊 MembersWidget: Showing ${members.length} members');
         if (members.isNotEmpty) {
-          print('   First member: ${members.first.displayName} (UID: ${members.first.uid})');
-          print('   First member community: ${members.first.communityId}');
+          debugPrint('   First member: ${members.first.displayName} (UID: ${members.first.uid})');
+          debugPrint('   First member community: ${members.first.communityId}');
         }
         
         // If no members
@@ -259,7 +260,7 @@ class _MembersWidgetState extends State<MembersWidget> {
         border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -365,7 +366,7 @@ SizedBox(height: 4),
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withOpacity(0.12),
+                  color: AppColors.primary(context).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -430,10 +431,10 @@ SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.12),
+                        color: Colors.orange.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: Colors.orange.withOpacity(0.35),
+                          color: Colors.orange.withValues(alpha: 0.35),
                         ),
                       ),
                       child: Text(
@@ -526,7 +527,7 @@ SizedBox(height: 4),
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -535,7 +536,7 @@ SizedBox(height: 4),
                   width: 120,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -544,7 +545,7 @@ SizedBox(height: 4),
                   width: 40,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -573,7 +574,7 @@ SizedBox(height: 4),
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.textTertiary(context).withOpacity(0.1),
+            color: AppColors.textTertiary(context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -588,7 +589,7 @@ SizedBox(height: 4),
                 width: 100,
                 height: 14,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -597,7 +598,7 @@ SizedBox(height: 4),
                 width: 80,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -613,7 +614,7 @@ SizedBox(height: 4),
               width: 40,
               height: 16,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary(context).withOpacity(0.1),
+                color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
@@ -622,7 +623,7 @@ SizedBox(height: 4),
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary(context).withOpacity(0.1),
+                color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
             ),
@@ -663,9 +664,9 @@ SizedBox(height: 4),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.1),
+                color: AppColors.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
               child: Text(
                 'Retry',
@@ -692,3 +693,4 @@ SizedBox(height: 4),
     return '?';
   }
 }
+

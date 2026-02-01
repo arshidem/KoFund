@@ -1,4 +1,4 @@
-// lib/features/programs/screens/edit_program_screen.dart
+﻿// lib/features/programs/screens/edit_program_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -218,12 +218,12 @@ Widget _buildInputField({
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _programTypeError != null 
-                  ? Colors.red.withOpacity(0.8) 
+                  ? Colors.red.withValues(alpha: 0.8) 
                   : AppColors.border(context),
               width: _programTypeError != null ? 1.5 : 1,
             ),
             color: _programTypeError != null 
-                ? Colors.red.withOpacity(0.03) 
+                ? Colors.red.withValues(alpha: 0.03) 
                 : AppColors.surface(context),
           ),
           child: DropdownButtonHideUnderline(
@@ -243,7 +243,7 @@ Widget _buildInputField({
                   'Select program type *',
                   style: TextStyle(
                     color: _programTypeError != null 
-                        ? Color(Colors.red.value).withOpacity(0.7) 
+                        ? Colors.red.withValues(alpha: 0.7) 
                         : AppColors.textSecondary(context),
                     fontSize: 14,
                   ),
@@ -258,7 +258,7 @@ Widget _buildInputField({
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.1),
+                          color: AppColors.primary(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
@@ -362,7 +362,7 @@ Widget _buildInputField({
             color: AppColors.surface(context),
             border: Border.all(
               color: currentDateError != null 
-                  ? Colors.red.withOpacity(0.8) 
+                  ? Colors.red.withValues(alpha: 0.8) 
                   : AppColors.border(context),
               width: currentDateError != null ? 1.5 : 1,
             ),
@@ -390,7 +390,7 @@ Widget _buildInputField({
               style: TextStyle(
                 fontSize: 15,
                 color: currentDateError != null 
-                    ? Colors.red.withOpacity(0.8) 
+                    ? Colors.red.withValues(alpha: 0.8) 
                     : AppColors.textPrimary(context),
                 fontWeight: FontWeight.w500,
               ),
@@ -575,6 +575,7 @@ Widget _buildInputField({
       );
 
       await programProvider.updateProgram(updatedProgram);
+      if (!mounted) return;
       
       if (mounted) {
         // Show appropriate success message
@@ -917,8 +918,8 @@ _buildInputField(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Color(Colors.green.value).withOpacity(0.3)),
+color: Colors.green.withValues(alpha: 0.1),                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -956,9 +957,9 @@ color: Color(Colors.green.value).withOpacity(0.1),                            bo
       margin: const EdgeInsets.only(bottom: 16, left: 12, right: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
+          color: Colors.orange.withValues(alpha: 0.3),
         ),
       ),
       child: Padding(
@@ -1001,3 +1002,4 @@ color: Color(Colors.green.value).withOpacity(0.1),                            bo
     );
   }
 }
+

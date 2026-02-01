@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/snackbar_helper.dart';
@@ -28,6 +28,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   // Check approval status when screen loads
   void _checkUserApprovalOnLoad() async {
     await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
     
     if (mounted) {
       final authProvider = context.read<AppAuthProvider>();
@@ -55,6 +56,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
       
       // 1. Force refresh user data from Firestore
       await authProvider.refreshUserData();
+      if (!mounted) return;
       
       // 2. Check if user is now approved
       if (authProvider.user?.isApproved == true) {
@@ -69,6 +71,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
         
         // Navigate after delay
         await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         _navigateToDashboard();
       } else {
         // Still not approved
@@ -113,10 +116,10 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.orange.withOpacity(0.3),
+                            color: Colors.orange.withValues(alpha: 0.3),
                             width: 2,
                           ),
                         ),
@@ -183,18 +186,18 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                           borderRadius: BorderRadius.circular(24),
                           gradient: LinearGradient(
                             colors: [
-                              Colors.orange.withOpacity(0.15),
-                              Colors.orange.withOpacity(0.05),
+                              Colors.orange.withValues(alpha: 0.15),
+                              Colors.orange.withValues(alpha: 0.05),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                            color: Colors.orange.withOpacity(0.25),
+                            color: Colors.orange.withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),

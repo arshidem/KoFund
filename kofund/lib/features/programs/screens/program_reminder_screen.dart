@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -675,7 +676,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error loading reminder data: $e');
+      debugPrint('❌ Error loading reminder data: $e');
     }
   }
 
@@ -747,3 +748,4 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
     );
   }
 }
+

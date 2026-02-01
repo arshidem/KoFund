@@ -1,4 +1,4 @@
-// lib/features/history/widgets/add_contribution_modal.dart
+﻿// lib/features/history/widgets/add_contribution_modal.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,6 +13,7 @@ import '../../../features/programs/models/program_model.dart';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/contributions/providers/contribution_provider.dart'; // Add this
 import '../../../core/constants/app_colors.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 class AddContributionModal extends StatefulWidget {
   final String? preSelectedProgramId;
   final String? preSelectedProgramName;
@@ -190,7 +191,7 @@ final program = programs.firstWhere(
         }
       });
     } catch (e) {
-      print('Error loading pre-selected program: $e');
+      debugPrint('Error loading pre-selected program: $e');
     }
   }
 
@@ -327,7 +328,7 @@ Widget _buildBottomActionSection() {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -359,7 +360,7 @@ Widget _buildBottomActionSection() {
                             ? AppColors.primary(context)
                             : Colors.grey[600],
                         disabledBackgroundColor:
-                            Colors.grey.withOpacity(0.4),
+                            Colors.grey.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -499,8 +500,8 @@ Widget _buildProgramSelectionStep(String communityId) {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isMonthly 
-                              ? Color(Colors.green.value).withOpacity(0.1)
-                              : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -595,8 +596,8 @@ Widget _buildProgramSelectionStep(String communityId) {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _isMonthlyProgram 
-                      ? Color(Colors.green.value).withOpacity(0.1)
-                      : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -710,7 +711,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         child: Text(
                           user.displayName?.isNotEmpty == true 
                               ? user.displayName![0].toUpperCase()
@@ -805,7 +806,7 @@ Widget _buildContributionDetailsStep() {
 
         // Payment method dropdown
         DropdownButtonFormField<String>(
-          value: _paymentMethod,
+          initialValue: _paymentMethod,
           decoration: InputDecoration(
             labelText: 'Payment Method',
             border: OutlineInputBorder(
@@ -937,7 +938,7 @@ Widget _buildSummaryItem(
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primary(context).withOpacity(0.12),
+            color: AppColors.primary(context).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -1104,7 +1105,7 @@ Widget _buildMonthGridSelector(BuildContext context) {
                     boxShadow: isSelected 
                         ? [
                             BoxShadow(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             )
@@ -1134,7 +1135,7 @@ Widget _buildMonthGridSelector(BuildContext context) {
                         style: TextStyle(
                           fontSize: 10,
                           color: isSelected 
-                              ? Colors.white.withOpacity(0.9)
+                              ? Colors.white.withValues(alpha: 0.9)
                               : Theme.of(context).disabledColor,
                         ),
                       ),
@@ -1162,7 +1163,7 @@ Widget _buildMonthGridSelector(BuildContext context) {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1301,7 +1302,10 @@ final contribution = ContributionModel(
     // Use Provider to add contribution
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
     await contributionProvider.addContribution(contribution);
+    if (!mounted) return;
 
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Contribution added successfully!'),
@@ -1309,8 +1313,10 @@ final contribution = ContributionModel(
       ),
     );
 
-    Navigator.pop(context); // Close modal
+    if (mounted) Navigator.pop(context); // Close modal
   } catch (e) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Error adding contribution: $e'),
@@ -1320,3 +1326,4 @@ final contribution = ContributionModel(
   }
 }
 }
+

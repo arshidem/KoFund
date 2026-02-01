@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
@@ -79,7 +80,7 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
 
 // Replace your _refreshAllData method with this:
 Future<void> _refreshAllData() async {
-  print('🔄 DEBUG: Refreshing all program details data...');
+  debugPrint('🔄 DEBUG: Refreshing all program details data...');
   
   try {
     // Show loading state
@@ -101,7 +102,7 @@ Future<void> _refreshAllData() async {
     try {
       await programProvider.refreshProgramData(widget.programId);
     } catch (e) {
-      print('⚠️ Could not call refreshProgramData: $e');
+      debugPrint('⚠️ Could not call refreshProgramData: $e');
     }
     
     // Method 2: Force re-fetch the program from Firestore
@@ -123,10 +124,10 @@ Future<void> _refreshAllData() async {
     
     // Complete the refresh
     _refreshController.refreshCompleted();
-    print('✅ DEBUG: All program details refreshed successfully');
+    debugPrint('✅ DEBUG: All program details refreshed successfully');
     
   } catch (e) {
-    print('❌ DEBUG: Error refreshing program details: $e');
+    debugPrint('❌ DEBUG: Error refreshing program details: $e');
     
     if (mounted) {
       setState(() {
@@ -212,7 +213,7 @@ Future<void> _refreshAllData() async {
               BoxShadow(
                 blurRadius: 6,
                 offset: const Offset(0, 2),
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
               ),
             ],
           ),
@@ -258,7 +259,7 @@ Future<void> _refreshAllData() async {
                             child: ElevatedButton(
                               onPressed: () => _joinProgram(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.15),
+                                backgroundColor: Colors.white.withValues(alpha: 0.15),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -268,7 +269,7 @@ Future<void> _refreshAllData() async {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 elevation: 2,
-                                shadowColor: Colors.black.withOpacity(0.5),
+                                shadowColor: Colors.black.withValues(alpha: 0.5),
                               ),
                               child: const Text(
                                 'Join',
@@ -289,7 +290,7 @@ Future<void> _refreshAllData() async {
           dividerColor: Colors.transparent,
           dividerHeight: 0,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.7),
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
           indicatorColor: Colors.white,
           indicatorWeight: 3,
           indicatorPadding: EdgeInsets.zero,
@@ -469,6 +470,7 @@ Future<void> _refreshAllData() async {
       );
 
       await participantProvider.joinProgram(participant);
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -551,6 +553,7 @@ Future<void> _refreshAllData() async {
     if (result == true) {
       try {
         await participantProvider.leaveProgram(widget.programId, currentUser.uid);
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -572,3 +575,4 @@ Future<void> _refreshAllData() async {
     }
   }
 }
+

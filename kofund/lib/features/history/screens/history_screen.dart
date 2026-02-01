@@ -1,4 +1,4 @@
-// lib/features/history/screens/history_screen.dart
+﻿// lib/features/history/screens/history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +23,7 @@ import 'edit_contribution_screen.dart';
 import 'edit_expense_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class HistoryScreen extends StatelessWidget {
   final bool? forceBackButton; // Optional override for specific cases
@@ -80,13 +81,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         _onRefresh();
-        print('🔄 DEBUG: Auto-refresh triggered after 3 seconds');
+        debugPrint('🔄 DEBUG: Auto-refresh triggered after 3 seconds');
       }
     });
   }
 
   void _onRefresh() async {
-    print('🔄 DEBUG: Pull to refresh triggered in History');
+    debugPrint('🔄 DEBUG: Pull to refresh triggered in History');
     
     try {
       final provider = Provider.of<HistoryProvider>(context, listen: false);
@@ -97,10 +98,10 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
       if (mounted) {
         setState(() {});
       }
-      print('✅ DEBUG: History refresh completed successfully');
+      debugPrint('✅ DEBUG: History refresh completed successfully');
     } catch (e) {
       _refreshController.refreshFailed();
-      print('❌ DEBUG: History refresh failed: $e');
+      debugPrint('❌ DEBUG: History refresh failed: $e');
     }
   }
 Future<void> _loadProgramName(String programId) async {
@@ -331,12 +332,12 @@ Widget _buildModernSearchBar() {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -360,7 +361,7 @@ Widget _buildModernSearchBar() {
                         bottomLeft: Radius.circular(18),
                       ),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         width: 0,
                       ),
                     ),
@@ -441,12 +442,12 @@ Widget _buildModernSearchBar() {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -490,7 +491,7 @@ Widget _buildModernSearchBar() {
             child: Icon(
               Icons.search_off, 
               size: 64, 
-              color: AppColors.primary(context).withOpacity(0.5)
+              color: AppColors.primary(context).withValues(alpha: 0.5)
             ),
           ),
           const SizedBox(height: 16),
@@ -499,7 +500,7 @@ Widget _buildModernSearchBar() {
               'No results found',
               style: TextStyle(
                 fontSize: 18,
-                color: AppColors.primary(context).withOpacity(0.7),
+                color: AppColors.primary(context).withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -540,7 +541,7 @@ Widget _buildModernSearchBar() {
           Icon(
             Icons.history,
             size: 64,
-            color: AppColors.primary(context).withOpacity(0.5),
+            color: AppColors.primary(context).withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Center(
@@ -548,7 +549,7 @@ Widget _buildModernSearchBar() {
               'No transactions yet',
               style: TextStyle(
                 fontSize: 18,
-                color: AppColors.primary(context).withOpacity(0.7),
+                color: AppColors.primary(context).withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -579,7 +580,7 @@ class _SearchHeader extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.primary(context).withOpacity(0.06),
+      color: AppColors.primary(context).withValues(alpha: 0.06),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: AppColors.primary(context)),
@@ -597,7 +598,7 @@ class _SearchHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.18),
+              color: AppColors.primary(context).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -695,7 +696,7 @@ class _DateGroup extends StatelessWidget {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: AppColors.background(context).withOpacity(0.7),
+          color: AppColors.background(context).withValues(alpha: 0.7),
           child: Text(
             dateLabel,
             style: TextStyle(
@@ -912,8 +913,8 @@ class _HistoryTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: isContribution 
-                    ? AppColors.revenue(context).withOpacity(0.1)
-                    : AppColors.expense(context).withOpacity(0.1),
+                    ? AppColors.revenue(context).withValues(alpha: 0.1)
+                    : AppColors.expense(context).withValues(alpha: 0.1),
                 ),
                 child: Icon(
                   isContribution ? Icons.payments : Icons.receipt_long_outlined,
@@ -1037,7 +1038,7 @@ Widget build(BuildContext context) {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 14,
               spreadRadius: 2,
             ),
@@ -1108,7 +1109,7 @@ Widget _buildHeaderRow(
             height: 4,
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: AppColors.border(context).withOpacity(0.4),
+              color: AppColors.border(context).withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -1138,7 +1139,7 @@ Widget _buildHeaderRow(
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1433,10 +1434,10 @@ Widget _buildContent(
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       width: 0.6,
                     ),
                   ),
@@ -1457,10 +1458,10 @@ Widget _buildContent(
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.orange.withOpacity(0.2),
+                        color: Colors.orange.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                     ),
@@ -1487,10 +1488,10 @@ Widget _buildContent(
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(expenseStatus).withOpacity(0.1),
+                      color: _getStatusColor(expenseStatus).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: _getStatusColor(expenseStatus).withOpacity(0.3),
+                        color: _getStatusColor(expenseStatus).withValues(alpha: 0.3),
                         width: 0.6,
                       ),
                     ),
@@ -1680,7 +1681,7 @@ Widget _buildExpenseStatusChip(String status) {
     decoration: BoxDecoration(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: textColor.withOpacity(0.3)),
+      border: Border.all(color: textColor.withValues(alpha: 0.3)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -1710,7 +1711,7 @@ Widget _buildSectionHeader(BuildContext context, {required String title, require
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withOpacity(0.10),
+          color: AppColors.primary(context).withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -1789,7 +1790,7 @@ Widget _buildEditHistorySection(BuildContext context) {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.10),
+              color: Colors.orange.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -1839,7 +1840,7 @@ Widget _buildEditHistorySection(BuildContext context) {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRadius.circular(8),
+color: Colors.blue.withValues(alpha: 0.1),        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2008,7 +2009,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withOpacity(0.1),
+        color: AppColors.primary(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -2061,10 +2062,10 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
+          color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -2094,7 +2095,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
                       'by $lastEditedBy',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.orange.withOpacity(0.8),
+                        color: Colors.orange.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -2107,7 +2108,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
                   'Reason: $editReason',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.orange.withOpacity(0.8),
+                    color: Colors.orange.withValues(alpha: 0.8),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -2129,10 +2130,10 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
+          color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -2162,7 +2163,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
                       'by $lastEditedBy',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.orange.withOpacity(0.8),
+                        color: Colors.orange.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -2175,7 +2176,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),        borderRadius: BorderRad
                   'Reason: $editReason',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.orange.withOpacity(0.8),
+                    color: Colors.orange.withValues(alpha: 0.8),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -2253,7 +2254,7 @@ Widget _buildExpenseStatusChangeButtons(BuildContext context, HistoryItem item, 
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.10),
+              color: AppColors.primary(context).withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -2651,7 +2652,7 @@ Future<void> _generateReceipt(HistoryItem item, BuildContext context) async {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, -4),
@@ -2699,7 +2700,7 @@ Future<void> _generateReceipt(HistoryItem item, BuildContext context) async {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 4,
-                    shadowColor: AppColors.primary(context).withOpacity(0.3),
+                    shadowColor: AppColors.primary(context).withValues(alpha: 0.3),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -3594,3 +3595,5 @@ class _FilterSheetState extends State<FilterSheet> {
     );
   }
 }
+
+

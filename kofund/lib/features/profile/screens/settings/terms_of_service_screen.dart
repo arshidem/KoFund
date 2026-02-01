@@ -1,9 +1,10 @@
-// lib/features/profile/screens/settings/terms_of_service_screen.dart
+﻿// lib/features/profile/screens/settings/terms_of_service_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class TermsOfServiceScreen extends StatefulWidget {
   const TermsOfServiceScreen({super.key});
@@ -23,17 +24,17 @@ class _TermsOfServiceScreenState extends State<TermsOfServiceScreen> {
   }
 
 Future<void> _loadAppInfo() async {
-  print('Loading app info...');
+  debugPrint('Loading app info...');
   final version = await AppInfo.appVersion;
   final build = await AppInfo.buildNumber;
-  print('Got version: $version, build: $build');
+  debugPrint('Got version: $version, build: $build');
   
   if (mounted) {
     setState(() {
       appVersion = version;
       buildNumber = build;
     });
-    print('State updated to version: $appVersion');
+    debugPrint('State updated to version: $appVersion');
   }
 }
   Future<void> _launchSupportEmail(BuildContext context) async {
@@ -60,6 +61,7 @@ Future<void> _loadAppInfo() async {
       // Copy email to clipboard
       final text = 'To: $email\nSubject: $subject\n\n$body';
       await Clipboard.setData(ClipboardData(text: text));
+      if (!mounted) return;
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -144,10 +146,10 @@ Future<void> _loadAppInfo() async {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.1),
+                          color: AppColors.primary(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -325,7 +327,7 @@ Future<void> _loadAppInfo() async {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                      borderRadius: BorderRadius.circular(10),
+color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.email,
@@ -534,3 +536,5 @@ Card(
     );
   }
 }
+
+

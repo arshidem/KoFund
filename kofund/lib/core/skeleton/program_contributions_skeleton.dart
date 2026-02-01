@@ -31,8 +31,8 @@ class ProgramContributionsSkeleton extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary(context).withOpacity(0.1),
-            AppColors.primary(context).withOpacity(0.05),
+            AppColors.primary(context).withValues(alpha: 0.1),
+            AppColors.primary(context).withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
@@ -41,7 +41,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
           BoxShadow(
             blurRadius: 6,
             offset: const Offset(0, 2),
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
           ),
         ],
       ),
@@ -63,7 +63,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                         width: 16,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -123,7 +123,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                     width: 18,
                     height: 18,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -151,7 +151,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -180,7 +180,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -199,7 +199,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                           width: 40,
                           height: 16,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -220,7 +220,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -250,7 +250,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
           const SizedBox(height: 12),
@@ -262,7 +262,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
             width: 160,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -279,11 +279,11 @@ class ProgramContributionsSkeleton extends StatelessWidget {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -294,7 +294,7 @@ class ProgramContributionsSkeleton extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
           ),

@@ -1,7 +1,8 @@
-// lib/core/services/expense_service.dart
+﻿// lib/core/services/expense_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/expenses/models/expense_model.dart';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart' show debugPrint;
 class ExpenseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -185,7 +186,7 @@ Future<void> updateExpense(
 }
 Future<ExpenseModel?> getExpenseById(String expenseId) async {
   try {
-    print('🔄 ExpenseService: Getting expense by ID: $expenseId');
+    debugPrint('🔄 ExpenseService: Getting expense by ID: $expenseId');
     
     // Try with the given ID first
     var docRef = _firestore
@@ -196,7 +197,7 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     
     // If not found, try adding 'expense_' prefix
     if (!snapshot.exists && !expenseId.startsWith('expense_')) {
-      print('⚠️ Not found, trying with "expense_" prefix...');
+      debugPrint('⚠️ Not found, trying with "expense_" prefix...');
       docRef = _firestore
           .collection('expenses')
           .doc('expense_$expenseId');
@@ -204,21 +205,21 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
     
     if (!snapshot.exists) {
-      print('❌ Expense not found with ID: $expenseId');
+      debugPrint('❌ Expense not found with ID: $expenseId');
       return null;
     }
     
     final data = snapshot.data();
     if (data == null || data is! Map<String, dynamic>) {
-      print('❌ Expense data is invalid or null');
+      debugPrint('❌ Expense data is invalid or null');
       return null;
     }
     
-    print('✅ Found expense: ${snapshot.id}');
+    debugPrint('✅ Found expense: ${snapshot.id}');
     return ExpenseModel.fromMap(data, snapshot.id);
     
   } catch (e) {
-    print('❌ Error getting expense by ID in service: $e');
+    debugPrint('❌ Error getting expense by ID in service: $e');
     return null;
   }
 }
@@ -341,3 +342,4 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     });
   }
 }
+

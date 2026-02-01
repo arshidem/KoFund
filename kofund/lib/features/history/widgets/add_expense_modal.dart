@@ -1,4 +1,4 @@
-// lib/features/history/widgets/add_expense_modal.dart
+﻿// lib/features/history/widgets/add_expense_modal.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -211,7 +211,7 @@ Future<void> _loadPrograms() async {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -542,7 +542,7 @@ Future<void> _loadPrograms() async {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -623,7 +623,7 @@ Future<void> _loadPrograms() async {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         decoration: BoxDecoration(
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
           borderRadius: BorderRadius.circular(12),
           color: Theme.of(context).colorScheme.surface,
@@ -872,6 +872,7 @@ Future<void> _loadPrograms() async {
       );
 
       await _expenseService.createExpense(expense);
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -1,23 +1,24 @@
-// First, create the LogoutService (if not already done)
+﻿// First, create the LogoutService (if not already done)
 // lib/core/services/logout_service.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class LogoutService {
   /// Complete logout that clears EVERYTHING
   static Future<void> completeLogout(BuildContext context) async {
     try {
-      print('🔄 STARTING COMPLETE LOGOUT PROCESS');
+      debugPrint('🔄 STARTING COMPLETE LOGOUT PROCESS');
       
       // 1. Clear all provider states FIRST
       _clearAllProviderStates(context);
       
       // 2. Get auth provider and sign out from Firebase
       final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      await authProvider.signOut();
+      await authProvider.signOut(context);
       
       // 3. Clear navigation stack completely
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -25,10 +26,10 @@ class LogoutService {
         (route) => false,
       );
       
-      print('✅ COMPLETE LOGOUT SUCCESSFUL');
+      debugPrint('✅ COMPLETE LOGOUT SUCCESSFUL');
       
     } catch (e) {
-      print('❌ Logout error: $e');
+      debugPrint('❌ Logout error: $e');
       // Even if there's an error, try to navigate to login
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/login', 
@@ -50,9 +51,10 @@ class LogoutService {
       // Provider.of<ProgramProvider>(context, listen: false).clearAllData();
       // Provider.of<ContributionProvider>(context, listen: false).clearAllData();
       
-      print('✅ All provider states cleared');
+      debugPrint('✅ All provider states cleared');
     } catch (e) {
-      print('⚠️ Error clearing provider states: $e');
+      debugPrint('⚠️ Error clearing provider states: $e');
     }
   }
 }
+

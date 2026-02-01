@@ -1,4 +1,4 @@
-// lib/features/auth/screens/register_screen.dart
+﻿// lib/features/auth/screens/register_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,7 +58,8 @@ Widget _buildInviteBanner() {
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),      borderRadius: BorderRadius.circular(8),
+      color: Colors.blue.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
       children: [
@@ -224,6 +225,7 @@ Future<void> _register() async {
       if (widget.pendingInviteCode != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+        if (!mounted) return;
         debugPrint('💾 Saved invite code for after verification: ${widget.pendingInviteCode}');
       }
       
@@ -314,10 +316,13 @@ Future<void> _signInWithGoogle() async {
         
         // Store invite code
         final prefs = await SharedPreferences.getInstance();
+        if (!mounted) return;
         await prefs.setString('pending_invite_code', widget.pendingInviteCode!);
+        if (!mounted) return;
         
         // Navigate to SplashScreen which will handle the invite
         await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -329,6 +334,7 @@ Future<void> _signInWithGoogle() async {
       } else {
         // Normal flow
         await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const SplashScreen()),
@@ -648,18 +654,18 @@ Widget _buildTermsCheckbox() {
                   ),
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  fillColor: MaterialStateProperty.resolveWith<Color?>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.selected)) {
+                  fillColor: WidgetStateProperty.resolveWith<Color?>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
                         return AppColors.primary(context);
                       }
                       return null;
                     },
                   ),
                   checkColor: Colors.white,
-                  overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                    (Set<MaterialState> states) {
-                      return AppColors.primary(context).withOpacity(0.1);
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                    (Set<WidgetState> states) {
+                      return AppColors.primary(context).withValues(alpha: 0.1);
                     },
                   ),
                 ),
@@ -668,9 +674,9 @@ Widget _buildTermsCheckbox() {
           ),
           
           // Text with individual control
-          Transform.translate(
-            offset: const Offset(-6, 0),
-            child: Expanded(
+          Expanded(
+            child: Transform.translate(
+              offset: const Offset(-6, 0),
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () {
@@ -793,7 +799,7 @@ Widget _buildTermsCheckbox() {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 4),
                           ),
@@ -861,9 +867,9 @@ Widget _buildTermsCheckbox() {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Color(Colors.red.value).withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -890,9 +896,9 @@ Widget _buildTermsCheckbox() {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Color(Colors.red.value).withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -919,9 +925,9 @@ Widget _buildTermsCheckbox() {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -1019,7 +1025,7 @@ Widget _buildTermsCheckbox() {
                                 backgroundColor: AppColors.primary(context),
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor:
-                                    AppColors.primary(context).withOpacity(0.5),
+                                    AppColors.primary(context).withValues(alpha: 0.5),
                                 disabledForegroundColor: Colors.white70,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1152,7 +1158,7 @@ Widget _buildTermsCheckbox() {
                               fontWeight: FontWeight.w600,
                               color: isOnline 
                                   ? AppColors.textPrimary(context)
-                                  : AppColors.textPrimary(context).withOpacity(0.5),
+                                  : AppColors.textPrimary(context).withValues(alpha: 0.5),
                             ),
                           ),
                           onPressed: isDisabled ? null : _signInWithGoogle,
@@ -1160,7 +1166,7 @@ Widget _buildTermsCheckbox() {
                             side: BorderSide(
                               color: isOnline 
                                   ? AppColors.border(context)
-                                  : AppColors.border(context).withOpacity(0.5),
+                                  : AppColors.border(context).withValues(alpha: 0.5),
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -1229,3 +1235,4 @@ Widget _buildTermsCheckbox() {
     );
   }
 }
+

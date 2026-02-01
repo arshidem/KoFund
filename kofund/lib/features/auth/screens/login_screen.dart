@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -185,6 +185,7 @@ Future<void> _login() async {
       if (_cachedInviteCode != null) {
         debugPrint('✅ Login successful, navigating to join community with invite');
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
         _navigateToJoinCommunityWithInvite();
       } else {
         // Normal flow - go to splash screen
@@ -261,9 +262,11 @@ Future<void> _signInWithGoogle() async {
       
       if (_cachedInviteCode != null) {
         await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         _navigateToJoinCommunityWithInvite();
       } else {
         await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const SplashScreen()),
@@ -601,18 +604,18 @@ Widget _buildTermsCheckbox() {
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   // ⭐ Control colors
-                  fillColor: MaterialStateProperty.resolveWith<Color?>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.selected)) {
+                  fillColor: WidgetStateProperty.resolveWith<Color?>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
                         return AppColors.primary(context);
                       }
                       return null;
                     },
                   ),
                   checkColor: Colors.white,
-                  overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                    (Set<MaterialState> states) {
-                      return AppColors.primary(context).withOpacity(0.1);
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                    (Set<WidgetState> states) {
+                      return AppColors.primary(context).withValues(alpha: 0.1);
                     },
                   ),
                 ),
@@ -621,9 +624,9 @@ Widget _buildTermsCheckbox() {
           ),
           
           // Text with individual control
-          Transform.translate(
-            offset: const Offset(-6, 0), // ⭐ Move text horizontally/vertically
-            child: Expanded(
+          Expanded(
+            child: Transform.translate(
+              offset: const Offset(-6, 0), // ⭐ Move text horizontally/vertically
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
                 onTap: () {
@@ -727,7 +730,8 @@ Widget _buildInviteBanner() {
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),      borderRadius: BorderRadius.circular(8),
+      color: Colors.blue.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
       children: [
@@ -800,7 +804,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),      borderRadius: BorderRadiu
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 4),
                           ),
@@ -870,9 +874,9 @@ color: Color(Colors.blue.value).withOpacity(0.1),      borderRadius: BorderRadiu
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Color(Colors.red.value).withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -899,9 +903,9 @@ if (_errorMessage != null) ...[
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: Color(Colors.red.value).withOpacity(0.1),
+      color: Colors.red.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Color(Colors.red.value).withOpacity(0.3)),
+      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
     ),
     child: Row(
       children: [
@@ -928,9 +932,9 @@ if (_formError != null) ...[
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: Colors.orange.withOpacity(0.1),
+      color: Colors.orange.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
     ),
     child: Row(
       children: [
@@ -1031,7 +1035,7 @@ FutureBuilder<bool>(
                   backgroundColor: AppColors.primary(context),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      AppColors.primary(context).withOpacity(0.5),
+                      AppColors.primary(context).withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1164,7 +1168,7 @@ FutureBuilder<bool>(
                 fontWeight: FontWeight.w600,
                 color: isOnline 
                     ? AppColors.textPrimary(context)
-                    : AppColors.textPrimary(context).withOpacity(0.5),
+                    : AppColors.textPrimary(context).withValues(alpha: 0.5),
               ),
             ),
             onPressed: isDisabled ? null : _signInWithGoogle,
@@ -1172,7 +1176,7 @@ FutureBuilder<bool>(
               side: BorderSide(
                 color: isOnline 
                     ? AppColors.border(context)
-                    : AppColors.border(context).withOpacity(0.5),
+                    : AppColors.border(context).withValues(alpha: 0.5),
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

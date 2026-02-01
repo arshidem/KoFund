@@ -1,9 +1,10 @@
-// lib/features/profile/screens/settings/community_guidelines_screen.dart
+﻿// lib/features/profile/screens/settings/community_guidelines_screen.dart
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 
 class CommunityGuidelinesScreen extends StatefulWidget {
@@ -26,17 +27,17 @@ class CommunityGuidelinesScreenState extends State<CommunityGuidelinesScreen> {
   }
 
 Future<void> _loadAppInfo() async {
-  print('Loading app info...');
+  debugPrint('Loading app info...');
   final version = await AppInfo.appVersion;
   final build = await AppInfo.buildNumber;
-  print('Got version: $version, build: $build');
+  debugPrint('Got version: $version, build: $build');
   
   if (mounted) {
     setState(() {
       appVersion = version;
       buildNumber = build;
     });
-    print('State updated to version: $appVersion');
+    debugPrint('State updated to version: $appVersion');
   }
 }
 
@@ -112,10 +113,10 @@ Future<void> _loadAppInfo() async {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withOpacity(0.1),
+                          color: AppColors.primary(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -493,7 +494,7 @@ Future<void> _loadAppInfo() async {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -633,3 +634,4 @@ Future<void> _loadAppInfo() async {
     );
   }
 }
+

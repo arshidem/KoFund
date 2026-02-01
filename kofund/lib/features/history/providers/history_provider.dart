@@ -1,4 +1,4 @@
-// lib/features/history/providers/history_provider.dart
+﻿// lib/features/history/providers/history_provider.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -152,7 +152,7 @@ class HistoryProvider with ChangeNotifier {
   // ✅ SAFE INITIALIZATION
   void _initializeFromAuth() {
     try {
-      print('🔄 HISTORY PROVIDER - Initializing from auth...');
+      debugPrint('🔄 HISTORY PROVIDER - Initializing from auth...');
       
       if (_authProvider.user == null) {
         _setError('User not authenticated. Please log in.');
@@ -172,11 +172,11 @@ class HistoryProvider with ChangeNotifier {
       updateCommunityId(userCommunityId);
       _isInitialized = true;
       
-      print('✅ HISTORY PROVIDER - Initialized successfully with community: $userCommunityId');
+      debugPrint('✅ HISTORY PROVIDER - Initialized successfully with community: $userCommunityId');
     } catch (e) {
       _setError('Failed to initialize history provider: $e');
       _isInitialized = true;
-      print('❌ HISTORY PROVIDER - Initialization error: $e');
+      debugPrint('❌ HISTORY PROVIDER - Initialization error: $e');
     }
   }
 
@@ -186,7 +186,7 @@ class HistoryProvider with ChangeNotifier {
       _communityId = communityId;
       _error = null; // Clear any previous errors
       
-      print('🔄 HISTORY PROVIDER - Community ID updated: $communityId');
+      debugPrint('🔄 HISTORY PROVIDER - Community ID updated: $communityId');
       
       // Restart streams with new communityId
       _restartStreams();
@@ -221,7 +221,7 @@ class HistoryProvider with ChangeNotifier {
     _programTitles.clear();
     _userNames.clear();
     _safeNotifyListeners(); // Now this method exists
-    print('🔄 HistoryProvider: Reset for new user - all data cleared');
+    debugPrint('🔄 HistoryProvider: Reset for new user - all data cleared');
   }
 // In your HistoryProvider class, add these methods:
 
@@ -240,7 +240,7 @@ void clearDataForUserChange() {
   _endDate = null;
   _communityId = null;
   _safeNotifyListeners();
-  print('🔄 HistoryProvider: Data cleared for user change');
+  debugPrint('🔄 HistoryProvider: Data cleared for user change');
 }
 
 void setUserCommunity(String communityId) {
@@ -250,7 +250,7 @@ void setUserCommunity(String communityId) {
     _isInitialized = true;
     fetchOnce();
     _restartStreams();
-    print('✅ HistoryProvider: Set community to $communityId');
+    debugPrint('✅ HistoryProvider: Set community to $communityId');
   }
 }
   // ================= CORE METHODS ==================
@@ -284,7 +284,7 @@ void setUserCommunity(String communityId) {
           .listen(
             (contributions) => _processContributions(contributions),
             onError: (error) {
-              print('❌ Contributions stream error: $error');
+              debugPrint('❌ Contributions stream error: $error');
               _setError('Failed to load contributions: $error');
             },
           );
@@ -295,15 +295,15 @@ void setUserCommunity(String communityId) {
           .listen(
             (expenses) => _processExpenses(expenses),
             onError: (error) {
-              print('❌ Expenses stream error: $error');
+              debugPrint('❌ Expenses stream error: $error');
               _setError('Failed to load expenses: $error');
             },
           );
 
-      print('✅ HISTORY PROVIDER - Streams started for community: $_communityId');
+      debugPrint('✅ HISTORY PROVIDER - Streams started for community: $_communityId');
     } catch (e) {
       _setError('Failed to start data streams: $e');
-      print('❌ HISTORY PROVIDER - Stream startup error: $e');
+      debugPrint('❌ HISTORY PROVIDER - Stream startup error: $e');
     }
   }
 
@@ -317,7 +317,7 @@ void setUserCommunity(String communityId) {
     _setError(null);
 
     try {
-      print('🔄 HISTORY PROVIDER - Fetching initial data...');
+      debugPrint('🔄 HISTORY PROVIDER - Fetching initial data...');
       
       final results = await Future.wait([
         _contributionService.getCommunityContributions(_communityId!),
@@ -327,7 +327,7 @@ void setUserCommunity(String communityId) {
       final contributions = results[0] as List<ContributionModel>;
       final expenses = results[1] as List<ExpenseModel>;
 
-      print('📥 HISTORY PROVIDER - Fetched ${contributions.length} contributions, ${expenses.length} expenses');
+      debugPrint('📥 HISTORY PROVIDER - Fetched ${contributions.length} contributions, ${expenses.length} expenses');
 
       // Process both contributions and expenses together
       await _processIncoming(
@@ -337,11 +337,11 @@ void setUserCommunity(String communityId) {
       );
 
       _setLoading(false);
-      print('✅ HISTORY PROVIDER - Initial data fetch completed');
+      debugPrint('✅ HISTORY PROVIDER - Initial data fetch completed');
     } catch (e) {
       _setLoading(false);
       _setError('Failed to load history data: $e');
-      print('❌ HISTORY PROVIDER - Fetch error: $e');
+      debugPrint('❌ HISTORY PROVIDER - Fetch error: $e');
     }
   }
 
@@ -349,7 +349,7 @@ void setUserCommunity(String communityId) {
     try {
       return await _expenseService.getExpensesByCommunity(communityId);
     } catch (e) {
-      print('⚠️ HISTORY PROVIDER - Could not load expenses: $e');
+      debugPrint('⚠️ HISTORY PROVIDER - Could not load expenses: $e');
       return [];
     }
   }
@@ -373,9 +373,9 @@ void setUserCommunity(String communityId) {
     bool replaceAll = false,
   }) async {
     try {
-      print('🔄 HISTORY PROVIDER - Processing incoming data...');
-      print('   📥 Contributions: ${contributions?.length ?? 0}');
-      print('   📥 Expenses: ${expenses?.length ?? 0}');
+      debugPrint('🔄 HISTORY PROVIDER - Processing incoming data...');
+      debugPrint('   📥 Contributions: ${contributions?.length ?? 0}');
+      debugPrint('   📥 Expenses: ${expenses?.length ?? 0}');
 
       // Create a copy of current items if not replacing all
       final Map<String, HistoryItem> itemsMap = replaceAll 
@@ -399,14 +399,14 @@ void setUserCommunity(String communityId) {
       // Update filtered items
       _updateFilteredItems();
 
-      print('✅ HISTORY PROVIDER - Processing completed:');
-      print('   📊 Total items: ${_items.length}');
-      print('   💰 Contributions: ${_items.where((i) => i.type == HistoryItemType.contribution).length}');
-      print('   💸 Expenses: ${_items.where((i) => i.type == HistoryItemType.expense).length}');
+      debugPrint('✅ HISTORY PROVIDER - Processing completed:');
+      debugPrint('   📊 Total items: ${_items.length}');
+      debugPrint('   💰 Contributions: ${_items.where((i) => i.type == HistoryItemType.contribution).length}');
+      debugPrint('   💸 Expenses: ${_items.where((i) => i.type == HistoryItemType.expense).length}');
 
       _safeNotifyListeners();
     } catch (e) {
-      print('❌ HISTORY PROVIDER - Processing error: $e');
+      debugPrint('❌ HISTORY PROVIDER - Processing error: $e');
       _setError('Failed to process history data: $e');
     }
   }
@@ -462,13 +462,13 @@ void setUserCommunity(String communityId) {
     List<ContributionModel> contributions,
     Map<String, HistoryItem> itemsMap,
   ) async {
-    print('   🔄 Processing ${contributions.length} contributions...');
+    debugPrint('   🔄 Processing ${contributions.length} contributions...');
 
     for (final contribution in contributions) {
       try {
         await _processSingleContribution(contribution, itemsMap);
       } catch (error) {
-        print('   ❌ Error processing contribution ${contribution.contributionId}: $error');
+        debugPrint('   ❌ Error processing contribution ${contribution.contributionId}: $error');
       }
     }
   }
@@ -477,13 +477,13 @@ void setUserCommunity(String communityId) {
     List<ExpenseModel> expenses,
     Map<String, HistoryItem> itemsMap,
   ) async {
-    print('   🔄 Processing ${expenses.length} expenses...');
+    debugPrint('   🔄 Processing ${expenses.length} expenses...');
 
     for (final expense in expenses) {
       try {
         await _processSingleExpense(expense, itemsMap);
       } catch (error) {
-        print('   ❌ Error processing expense ${expense.expenseId}: $error');
+        debugPrint('   ❌ Error processing expense ${expense.expenseId}: $error');
       }
     }
   }
@@ -562,7 +562,7 @@ Future<String?> _getProgramName(String programId) async {
     final program = await ProgramService().getProgramById(programId);
     return program?.title;
   } catch (e) {
-    print('Error fetching program name: $e');
+    debugPrint('Error fetching program name: $e');
     return null;
   }
 }
@@ -640,7 +640,7 @@ Future<String?> _getProgramName(String programId) async {
       _programTitles[programId] = title;
       return title;
     } catch (e) {
-      print('⚠️ Error fetching program title for $programId: $e');
+      debugPrint('⚠️ Error fetching program title for $programId: $e');
       _programTitles[programId] = 'Unknown Program';
       return 'Unknown Program';
     }
@@ -662,7 +662,7 @@ Future<String?> _getProgramName(String programId) async {
       _userNames[userId] = name;
       return name;
     } catch (e) {
-      print('⚠️ Error fetching user name for $userId: $e');
+      debugPrint('⚠️ Error fetching user name for $userId: $e');
       _userNames[userId] = 'Unknown User';
       return 'Unknown User';
     }
@@ -729,7 +729,7 @@ Future<String?> _getProgramName(String programId) async {
   void init() {
     // This method is now just a wrapper for the internal initialization
     // It's kept for backward compatibility with existing code
-    print('📝 HISTORY PROVIDER - Manual init() called');
+    debugPrint('📝 HISTORY PROVIDER - Manual init() called');
     _initializeFromAuth();
   }
 
@@ -738,7 +738,8 @@ Future<String?> _getProgramName(String programId) async {
     _disposed = true; // ADD THIS LINE
     _contribSub?.cancel();
     _expenseSub?.cancel();
-    print('♻️ HISTORY PROVIDER - Disposed');
+    debugPrint('♻️ HISTORY PROVIDER - Disposed');
     super.dispose();
   }
 }
+

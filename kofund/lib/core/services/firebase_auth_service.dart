@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
@@ -265,13 +265,13 @@ Future<User?> signInWithGoogle() async {
       );
       
       await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
-      print('✅ New Google user created in Firestore: ${user.uid}');
+      debugPrint('✅ New Google user created in Firestore: ${user.uid}');
     } else {
       // Update last login for existing user
       await _firestore.collection('users').doc(user.uid).update({
         'lastLogin': FieldValue.serverTimestamp(),
       });
-      print('✅ Existing Google user updated: ${user.uid}');
+      debugPrint('✅ Existing Google user updated: ${user.uid}');
     }
   }
 
@@ -317,7 +317,7 @@ Future<User?> signInWithGoogle() async {
 // In FirebaseAuthService
 Future<void> signOut() async {
   try {
-    print('🔄 FirebaseAuthService: Starting sign-out');
+    debugPrint('🔄 FirebaseAuthService: Starting sign-out');
 
     // 1. Cache user ID BEFORE sign out
     final user = _auth.currentUser;
@@ -327,10 +327,10 @@ Future<void> signOut() async {
     try {
       if (!kIsWeb && await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
-        print('🔵 Google sign-out complete');
+        debugPrint('🔵 Google sign-out complete');
       }
     } catch (e) {
-      print('⚠️ Google sign-out error: $e');
+      debugPrint('⚠️ Google sign-out error: $e');
     }
 
     // 3. Clean FCM token ONCE (AppAuthProvider will NOT duplicate)
@@ -338,7 +338,7 @@ Future<void> signOut() async {
 
     // 4. Sign out Firebase Auth
     await _auth.signOut();
-    print('🟦 FirebaseAuth: Signed out');
+    debugPrint('🟦 FirebaseAuth: Signed out');
 
     // 5. DO NOT WIPE SharedPreferences HERE
     // AppAuthProvider already removes user-only data
@@ -351,11 +351,11 @@ Future<void> signOut() async {
     // 6. Verify user
     await Future.delayed(Duration(milliseconds: 150));
     if (_auth.currentUser == null) {
-      print('✅ FirebaseAuthService: Sign-out confirmed');
+      debugPrint('✅ FirebaseAuthService: Sign-out confirmed');
     }
 
   } catch (e) {
-    print('❌ FirebaseAuthService sign-out error: $e');
+    debugPrint('❌ FirebaseAuthService sign-out error: $e');
     rethrow;
   }
 }
@@ -363,7 +363,7 @@ Future<void> signOut() async {
 // ===== NEW METHOD: Clean FCM tokens on logout =====
 Future<void> _cleanFCMTokensOnLogout(String userId) async {
   try {
-    print('🧹 Cleaning FCM tokens for user: $userId');
+    debugPrint('🧹 Cleaning FCM tokens for user: $userId');
     
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -371,7 +371,7 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
         .get();
     
     if (!userDoc.exists) {
-      print('⚠️ User document not found for token cleanup');
+      debugPrint('⚠️ User document not found for token cleanup');
       return;
     }
     
@@ -379,11 +379,11 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
     final tokens = List<String>.from(userData?['fcmTokens'] ?? []);
     
     if (tokens.isEmpty) {
-      print('✅ No FCM tokens to clean');
+      debugPrint('✅ No FCM tokens to clean');
       return;
     }
     
-    print('📱 Removing ${tokens.length} FCM tokens...');
+    debugPrint('📱 Removing ${tokens.length} FCM tokens...');
     
     // Remove all tokens from Firestore
     await userDoc.reference.update({
@@ -413,16 +413,16 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
         }
         
         await batch.commit();
-        print('✅ Deactivated ${tokensSnapshot.docs.length} tokens in subcollection');
+        debugPrint('✅ Deactivated ${tokensSnapshot.docs.length} tokens in subcollection');
       }
     } catch (e) {
-      print('⚠️ Error cleaning subcollection: $e');
+      debugPrint('⚠️ Error cleaning subcollection: $e');
     }
     
-    print('✅ FCM tokens cleaned successfully');
+    debugPrint('✅ FCM tokens cleaned successfully');
     
   } catch (e) {
-    print('❌ Error in _cleanFCMTokensOnLogout: $e');
+    debugPrint('❌ Error in _cleanFCMTokensOnLogout: $e');
     throw e;
   }
 }
@@ -459,26 +459,26 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
     try {
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
       if (userDoc.exists) {
-        print('✅ User data retrieved from Firestore');
+        debugPrint('✅ User data retrieved from Firestore');
         return userDoc.data() as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      print('❌ Error getting user data: $e');
+      debugPrint('❌ Error getting user data: $e');
       return null;
     }
   }
 // Add this method to your FirebaseAuthService class
 Future<void> sendPasswordResetEmail(String email) async {
   try {
-    print('🔄 Sending password reset email to: $email');
+    debugPrint('🔄 Sending password reset email to: $email');
     await _auth.sendPasswordResetEmail(email: email);
-    print('✅ Password reset email sent successfully');
+    debugPrint('✅ Password reset email sent successfully');
   } on FirebaseAuthException catch (e) {
-    print('❌ Password reset error: ${e.code} - ${e.message}');
+    debugPrint('❌ Password reset error: ${e.code} - ${e.message}');
     throw _handleAuthError(e);
   } catch (e) {
-    print('❌ Unexpected error in password reset: $e');
+    debugPrint('❌ Unexpected error in password reset: $e');
     throw 'Failed to send password reset email. Please try again.';
   }
 }
@@ -501,13 +501,13 @@ Future<bool> changePassword({
     // Update to new password
     await user.updatePassword(newPassword);
     
-    print('✅ Password changed successfully');
+    debugPrint('✅ Password changed successfully');
     return true;
   } on FirebaseAuthException catch (e) {
-    print('❌ Password change error: ${e.code} - ${e.message}');
+    debugPrint('❌ Password change error: ${e.code} - ${e.message}');
     throw _handleAuthError(e);
   } catch (e) {
-    print('❌ Unexpected error in password change: $e');
+    debugPrint('❌ Unexpected error in password change: $e');
     throw 'Failed to change password. Please try again.';
   }
 }
@@ -523,10 +523,10 @@ Future<bool> reauthenticateUser(String password) async {
     await _reauthenticateUser(user, password);
     return true;
   } on FirebaseAuthException catch (e) {
-    print('❌ Reauthentication error: ${e.code} - ${e.message}');
+    debugPrint('❌ Reauthentication error: ${e.code} - ${e.message}');
     throw _handleAuthError(e);
   } catch (e) {
-    print('❌ Unexpected error in reauthentication: $e');
+    debugPrint('❌ Unexpected error in reauthentication: $e');
     throw 'Authentication failed. Please check your password.';
   }
 }
@@ -557,13 +557,13 @@ Future<bool> updatePassword(String newPassword) async {
     }
 
     await user.updatePassword(newPassword);
-    print('✅ Password updated successfully');
+    debugPrint('✅ Password updated successfully');
     return true;
   } on FirebaseAuthException catch (e) {
-    print('❌ Password update error: ${e.code} - ${e.message}');
+    debugPrint('❌ Password update error: ${e.code} - ${e.message}');
     throw _handleAuthError(e);
   } catch (e) {
-    print('❌ Unexpected error in password update: $e');
+    debugPrint('❌ Unexpected error in password update: $e');
     throw 'Failed to update password. Please try again.';
   }
 }
@@ -604,3 +604,4 @@ String _handleAuthError(FirebaseAuthException e) {
   }
 }
 }
+

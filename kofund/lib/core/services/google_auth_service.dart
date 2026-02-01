@@ -1,5 +1,6 @@
-import 'package:google_sign_in/google_sign_in.dart';
+﻿import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class GoogleAuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -33,7 +34,7 @@ class GoogleAuthService {
           await _firebaseAuth.signInWithCredential(credential);
       return userCredential.user;
     } catch (e) {
-      print('Error during Google Sign-In: $e');
+      debugPrint('Error during Google Sign-In: $e');
       rethrow;
     }
   }
@@ -44,7 +45,8 @@ class GoogleAuthService {
       await _googleSignIn.signOut();
       await _firebaseAuth.signOut();
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
     }
   }
 }
+

@@ -103,7 +103,7 @@ class CustomTextField extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: enabled 
-                        ? theme.colorScheme.onSurface.withOpacity(0.7)
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
                         : theme.disabledColor,
                     ),
                   ),
@@ -160,10 +160,10 @@ class CustomTextField extends StatelessWidget {
             prefixText: prefixText,
             suffixText: suffixText,
             prefixStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             suffixStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             contentPadding: contentPadding ?? EdgeInsets.symmetric(
               horizontal: 12,
@@ -206,7 +206,7 @@ class CustomTextField extends StatelessWidget {
             ),
             fillColor: fillColor ?? (enabled 
               ? theme.colorScheme.surface 
-              : theme.colorScheme.surface.withOpacity(0.5)),
+              : theme.colorScheme.surface.withValues(alpha: 0.5)),
             filled: filled || !enabled,
             errorText: errorText,
             errorStyle: errorStyle ?? TextStyle(

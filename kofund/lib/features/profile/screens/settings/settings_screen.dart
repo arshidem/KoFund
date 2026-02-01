@@ -1,4 +1,4 @@
-// lib/features/profile/screens/settings/settings_screen.dart
+﻿// lib/features/profile/screens/settings/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +15,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'dart:ui';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,17 +36,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 Future<void> _loadAppInfo() async {
-  print('Loading app info...');
+  debugPrint('Loading app info...');
   final version = await AppInfo.appVersion;
   final build = await AppInfo.buildNumber;
-  print('Got version: $version, build: $build');
+  debugPrint('Got version: $version, build: $build');
   
   if (mounted) {
     setState(() {
       appVersion = version;
       buildNumber = build;
     });
-    print('State updated to version: $appVersion');
+    debugPrint('State updated to version: $appVersion');
   }
 }
 
@@ -359,8 +360,8 @@ Widget _buildDangerTile({
     color: Colors.transparent, // Important for ripple to show
     child: InkWell(
       onTap: onTap,
-      splashColor: AppColors.error(context).withOpacity(0.2), // Custom splash color
-      highlightColor: AppColors.error(context).withOpacity(0.1), // Custom highlight color
+      splashColor: AppColors.error(context).withValues(alpha: 0.2), // Custom splash color
+      highlightColor: AppColors.error(context).withValues(alpha: 0.1), // Custom highlight color
       borderRadius: BorderRadius.circular(0), // Match card corners
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18), // Good height
@@ -385,7 +386,7 @@ Widget _buildDangerTile({
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: AppColors.error(context).withOpacity(0.6),
+              color: AppColors.error(context).withValues(alpha: 0.6),
             ),
           ],
         ),
@@ -543,6 +544,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
           onPressed: () async {
             // Check internet connection first
             final bool isConnected = await NetworkService().isConnected;
+            if (!mounted) return;
             
             if (!isConnected) {
               // Show snackbar and keep dialog open
@@ -565,6 +567,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
             );
 
             final success = await profileProvider.leaveCommunity();
+            if (!mounted) return;
             
             if (success) {
               scaffoldMessenger.showSnackBar(
@@ -628,7 +631,7 @@ void _showDeleteAccountDialog(AppAuthProvider authProvider) {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                borderRadius: BorderRadius.circular(8),
+color: Colors.blue.withValues(alpha: 0.1),                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blue),
               ),
               child: Row(
@@ -665,7 +668,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                borderRadius: B
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.orange),
             ),
@@ -736,6 +739,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                borderRadius: B
           onPressed: () async {
             // Check internet connection first
             final bool isConnected = await NetworkService().isConnected;
+            if (!mounted) return;
             
             if (!isConnected) {
               // Show snackbar and keep dialog open
@@ -839,6 +843,7 @@ Future<void> _attemptAccountDeletion(
 }) async {
   try {
     final success = await profileProvider.deleteUserAccount(password: password);
+    if (!mounted) return;
     
     if (success) {
       // Account deleted successfully
@@ -942,6 +947,7 @@ void _showReauthenticationRequiredDialog() {
           onPressed: () async {
             Navigator.pop(context);
             await FirebaseAuth.instance.signOut();
+            if (!mounted) return;
             Navigator.pushNamedAndRemoveUntil(
               context,
               RouteNames.login,
@@ -973,6 +979,7 @@ void _showLogoutDialog(AppAuthProvider authProvider) {
           onPressed: () async {
             // Check internet connection first
             final bool isConnected = await NetworkService().isConnected;
+            if (!mounted) return;
             
             if (!isConnected) {
               // Show snackbar and close dialog
@@ -993,6 +1000,7 @@ void _showLogoutDialog(AppAuthProvider authProvider) {
             
             // 2. Sign out from auth
             await authProvider.signOut(context);
+            if (!mounted) return;
             
             // 3. Show success message
             SnackbarHelper.showSuccess(context, 'Logged out successfully!');
@@ -1014,3 +1022,5 @@ void _showLogoutDialog(AppAuthProvider authProvider) {
   );
 }
 }
+
+

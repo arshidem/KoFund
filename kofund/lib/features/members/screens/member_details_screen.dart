@@ -1,4 +1,4 @@
-// lib/features/members/screens/member_details_screen.dart
+﻿// lib/features/members/screens/member_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -19,6 +19,7 @@ import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/features/virtual_users/screens/edit_virtual_user_screen.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 // =================== MAIN SCREEN ===================
 class MemberDetailsScreen extends StatelessWidget {
@@ -71,7 +72,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: MemberDetailsScreen initState called');
+    debugPrint('🔄 DEBUG: MemberDetailsScreen initState called');
     _loadMemberData();
   }
 
@@ -90,7 +91,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     final currentUser = authProvider.user;
     
     if (currentUser?.uid != _currentUserId) {
-      print('👤 DEBUG: User changed in MemberDetailsScreen - from $_currentUserId to ${currentUser?.uid}');
+      debugPrint('👤 DEBUG: User changed in MemberDetailsScreen - from $_currentUserId to ${currentUser?.uid}');
       _currentUserId = currentUser?.uid;
       
       // Reset screen state for new user
@@ -101,7 +102,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   void _resetScreenForNewUser() {
     if (!mounted) return;
     
-    print('🔄 DEBUG: Resetting MemberDetailsScreen for new user');
+    debugPrint('🔄 DEBUG: Resetting MemberDetailsScreen for new user');
     
     setState(() {
       _currentMember = null;
@@ -150,7 +151,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
         }
       }
     } catch (e) {
-      print('❌ DEBUG: Error loading member data: $e');
+      debugPrint('❌ DEBUG: Error loading member data: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -190,7 +191,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       
       _refreshController.refreshCompleted();
     } catch (e) {
-      print('❌ DEBUG: Error refreshing member data: $e');
+      debugPrint('❌ DEBUG: Error refreshing member data: $e');
       _refreshController.refreshFailed();
     } finally {
       if (mounted) {
@@ -201,6 +202,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
 
   void _onRefresh() async {
     await _refreshMemberData();
+    if (!mounted) return;
   }
 
   @override
@@ -407,7 +409,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: ( AppColors.primary(context)).withOpacity(0.2),
+            color: ( AppColors.primary(context)).withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 1),
           ),
@@ -422,10 +424,10 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(35),
                   border: Border.all(
-                    color: isVirtualUser ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.3), 
+                    color: isVirtualUser ? Colors.white.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.3), 
                     width: 2
                   ),
                 ),
@@ -473,14 +475,14 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                     
                     Row(
                       children: [
-                        Icon(Icons.email, size: 16, color: Colors.white.withOpacity(0.8)),
+                        Icon(Icons.email, size: 16, color: Colors.white.withValues(alpha: 0.8)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             member.email ?? 'No email',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -493,13 +495,13 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                     if (member.phoneNumber != null && member.phoneNumber!.isNotEmpty) ...[
                       Row(
                         children: [
-                          Icon(Icons.phone, size: 16, color: Colors.white.withOpacity(0.8)),
+                          Icon(Icons.phone, size: 16, color: Colors.white.withValues(alpha: 0.8)),
                           const SizedBox(width: 8),
                           Text(
                             member.phoneNumber!,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         
@@ -518,7 +520,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
               top: -8,
               right: -10,
               child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, color: Colors.white.withOpacity(0.8)),
+                icon: Icon(Icons.more_vert, color: Colors.white.withValues(alpha: 0.8)),
                 onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
                 itemBuilder: (context) {
                  // In _buildProfileHeaderCard method, update the PopupMenuButton for virtual users:
@@ -609,9 +611,9 @@ if (isVirtualUser) {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withOpacity(0.08),
+        color: AppColors.primary(context).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +627,7 @@ if (isVirtualUser) {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary(context).withOpacity(.8),
+                  color: AppColors.primary(context).withValues(alpha: .8),
                 ),
               ),
             ],
@@ -646,7 +648,7 @@ if (isVirtualUser) {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.05),
+              color: AppColors.primary(context).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -658,7 +660,7 @@ if (isVirtualUser) {
                     'Virtual members don\'t have app access. They are managed by community admins.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.primary(context).withOpacity(0.8),
+                      color: AppColors.primary(context).withValues(alpha: 0.8),
                       height: 1.4,
                     ),
                   ),
@@ -685,7 +687,7 @@ if (isVirtualUser) {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.primary(context).withOpacity(0.7),
+                  color: AppColors.primary(context).withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -694,7 +696,7 @@ if (isVirtualUser) {
                 value,
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.primary(context).withOpacity(0.7),
+                  color: AppColors.primary(context).withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -770,7 +772,7 @@ void _navigateToEditVirtualUser(UserModel member) async {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -894,7 +896,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -919,7 +921,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withOpacity(0.1),
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -971,7 +973,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withOpacity(0.1),
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1016,7 +1018,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withOpacity(0.1),
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1070,7 +1072,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: hasPaid ? Color(Colors.green.value).withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  color: hasPaid ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: hasPaid ? Colors.green : Colors.orange,
@@ -1166,7 +1168,7 @@ Widget _buildPhoneInfoItem(UserModel member) {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),              borderRadius: BorderRadius.circular(10),
+color: Colors.green.withValues(alpha: 0.1),              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               ProgramTypes.getIconData(programType),
@@ -1223,7 +1225,7 @@ color: Color(Colors.green.value).withOpacity(0.1),              borderRadius: Bo
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(6),
+color: Colors.green.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
                   'PAID',
@@ -1258,7 +1260,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1283,7 +1285,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
+color: Colors.green.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '₹${totalAmount.toStringAsFixed(0)}',
@@ -1334,7 +1336,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                    borderRadius: BorderRadius.circular(12),
+color: Colors.green.withValues(alpha: 0.1),                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '+ ${contributionHistory.length - 3} more contributions',
@@ -1360,7 +1362,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                    borderRadi
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -1468,6 +1470,7 @@ Future<void> _openWhatsApp(String phone) async {
 
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) return;
   } else {
     // optional: show snackbar / toast
     debugPrint('WhatsApp not installed or cannot launch');
@@ -1479,9 +1482,9 @@ Future<void> _openWhatsApp(String phone) async {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1539,7 +1542,7 @@ Future<void> _openWhatsApp(String phone) async {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          Icon(icon, size: 56, color: AppColors.textSecondary(context).withOpacity(0.5)),
+          Icon(icon, size: 56, color: AppColors.textSecondary(context).withValues(alpha: 0.5)),
           const SizedBox(height: 12),
           Text(
             title,
@@ -1570,6 +1573,7 @@ Future<void> _openWhatsApp(String phone) async {
   // Admin Action Methods
   void _makeAdmin(UserModel member, MemberProvider memberProvider) async {
     final success = await memberProvider.updateMemberRole(member.uid, true);
+    if (!mounted) return;
     
     if (success && mounted) {
       SnackbarHelper.showSuccess(context, '${member.displayName} is now an Admin');
@@ -1579,6 +1583,7 @@ Future<void> _openWhatsApp(String phone) async {
 
   void _removeAdmin(UserModel member, MemberProvider memberProvider) async {
     final success = await memberProvider.updateMemberRole(member.uid, false);
+    if (!mounted) return;
     
     if (success && mounted) {
       SnackbarHelper.showSuccess(context, '${member.displayName} is no longer an Admin');
@@ -1630,6 +1635,7 @@ Future<void> _openWhatsApp(String phone) async {
     try {
       final memberProvider = context.read<MemberProvider>();
       final success = await memberProvider.unapproveUser(member.uid);
+      if (!mounted) return;
       
       if (success && mounted) {
         SnackbarHelper.showSuccess(context, '${member.displayName} has been unapproved');
@@ -1726,6 +1732,7 @@ Future<void> _openWhatsApp(String phone) async {
     try {
       final memberProvider = context.read<MemberProvider>();
       final success = await memberProvider.removeFromCommunity(member.uid);
+      if (!mounted) return;
       
       if (success && mounted) {
         SnackbarHelper.showSuccess(context, '${member.displayName} has been removed from community');
@@ -1743,6 +1750,7 @@ Future<void> _openWhatsApp(String phone) async {
       final memberProvider = context.read<MemberProvider>();
       // You need to implement deleteVirtualUser in MemberProvider
       final success = await memberProvider.deleteVirtualUser(member.uid);
+      if (!mounted) return;
       
       if (success && mounted) {
         SnackbarHelper.showSuccess(context, 'Virtual user ${member.displayName} has been deleted');
@@ -1773,6 +1781,7 @@ Future<void> _openWhatsApp(String phone) async {
       
       if (await canLaunchUrl(url)) {
         await launchUrl(url);
+        if (!mounted) return;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1835,3 +1844,5 @@ Future<void> _openWhatsApp(String phone) async {
     }
   }
 }
+
+

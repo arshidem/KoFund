@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -118,15 +119,15 @@ Future<void> _loadPrograms() async {
 }
 
   void _onRefresh() async {
-    print('🔄 DEBUG: Pull to refresh triggered in Programs');
+    debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
     
     try {
       await _loadPrograms();
       _refreshController.refreshCompleted();
-      print('✅ DEBUG: Programs refresh completed successfully');
+      debugPrint('✅ DEBUG: Programs refresh completed successfully');
     } catch (e) {
       _refreshController.refreshFailed();
-      print('❌ DEBUG: Programs refresh failed: $e');
+      debugPrint('❌ DEBUG: Programs refresh failed: $e');
     }
   }
 
@@ -305,12 +306,12 @@ Widget _buildModernSearchBar() {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 width: 1.5, // Increased border width
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -334,7 +335,7 @@ Widget _buildModernSearchBar() {
                           bottomLeft: Radius.circular(18),
                         ),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           width: 0, // Same border width
                         ),
                       ),
@@ -413,12 +414,12 @@ Widget _buildModernSearchBar() {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               width: 1.5, // Same border width
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -455,7 +456,7 @@ Widget _buildModernSearchBar() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.primary(context).withOpacity(0.06),
+      color: AppColors.primary(context).withValues(alpha: 0.06),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: AppColors.primary(context)),
@@ -473,7 +474,7 @@ Widget _buildModernSearchBar() {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.18),
+              color: AppColors.primary(context).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -552,14 +553,14 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
             child: Icon(
               Icons.search_off, 
               size: 64, 
-              color: AppColors.primary(context).withOpacity(0.5)
+              color: AppColors.primary(context).withValues(alpha: 0.5)
             ),
           )
         else
           Icon(
             Icons.event,
             size: 64,
-            color: AppColors.primary(context).withOpacity(0.5),
+            color: AppColors.primary(context).withValues(alpha: 0.5),
           ),
         const SizedBox(height: 16),
         Center(
@@ -567,7 +568,7 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
             _searchQuery.isNotEmpty ? 'No results found' : 'No Programs Available',
             style: TextStyle(
               fontSize: 18,
-              color: AppColors.primary(context).withOpacity(0.7),
+              color: AppColors.primary(context).withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -678,7 +679,7 @@ Widget _buildProgramCard(
         child: Material(
           color: AppColors.card(context),
           elevation: 3,
-          shadowColor: Colors.black.withOpacity(0.08),
+          shadowColor: Colors.black.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18),
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
@@ -740,7 +741,7 @@ Widget _buildProgramCard(
                                     width: 42,
                                     height: 42,
                                     decoration: BoxDecoration(
-                                      color: programColor.withOpacity(0.12),
+                                      color: programColor.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Icon(
@@ -793,8 +794,8 @@ Widget _buildProgramCard(
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Color(Colors.blue.value).withOpacity(0.3)),
+color: Colors.blue.withValues(alpha: 0.1),                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -962,10 +963,10 @@ color: Color(Colors.blue.value).withOpacity(0.1),                               
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: Color(Colors.red.value).withOpacity(0.1),
+                                    color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: Color(Colors.red.value).withOpacity(0.3),
+                                      color: Colors.red.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: IconButton(
@@ -1090,7 +1091,7 @@ Widget _buildProgramStatus(ProgramModel program) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Text(
@@ -1191,9 +1192,9 @@ Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1308,6 +1309,7 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
   Future<void> _deleteProgram(ProgramModel program, ProgramProvider programProvider) async {
     try {
       await programProvider.deleteProgram(program.programId);
+      if (!mounted) return;
       SnackbarHelper.showSuccess(context, 'Program deleted successfully');
       _loadPrograms();
     } catch (e) {
@@ -1370,6 +1372,7 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
     if (confirm == true) {
       try {
         await programProvider.leaveProgram(program.programId, authProvider.user!.uid);
+        if (!mounted) return;
         SnackbarHelper.showInfo(context, 'Left ${program.title}');
       } catch (e) {
         SnackbarHelper.showError(context, 'Failed to leave: $e');
@@ -1591,3 +1594,5 @@ class _FilterSheetState extends State<FilterSheet> {
     );
   }
 }
+
+

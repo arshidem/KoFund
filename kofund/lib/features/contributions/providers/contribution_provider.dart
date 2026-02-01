@@ -1,4 +1,4 @@
-// lib/features/contributions/providers/contribution_provider.dart
+﻿// lib/features/contributions/providers/contribution_provider.dart
 import 'package:flutter/material.dart';
 import '../../../core/services/contribution_service.dart';
 import '../../../core/services/deleted_contribution_service.dart';
@@ -6,6 +6,7 @@ import '../models/contribution_model.dart';
 import '../models/deleted_contribution_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
   // Cache entry class
   class CacheEntry {
@@ -68,7 +69,7 @@ Future<void> updateContribution(
 }) async {
   try {
     // DEBUG
-    print('📱 Provider: Updating contribution ${contribution.contributionId}');
+    debugPrint('📱 Provider: Updating contribution ${contribution.contributionId}');
     
     // First, update in Firestore
     await _contributionService.updateContribution(
@@ -119,7 +120,7 @@ Future<void> updateContribution(
           
           return 'Program $programId';
         } catch (e) {
-          print('⚠️ Error fetching program title: $e');
+          debugPrint('⚠️ Error fetching program title: $e');
           return 'Program $programId';
         }
       }
@@ -218,13 +219,13 @@ Future<void> updateContribution(
       clearCacheForUser(contribution.programId, contribution.userId);
       
       notifyListeners();
-      print('✅ Provider: Local update successful');
+      debugPrint('✅ Provider: Local update successful');
     } else {
-      print('⚠️ Warning: Contribution not found in local list, but Firestore update succeeded');
+      debugPrint('⚠️ Warning: Contribution not found in local list, but Firestore update succeeded');
     }
     
   } catch (e) {
-    print('❌ Provider error: $e');
+    debugPrint('❌ Provider error: $e');
     rethrow;
   }
 }
@@ -260,7 +261,7 @@ Future<void> deleteContribution(String contributionId, String reason) async {
     _isLoading = true;
     notifyListeners();
     
-    print('🔄 Starting secure deletion for: $contributionId');
+    debugPrint('🔄 Starting secure deletion for: $contributionId');
     
     // 1. Get current user (admin)
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -274,7 +275,7 @@ Future<void> deleteContribution(String contributionId, String reason) async {
       throw Exception('Contribution not found');
     }
     
-    print('📋 Found contribution: ${contribution.contributionId} for user: ${contribution.userId}');
+    debugPrint('📋 Found contribution: ${contribution.contributionId} for user: ${contribution.userId}');
     
     // 3. Get admin user info (you might need to fetch from users collection)
     final userDoc = await FirebaseFirestore.instance
@@ -298,10 +299,10 @@ Future<void> deleteContribution(String contributionId, String reason) async {
     // 6. Remove from local lists
     _removeContributionFromLists(contributionId);
     
-    print('✅ Contribution securely deleted and archived');
+    debugPrint('✅ Contribution securely deleted and archived');
     
   } catch (e) {
-    print('❌ Error in deleteContribution: $e');
+    debugPrint('❌ Error in deleteContribution: $e');
     rethrow;
   } finally {
     _isLoading = false;
@@ -356,7 +357,7 @@ Future<void> restoreDeletedContribution({
     notifyListeners();
     
   } catch (e) {
-    print('❌ Error restoring contribution: $e');
+    debugPrint('❌ Error restoring contribution: $e');
     rethrow;
   }
 }
@@ -379,7 +380,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getProgramTotalContributions(programId);
     } catch (e) {
-      print('Error getting program total contributions: $e');
+      debugPrint('Error getting program total contributions: $e');
       return 0.0;
     }
   }
@@ -389,7 +390,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getProgramContributions(programId);
     } catch (e) {
-      print('Error getting program contributions: $e');
+      debugPrint('Error getting program contributions: $e');
       return [];
     }
   }
@@ -407,7 +408,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
       _contributions = await _contributionService.getProgramContributions(programId);
       _totalContributions = await _contributionService.getProgramTotalContributions(programId);
     } catch (e) {
-      print('Error loading program contributions: $e');
+      debugPrint('Error loading program contributions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -420,7 +421,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
       _userContributions = await _contributionService.getUserProgramContributions(programId, userId);
       notifyListeners();
     } catch (e) {
-      print('Error loading user program contributions: $e');
+      debugPrint('Error loading user program contributions: $e');
     }
   }
 
@@ -432,7 +433,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       _userContributions = await _contributionService.getUserContributions(userId, communityId);
     } catch (e) {
-      print('Error loading user contributions: $e');
+      debugPrint('Error loading user contributions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -446,9 +447,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
 
     try {
       _communityContributions = await _contributionService.getCommunityContributions(communityId);
-      print('✅ Loaded ${_communityContributions.length} community contributions');
+      debugPrint('✅ Loaded ${_communityContributions.length} community contributions');
     } catch (e) {
-      print('❌ Error loading community contributions: $e');
+      debugPrint('❌ Error loading community contributions: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -464,7 +465,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       _paymentStats = await _contributionService.getCommunityPaymentStats(communityId);
     } catch (e) {
-      print('Error loading payment stats: $e');
+      debugPrint('Error loading payment stats: $e');
       _paymentStats = {};
     } finally {
       _isLoading = false;
@@ -480,7 +481,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       _topContributors = await _contributionService.getTopContributors(communityId, limit: limit);
     } catch (e) {
-      print('Error loading top contributors: $e');
+      debugPrint('Error loading top contributors: $e');
       _topContributors = [];
     } finally {
       _isLoading = false;
@@ -497,7 +498,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getUserProgramTotalContributions(programId, userId);
     } catch (e) {
-      print('Error getting user program total: $e');
+      debugPrint('Error getting user program total: $e');
       return 0;
     }
   }
@@ -507,7 +508,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getUserTotalContributions(userId, communityId);
     } catch (e) {
-      print('Error getting user total contributions: $e');
+      debugPrint('Error getting user total contributions: $e');
       return 0;
     }
   }
@@ -517,7 +518,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getUserPaymentProgress(programId, userId);
     } catch (e) {
-      print('Error getting payment progress: $e');
+      debugPrint('Error getting payment progress: $e');
       return {
         'totalPaid': 0,
         'suggestedAmount': 0,
@@ -534,7 +535,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getProgramPaymentSummary(programId);
     } catch (e) {
-      print('Error getting program payment summary: $e');
+      debugPrint('Error getting program payment summary: $e');
       return {};
     }
   }
@@ -545,7 +546,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
     try {
       return await _contributionService.getUserPaymentHistoryWithDetails(userId, communityId);
     } catch (e) {
-      print('Error getting user payment history: $e');
+      debugPrint('Error getting user payment history: $e');
       return [];
     }
   }
@@ -646,12 +647,12 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
     if (!forceRefresh && 
         _cache.containsKey(cacheKey) && 
         now.difference(_cache[cacheKey]!.timestamp) < Duration(seconds: 30)) {
-      print('📦 Using cached contributions for $cacheKey');
+      debugPrint('📦 Using cached contributions for $cacheKey');
       return _cache[cacheKey]!.data;
     }
     
     try {
-      print('🌐 Fetching fresh contributions from Firestore for $cacheKey');
+      debugPrint('🌐 Fetching fresh contributions from Firestore for $cacheKey');
       
       final querySnapshot = await _firestore
           .collection('contributions')
@@ -664,7 +665,7 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
           .map((doc) => ContributionModel.fromMap(doc.data(), doc.id))
           .toList();
       
-      print('✅ Fetched ${contributions.length} contributions from Firestore');
+      debugPrint('✅ Fetched ${contributions.length} contributions from Firestore');
       
       // Update cache
       _cache[cacheKey] = CacheEntry(
@@ -674,11 +675,11 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
       
       return contributions;
     } catch (e) {
-      print('❌ Error fetching contributions from Firestore: $e');
+      debugPrint('❌ Error fetching contributions from Firestore: $e');
       
       // Return cached data if available (even if stale)
       if (_cache.containsKey(cacheKey)) {
-        print('⚠️ Returning stale cached data due to error');
+        debugPrint('⚠️ Returning stale cached data due to error');
         return _cache[cacheKey]!.data;
       }
       
@@ -691,14 +692,14 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
     final cacheKey = '$programId-$userId';
     if (_cache.containsKey(cacheKey)) {
       _cache.remove(cacheKey);
-      print('🗑️ Cleared cache for $cacheKey');
+      debugPrint('🗑️ Cleared cache for $cacheKey');
     }
   }
 
   // Clear all cache
   void clearAllCache() {
     _cache.clear();
-    print('🗑️ Cleared all cache entries');
+    debugPrint('🗑️ Cleared all cache entries');
   }
 
 
@@ -726,7 +727,7 @@ void clearUserData() {
   _isLoading = false;
   _error = null;
   notifyListeners();
-  print('🔄 ContributionProvider: User data cleared');
+  debugPrint('🔄 ContributionProvider: User data cleared');
 }
 
 // Add this for compatibility
@@ -847,9 +848,10 @@ Future<List<ContributionModel>> getMonthlyContributionsForProgram(
   try {
     return await _contributionService.getMonthlyContributionsForProgram(programId, monthId);
   } catch (e) {
-    print('❌ Error getting monthly contributions: $e');
+    debugPrint('❌ Error getting monthly contributions: $e');
     return [];
   }
 }
 
 }
+

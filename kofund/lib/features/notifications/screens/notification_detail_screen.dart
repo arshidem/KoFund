@@ -64,7 +64,7 @@ class NotificationDetailScreen extends StatelessWidget {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: notification.priorityColor.withOpacity(0.1),
+                    color: notification.priorityColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Icon(

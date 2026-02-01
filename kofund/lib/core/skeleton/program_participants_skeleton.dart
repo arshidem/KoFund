@@ -36,8 +36,8 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary(context).withOpacity(0.1),
-            AppColors.primary(context).withOpacity(0.05),
+            AppColors.primary(context).withValues(alpha: 0.1),
+            AppColors.primary(context).withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
@@ -66,7 +66,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                     width: 16,
                     height: 16,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
@@ -108,7 +108,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -117,7 +117,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
             width: 16,
             height: 16,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
           ),
@@ -153,7 +153,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -167,7 +167,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                 width: 80,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -176,7 +176,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -205,7 +205,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -218,7 +218,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
             width: 60,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -243,7 +243,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
               const SizedBox(width: 12),
@@ -272,7 +272,7 @@ class ProgramParticipantsSkeleton extends StatelessWidget {
                 width: 60,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),

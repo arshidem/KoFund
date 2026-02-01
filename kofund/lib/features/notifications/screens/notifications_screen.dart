@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
@@ -116,7 +116,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (hasActiveFilters)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-color: Color(Colors.blue.value).withOpacity(0.1),
+color: Colors.blue.withValues(alpha: 0.1),
                   child: Row(
                     children: [
                       const Icon(Icons.filter_alt, size: 16, color: Colors.blue),
@@ -503,7 +503,7 @@ class NotificationTile extends StatelessWidget {
           width: 45,
           height: 45,
           decoration: BoxDecoration(
-            color: notification.priorityColor.withOpacity(0.1),
+            color: notification.priorityColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -527,7 +527,7 @@ class NotificationTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(4),
+color: Colors.blue.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   notification.communityId!.substring(0, 6) + '...',
@@ -656,3 +656,4 @@ color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius:
     );
   }
 }
+

@@ -249,7 +249,7 @@ _buildToolCard(
 
             // Danger Zone
             Card(
-              color: AppColors.error(context).withOpacity(0.1),
+              color: AppColors.error(context).withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(color: AppColors.error(context)),

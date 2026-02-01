@@ -1,4 +1,4 @@
-// lib/features/contributions/utils/contribution_receipt_pdf.dart
+﻿// lib/features/contributions/utils/contribution_receipt_pdf.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ContributionReceiptPdf {
   // Generate premium receipt PDF
@@ -39,7 +40,7 @@ static Future<Uint8List> _generateReceiptPdf({
   // Create watermark text style with font size 30
   final watermarkTextStyle = pw.TextStyle(
     fontSize: 30, // Set to 30 as requested
-    color: PdfColor.fromHex('#00BFA6').withOpacity(0.15), // Custom color with low opacity
+    color: PdfColor.fromInt(0x0D4E45), // Darkened version of #00BFA6 for watermark effect
     fontWeight: pw.FontWeight.bold,
   );
 
@@ -366,7 +367,7 @@ static Future<Uint8List> _generateReceiptPdf({
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -535,7 +536,7 @@ static Future<Uint8List> _generateReceiptPdf({
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -588,7 +589,7 @@ static Future<Uint8List> _generateReceiptPdf({
         );
       }
       
-      print('Receipt saved to: $filePath');
+      debugPrint('Receipt saved to: $filePath');
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop();
@@ -622,7 +623,7 @@ static Future<Uint8List> _generateReceiptPdf({
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -868,3 +869,4 @@ class _ReceiptPreviewDialogState extends State<ReceiptPreviewDialog> {
     );
   }
 }
+

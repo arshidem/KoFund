@@ -1,4 +1,4 @@
-// lib/features/issues/screens/report_issue_screen.dart
+﻿// lib/features/issues/screens/report_issue_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -50,7 +50,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         setState(() => _selectedIssueType = type['value']);
       },
       backgroundColor: AppColors.card(context),
-      selectedColor: AppColors.primary(context).withOpacity(0.2),
+      selectedColor: AppColors.primary(context).withValues(alpha: 0.2),
       labelStyle: TextStyle(
         color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -469,7 +469,7 @@ GestureDetector(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),              borderRadius: BorderRadius.circular(10),
+color: Colors.blue.withValues(alpha: 0.1),              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.list_alt,
@@ -518,3 +518,4 @@ color: Color(Colors.blue.value).withOpacity(0.1),              borderRadius: Bor
     );
   }
 }
+

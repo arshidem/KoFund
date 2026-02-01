@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -55,10 +55,10 @@ class ProfileProvider with ChangeNotifier {
     final result = firebaseUser != null && 
                   _loadedUserId == firebaseUser.uid;
     
-    print('🔍 DEBUG isDataForCurrentUser:');
-    print('🔍   FirebaseAuth.currentUser?.uid: ${firebaseUser?.uid}');
-    print('🔍   _loadedUserId: $_loadedUserId');
-    print('🔍   Result: $result');
+    debugPrint('🔍 DEBUG isDataForCurrentUser:');
+    debugPrint('🔍   FirebaseAuth.currentUser?.uid: ${firebaseUser?.uid}');
+    debugPrint('🔍   _loadedUserId: $_loadedUserId');
+    debugPrint('🔍   Result: $result');
     
     return result;
   }
@@ -94,7 +94,7 @@ String? getUserProviderType() {
     _isLoading = false;
     
     _safeNotifyListeners();
-    print('🔄 ProfileProvider: All user data cleared');
+    debugPrint('🔄 ProfileProvider: All user data cleared');
   }
 
   // Compatibility method
@@ -115,7 +115,7 @@ String? getUserProviderType() {
     _safeNotifyListeners();
 
     try {
-      print('Updating user in Firestore...');
+      debugPrint('Updating user in Firestore...');
       await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
@@ -125,14 +125,14 @@ String? getUserProviderType() {
         'updatedAt': Timestamp.now(),
       });
 
-      print('User updated successfully in Firestore');
+      debugPrint('User updated successfully in Firestore');
       
       _isLoading = false;
       _safeNotifyListeners();
       
       return true;
     } catch (e) {
-      print('Error updating user: $e');
+      debugPrint('Error updating user: $e');
       _error = 'Failed to update profile: $e';
       _isLoading = false;
       _safeNotifyListeners();
@@ -164,7 +164,7 @@ String? getUserProviderType() {
       
       return true;
     } catch (e) {
-      print('Error updating privacy settings: $e');
+      debugPrint('Error updating privacy settings: $e');
       _error = 'Failed to update privacy settings: $e';
       _isLoading = false;
       _safeNotifyListeners();
@@ -176,30 +176,30 @@ String? getUserProviderType() {
 Future<bool> deleteUserAccount({String? password}) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
-    print('❌ No authenticated user found');
+    debugPrint('❌ No authenticated user found');
     _setError('No authenticated user found.');
     return false;
   }
 
-  print('🚀 Starting account deletion for user: ${user.uid}');
+  debugPrint('🚀 Starting account deletion for user: ${user.uid}');
   _setLoading(true);
 
   try {
     final userId = user.uid;
     final providerType = getUserProviderType();
     
-    print('👤 Provider type: $providerType');
+    debugPrint('👤 Provider type: $providerType');
 
     // For email/password users, reauthenticate if password is provided
     if (providerType == 'email' && password != null && password.isNotEmpty) {
-      print('🔐 Reauthenticating email/password user...');
+      debugPrint('🔐 Reauthenticating email/password user...');
       try {
         final credential = EmailAuthProvider.credential(
           email: user.email!,
           password: password,
         );
         await user.reauthenticateWithCredential(credential);
-        print('✅ Reauthentication successful');
+        debugPrint('✅ Reauthentication successful');
       } on FirebaseAuthException catch (authError) {
         _setLoading(false);
         
@@ -215,35 +215,35 @@ Future<bool> deleteUserAccount({String? password}) async {
     }
     // For Google users, we'll handle reauthentication differently
     else if (providerType == 'google') {
-      print('🔗 Google user detected - will require reauthentication');
+      debugPrint('🔗 Google user detected - will require reauthentication');
     }
 
     // 🔹 Step 1: Delete from Firestore 'users' collection
-    print('🗑️ Deleting from Firestore users collection...');
+    debugPrint('🗑️ Deleting from Firestore users collection...');
     await FirebaseFirestore.instance.collection('users').doc(userId).delete();
-    print('✅ Firestore users deleted');
+    debugPrint('✅ Firestore users deleted');
 
     // 🔹 Step 2: Delete from community members subcollection (if exists)
-    print('🗑️ Deleting from communities...');
+    debugPrint('🗑️ Deleting from communities...');
     await _deleteUserFromCommunities(userId);
-    print('✅ Communities cleaned up');
+    debugPrint('✅ Communities cleaned up');
 
     // 🔹 Step 3: Delete from Firebase Authentication
-    print('🗑️ Deleting from Firebase Auth...');
+    debugPrint('🗑️ Deleting from Firebase Auth...');
     await user.delete();
-    print('✅ Firebase Auth user deleted');
+    debugPrint('✅ Firebase Auth user deleted');
 
     // 🔹 Step 4: Sign out
-    print('👋 Signing out...');
+    debugPrint('👋 Signing out...');
     await FirebaseAuth.instance.signOut();
-    print('✅ Signed out');
+    debugPrint('✅ Signed out');
 
     _setLoading(false);
-    print('🎉 Account deletion COMPLETE');
+    debugPrint('🎉 Account deletion COMPLETE');
     return true;
     
   } on FirebaseAuthException catch (e) {
-    print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
+    debugPrint('❌ FirebaseAuthException: ${e.code} - ${e.message}');
     _setLoading(false);
     
     if (e.code == 'requires-recent-login') {
@@ -278,12 +278,12 @@ Future<bool> deleteUserAccount({String? password}) async {
       throw Exception('password_required');
     }
     
-    print('❌ General error: $e');
+    debugPrint('❌ General error: $e');
     _setError('Failed to delete account: $e');
     _setLoading(false);
     return false;
   } catch (e) {
-    print('❌ General error: $e');
+    debugPrint('❌ General error: $e');
     if (e.toString().contains('password_required') || 
         e.toString().contains('wrong_password')) {
       rethrow; // Re-throw to handle in UI
@@ -323,7 +323,7 @@ Future<void> _deleteUserFromCommunities(String userId) async {
     }
     
   } catch (e) {
-    print('Error deleting user from communities: $e');
+    debugPrint('Error deleting user from communities: $e');
     // Don't throw error here, continue with account deletion
   }
 }
@@ -368,7 +368,7 @@ Future<bool> leaveCommunity() async {
   Future<void> loadUserStatistics({String? userId}) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print('❌ No Firebase user');
+      debugPrint('❌ No Firebase user');
       return;
     }
 
@@ -379,7 +379,7 @@ Future<bool> leaveCommunity() async {
         .get();
     
     if (!userDoc.exists || userDoc.data() == null) {
-      print('❌ No user data in Firestore');
+      debugPrint('❌ No user data in Firestore');
       return;
     }
     
@@ -387,16 +387,16 @@ Future<bool> leaveCommunity() async {
     final communityId = userData['communityId'];
     
     if (communityId == null) {
-      print('❌ User has no community');
+      debugPrint('❌ User has no community');
       return;
     }
 
     // Use the userId parameter if provided, otherwise use current user
     final targetUserId = userId ?? currentUser.uid;
     
-    print('👤 Loading statistics for target user: $targetUserId');
-    print('👤 Current Firebase user: ${currentUser.uid}');
-    print('👤 Are they the same? ${targetUserId == currentUser.uid}');
+    debugPrint('👤 Loading statistics for target user: $targetUserId');
+    debugPrint('👤 Current Firebase user: ${currentUser.uid}');
+    debugPrint('👤 Are they the same? ${targetUserId == currentUser.uid}');
     
     _setLoading(true);
     try {
@@ -406,8 +406,8 @@ Future<bool> leaveCommunity() async {
       ]);
       
       _loadedUserId = targetUserId;
-      print('✅ Statistics loaded for user: $targetUserId');
-      print('✅ _loadedUserId set to: $_loadedUserId');
+      debugPrint('✅ Statistics loaded for user: $targetUserId');
+      debugPrint('✅ _loadedUserId set to: $_loadedUserId');
       
     } catch (e) {
       _setError('Failed to load user statistics: $e');
@@ -419,24 +419,24 @@ Future<bool> leaveCommunity() async {
   Future<void> getUserParticipationHistory({String? userId}) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print('❌ No Firebase user');
+      debugPrint('❌ No Firebase user');
       return;
     }
 
     // Use the userId parameter if provided, otherwise use current user
     final targetUserId = userId ?? currentUser.uid;
     
-    print('🎯 Getting participation history for: $targetUserId');
-    print('🎯 Current Firebase user: ${currentUser.uid}');
+    debugPrint('🎯 Getting participation history for: $targetUserId');
+    debugPrint('🎯 Current Firebase user: ${currentUser.uid}');
 
     _setLoading(true);
     try {
       _participationHistory = await _participantService.getUserParticipationHistoryWithContributions(targetUserId);
       _loadedUserId = targetUserId;
-      print('✅ Loaded ${_participationHistory.length} participations');
-      print('✅ _loadedUserId set to: $_loadedUserId');
+      debugPrint('✅ Loaded ${_participationHistory.length} participations');
+      debugPrint('✅ _loadedUserId set to: $_loadedUserId');
     } catch (e) {
-      print('❌ Failed to load participation history: $e');
+      debugPrint('❌ Failed to load participation history: $e');
       _setError('Failed to load participation history: $e');
     } finally {
       _setLoading(false);
@@ -447,7 +447,7 @@ Future<bool> leaveCommunity() async {
   Future<void> getUserContributionHistory({String? userId}) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print('❌ No Firebase user');
+      debugPrint('❌ No Firebase user');
       return;
     }
 
@@ -458,7 +458,7 @@ Future<bool> leaveCommunity() async {
         .get();
     
     if (!userDoc.exists || userDoc.data() == null) {
-      print('❌ No user data in Firestore');
+      debugPrint('❌ No user data in Firestore');
       return;
     }
     
@@ -466,15 +466,15 @@ Future<bool> leaveCommunity() async {
     final communityId = userData['communityId'];
     
     if (communityId == null) {
-      print('❌ User has no community');
+      debugPrint('❌ User has no community');
       return;
     }
 
     // Use the userId parameter if provided, otherwise use current user
     final targetUserId = userId ?? currentUser.uid;
     
-    print('💰 Getting contribution history for: $targetUserId');
-    print('💰 Current Firebase user: ${currentUser.uid}');
+    debugPrint('💰 Getting contribution history for: $targetUserId');
+    debugPrint('💰 Current Firebase user: ${currentUser.uid}');
 
     _setLoading(true);
     try {
@@ -485,8 +485,8 @@ Future<bool> leaveCommunity() async {
       
       _contributionHistory = result;
       _loadedUserId = targetUserId;
-      print('✅ Loaded ${_contributionHistory.length} contributions');
-      print('✅ _loadedUserId set to: $_loadedUserId');
+      debugPrint('✅ Loaded ${_contributionHistory.length} contributions');
+      debugPrint('✅ _loadedUserId set to: $_loadedUserId');
     } catch (e) {
       _setError('Failed to load contribution history: $e');
     } finally {
@@ -498,7 +498,7 @@ Future<bool> leaveCommunity() async {
   Map<String, dynamic> getUserStatistics() {
     // Check if we have data loaded at all
     if (_participationHistory.isEmpty && _contributionHistory.isEmpty) {
-      print('⚠️ No data loaded yet');
+      debugPrint('⚠️ No data loaded yet');
       return {
         'participations': 0,
         'contributions': 0,
@@ -623,7 +623,7 @@ Future<bool> leaveCommunity() async {
   Future<void> refreshAllUserData({String? userId}) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      print('❌ No Firebase user');
+      debugPrint('❌ No Firebase user');
       return;
     }
 
@@ -634,7 +634,7 @@ Future<bool> leaveCommunity() async {
         .get();
     
     if (!userDoc.exists || userDoc.data() == null) {
-      print('❌ No user data in Firestore');
+      debugPrint('❌ No user data in Firestore');
       return;
     }
     
@@ -642,7 +642,7 @@ Future<bool> leaveCommunity() async {
     final communityId = userData['communityId'];
     
     if (communityId == null) {
-      print('❌ User has no community');
+      debugPrint('❌ User has no community');
       return;
     }
 
@@ -730,3 +730,4 @@ Future<bool> leaveCommunity() async {
     super.dispose();
   }
 }
+

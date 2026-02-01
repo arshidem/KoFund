@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
-import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 
 class VirtualUserProvider extends ChangeNotifier {

@@ -1,4 +1,4 @@
-// lib/features/dashboard/widgets/history_widget.dart
+﻿// lib/features/dashboard/widgets/history_widget.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -6,6 +6,7 @@ import 'package:kofund/features/history/providers/history_provider.dart';
 import 'package:kofund/features/history/screens/history_screen.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class HistoryWidget extends StatefulWidget {
   const HistoryWidget({
@@ -25,7 +26,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: HistoryWidget initState called');
+    debugPrint('🔄 DEBUG: HistoryWidget initState called');
     
     // Initial load after a short delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -43,7 +44,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     
     // Check if user has changed
     if (user?.uid != _currentUserId) {
-      print('👤 DEBUG: User changed in HistoryWidget - from $_currentUserId to ${user?.uid}');
+      debugPrint('👤 DEBUG: User changed in HistoryWidget - from $_currentUserId to ${user?.uid}');
       _currentUserId = user?.uid;
       
       // Reset state for new user
@@ -52,7 +53,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
   }
 
   void _resetForNewUser() {
-    print('🔄 DEBUG: Resetting HistoryWidget for new user');
+    debugPrint('🔄 DEBUG: Resetting HistoryWidget for new user');
     
     // Reset the HistoryProvider data
     final historyProvider = context.read<HistoryProvider>();
@@ -78,7 +79,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     final historyProvider = context.read<HistoryProvider>();
     
     if (user == null) {
-      print('❌ DEBUG: No user found in HistoryWidget');
+      debugPrint('❌ DEBUG: No user found in HistoryWidget');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -94,7 +95,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     
     // Check if user has community
     if (user.communityId == null || user.communityId!.isEmpty) {
-      print('❌ DEBUG: User has no community');
+      debugPrint('❌ DEBUG: User has no community');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -105,7 +106,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       return;
     }
     
-    print('✅ DEBUG: User found with community ${user.communityId}, loading history...');
+    debugPrint('✅ DEBUG: User found with community ${user.communityId}, loading history...');
     _loadHistoryData(user.communityId!);
   }
 
@@ -133,7 +134,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         });
       }
     } catch (error) {
-      print('❌ DEBUG: Error loading history data: $error');
+      debugPrint('❌ DEBUG: Error loading history data: $error');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -199,7 +200,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       builder: (context, historyProvider, child) {
         // Check if provider has the correct community
         if (historyProvider.communityId != user.communityId) {
-          print('⚠️ DEBUG: Provider community (${historyProvider.communityId}) doesn\'t match user community (${user.communityId})');
+          debugPrint('⚠️ DEBUG: Provider community (${historyProvider.communityId}) doesn\'t match user community (${user.communityId})');
           return _buildLoadingState(context);
         }
         
@@ -230,7 +231,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
         border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -358,7 +359,7 @@ SizedBox(height: 4),
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -420,10 +421,10 @@ SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
+                      color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: statusColor.withOpacity(0.35),
+                        color: statusColor.withValues(alpha: 0.35),
                       ),
                     ),
                     child: Text(
@@ -505,7 +506,7 @@ SizedBox(height: 4),
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -514,7 +515,7 @@ SizedBox(height: 4),
                   width: 120,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -523,7 +524,7 @@ SizedBox(height: 4),
                   width: 40,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -552,7 +553,7 @@ SizedBox(height: 4),
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.textTertiary(context).withOpacity(0.1),
+            color: AppColors.textTertiary(context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -567,7 +568,7 @@ SizedBox(height: 4),
                 width: 100,
                 height: 14,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -576,7 +577,7 @@ SizedBox(height: 4),
                 width: 80,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary(context).withOpacity(0.1),
+                  color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -592,7 +593,7 @@ SizedBox(height: 4),
               width: 60,
               height: 14,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary(context).withOpacity(0.1),
+                color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -601,7 +602,7 @@ SizedBox(height: 4),
               width: 50,
               height: 16,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary(context).withOpacity(0.1),
+                color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
             ),
@@ -642,9 +643,9 @@ SizedBox(height: 4),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.1),
+                color: AppColors.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
               child: Text(
                 'Retry',
@@ -672,3 +673,4 @@ SizedBox(height: 4),
     return '$hour:$minute $amPm';
   }
 }
+

@@ -74,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   /// Ensure splash shows for at least 2 seconds
   void _startSplashTimer() {
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
       _initializeAppWithTimeout();
     });
@@ -167,24 +167,28 @@ Future<void> _initializeAppWithTimeout() async {
     
     final authProvider = Provider.of<app_auth.AppAuthProvider>(context, listen: false);
     
-    // Wait MAX 3 seconds total
-    await Future.any([
-      _performInitialization(authProvider),
-      Future.delayed(const Duration(seconds: 3)),
-    ]);
+    // ⭐ WAIT for auth provider to be initialized
+    debugPrint("⏳ Waiting for auth provider initialization...");
+    await authProvider.waitForInitialization();
+    debugPrint("✅ Auth provider initialized");
+    
+    // Now perform navigation
+    await _performInitialization(authProvider);
     
   } catch (e) {
     debugPrint("❌ Splash initialization error: $e");
-    _navigateToLogin();
+    if (mounted) _navigateToLogin();
   } finally {
-    setState(() => _isInitializing = false);
+    if (mounted) {
+      setState(() => _isInitializing = false);
+    }
   }
 }
 
 Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async {
-  await Future.delayed(const Duration(milliseconds: 800));
+  await Future.delayed(const Duration(milliseconds: 500));
   
-  debugPrint("=== SPLASH SCREEN ===");
+  debugPrint("=== SPLASH SCREEN INITIALIZATION ===");
   debugPrint("Auth Provider Status:");
   debugPrint("  - isLoading: ${authProvider.isLoading}");
   debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
@@ -201,7 +205,7 @@ Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async
     if (authProvider.isOfflineMode) {
       debugPrint("📱 OFFLINE MODE: Using cached data");
       _updateStatus('');
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 300));
       
       // ⭐ Offline mode: Skip email verification check entirely
       await _offlineNavigationLogic(user);
@@ -345,7 +349,10 @@ Future<void> _normalNavigationLogic(UserModel? user) async {
 
   // Navigation helpers
   void _navigateToLogin() {
-    if (!mounted) return;
+    if (!mounted) {
+      debugPrint('❌ Cannot navigate - widget not mounted');
+      return;
+    }
     
     debugPrint('🚀 Navigating to LoginScreen');
     Navigator.pushReplacement(
@@ -454,7 +461,7 @@ Future<void> _normalNavigationLogic(UserModel? user) async {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(

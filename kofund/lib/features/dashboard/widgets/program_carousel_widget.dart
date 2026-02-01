@@ -1,4 +1,4 @@
-// lib/features/dashboard/widgets/program_carousel_widget.dart
+﻿// lib/features/dashboard/widgets/program_carousel_widget.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +12,7 @@ import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/features/programs/screens/program_details_screen.dart';
 import 'package:kofund/features/programs/screens/all_programs_screen.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ProgramCarouselWidget extends StatefulWidget {
   final bool isAdmin;
@@ -34,7 +35,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: ProgramCarouselWidget initState called');
+    debugPrint('🔄 DEBUG: ProgramCarouselWidget initState called');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadData();
@@ -49,7 +50,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
     final programProvider = context.read<ProgramProvider>();
     
     if (user == null) {
-      print('❌ DEBUG: No user found in ProgramCarouselWidget');
+      debugPrint('❌ DEBUG: No user found in ProgramCarouselWidget');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -63,7 +64,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
     }
     
     if (user.communityId == null || user.communityId!.isEmpty) {
-      print('❌ DEBUG: User has no community');
+      debugPrint('❌ DEBUG: User has no community');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -74,7 +75,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
       return;
     }
     
-    print('✅ DEBUG: User found with community ${user.communityId}, loading programs...');
+    debugPrint('✅ DEBUG: User found with community ${user.communityId}, loading programs...');
     _loadProgramsData(user.communityId!);
   }
 
@@ -106,7 +107,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
         });
       }
     } catch (error) {
-      print('❌ DEBUG: Error loading programs data: $error');
+      debugPrint('❌ DEBUG: Error loading programs data: $error');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -333,7 +334,7 @@ SizedBox(
                   width: 18,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -342,7 +343,7 @@ SizedBox(
                   width: 120,
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -351,7 +352,7 @@ SizedBox(
                   width: 40,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -411,9 +412,9 @@ SizedBox(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.1),
+                color: AppColors.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
               child: Text(
                 'Retry',
@@ -469,13 +470,13 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: AppColors.border(context).withOpacity(0.3),
+          color: AppColors.border(context).withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -495,7 +496,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.primary(context).withOpacity(0.12),
+                        color: AppColors.primary(context).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -559,10 +560,10 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.12),
+                          color: Colors.green.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: Colors.green.withOpacity(0.35),
+                            color: Colors.green.withValues(alpha: 0.35),
                           ),
                         ),
                         child: Text(
@@ -624,7 +625,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
           Divider(
             height: 1,
             thickness: 1,
-            color: AppColors.border(context).withOpacity(0.3),
+            color: AppColors.border(context).withValues(alpha: 0.3),
           ),
           
           // Financial stats
@@ -661,7 +662,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
           Divider(
             height: 1,
             thickness: 1,
-            color: AppColors.border(context).withOpacity(0.3),
+            color: AppColors.border(context).withValues(alpha: 0.3),
           ),
           
           // Progress bar
@@ -780,10 +781,10 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Color(Colors.red.value).withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color:Color(Colors.red.value).withOpacity(0.3) ,
+                        color:Colors.red.withValues(alpha: 0.3) ,
                       ),
                     ),
                     child: IconButton(
@@ -1040,6 +1041,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
 
       try {
         await programProvider.leaveProgram(widget.program.programId, user.uid);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Left ${widget.program.title}'),
@@ -1085,3 +1087,5 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     }
   }
 }
+
+

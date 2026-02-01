@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import '../../../../core/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,7 +42,7 @@ Future<void> loadCommunityMembers(String communityId) async {
     // Fetch all users belonging to this community
     final allUsers = await _userService.getUsersByCommunity(communityId);
 
-    print('DEBUG: Total users fetched: ${allUsers.length}');
+    debugPrint('DEBUG: Total users fetched: ${allUsers.length}');
     
     // ✅ Create NEW lists to avoid reference issues
     final List<UserModel> newApproved = [];
@@ -63,12 +63,12 @@ Future<void> loadCommunityMembers(String communityId) async {
     _approvedMembers = newApproved;
     _pendingMembers = newPending;
     
-    print('DEBUG: Approved count: ${_approvedMembers.length}');
-    print('DEBUG: Pending count: ${_pendingMembers.length}');
+    debugPrint('DEBUG: Approved count: ${_approvedMembers.length}');
+    debugPrint('DEBUG: Pending count: ${_pendingMembers.length}');
     
     _setMessage('Community members loaded successfully');
   } catch (e) {
-    print('ERROR loading community members: $e');
+    debugPrint('ERROR loading community members: $e');
     _setMessage('Error loading community members: $e');
   } finally {
     _setLoading(false);
@@ -104,12 +104,12 @@ Future<void> unapproveUser(String uid) async {
       _approvedMembers = newApproved;
       _pendingMembers = newPending;
       
-      print('DEBUG: After unapprove - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
+      debugPrint('DEBUG: After unapprove - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
     }
     
     _setMessage('User removed from approved members');
   } catch (e) {
-    print('ERROR unapproving user: $e');
+    debugPrint('ERROR unapproving user: $e');
     _setMessage('Error unapproving user: $e');
     
     // 🔹 Reload data to ensure consistency
@@ -148,12 +148,12 @@ Future<void> approveUser(String uid, String communityId) async {
       _pendingMembers = newPending;
       _approvedMembers = newApproved;
       
-      print('DEBUG: After approve - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
+      debugPrint('DEBUG: After approve - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
     }
 
     _setMessage('User approved successfully');
   } catch (e) {
-    print('ERROR approving user: $e');
+    debugPrint('ERROR approving user: $e');
     _setMessage('Error approving user: $e');
   } finally {
     _setLoading(false);
@@ -187,11 +187,11 @@ Future<void> rejectUser(String uid) async {
         .where((user) => user.uid != uid)
         .toList();
 
-    print('✅ DEBUG: User $uid rejected. Pending count: ${_pendingMembers.length}');
+    debugPrint('✅ DEBUG: User $uid rejected. Pending count: ${_pendingMembers.length}');
 
     _setMessage('User rejected successfully');
   } catch (e) {
-    print('❌ ERROR rejecting user: $e');
+    debugPrint('❌ ERROR rejecting user: $e');
     _setMessage('Error rejecting user: $e');
   } finally {
     _setLoading(false);
@@ -317,3 +317,4 @@ void clearData() {
 }
 
 }
+

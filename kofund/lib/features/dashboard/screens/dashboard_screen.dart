@@ -1,4 +1,4 @@
-// lib/features/community/screens/dashboard_screen.dart
+﻿// lib/features/community/screens/dashboard_screen.dart
 import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 import 'package:kofund/core/skeleton/stats_card_skeleton.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
@@ -46,6 +46,7 @@ import 'package:kofund/core/services/community_firestore_service.dart';
 // 🆕 ADD INVITE IMPORTS
 import 'package:kofund/features/community/providers/community_provider.dart';
 import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToMembers;
@@ -74,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _inviteLoading = false;
 
 void _onRefresh() async {
-  print('🔄 DEBUG: Pull to refresh triggered in Dashboard');
+  debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
   
   try {
     final user = context.read<AppAuthProvider>().user;
@@ -82,7 +83,9 @@ void _onRefresh() async {
     
     if (cid != null && cid.isNotEmpty && user != null) {
       await context.read<DashboardProvider>().refreshDashboard(cid);
+      if (!mounted) return;
       await context.read<ProgramProvider>().loadCommunityPrograms(cid);
+      if (!mounted) return;
       await context.read<ProgramProvider>().loadMyParticipations(user.uid, cid);
       
       // ✅ RESET PROVIDERS FOR FRESH DATA
@@ -96,15 +99,15 @@ void _onRefresh() async {
     }
     
     _refreshController.refreshCompleted();
-    print('✅ DEBUG: Dashboard refresh completed successfully');
+    debugPrint('✅ DEBUG: Dashboard refresh completed successfully');
   } catch (e) {
     _refreshController.refreshFailed();
-    print('❌ DEBUG: Dashboard refresh failed: $e');
+    debugPrint('❌ DEBUG: Dashboard refresh failed: $e');
   }
 }
 
 void _resetWidgetProviders(String userId, String communityId) {
-  print('🔄 DEBUG: Resetting widget providers for user $userId, community $communityId');
+  debugPrint('🔄 DEBUG: Resetting widget providers for user $userId, community $communityId');
   
   try {
     // Reset MemberProvider
@@ -121,9 +124,9 @@ void _resetWidgetProviders(String userId, String communityId) {
     final userProvider = context.read<UserProvider>();
     userProvider.clearData();
     
-    print('✅ DEBUG: Widget providers reset successfully');
+    debugPrint('✅ DEBUG: Widget providers reset successfully');
   } catch (e) {
-    print('❌ DEBUG: Error resetting widget providers: $e');
+    debugPrint('❌ DEBUG: Error resetting widget providers: $e');
   }
 }
 
@@ -150,9 +153,9 @@ void _resetWidgetProviders(String userId, String communityId) {
     
     // Check if user or community has changed
     if (currentUserId != _previousUserId || currentCommunityId != _previousCommunityId) {
-      print('👤 DEBUG: User/Community changed in DashboardScreen');
-      print('   Previous user: $_previousUserId, community: $_previousCommunityId');
-      print('   New user: $currentUserId, community: $currentCommunityId');
+      debugPrint('👤 DEBUG: User/Community changed in DashboardScreen');
+      debugPrint('   Previous user: $_previousUserId, community: $_previousCommunityId');
+      debugPrint('   New user: $currentUserId, community: $currentCommunityId');
       
       _previousUserId = currentUserId;
       _previousCommunityId = currentCommunityId;
@@ -163,7 +166,7 @@ void _resetWidgetProviders(String userId, String communityId) {
   }
 
   void _resetDashboardForNewUser() {
-    print('🔄 DEBUG: Resetting dashboard for new user/community');
+    debugPrint('🔄 DEBUG: Resetting dashboard for new user/community');
     
     if (mounted) {
       setState(() {
@@ -204,7 +207,7 @@ void _resetWidgetProviders(String userId, String communityId) {
       communityId = user?.communityId;
 
       if (communityId != null && communityId!.isNotEmpty && user != null) {
-        print('🔄 DEBUG: Initializing dashboard data for community: $communityId');
+        debugPrint('🔄 DEBUG: Initializing dashboard data for community: $communityId');
         
         // ✅ Load dashboard data
         context.read<DashboardProvider>().loadDashboardData(communityId!);
@@ -226,7 +229,7 @@ void _resetWidgetProviders(String userId, String communityId) {
         
         _hasLoadedData = true;
       } else {
-        print('⚠️ DEBUG: No community ID found for user');
+        debugPrint('⚠️ DEBUG: No community ID found for user');
       }
       
       _isInitializing = false;
@@ -234,7 +237,7 @@ void _resetWidgetProviders(String userId, String communityId) {
   }
 
 void _initializeWidgetProviders(String userId, String communityId) {
-  print('🔄 DEBUG: Initializing widget providers');
+  debugPrint('🔄 DEBUG: Initializing widget providers');
   
   try {
     // Initialize HistoryProvider
@@ -249,9 +252,9 @@ void _initializeWidgetProviders(String userId, String communityId) {
     final userProvider = context.read<UserProvider>();
     userProvider.loadCommunityMembers(communityId);
     
-    print('✅ DEBUG: Widget providers initialized successfully');
+    debugPrint('✅ DEBUG: Widget providers initialized successfully');
   } catch (e) {
-    print('❌ DEBUG: Error initializing widget providers: $e');
+    debugPrint('❌ DEBUG: Error initializing widget providers: $e');
   }
 }
 
@@ -271,7 +274,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
       
       setState(() {});
     } catch (e) {
-      print('❌ Error checking admin permissions: $e');
+      debugPrint('❌ Error checking admin permissions: $e');
     }
   }
 
@@ -301,7 +304,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         setState(() {});
       }
     } catch (e) {
-      print('❌ Error loading invite info: $e');
+      debugPrint('❌ Error loading invite info: $e');
     }
   }
 
@@ -312,7 +315,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         await _loadInviteInfo(communityId);
       }
     } catch (e) {
-      print('❌ Error refreshing invite info: $e');
+      debugPrint('❌ Error refreshing invite info: $e');
     }
   }
 
@@ -382,6 +385,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     if (_inviteCode.isEmpty) return;
     
     await FlutterClipboard.copy(_inviteCode);
+    if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -397,6 +401,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     if (_inviteLink.isEmpty) return;
     
     await FlutterClipboard.copy(_inviteLink);
+    if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -564,7 +569,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
                 if (_inviteLoading)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       child: const Center(
                         child: CircularProgressIndicator(),
                       ),
@@ -594,7 +599,7 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.15),
+          color: Colors.black.withValues(alpha: 0.15),
           blurRadius: 20,
           offset: const Offset(0, 8),
         ),
@@ -640,7 +645,7 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
                             child: Icon(
                               Icons.edit_rounded,
                               size: 18,
-                              color: Colors.white.withOpacity(0.85),
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
                           ),
                         ),
@@ -687,10 +692,10 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
             //       width: 56,
             //       height: 56,
             //       decoration: BoxDecoration(
-            //         color: Colors.white.withOpacity(0.18),
+            //         color: Colors.white.withValues(alpha: 0.18),
             //         borderRadius: BorderRadius.circular(30),
             //         border: Border.all(
-            //           color: Colors.white.withOpacity(0.35),
+            //           color: Colors.white.withValues(alpha: 0.35),
             //           width: 1.2,
             //         ),
             //       ),
@@ -729,10 +734,10 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.35),
+                              color: Colors.white.withValues(alpha: 0.35),
                               width: 1.2,
                             ),
                           ),
@@ -793,10 +798,10 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
+                      color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.35),
+                        color: Colors.white.withValues(alpha: 0.35),
                         width: 1.2,
                       ),
                     ),
@@ -887,7 +892,7 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
           BoxShadow(
             blurRadius: 6,
             spreadRadius: 1,
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
           ),
         ],
       ),
@@ -947,3 +952,4 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
     );
   }
 }
+

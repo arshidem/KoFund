@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -602,7 +602,7 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
           BoxShadow(
             blurRadius: 6,
             spreadRadius: 1,
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
           ),
         ],
       ),
@@ -618,7 +618,7 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: (widget.isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary).withOpacity(0.12),
+                      backgroundColor: (widget.isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary).withValues(alpha: 0.12),
                       radius: 16,
                       child: Icon(
                         Icons.poll,
@@ -647,10 +647,10 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.orange.withOpacity(0.3),
+                            color: Colors.orange.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -677,7 +677,7 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: daysLeft <= 1
-                            ? Color(Colors.red.value).withOpacity(0.1)
+                            ? Colors.red.withValues(alpha: 0.1)
                             : widget.isDarkMode
                                 ? Colors.grey[800]
                                 : Colors.grey[200],
@@ -1073,7 +1073,7 @@ class __AnimatedPollOptionState extends State<_AnimatedPollOption> {
           boxShadow: widget.votesLocked && widget.isSelected
               ? [
                   BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
+                    color: Colors.orange.withValues(alpha: 0.3),
                     blurRadius: 4,
                     spreadRadius: 1,
                   ),
@@ -1096,10 +1096,10 @@ class __AnimatedPollOptionState extends State<_AnimatedPollOption> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: widget.isWinning
-                                ? Colors.green.withOpacity(0.15)
+                                ? Colors.green.withValues(alpha: 0.15)
                                 : (widget.isDarkMode 
-                                    ? AppColors.darkPrimary.withOpacity(0.1)
-                                    : AppColors.lightPrimary.withOpacity(0.1)),
+                                    ? AppColors.darkPrimary.withValues(alpha: 0.1)
+                                    : AppColors.lightPrimary.withValues(alpha: 0.1)),
                           ),
                         ),
                       ),
@@ -1218,3 +1218,4 @@ class __AnimatedPollOptionState extends State<_AnimatedPollOption> {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-// // lib/features/contributions/screens/add_contribution_screen.dart
+﻿// // lib/features/contributions/screens/add_contribution_screen.dart
 // import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
@@ -87,28 +87,28 @@
 //           .get();
 
 //       // ✅ ADD: Debug all programs with more details
-//       print('=== LOADING ALL PROGRAMS ===');
-//       print('Community ID: ${currentUser.communityId}');
-//       print('Total programs found: ${snapshot.docs.length}');
+//       debugPrint('=== LOADING ALL PROGRAMS ===');
+//       debugPrint('Community ID: ${currentUser.communityId}');
+//       debugPrint('Total programs found: ${snapshot.docs.length}');
       
 //       for (var doc in snapshot.docs) {
 //         final data = doc.data();
-//         print('\n📋 Program: ${data['title']}');
-//         print('   📍 ID: ${doc.id}');
-//         print('   📊 Status: ${data['status']}');
-//         print('   💰 Suggested: ${data['suggestedContribution']}');
+//         debugPrint('\n📋 Program: ${data['title']}');
+//         debugPrint('   📍 ID: ${doc.id}');
+//         debugPrint('   📊 Status: ${data['status']}');
+//         debugPrint('   💰 Suggested: ${data['suggestedContribution']}');
         
 //         // ✅ Check if the field exists in Firestore
 //         if (data.containsKey('isMonthlyPaymentProgram')) {
-//           print('   📅 isMonthlyPaymentProgram: ${data['isMonthlyPaymentProgram']} (found in Firestore)');
+//           debugPrint('   📅 isMonthlyPaymentProgram: ${data['isMonthlyPaymentProgram']} (found in Firestore)');
 //         } else {
-//           print('   ❌ isMonthlyPaymentProgram: FIELD NOT FOUND in Firestore');
-//           print('   ⚠️ Defaulting to: false');
+//           debugPrint('   ❌ isMonthlyPaymentProgram: FIELD NOT FOUND in Firestore');
+//           debugPrint('   ⚠️ Defaulting to: false');
 //         }
         
 //         final program = ProgramModel.fromMap(data, doc.id);
-//         print('   ✅ Parsed isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
-//         print('---');
+//         debugPrint('   ✅ Parsed isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
+//         debugPrint('---');
 //       }
       
 //       setState(() {
@@ -117,7 +117,7 @@
 //             .toList();
 //       });
 //     } catch (e) {
-//       print('Error loading programs: $e');
+//       debugPrint('Error loading programs: $e');
 //     } finally {
 //       setState(() => _isLoading = false);
 //     }
@@ -142,9 +142,9 @@
 //         final program = ProgramModel.fromMap(programData, programId);
         
 //         // ✅ ADD DEBUG PRINTS
-//         print('=== LOADING PARTICIPANTS FOR PROGRAM ===');
-//         print('Program Title: ${program.title}');
-//         print('isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
+//         debugPrint('=== LOADING PARTICIPANTS FOR PROGRAM ===');
+//         debugPrint('Program Title: ${program.title}');
+//         debugPrint('isMonthlyPaymentProgram: ${program.isMonthlyPaymentProgram}');
         
 //         setState(() {
 //           _suggestedContribution = program.suggestedContribution ?? 0;
@@ -152,13 +152,13 @@
           
 //           // ✅ If monthly program, generate month options
 //           if (_isMonthlyProgram) {
-//             print('✅ This is a MONTHLY program - showing month selector');
+//             debugPrint('✅ This is a MONTHLY program - showing month selector');
 //             _availableMonths = _generateMonthOptions();
 //             _selectedMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
-//             print('Available months: $_availableMonths');
-//             print('Selected month: $_selectedMonth');
+//             debugPrint('Available months: $_availableMonths');
+//             debugPrint('Selected month: $_selectedMonth');
 //           } else {
-//             print('❌ This is NOT a monthly program');
+//             debugPrint('❌ This is NOT a monthly program');
 //           }
 //         });
 //       }
@@ -172,7 +172,7 @@
 //         _searchQuery = '';
 //       });
 //     } catch (e) {
-//       print('Error loading participants: $e');
+//       debugPrint('Error loading participants: $e');
 //       ScaffoldMessenger.of(context).showSnackBar(
 //         SnackBar(content: Text('Error loading participants: $e')),
 //       );
@@ -233,10 +233,10 @@
 
 //     try {
 //       await provider.addContribution(contribution);
-      
+//       
 //       // Update participant's payment status
 //       await _updateParticipantPaymentStatus();
-      
+//       
 //       ScaffoldMessenger.of(context).showSnackBar(
 //         const SnackBar(
 //           content: Text('Contribution added successfully'),
@@ -271,7 +271,7 @@
 //             'hasPaidContribution': hasFullyPaid,
 //           });
 //     } catch (e) {
-//       print('Error updating participant payment status: $e');
+//       debugPrint('Error updating participant payment status: $e');
 //     }
 //   }
 
@@ -814,3 +814,4 @@
 //     return '${date.day}/${date.month}/${date.year}';
 //   }
 // }
+

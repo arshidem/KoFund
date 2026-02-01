@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
@@ -212,7 +212,7 @@ Future<void> regenerateInviteCode(String communityId) async {
       
       notifyListeners();
     } catch (e) {
-      print('Error checking invite permission: $e');
+      debugPrint('Error checking invite permission: $e');
       _canInvite = false;
       _isAdmin = false;
       notifyListeners();
@@ -245,7 +245,7 @@ Future<void> regenerateInviteCode(String communityId) async {
         notifyListeners();
       }
     } catch (e) {
-      print('Error getting invite code: $e');
+      debugPrint('Error getting invite code: $e');
     }
   }
 
@@ -404,7 +404,7 @@ Future<void> regenerateInviteCode(String communityId) async {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading community by code: $e');
+      debugPrint('Error loading community by code: $e');
     }
   }
 
@@ -515,7 +515,7 @@ Future<void> regenerateInviteCode(String communityId) async {
 
       notifyListeners();
     } catch (e) {
-      print('❌ Error loading monthly program stats: $e');
+      debugPrint('❌ Error loading monthly program stats: $e');
       _monthlyProgramBalance = 0;
       _monthlyProgramParticipants = 0;
       _monthlyProgramCollected = 0;
@@ -790,3 +790,4 @@ Future<void> regenerateInviteCode(String communityId) async {
     super.dispose();
   }
 }
+

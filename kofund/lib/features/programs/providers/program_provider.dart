@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/participant_service.dart';
 import '../../../core/services/contribution_service.dart';
@@ -51,12 +52,12 @@ void clearUserData() {
   _isLoading = false;
   _error = null;
   notifyListeners();
-  print('🔄 ProgramProvider: User data cleared');
+  debugPrint('🔄 ProgramProvider: User data cleared');
 }
 // Add this to your ProgramProvider class
 Future<void> refreshProgramData(String programId) async {
   try {
-    print('🔄 ProgramProvider: Refreshing program data for $programId');
+    debugPrint('🔄 ProgramProvider: Refreshing program data for $programId');
     
     // Clear this specific program from cache to force re-fetch
     final index = _programs.indexWhere((p) => p.programId == programId);
@@ -71,9 +72,9 @@ Future<void> refreshProgramData(String programId) async {
     // Optional: Force re-fetch the program
     await _programService.getProgramById(programId);
     
-    print('✅ ProgramProvider: Program data refreshed for $programId');
+    debugPrint('✅ ProgramProvider: Program data refreshed for $programId');
   } catch (e) {
-    print('❌ ProgramProvider: Error refreshing program data: $e');
+    debugPrint('❌ ProgramProvider: Error refreshing program data: $e');
     rethrow;
   }
 }
@@ -106,7 +107,7 @@ void clearAllData() {
         hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
       );
     } catch (e) {
-      print('❌ Error getting participant with contribution: $e');
+      debugPrint('❌ Error getting participant with contribution: $e');
       rethrow;
     }
   }
@@ -150,7 +151,7 @@ Stream<List<ParticipantModel>> streamProgramParticipantsWithMonthlyContributions
           hasPaidContribution: hasPaid,
         ));
       } catch (e) {
-        print('❌ Error processing monthly participant ${participant.userId}: $e');
+        debugPrint('❌ Error processing monthly participant ${participant.userId}: $e');
         updatedParticipants.add(participant);
       }
     }
@@ -174,7 +175,7 @@ Future<Map<String, int>> getMonthlyPaymentCounts(String programId) async {
     
     return counts;
   } catch (e) {
-    print('❌ Error getting monthly payment counts: $e');
+    debugPrint('❌ Error getting monthly payment counts: $e');
     return {};
   }
 }
@@ -270,7 +271,7 @@ Stream<List<ParticipantModel>> streamProgramParticipantsWithContributions(String
           hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
         ));
       } catch (e) {
-        print('❌ Error processing participant ${participant.userId}: $e');
+        debugPrint('❌ Error processing participant ${participant.userId}: $e');
         // Add participant without contribution data as fallback
         updatedParticipants.add(participant);
       }
@@ -306,14 +307,14 @@ Future<List<ParticipantModel>> getProgramParticipantsWithContributions(String pr
           hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
         ));
       } catch (e) {
-        print('❌ Error processing participant ${participant.userId}: $e');
+        debugPrint('❌ Error processing participant ${participant.userId}: $e');
         updatedParticipants.add(participant);
       }
     }
     
     return updatedParticipants;
   } catch (e) {
-    print('❌ Error getting participants with contributions: $e');
+    debugPrint('❌ Error getting participants with contributions: $e');
     return [];
   }
 }
@@ -364,7 +365,7 @@ Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async 
       'suggestedContribution': suggestedContribution,
     };
   } catch (e) {
-    print('❌ Error getting financial summary: $e');
+    debugPrint('❌ Error getting financial summary: $e');
     return {
       'totalParticipants': 0,
       'paidParticipants': 0,
@@ -445,13 +446,13 @@ Future<void> loadCommunityPrograms(String communityId) async {
       try {
         await program.syncComputedStatusToFirestore();
       } catch (e) {
-        print('❌ Error syncing status for program ${program.programId}: $e');
+        debugPrint('❌ Error syncing status for program ${program.programId}: $e');
         // Continue with other programs even if one fails
       }
     }
     
   } catch (e) {
-    print('Error loading programs: $e');
+    debugPrint('Error loading programs: $e');
   } finally {
     _isLoading = false;
     notifyListeners();
@@ -464,12 +465,12 @@ Future<void> syncAllProgramsStatus() async {
       try {
         await program.syncComputedStatusToFirestore();
       } catch (e) {
-        print('❌ Error syncing status for program ${program.programId}: $e');
+        debugPrint('❌ Error syncing status for program ${program.programId}: $e');
       }
     }
-    print('✅ Program status sync completed for ${_programs.length} programs');
+    debugPrint('✅ Program status sync completed for ${_programs.length} programs');
   } catch (e) {
-    print('❌ Error in syncAllProgramsStatus: $e');
+    debugPrint('❌ Error in syncAllProgramsStatus: $e');
   }
 }
   // ✅ Join program - UPDATED for monthly payment program
@@ -540,7 +541,7 @@ Future<void> syncAllProgramsStatus() async {
       
       notifyListeners();
     } catch (e) {
-      print('❌ Error adding reminder date: $e');
+      debugPrint('❌ Error adding reminder date: $e');
       rethrow;
     }
   }
@@ -564,7 +565,7 @@ Future<void> syncAllProgramsStatus() async {
       
       notifyListeners();
     } catch (e) {
-      print('❌ Error removing reminder date: $e');
+      debugPrint('❌ Error removing reminder date: $e');
       rethrow;
     }
   }
@@ -600,7 +601,7 @@ Future<void> syncAllProgramsStatus() async {
       
       notifyListeners();
     } catch (e) {
-      print('❌ Error updating reminder settings: $e');
+      debugPrint('❌ Error updating reminder settings: $e');
       rethrow;
     }
   }
@@ -621,7 +622,7 @@ Future<void> syncAllProgramsStatus() async {
       
       notifyListeners();
     } catch (e) {
-      print('❌ Error clearing reminder dates: $e');
+      debugPrint('❌ Error clearing reminder dates: $e');
       rethrow;
     }
   }
@@ -635,7 +636,7 @@ Future<void> syncAllProgramsStatus() async {
       await _programService.sendContributionReminder(programId);
       notifyListeners();
     } catch (e) {
-      print('❌ Error sending reminder: $e');
+      debugPrint('❌ Error sending reminder: $e');
       rethrow;
     }
   }
@@ -663,7 +664,7 @@ Future<void> updateProgramReminderSettings({
     );
     notifyListeners();
   } catch (e) {
-    print('❌ Error updating reminder settings: $e');
+    debugPrint('❌ Error updating reminder settings: $e');
     rethrow;
   }
 }
@@ -673,7 +674,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _programService.getProgramsWithUpcomingReminders(communityId);
     } catch (e) {
-      print('❌ Error getting upcoming reminders: $e');
+      debugPrint('❌ Error getting upcoming reminders: $e');
       return [];
     }
   }
@@ -721,7 +722,7 @@ Future<void> updateProgramReminderSettings({
         'status': program.enableAutoReminders ? 'active' : 'disabled',
       };
     } catch (e) {
-      print('❌ Error getting reminder status: $e');
+      debugPrint('❌ Error getting reminder status: $e');
       return {
         'hasReminders': false,
         'nextReminder': null,
@@ -757,7 +758,7 @@ Future<void> updateProgramReminderSettings({
         ),
       );
     } catch (e) {
-      print('❌ Error getting monthly payment program: $e');
+      debugPrint('❌ Error getting monthly payment program: $e');
       return null;
     }
   }
@@ -790,7 +791,7 @@ Future<void> updateProgramReminderSettings({
         'collectionRate': financialSummary['collectionRate'] ?? 0.0,
       };
     } catch (e) {
-      print('❌ Error getting monthly program stats: $e');
+      debugPrint('❌ Error getting monthly program stats: $e');
       return {
         'hasMonthlyProgram': false,
         'totalCollected': 0.0,
@@ -858,7 +859,7 @@ Future<void> updateProgramReminderSettings({
       );
       notifyListeners();
     } catch (e) {
-      print('Error loading participations: $e');
+      debugPrint('Error loading participations: $e');
     }
   }
 
@@ -975,7 +976,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _participantService.getProgramParticipantCount(programId);
     } catch (e) {
-      print('Error getting participant count: $e');
+      debugPrint('Error getting participant count: $e');
       return 0;
     }
   }
@@ -996,7 +997,7 @@ Future<void> updateProgramReminderSettings({
       }
       return null;
     } catch (e) {
-      print('Error getting program with live count: $e');
+      debugPrint('Error getting program with live count: $e');
       return null;
     }
   }
@@ -1063,7 +1064,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _contributionService.getProgramContributions(programId);
     } catch (e) {
-      print('Error loading contributions: $e');
+      debugPrint('Error loading contributions: $e');
       return [];
     }
   }
@@ -1078,7 +1079,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _contributionService.getProgramTotalContributions(programId);
     } catch (e) {
-      print('Error calculating total contributions: $e');
+      debugPrint('Error calculating total contributions: $e');
       return 0;
     }
   }
@@ -1122,7 +1123,7 @@ Future<void> updateProgramReminderSettings({
         'totalProgramAmount': program.totalProgramAmount,
       };
     } catch (e) {
-      print('Error calculating financial progress: $e');
+      debugPrint('Error calculating financial progress: $e');
       return {
         'totalCollected': 0,
         'progressPercentage': 0,
@@ -1155,7 +1156,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _participantService.getProgramParticipants(programId);
     } catch (e) {
-      print('Error loading program participants: $e');
+      debugPrint('Error loading program participants: $e');
       return [];
     }
   }
@@ -1218,7 +1219,7 @@ Future<void> updateProgramReminderSettings({
     try {
       return await _participantService.getParticipantByProgramAndUser(programId, userId);
     } catch (e) {
-      print('Error getting participant: $e');
+      debugPrint('Error getting participant: $e');
       return null;
     }
   }
@@ -1255,7 +1256,7 @@ Future<void> updateProgramReminderSettings({
       
       return updatedPrograms;
     } catch (e) {
-      print('Error loading programs with financial goals: $e');
+      debugPrint('Error loading programs with financial goals: $e');
       return [];
     }
   }
@@ -1310,7 +1311,7 @@ Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
     
     return result;
   } catch (e) {
-    print('❌ Error getting participants with monthly status: $e');
+    debugPrint('❌ Error getting participants with monthly status: $e');
     return [];
   }
 }
@@ -1341,3 +1342,4 @@ class ProgramWithJoinStatus {
     this.participant,
   });
 }
+

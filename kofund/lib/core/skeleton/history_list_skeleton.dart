@@ -40,7 +40,7 @@ class HistoryListSkeleton extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.grey.withOpacity(0.4),
+                  color: Colors.grey.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(width: 12),
@@ -102,3 +102,4 @@ class HistoryListSkeleton extends StatelessWidget {
     );
   }
 }
+

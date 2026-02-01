@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
@@ -226,6 +226,7 @@ void _setupPollSubscription() {
     try {
       final pollProvider = context.read<PollProvider>();
       final success = await pollProvider.deletePoll(widget.pollId);
+      if (!mounted) return;
       
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -550,8 +551,8 @@ void _setupPollSubscription() {
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
                 color: isClosed
-                    ? Colors.orange.withOpacity(0.1)
-                    : Color(Colors.red.value).withOpacity(0.1),
+                    ? Colors.orange.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isClosed ? Colors.orange : Colors.red,
@@ -593,7 +594,7 @@ void _setupPollSubscription() {
                     children: [
                       CircleAvatar(
                         backgroundColor:
-                            (isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary).withOpacity(0.12),
+                            (isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary).withValues(alpha: 0.12),
                         radius: 20,
                         child: Icon(
                           Icons.poll,
@@ -735,7 +736,7 @@ void _setupPollSubscription() {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: BorderRadius.circular(8),
+color: Colors.green.withValues(alpha: 0.1),                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.green, width: 1),
               ),
               child: Row(
@@ -817,7 +818,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: 
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(top: 16),
               decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: BorderRadius.circular(8),
+color: Colors.green.withValues(alpha: 0.1),                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
@@ -866,10 +867,10 @@ color: Color(Colors.green.value).withOpacity(0.1),                borderRadius: 
           color: color ?? (isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
         ),
       ),
-      backgroundColor: color?.withOpacity(0.1) ??
+      backgroundColor: color?.withValues(alpha: 0.1) ??
           (isDarkMode ? Colors.grey[800] : Colors.grey[200]),
       side: BorderSide(
-        color: color?.withOpacity(0.3) ??
+        color: color?.withValues(alpha: 0.3) ??
             (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
       ),
       visualDensity: VisualDensity.compact,
@@ -1162,7 +1163,7 @@ class _PollOptionDetail extends StatelessWidget {
           boxShadow: isWinning
               ? [
                   BoxShadow(
-                    color: Color(Colors.green.value).withOpacity(0.3),
+                    color: Colors.green.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 2,
                   ),
@@ -1218,7 +1219,7 @@ class _PollOptionDetail extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: isWinning
-                          ? Color(Colors.green.value).withOpacity(0.2)
+                          ? Colors.green.withValues(alpha: 0.2)
                           : (isDarkMode ? Colors.grey[800] : Colors.grey[200]),
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -1317,3 +1318,4 @@ class _PollOptionDetail extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-// edit_contribution_screen.dart
+﻿// edit_contribution_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +14,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
 import '../../programs/providers/program_provider.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class EditContributionScreen extends StatefulWidget {
   final String contributionId;
@@ -87,7 +88,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
 
   Future<void> _fetchContributionAndPrograms() async {
     try {
-      print('🔄 Fetching contribution with ID: ${widget.contributionId}');
+      debugPrint('🔄 Fetching contribution with ID: ${widget.contributionId}');
       
       // First try with the given ID
       var docRef = FirebaseFirestore.instance
@@ -98,7 +99,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       
       // If not found, try adding 'contrib_' prefix
       if (!snapshot.exists && !widget.contributionId.startsWith('contrib_')) {
-        print('⚠️ Not found, trying with "contrib_" prefix...');
+        debugPrint('⚠️ Not found, trying with "contrib_" prefix...');
         docRef = FirebaseFirestore.instance
             .collection('contributions')
             .doc('contrib_${widget.contributionId}');
@@ -117,11 +118,11 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       // Create ContributionModel from Firestore data
       _contribution = ContributionModel.fromMap(data, snapshot.id);
       
-      print('✅ Contribution fetched successfully');
-      print('   Amount: ${_contribution!.amount}');
-      print('   Payment Method: ${_contribution!.paymentMethod}');
-      print('   Program ID: ${_contribution!.programId}');
-      print('   Community ID: ${_contribution!.communityId}');
+      debugPrint('✅ Contribution fetched successfully');
+      debugPrint('   Amount: ${_contribution!.amount}');
+      debugPrint('   Payment Method: ${_contribution!.paymentMethod}');
+      debugPrint('   Program ID: ${_contribution!.programId}');
+      debugPrint('   Community ID: ${_contribution!.communityId}');
       
       // Fetch available programs for this community
       await _fetchAvailablePrograms(_contribution!.communityId);
@@ -138,7 +139,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       });
       
     } catch (e) {
-      print('❌ Error fetching contribution: $e');
+      debugPrint('❌ Error fetching contribution: $e');
       setState(() {
         _isLoading = false;
         _hasError = true;
@@ -149,7 +150,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
 
   Future<void> _fetchAvailablePrograms(String communityId) async {
     try {
-      print('📋 Fetching programs for community: $communityId');
+      debugPrint('📋 Fetching programs for community: $communityId');
       
       final querySnapshot = await FirebaseFirestore.instance
           .collection('communities')
@@ -160,15 +161,15 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       
       _availablePrograms = querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        print('📝 Program data: $data');
+        debugPrint('📝 Program data: $data');
         return ProgramModel.fromMap(data, doc.id);
       }).toList();
       
-      print('✅ Found ${_availablePrograms.length} programs');
+      debugPrint('✅ Found ${_availablePrograms.length} programs');
 
       // If no programs found in subcollection, try root programs collection
       if (_availablePrograms.isEmpty) {
-        print('⚠️ No programs in subcollection, trying root collection...');
+        debugPrint('⚠️ No programs in subcollection, trying root collection...');
         final rootQuery = await FirebaseFirestore.instance
             .collection('programs')
             .where('communityId', isEqualTo: communityId)
@@ -179,7 +180,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
           return ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
         }).toList();
         
-        print('✅ Found ${_availablePrograms.length} programs in root collection');
+        debugPrint('✅ Found ${_availablePrograms.length} programs in root collection');
       }
       
       // Ensure the current program is in the list
@@ -197,7 +198,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
           if (programDoc.exists) {
             final program = ProgramModel.fromMap(programDoc.data() as Map<String, dynamic>, programDoc.id);
             _availablePrograms.add(program);
-            print('➕ Added current program from subcollection');
+            debugPrint('➕ Added current program from subcollection');
           } else {
             // Try root collection
             final rootProgramDoc = await FirebaseFirestore.instance
@@ -208,11 +209,11 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
             if (rootProgramDoc.exists) {
               final program = ProgramModel.fromMap(rootProgramDoc.data() as Map<String, dynamic>, rootProgramDoc.id);
               _availablePrograms.add(program);
-              print('➕ Added current program from root collection');
+              debugPrint('➕ Added current program from root collection');
             }
           }
         } catch (e) {
-          print('⚠️ Could not fetch current program: $e');
+          debugPrint('⚠️ Could not fetch current program: $e');
         }
       }
       
@@ -221,11 +222,11 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       
       // Debug: Print program types
       for (var program in _availablePrograms) {
-        print('📋 Program: ${program.title}, Monthly: ${program.isMonthlyPaymentProgram}');
+        debugPrint('📋 Program: ${program.title}, Monthly: ${program.isMonthlyPaymentProgram}');
       }
       
     } catch (e) {
-      print('❌ Error fetching programs: $e');
+      debugPrint('❌ Error fetching programs: $e');
       _availablePrograms = [];
     }
   }
@@ -551,13 +552,13 @@ Widget _buildChangeItem({
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
       color: hasChanged
-          ? Colors.blue.withOpacity(0.05)
+          ? Colors.blue.withValues(alpha: 0.05)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
         color: hasChanged
-            ? Color(Colors.blue.value).withOpacity(0.2)
-            : AppColors.border(context).withOpacity(0.3),
+            ? Colors.blue.withValues(alpha: 0.2)
+            : AppColors.border(context).withValues(alpha: 0.3),
         width: 1,
       ),
     ),
@@ -644,7 +645,7 @@ Widget _buildChangeItem({
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.12),
+              color: Colors.green.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -859,7 +860,7 @@ Widget _buildChangeItem({
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.green.withOpacity(0.12),
+                                                      color: Colors.green.withValues(alpha: 0.12),
                                                       borderRadius: BorderRadius.circular(6),
                                                     ),
                                                     child: Text(
@@ -1155,7 +1156,7 @@ Widget _buildChangeItem({
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.12),
+                color: Colors.blue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -1181,7 +1182,7 @@ Widget _buildChangeItem({
         // Divider
         Container(
           height: 1,
-          color: AppColors.border(context).withOpacity(0.5),
+          color: AppColors.border(context).withValues(alpha: 0.5),
         ),
         
         const SizedBox(height: 12),
@@ -1249,10 +1250,10 @@ Widget _buildChangeItem({
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.08),
+                color: Colors.grey.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -1319,3 +1320,5 @@ Widget _buildChangeItem({
     super.dispose();
   }
 }
+
+

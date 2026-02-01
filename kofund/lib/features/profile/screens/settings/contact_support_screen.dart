@@ -1,9 +1,10 @@
-// lib/features/profile/screens/settings/contact_support_screen.dart
+﻿// lib/features/profile/screens/settings/contact_support_screen.dart
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
@@ -15,7 +16,7 @@ Future<void> _launchEmail(BuildContext context) async {
   
   final nativeUrl = Uri.parse('mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
   
-  print('Launching email URL: $nativeUrl');
+  debugPrint('Launching email URL: $nativeUrl');
   
   try {
     // Try to launch directly
@@ -24,15 +25,15 @@ Future<void> _launchEmail(BuildContext context) async {
       mode: LaunchMode.externalApplication,
     );
     
-    print('Launch result: $result');
+    debugPrint('Launch result: $result');
     
     if (!result) {
-      print('LaunchUrl returned false, showing options');
+      debugPrint('LaunchUrl returned false, showing options');
       await Future.delayed(Duration(milliseconds: 300));
       _showEmailOptionsDialog(context, email, subject, body);
     }
   } catch (e) {
-    print('LaunchUrl error: $e');
+    debugPrint('LaunchUrl error: $e');
     await Future.delayed(Duration(milliseconds: 300));
     _showEmailOptionsDialog(context, email, subject, body);
   }
@@ -105,7 +106,7 @@ Future<void> _launchEmail(BuildContext context) async {
       '&body=$encodedBody'
     );
     
-    print('Trying Gmail URL: $gmailUrl');
+    debugPrint('Trying Gmail URL: $gmailUrl');
     
     try {
       await launchUrl(
@@ -113,7 +114,7 @@ Future<void> _launchEmail(BuildContext context) async {
         mode: LaunchMode.externalApplication,
       );
     } catch (e) {
-      print('Gmail web failed: $e');
+      debugPrint('Gmail web failed: $e');
       
       final outlookUrl = Uri.parse(
         'https://outlook.live.com/mail/0/deeplink/compose?to=$email&subject=$encodedSubject&body=$encodedBody'
@@ -122,7 +123,7 @@ Future<void> _launchEmail(BuildContext context) async {
       try {
         await launchUrl(outlookUrl, mode: LaunchMode.externalApplication);
       } catch (e2) {
-        print('Outlook also failed: $e2');
+        debugPrint('Outlook also failed: $e2');
         await _copyEmailDetails(email, subject, body, context);
       }
     }
@@ -221,7 +222,7 @@ Future<void> _launchEmail(BuildContext context) async {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color),
@@ -263,7 +264,7 @@ Widget _buildWhatsAppContactCard({
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),          borderRadius: BorderRadius.circular(10),
+color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
           child: FaIcon(
@@ -503,3 +504,6 @@ _buildWhatsAppContactCard( // Use the custom method
     );
     }
   }
+
+
+

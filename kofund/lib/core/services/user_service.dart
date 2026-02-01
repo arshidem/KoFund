@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../features/auth/models/user_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,7 +22,7 @@ class UserService {
   // In your UserService or ParticipantService
   Future<bool> isUserInProgram(String userId, String programId) async {
     try {
-      print('🔍 DEBUG: Checking if user $userId is ACTIVE participant in program $programId');
+      debugPrint('🔍 DEBUG: Checking if user $userId is ACTIVE participant in program $programId');
       
       final snapshot = await _firestore
           .collection('participants')
@@ -32,11 +33,11 @@ class UserService {
           .get();
       
       final isActiveParticipant = snapshot.docs.isNotEmpty;
-      print('📊 DEBUG: User $userId is ACTIVE participant in program $programId: $isActiveParticipant');
+      debugPrint('📊 DEBUG: User $userId is ACTIVE participant in program $programId: $isActiveParticipant');
       
       return isActiveParticipant;
     } catch (e) {
-      print('❌ DEBUG: Error checking program participation: $e');
+      debugPrint('❌ DEBUG: Error checking program participation: $e');
       throw Exception('Failed to check program participation: $e');
     }
   }
@@ -50,10 +51,10 @@ Future<List<UserModel>> getUsersByCommunity(
   bool loadMore = false, // Whether to load next page
 }) async {
   try {
-    print('🔍 DEBUG: Fetching $filterType users for community $communityId');
+    debugPrint('🔍 DEBUG: Fetching $filterType users for community $communityId');
     
     if (filterType == 'real') {
-      print('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
+      debugPrint('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
       
       // For real users, we need to get ALL users first, then filter
       // because real users might not have the isVirtualUser field
@@ -64,13 +65,13 @@ Future<List<UserModel>> getUsersByCommunity(
       
       if (loadMore && lastDocument != null) {
         query = query.startAfterDocument(lastDocument);
-        print('📄 DEBUG: Loading next page from cursor');
+        debugPrint('📄 DEBUG: Loading next page from cursor');
       }
       
-      print('📊 DEBUG: Executing query with limit ${limit * 3} for real users (will filter)');
+      debugPrint('📊 DEBUG: Executing query with limit ${limit * 3} for real users (will filter)');
       
       final snapshot = await query.get();
-      print('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
+      debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
       
       // Convert and filter in code
       final users = snapshot.docs.map((doc) {
@@ -86,12 +87,12 @@ Future<List<UserModel>> getUsersByCommunity(
         .take(limit) // Apply limit after filtering
         .toList();
       
-      print('✅ DEBUG: After filtering - got ${users.length} real users');
+      debugPrint('✅ DEBUG: After filtering - got ${users.length} real users');
       return users;
       
     } else {
       // For 'all' and 'virtual' users, we can query directly
-      print('🎯 $filterType.toUpperCase() USERS: Querying directly');
+      debugPrint('🎯 $filterType.toUpperCase() USERS: Querying directly');
       
       Query query = usersCollection
           .where('communityId', isEqualTo: communityId)
@@ -101,20 +102,20 @@ Future<List<UserModel>> getUsersByCommunity(
       // Apply server-side filtering for virtual users
       if (filterType == 'virtual') {
         query = query.where('isVirtualUser', isEqualTo: true);
-        print('🎯 Added isVirtualUser = true filter');
+        debugPrint('🎯 Added isVirtualUser = true filter');
       }
       // For 'all', no additional filter
       
       // Apply pagination if loading more
       if (loadMore && lastDocument != null) {
         query = query.startAfterDocument(lastDocument);
-        print('📄 DEBUG: Loading next page from cursor');
+        debugPrint('📄 DEBUG: Loading next page from cursor');
       }
       
-      print('📊 DEBUG: Executing query with limit $limit for $filterType users');
+      debugPrint('📊 DEBUG: Executing query with limit $limit for $filterType users');
       
       final snapshot = await query.get();
-      print('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
+      debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
       
       // Convert documents to UserModel
       final users = snapshot.docs.map((doc) {
@@ -133,7 +134,7 @@ Future<List<UserModel>> getUsersByCommunity(
     }
     
   } catch (e) {
-    print('❌ DEBUG: Error fetching community members: $e');
+    debugPrint('❌ DEBUG: Error fetching community members: $e');
     throw 'Failed to fetch community members: $e';
   }
 }
@@ -215,10 +216,10 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
 
     await batch.commit();
-    print('✅ Admin rejected user $uid from community $communityId');
+    debugPrint('✅ Admin rejected user $uid from community $communityId');
     
   } catch (e) {
-    print('❌ Error rejecting user: $e');
+    debugPrint('❌ Error rejecting user: $e');
     throw 'Failed to reject user: $e';
   }
 }
@@ -320,10 +321,10 @@ Future<void> leaveCommunity(String uid, String communityId) async {
 
     await batch.commit();
     
-    print('✅ User $uid successfully left community $communityId');
+    debugPrint('✅ User $uid successfully left community $communityId');
     
   } catch (e) {
-    print('❌ Error leaving community: $e');
+    debugPrint('❌ Error leaving community: $e');
     throw 'Failed to leave community: $e';
   }
 }
@@ -376,10 +377,10 @@ Future<void> removeFromCommunity(String uid, String communityId) async {
     }
 
     await batch.commit();
-    print('✅ Admin removed user $uid from community $communityId');
+    debugPrint('✅ Admin removed user $uid from community $communityId');
     
   } catch (e) {
-    print('❌ Error removing user from community: $e');
+    debugPrint('❌ Error removing user from community: $e');
     throw 'Failed to remove user from community: $e';
   }
 }
@@ -397,6 +398,8 @@ Future<void> removeFromCommunity(String uid, String communityId) async {
     }
   }
 }
+
+
 
 
 

@@ -1,10 +1,9 @@
-// ✅ FIXED: Stats logic and auto-close month selector
+﻿// ✅ FIXED: Stats logic and auto-close month selector
 // ✅ ADDED: Skeleton shimmer effect for loading state
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'dart:math'; // Add this import
 import '../../models/program_model.dart';
 import '../../providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
@@ -16,8 +15,8 @@ import 'package:kofund/features/members/screens/member_details_screen.dart';
 import 'package:kofund/features/programs/screens/add_participant_screen.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
-import '../../../auth/models/user_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 // Add this at the top of your file or in a separate file
 class SafeAsyncOperation {
@@ -83,7 +82,6 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
   }
 
   void _initializeMonths() async {
-    if (!mounted) return;
     setState(() => _isLoadingMonths = true);
     
     try {
@@ -330,7 +328,6 @@ Future<void> _navigateToAddParticipantScreen(BuildContext context) async {
     ),
   );
 
-  if (!mounted) return;
 
   if (result == true) {
     setState(() {
@@ -347,34 +344,34 @@ bool _isAdmin(BuildContext context) {
   final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
   final currentUser = authProvider.user;
   
-  print('🔧 _isAdmin called:');
-  print('   - User from authProvider: ${currentUser?.uid}');
-  print('   - User isAdmin: ${currentUser?.isAdmin}');
+  debugPrint('🔧 _isAdmin called:');
+  debugPrint('   - User from authProvider: ${currentUser?.uid}');
+  debugPrint('   - User isAdmin: ${currentUser?.isAdmin}');
   
   if (currentUser == null) {
-    print('   ❌ User is null - returning false');
+    debugPrint('   ❌ User is null - returning false');
     return false;
   }
   
   // 1. Program creator is always admin
   if (currentUser.uid == widget.program.createdBy) {
-    print('   ✅ User is program creator - returning true');
+    debugPrint('   ✅ User is program creator - returning true');
     return true;
   }
   
   // 2. User with 'admin' role
   if (currentUser.role == 'admin') {
-    print('   ✅ User has admin role - returning true');
+    debugPrint('   ✅ User has admin role - returning true');
     return true;
   }
   
   // 3. User with isAdmin flag and approved
   if (currentUser.isAdmin == true) {
-    print('   ✅ User has isAdmin flag - returning true');
+    debugPrint('   ✅ User has isAdmin flag - returning true');
     return true;
   }
   
-  print('   ❌ User is not admin - returning false');
+  debugPrint('   ❌ User is not admin - returning false');
   return false;
 }
 
@@ -466,7 +463,7 @@ bool _isAdmin(BuildContext context) {
   }
 
 Widget _buildShimmerStats() {
-  final skeletonColor = AppColors.textCards(context).withOpacity(0.25);
+  final skeletonColor = AppColors.textCards(context).withValues(alpha: 0.25);
 
   return Container(
     width: double.infinity,
@@ -479,7 +476,7 @@ Widget _buildShimmerStats() {
         BoxShadow(
           blurRadius: 6,
           offset: const Offset(0, 2),
-          color: Colors.black.withOpacity(0.06),
+          color: Colors.black.withValues(alpha: 0.06),
         ),
       ],
     ),
@@ -539,7 +536,7 @@ Widget _buildShimmerChip() {
         horizontal: 10,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface(context).withOpacity(0.35),
+        color: AppColors.surface(context).withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -550,7 +547,7 @@ Widget _buildShimmerChip() {
             width: 16,   // ⬅ match Icons.check_circle size
             height: 16,
             decoration: BoxDecoration(
-              color: AppColors.surface(context).withOpacity(0.6),
+              color: AppColors.surface(context).withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
           ),
@@ -565,7 +562,7 @@ Widget _buildShimmerChip() {
                 width: 28,
                 height: 12, // ⬅ label text size
                 decoration: BoxDecoration(
-                  color: AppColors.surface(context).withOpacity(0.6),
+                  color: AppColors.surface(context).withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -574,7 +571,7 @@ Widget _buildShimmerChip() {
                 width: 18,
                 height: 14, // ⬅ value text size
                 decoration: BoxDecoration(
-                  color: AppColors.surface(context).withOpacity(0.6),
+                  color: AppColors.surface(context).withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -693,7 +690,7 @@ Widget _buildShimmerChip() {
               BoxShadow(
                 blurRadius: 6,
                 offset: const Offset(0, 2),
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
               ),
             ],
           ),
@@ -712,7 +709,7 @@ Widget _buildShimmerChip() {
                             ? "Monthly Summary"
                             : "Participants Overview",
                         style: TextStyle(
-                          color: AppColors.textCards(context).withOpacity(0.9),
+                          color: AppColors.textCards(context).withValues(alpha: 0.9),
                           fontSize: 11,
                         ),
                       ),
@@ -768,7 +765,7 @@ Widget _buildShimmerChip() {
                   child: Text(
                     "of ₹${totalExpected.toStringAsFixed(0)} expected",
                     style: TextStyle(
-                      color: AppColors.textCards(context).withOpacity(0.85),
+                      color: AppColors.textCards(context).withValues(alpha: 0.85),
                       fontSize: 11,
                     ),
                   ),
@@ -781,7 +778,7 @@ Widget _buildShimmerChip() {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 6,
-                  backgroundColor: AppColors.textCards(context).withOpacity(0.25),
+                  backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.textCards(context),
                   ),
@@ -924,7 +921,7 @@ Widget _buildShimmerChip() {
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.primary(context) : 
                              isFutureMonth ? AppColors.surface(context) : 
-                             hasPayments ? AppColors.success(context).withOpacity(0.1) : 
+                             hasPayments ? AppColors.success(context).withValues(alpha: 0.1) : 
                              AppColors.card(context),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
@@ -954,8 +951,8 @@ Widget _buildShimmerChip() {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
                             decoration: BoxDecoration(
-                              color: isSelected ? Colors.white.withOpacity(0.9) : 
-                                     AppColors.success(context).withOpacity(0.2),
+                              color: isSelected ? Colors.white.withValues(alpha: 0.9) : 
+                                     AppColors.success(context).withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -1006,7 +1003,7 @@ Widget _buildShimmerChip() {
                   context,
                 ),
                 _buildLegendItem(
-                  AppColors.success(context).withOpacity(0.2), 
+                  AppColors.success(context).withValues(alpha: 0.2), 
                   'Has Payments',
                   context,
                 ),
@@ -1071,7 +1068,7 @@ Widget _buildShimmerChip() {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.primary(context).withOpacity(0.1),
+                              color: AppColors.primary(context).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
@@ -1179,7 +1176,7 @@ Widget _buildShimmerChip() {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: AppColors.textCards(context).withOpacity(0.15),
+          color: AppColors.textCards(context).withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -1200,7 +1197,7 @@ Widget _buildShimmerChip() {
                 Text(
                   label,
                   style: TextStyle(
-                    color: AppColors.textCards(context).withOpacity(0.85),
+                    color: AppColors.textCards(context).withValues(alpha: 0.85),
                     fontSize: 10,
                   ),
                 ),
@@ -1344,7 +1341,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                   height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.primary(context).withOpacity(0.12),
+                    color: AppColors.primary(context).withValues(alpha: 0.12),
                   ),
                   child: Center(
                     child: Text(
@@ -1398,13 +1395,13 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: hasPaidFull 
-                          ? AppColors.success(context).withOpacity(0.15)
-                          : AppColors.warning(context).withOpacity(0.15),
+                          ? AppColors.success(context).withValues(alpha: 0.15)
+                          : AppColors.warning(context).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: hasPaidFull 
-                            ? AppColors.success(context).withOpacity(0.3)
-                            : AppColors.warning(context).withOpacity(0.3),
+                            ? AppColors.success(context).withValues(alpha: 0.3)
+                            : AppColors.warning(context).withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -2259,3 +2256,4 @@ Future<String?> _getPaymentSubtitleWithRealData(ParticipantModel participant) as
   }
 }
 }
+

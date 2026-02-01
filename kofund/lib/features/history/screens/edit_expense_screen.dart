@@ -1,4 +1,4 @@
-// edit_expense_screen.dart
+﻿// edit_expense_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +13,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
 import '../../programs/providers/program_provider.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class EditExpenseScreen extends StatefulWidget {
   final String expenseId;
@@ -95,7 +96,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   Future<void> _fetchExpenseAndPrograms() async {
     try {
-      print('🔄 Fetching expense with ID: ${widget.expenseId}');
+      debugPrint('🔄 Fetching expense with ID: ${widget.expenseId}');
       
       // First try with the given ID
       var docRef = FirebaseFirestore.instance
@@ -106,7 +107,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       
       // If not found, try adding 'expense_' prefix
       if (!snapshot.exists && !widget.expenseId.startsWith('expense_')) {
-        print('⚠️ Not found, trying with "expense_" prefix...');
+        debugPrint('⚠️ Not found, trying with "expense_" prefix...');
         docRef = FirebaseFirestore.instance
             .collection('expenses')
             .doc('expense_${widget.expenseId}');
@@ -125,11 +126,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       // Create ExpenseModel from Firestore data
       _expense = ExpenseModel.fromMap(data, snapshot.id);
       
-      print('✅ Expense fetched successfully');
-      print('   Title: ${_expense!.title}');
-      print('   Amount: ${_expense!.amount}');
-      print('   Program ID: ${_expense!.programId}');
-      print('   Community ID: ${_expense!.communityId}');
+      debugPrint('✅ Expense fetched successfully');
+      debugPrint('   Title: ${_expense!.title}');
+      debugPrint('   Amount: ${_expense!.amount}');
+      debugPrint('   Program ID: ${_expense!.programId}');
+      debugPrint('   Community ID: ${_expense!.communityId}');
       
       // Fetch available programs for this community
       await _fetchAvailablePrograms(_expense!.communityId);
@@ -148,7 +149,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       });
       
     } catch (e) {
-      print('❌ Error fetching expense: $e');
+      debugPrint('❌ Error fetching expense: $e');
       setState(() {
         _isLoading = false;
         _hasError = true;
@@ -159,7 +160,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   Future<void> _fetchAvailablePrograms(String communityId) async {
     try {
-      print('📋 Fetching programs for community: $communityId');
+      debugPrint('📋 Fetching programs for community: $communityId');
       
       final querySnapshot = await FirebaseFirestore.instance
           .collection('communities')
@@ -172,11 +173,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         return ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
       
-      print('✅ Found ${_availablePrograms.length} programs');
+      debugPrint('✅ Found ${_availablePrograms.length} programs');
       
       // If no programs found in subcollection, try root programs collection
       if (_availablePrograms.isEmpty) {
-        print('⚠️ No programs in subcollection, trying root collection...');
+        debugPrint('⚠️ No programs in subcollection, trying root collection...');
         final rootQuery = await FirebaseFirestore.instance
             .collection('programs')
             .where('communityId', isEqualTo: communityId)
@@ -187,7 +188,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           return ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
         }).toList();
         
-        print('✅ Found ${_availablePrograms.length} programs in root collection');
+        debugPrint('✅ Found ${_availablePrograms.length} programs in root collection');
       }
       
       // Ensure the current program is in the list
@@ -203,7 +204,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           if (programDoc.exists) {
             final program = ProgramModel.fromMap(programDoc.data() as Map<String, dynamic>, programDoc.id);
             _availablePrograms.add(program);
-            print('➕ Added current program from subcollection');
+            debugPrint('➕ Added current program from subcollection');
           } else {
             final rootProgramDoc = await FirebaseFirestore.instance
                 .collection('programs')
@@ -213,11 +214,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             if (rootProgramDoc.exists) {
               final program = ProgramModel.fromMap(rootProgramDoc.data() as Map<String, dynamic>, rootProgramDoc.id);
               _availablePrograms.add(program);
-              print('➕ Added current program from root collection');
+              debugPrint('➕ Added current program from root collection');
             }
           }
         } catch (e) {
-          print('⚠️ Could not fetch current program: $e');
+          debugPrint('⚠️ Could not fetch current program: $e');
         }
       }
       
@@ -225,7 +226,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       _availablePrograms.sort((a, b) => a.title.compareTo(b.title));
       
     } catch (e) {
-      print('❌ Error fetching programs: $e');
+      debugPrint('❌ Error fetching programs: $e');
       _availablePrograms = [];
     }
   }
@@ -328,8 +329,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     // Check if user is admin
     final bool isAdmin = currentUser.isAdmin == true && currentUser.isApproved == true;
 
-    print('👤 User is Admin: $isAdmin');
-    print('📊 Current expense status: ${_expense!.status}');
+    debugPrint('👤 User is Admin: $isAdmin');
+    debugPrint('📊 Current expense status: ${_expense!.status}');
 
     // Parse amount
     final amountText = _amountController.text;
@@ -366,10 +367,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       
       if (!isAdmin) {
         // Non-admin user flow
-        print('🔄 Non-admin user detected - using 2-step update');
+        debugPrint('🔄 Non-admin user detected - using 2-step update');
         
         // Step 1: Update all other fields using regular updateExpense
-        print('📝 Step 1: Updating expense fields...');
+        debugPrint('📝 Step 1: Updating expense fields...');
         
         final updatedExpense = _expense!.copyWith(
           expenseId: widget.expenseId,
@@ -396,7 +397,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         );
         
         // Step 2: Update status to "pending" using updateExpenseStatus
-        print('🔄 Step 2: Changing status to "pending"...');
+        debugPrint('🔄 Step 2: Changing status to "pending"...');
         await expenseProvider.updateExpenseStatus(widget.expenseId, 'pending');
         
         final finalExpense = updatedExpense.copyWith(
@@ -413,7 +414,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         
       } else {
         // Admin user flow
-        print('👑 Admin user - keeping current status');
+        debugPrint('👑 Admin user - keeping current status');
         
         final updatedExpense = _expense!.copyWith(
           expenseId: widget.expenseId,
@@ -449,7 +450,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       if (mounted) Navigator.pop(context);
       
     } catch (e) {
-      print('❌ Error in _saveChanges: $e');
+      debugPrint('❌ Error in _saveChanges: $e');
       if (!mounted) return;
       SnackbarHelper.showError(context, 'Error updating expense: $e');
     } finally {
@@ -584,13 +585,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: hasChanged
-            ? Colors.blue.withOpacity(0.05)
+            ? Colors.blue.withValues(alpha: 0.05)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: hasChanged
-              ? Color(Colors.blue.value).withOpacity(0.2)
-              : AppColors.border(context).withOpacity(0.3),
+              ? Colors.blue.withValues(alpha: 0.2)
+              : AppColors.border(context).withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -671,7 +672,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.12),
+                color: Colors.green.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -1191,7 +1192,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                         width: 32,
                                         height: 32,
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withOpacity(0.12),
+                                          color: Colors.blue.withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Icon(
@@ -1216,7 +1217,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                   
                                   Container(
                                     height: 1,
-                                    color: AppColors.border(context).withOpacity(0.5),
+                                    color: AppColors.border(context).withValues(alpha: 0.5),
                                   ),
                                   
                                   const SizedBox(height: 12),
@@ -1303,10 +1304,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey.withOpacity(0.08),
+                                          color: Colors.grey.withValues(alpha: 0.08),
                                           borderRadius: BorderRadius.circular(8),
                                           border: Border.all(
-                                            color: Colors.grey.withOpacity(0.2),
+                                            color: Colors.grey.withValues(alpha: 0.2),
                                           ),
                                         ),
                                         child: Row(
@@ -1374,3 +1375,5 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     super.dispose();
   }
 }
+
+

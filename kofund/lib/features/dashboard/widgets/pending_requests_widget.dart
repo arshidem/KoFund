@@ -80,7 +80,7 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   spreadRadius: 1,
                   offset: const Offset(0, 2),
@@ -110,7 +110,7 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 6,
                                   spreadRadius: 1,
                                 ),
@@ -139,7 +139,7 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
+                                    color: Colors.black.withValues(alpha: 0.15),
                                     blurRadius: 4,
                                     spreadRadius: 1,
                                   ),
@@ -205,7 +205,7 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       elevation: 2,
-                      shadowColor: _getButtonColor(context).withOpacity(0.3),
+                      shadowColor: _getButtonColor(context).withValues(alpha: 0.3),
                     ),
                     child: Text(
                       "Review Requests",
@@ -228,14 +228,14 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
   Color _getContainerBackgroundColor(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return isDarkMode 
-        ? const Color(0xFF2A1F00).withOpacity(0.8) // Dark yellow-brown
+        ? const Color(0xFF2A1F00).withValues(alpha: 0.8) // Dark yellow-brown
         : const Color(0xFFFFF3D9); // Light cream-yellow
   }
 
   Color _getContainerBorderColor(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return isDarkMode 
-        ? const Color(0xFF4A3C00).withOpacity(0.6)
+        ? const Color(0xFF4A3C00).withValues(alpha: 0.6)
         : const Color(0xFFFFE0B2);
   }
 
@@ -275,12 +275,12 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDarkMode 
-            ? AppColors.darkCard.withOpacity(0.5)
-            : AppColors.lightCard.withOpacity(0.7),
+            ? AppColors.darkCard.withValues(alpha: 0.5)
+            : AppColors.lightCard.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDarkMode 
-              ? AppColors.darkBorder.withOpacity(0.3)
+              ? AppColors.darkBorder.withValues(alpha: 0.3)
               : AppColors.lightBorder,
         ),
       ),
@@ -292,8 +292,8 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
             height: 56,
             decoration: BoxDecoration(
               color: isDarkMode 
-                  ? AppColors.darkTextSecondary.withOpacity(0.2)
-                  : AppColors.lightTextSecondary.withOpacity(0.2),
+                  ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
+                  : AppColors.lightTextSecondary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -310,8 +310,8 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
                   height: 16,
                   decoration: BoxDecoration(
                     color: isDarkMode 
-                        ? AppColors.darkTextSecondary.withOpacity(0.2)
-                        : AppColors.lightTextSecondary.withOpacity(0.2),
+                        ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
+                        : AppColors.lightTextSecondary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -321,8 +321,8 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
                   height: 14,
                   decoration: BoxDecoration(
                     color: isDarkMode 
-                        ? AppColors.darkTextSecondary.withOpacity(0.2)
-                        : AppColors.lightTextSecondary.withOpacity(0.2),
+                        ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
+                        : AppColors.lightTextSecondary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

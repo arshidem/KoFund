@@ -1,9 +1,10 @@
-// lib/features/profile/screens/settings/help_faq_screen.dart
+﻿// lib/features/profile/screens/settings/help_faq_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/profile/screens/settings/contact_support_screen.dart';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 
 class HelpFAQScreen extends StatefulWidget {
@@ -25,17 +26,17 @@ class _HelpFAQScreenSate extends State<HelpFAQScreen> {
   }
 
 Future<void> _loadAppInfo() async {
-  print('Loading app info...');
+  debugPrint('Loading app info...');
   final version = await AppInfo.appVersion;
   final build = await AppInfo.buildNumber;
-  print('Got version: $version, build: $build');
+  debugPrint('Got version: $version, build: $build');
   
   if (mounted) {
     setState(() {
       appVersion = version;
       buildNumber = build;
     });
-    print('State updated to version: $appVersion');
+    debugPrint('State updated to version: $appVersion');
   }
 }
 
@@ -315,3 +316,4 @@ class FAQItem {
     required this.answer,
   });
 }
+

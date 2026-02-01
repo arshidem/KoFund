@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -109,7 +110,7 @@ final Map<String, String> _localUserNameCache = {};
       
       return 'User $userId';
     } catch (e) {
-      print('Error fetching user name: $e');
+      debugPrint('Error fetching user name: $e');
       return 'User $userId';
     }
   }
@@ -294,7 +295,7 @@ Widget build(BuildContext context) {
                   BoxShadow(
                     blurRadius: 6,
                     offset: const Offset(0, 2),
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                   ),
                 ],
               ),
@@ -310,7 +311,7 @@ Widget build(BuildContext context) {
                           Text(
                             "Contributions Overview",
                             style: TextStyle(
-                              color: AppColors.textCards(context).withOpacity(0.9),
+                              color: AppColors.textCards(context).withValues(alpha: 0.9),
                               fontSize: 11,
                             ),
                           ),
@@ -353,7 +354,7 @@ Widget build(BuildContext context) {
                       child: Text(
                         "of ₹${totalExpected.toStringAsFixed(0)} expected",
                         style: TextStyle(
-                          color: AppColors.textCards(context).withOpacity(0.85),
+                          color: AppColors.textCards(context).withValues(alpha: 0.85),
                           fontSize: 11,
                         ),
                       ),
@@ -366,7 +367,7 @@ Widget build(BuildContext context) {
                     child: LinearProgressIndicator(
                       value: totalExpected > 0 ? totalCollected / totalExpected : 0,
                       minHeight: 6,
-                      backgroundColor: AppColors.textCards(context).withOpacity(0.25),
+                      backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         AppColors.textCards(context),
                       ),
@@ -382,7 +383,7 @@ Widget build(BuildContext context) {
                         '${progressPercentage.toStringAsFixed(1)}% collected',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.textCards(context).withOpacity(0.85),
+                          color: AppColors.textCards(context).withValues(alpha: 0.85),
                         ),
                       ),
                       if (totalExpected > totalCollected)
@@ -390,7 +391,7 @@ Widget build(BuildContext context) {
                           '₹${(totalExpected - totalCollected).toStringAsFixed(0)} remaining',
                           style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.textCards(context).withOpacity(0.85),
+                            color: AppColors.textCards(context).withValues(alpha: 0.85),
                           ),
                         ),
                     ],
@@ -637,7 +638,7 @@ void _navigateToProgramDeletedContributions(BuildContext context) {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.success(context).withOpacity(0.1),
+                      color: AppColors.success(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -673,10 +674,10 @@ void _navigateToProgramDeletedContributions(BuildContext context) {
             vertical: 2,
           ),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: Colors.orange.withOpacity(0.3),
+              color: Colors.orange.withValues(alpha: 0.3),
             ),
           ),
           child: Text(
@@ -940,7 +941,7 @@ void _showContributionDetails(ContributionModel contribution, BuildContext conte
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 32,
                       spreadRadius: 0,
                       offset: const Offset(0, -8),
@@ -957,7 +958,7 @@ void _showContributionDetails(ContributionModel contribution, BuildContext conte
                           width: 48,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.border(context).withOpacity(0.4),
+                            color: AppColors.border(context).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -988,7 +989,7 @@ void _showContributionDetails(ContributionModel contribution, BuildContext conte
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary(context).withOpacity(0.08),
+                                    color: AppColors.primary(context).withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -1009,15 +1010,15 @@ void _showContributionDetails(ContributionModel contribution, BuildContext conte
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    Colors.orange.withOpacity(0.15),
-                                    Colors.orange.withOpacity(0.08),
+                                    Colors.orange.withValues(alpha: 0.15),
+                                    Colors.orange.withValues(alpha: 0.08),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.orange.withOpacity(0.2),
+                                  color: Colors.orange.withValues(alpha: 0.2),
                                   width: 1.5,
                                 ),
                               ),
@@ -1209,7 +1210,7 @@ Column(
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.10),
+            color: Colors.orange.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
@@ -1403,7 +1404,7 @@ Column(
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                             spreadRadius: 0,
                             offset: const Offset(0, -4),
@@ -1452,7 +1453,7 @@ Column(
               ),
               padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 4,
-              shadowColor: AppColors.primary(context).withOpacity(0.3),
+              shadowColor: AppColors.primary(context).withValues(alpha: 0.3),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1534,7 +1535,7 @@ Widget _buildSectionHeader(BuildContext context, {required String title, require
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withOpacity(0.1),
+          color: AppColors.primary(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -1776,7 +1777,7 @@ String _getFieldDisplayName(String field) {
                 setState(() {});
               }
             } catch (e) {
-              print('Error handling updated contribution: $e');
+              debugPrint('Error handling updated contribution: $e');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Error: ${e.toString()}'),
@@ -1808,6 +1809,7 @@ Future<void> _generateReceipt(
   try {
     // Get user name
     final userName = await _getUserName(contribution.userId, context);
+    if (!mounted) return;
 
     if (!context.mounted) return;
 
@@ -1973,3 +1975,4 @@ Future<String?> _showDeleteReasonDialog(BuildContext context) async {
     }
   }
 }
+

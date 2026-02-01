@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:kofund/features/community/models/community_model.dart';
@@ -74,7 +74,7 @@ class DashboardProvider with ChangeNotifier {
 Future<void> loadDashboardData(String communityId) async {
   // ✅ SAFETY CHECK: Prevent multiple simultaneous loads
   if (_isLoading) {
-    print('⏳ DEBUG: Dashboard data load already in progress, skipping...');
+    debugPrint('⏳ DEBUG: Dashboard data load already in progress, skipping...');
     return;
   }
   
@@ -82,7 +82,7 @@ Future<void> loadDashboardData(String communityId) async {
     _setLoading(true);
     _errorMessage = '';
 
-    print('🔄 DEBUG: Loading dashboard data for community: $communityId');
+    debugPrint('🔄 DEBUG: Loading dashboard data for community: $communityId');
     
     // 1. COMMUNITY DETAILS
     await _loadCommunityDetails(communityId);
@@ -101,11 +101,11 @@ Future<void> loadDashboardData(String communityId) async {
       _resetMonthlyProgramFinancials();
     }
 
-    print('✅ DEBUG: Dashboard data loaded successfully');
+    debugPrint('✅ DEBUG: Dashboard data loaded successfully');
     notifyListeners();
   } catch (e) {
     _errorMessage = 'Failed to load dashboard data: $e';
-    print('❌ DEBUG: Dashboard load error: $e');
+    debugPrint('❌ DEBUG: Dashboard load error: $e');
     notifyListeners();
   } finally {
     _setLoading(false);
@@ -134,11 +134,11 @@ Future<void> loadDashboardData(String communityId) async {
       _monthlyPaymentProgram = programs.firstWhere(
         (p) => p.isMonthlyPaymentProgram == true
       );
-      print('✅ Found monthly payment program: ${_monthlyPaymentProgram!.title}');
+      debugPrint('✅ Found monthly payment program: ${_monthlyPaymentProgram!.title}');
     } catch (_) {
       // 👉 NO monthly payment program found
       _monthlyPaymentProgram = null;
-      print('ℹ️ No monthly payment program found in this community');
+      debugPrint('ℹ️ No monthly payment program found in this community');
     }
   }
 
@@ -155,7 +155,7 @@ Future<void> loadDashboardData(String communityId) async {
   // -------------------------
   Future<void> _loadMonthlyProgramFinancials(String programId) async {
     try {
-      print('💰 Loading financials for monthly payment program: $programId');
+      debugPrint('💰 Loading financials for monthly payment program: $programId');
       
       // 👉 ONLY get financial data for the monthly payment program
       final contributions = await _contributionService.getProgramTotalContributions(programId);
@@ -167,10 +167,10 @@ Future<void> loadDashboardData(String communityId) async {
       _monthlyProgramBalance = contributions - expenses;
       _monthlyProgramContributors = contributors;
 
-      print('💰 Monthly Program Financials - Collected: $contributions, Expenses: $expenses, Balance: ${_monthlyProgramBalance}');
+      debugPrint('💰 Monthly Program Financials - Collected: $contributions, Expenses: $expenses, Balance: ${_monthlyProgramBalance}');
 
     } catch (e) {
-      print('❌ Error loading monthly program financials: $e');
+      debugPrint('❌ Error loading monthly program financials: $e');
       _errorMessage = 'Failed to load monthly program financials: $e';
       // Reset to defaults on error
       _resetMonthlyProgramFinancials();
@@ -198,7 +198,7 @@ Future<void> loadDashboardData(String communityId) async {
     _monthlyProgramExpenses = 0.0;
     _monthlyProgramBalance = 0.0;
     _monthlyProgramContributors = 0;
-    print('💰 Reset monthly program financials to zero');
+    debugPrint('💰 Reset monthly program financials to zero');
   }
 
   // -------------------------
@@ -286,3 +286,4 @@ Future<void> loadDashboardData(String communityId) async {
     notifyListeners();
   }
 }
+

@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/contributions/models/contribution_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class ContributionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -79,12 +80,12 @@ class ContributionService {
   }
 Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId) async {
   try {
-    print('💰 ContributionService: Getting contribution history for member: $memberId');
+    debugPrint('💰 ContributionService: Getting contribution history for member: $memberId');
     
     // FIRST: Get the user to get their communityId
     final userDoc = await _firestore.collection('users').doc(memberId).get();
     if (!userDoc.exists) {
-      print('❌ ContributionService: User $memberId not found in users collection');
+      debugPrint('❌ ContributionService: User $memberId not found in users collection');
       return [];
     }
     
@@ -92,11 +93,11 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
     final communityId = userData['communityId'];
     
     if (communityId == null || communityId.isEmpty) {
-      print('⚠️ ContributionService: User $memberId has no communityId');
+      debugPrint('⚠️ ContributionService: User $memberId has no communityId');
       return [];
     }
     
-    print('🏠 ContributionService: User belongs to community: $communityId');
+    debugPrint('🏠 ContributionService: User belongs to community: $communityId');
     
     // Get all contributions for this user IN THEIR COMMUNITY
     final contributionSnapshot = await _firestore
@@ -106,11 +107,11 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
         .orderBy('createdAt', descending: true)
         .get();
     
-    print('📊 ContributionService: Found ${contributionSnapshot.docs.length} contribution documents');
+    debugPrint('📊 ContributionService: Found ${contributionSnapshot.docs.length} contribution documents');
     
     // Debug: Print contribution data
     for (final doc in contributionSnapshot.docs) {
-      print('   💰 Contribution Doc ${doc.id}: ${doc.data()}');
+      debugPrint('   💰 Contribution Doc ${doc.id}: ${doc.data()}');
     }
     
     final contributionHistory = <Map<String, dynamic>>[];
@@ -120,11 +121,11 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
       final programId = contribution['programId'] as String?;
       
       if (programId == null || programId.isEmpty) {
-        print('⚠️ ContributionService: Skipping contribution without programId');
+        debugPrint('⚠️ ContributionService: Skipping contribution without programId');
         continue;
       }
       
-      print('🔍 ContributionService: Processing program: $programId');
+      debugPrint('🔍 ContributionService: Processing program: $programId');
       
       try {
         final programDoc = await _firestore
@@ -149,9 +150,9 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
             'communityId': communityId, // ✅ ADD THIS
           });
           
-          print('✅ ContributionService: Added contribution for program: ${programData['title']}');
+          debugPrint('✅ ContributionService: Added contribution for program: ${programData['title']}');
         } else {
-          print('⚠️ ContributionService: Program $programId not found');
+          debugPrint('⚠️ ContributionService: Program $programId not found');
           
           // Still add contribution with basic info
           contributionHistory.add({
@@ -168,23 +169,23 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
           });
         }
       } catch (e) {
-        print('❌ ContributionService Error fetching program $programId: $e');
+        debugPrint('❌ ContributionService Error fetching program $programId: $e');
       }
     }
     
-    print('✅ ContributionService: Returning ${contributionHistory.length} contribution history items');
+    debugPrint('✅ ContributionService: Returning ${contributionHistory.length} contribution history items');
     return contributionHistory;
   } catch (e) {
-    print('❌❌❌ ContributionService Error in getMemberContributionHistory: $e');
-    print('❌❌❌ Stack trace: ${e.toString()}');
+    debugPrint('❌❌❌ ContributionService Error in getMemberContributionHistory: $e');
+    debugPrint('❌❌❌ Stack trace: ${e.toString()}');
     return [];
   }
 }
   // 🔹 Read (Admin - all contributions in a community)
   Future<List<ContributionModel>> getCommunityContributions(String communityId) async {
-    print('🔄 SERVICE: Starting getCommunityContributions for community: $communityId');
+    debugPrint('🔄 SERVICE: Starting getCommunityContributions for community: $communityId');
     try {
-      print('🔥 SERVICE: Executing Firestore query...');
+      debugPrint('🔥 SERVICE: Executing Firestore query...');
       
       final snapshot = await _firestore
           .collection('contributions')
@@ -192,20 +193,20 @@ Future<List<Map<String, dynamic>>> getMemberContributionHistory(String memberId)
           .orderBy('createdAt', descending: true)
           .get();
 
-      print('✅ SERVICE: Query successful, found ${snapshot.docs.length} documents');
+      debugPrint('✅ SERVICE: Query successful, found ${snapshot.docs.length} documents');
       
       final contributions = snapshot.docs
           .map((doc) {
-            print('📄 SERVICE: Processing doc ${doc.id} - data: ${doc.data()}');
+            debugPrint('📄 SERVICE: Processing doc ${doc.id} - data: ${doc.data()}');
             return ContributionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
           })
           .toList();
       
-      print('🎯 SERVICE: Successfully parsed ${contributions.length} contributions');
+      debugPrint('🎯 SERVICE: Successfully parsed ${contributions.length} contributions');
       return contributions;
       
     } catch (e) {
-      print('❌ SERVICE ERROR: Failed to load community contributions: $e');
+      debugPrint('❌ SERVICE ERROR: Failed to load community contributions: $e');
       throw Exception('Failed to load community contributions: $e');
     }
   }
@@ -232,7 +233,7 @@ Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
       };
     }).toList();
   } catch (e) {
-    print('❌ ContributionService Error: $e');
+    debugPrint('❌ ContributionService Error: $e');
     return [];
   }
 }
@@ -542,7 +543,7 @@ Future<List<Map<String, dynamic>>> getUserPaymentHistoryWithDetails(
     return paymentHistory;
     
   } catch (e) {
-    print('❌ Error: $e');
+    debugPrint('❌ Error: $e');
     return [];
   }
 }
@@ -632,7 +633,7 @@ Future<void> updateContribution(ContributionModel contribution, {
         };
         
       } catch (e) {
-        print('⚠️ Error fetching program info: $e');
+        debugPrint('⚠️ Error fetching program info: $e');
         return {
           'title': 'Program $programId',
           'location': '',
@@ -847,7 +848,7 @@ Future<List<ContributionModel>> getMonthlyContributionsForProgram(
             ContributionModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
   } catch (e) {
-    print('❌ Error getting monthly contributions: $e');
+    debugPrint('❌ Error getting monthly contributions: $e');
     return [];
   }
 }
@@ -870,7 +871,7 @@ Future<bool> hasUserPaidForMonth(
 
     return snapshot.docs.isNotEmpty;
   } catch (e) {
-    print('❌ Error checking monthly payment: $e');
+    debugPrint('❌ Error checking monthly payment: $e');
     return false;
   }
 }
@@ -905,7 +906,7 @@ Future<Map<String, List<ContributionModel>>> getMonthlyContributionsByMonth(
     
     return monthlyMap;
   } catch (e) {
-    print('❌ Error getting monthly contributions by month: $e');
+    debugPrint('❌ Error getting monthly contributions by month: $e');
     return {};
   }
 }
@@ -933,8 +934,9 @@ Future<Map<String, bool>> getMonthlyPaymentStatus(
     
     return paymentStatus;
   } catch (e) {
-    print('❌ Error getting monthly payment status: $e');
+    debugPrint('❌ Error getting monthly payment status: $e');
     return {};
   }
 }
 }
+

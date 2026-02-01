@@ -1,4 +1,4 @@
-// main.dart - UPDATED VERSION with proper Firebase initialization and deep linking
+﻿// main.dart - UPDATED VERSION with proper Firebase initialization and deep linking
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'core/constants/app_colors.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app_links/app_links.dart';    
 // 🧩 Services
 import 'core/services/firebase_auth_service.dart';
@@ -48,12 +47,7 @@ import 'core/providers/theme_provider.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
-
-import 'dart:async';
-import 'routing/route_names.dart'; // Or wherever your RouteNames class is
-
-// 🏁 Screens
-import 'features/auth/screens/splash_screen.dart';
+import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // =============================
@@ -64,9 +58,9 @@ void main() async {
 
   try {
     await validateFirebaseConfig();
-    print('✅ Firebase config validated successfully');
+    debugPrint('✅ Firebase config validated successfully');
   } catch (e) {
-    print('❌ Firebase config error: $e');
+    debugPrint('❌ Firebase config error: $e');
     // Consider showing an error screen instead of crashing
   }
   // Set portrait orientation
@@ -80,29 +74,29 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('✅ Firebase initialized SUCCESSFULLY');
+    debugPrint('✅ Firebase initialized SUCCESSFULLY');
   } catch (e) {
-    print('❌ Firebase initialization FAILED: $e');
+    debugPrint('❌ Firebase initialization FAILED: $e');
     // Even if Firebase fails, we can still run the app in offline mode
   }
 
   // Set Firebase Auth persistence (requires Firebase to be initialized)
   try {
     await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-    print('✅ Firebase Auth persistence: LOCAL (offline supported)');
+    debugPrint('✅ Firebase Auth persistence: LOCAL (offline supported)');
   } catch (e) {
-    print('⚠️ Auth persistence error: $e');
+    debugPrint('⚠️ Auth persistence error: $e');
   }
 
   // Initialize Shared Preferences
   await SharedPreferences.getInstance();
-  print('✅ Shared Preferences initialized');
+  debugPrint('✅ Shared Preferences initialized');
 
   // Register Background FCM Handler (requires Firebase to be initialized)
   FirebaseMessaging.onBackgroundMessage(
     NotificationService.firebaseMessagingBackgroundHandler
   );
-  print('✅ Background FCM handler registered');
+  debugPrint('✅ Background FCM handler registered');
 
   // Initialize AdMob in background (non-critical)
   unawaited(_initializeAdMobSafely());
@@ -113,6 +107,31 @@ void main() async {
     if (details.stack != null) {
       debugPrint('📌 Stack: ${details.stack}');
     }
+  };
+
+  // Show a visible error screen so silent runtime errors produce an understandable UI
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    final message = details.exceptionAsString();
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 56),
+              const SizedBox(height: 12),
+              Text('An error occurred while starting the app', style: TextStyle(fontSize: 18, color: Colors.red[700])),
+              const SizedBox(height: 12),
+              Text(message, style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 12),
+              if (details.stack != null) Text('${details.stack}', style: const TextStyle(fontSize: 10)),
+            ],
+          ),
+        ),
+      ),
+    );
   };
 
   // Run app
@@ -128,7 +147,7 @@ Future<void> validateFirebaseConfig() async {
   try {
     final options = DefaultFirebaseOptions.currentPlatform;
     
-    debugPrint('📱 Platform: ${Theme.of(navigatorKey.currentContext!).platform}');
+    debugPrint('📱 Platform: $defaultTargetPlatform');
     debugPrint('🔥 Firebase App ID: ${options.appId}');
     debugPrint('🌐 Project ID: ${options.projectId}');
     debugPrint('🔑 API Key: ${options.apiKey}');
@@ -146,7 +165,7 @@ Future<void> validateFirebaseConfig() async {
 // 🔰 AdMob Initialization
 // =============================
 Future<void> _initializeAdMobSafely() async {
-  print('🔄 Initializing AdMob...');
+  debugPrint('🔄 Initializing AdMob...');
 
   try {
     MobileAds.instance.updateRequestConfiguration(
@@ -156,9 +175,9 @@ Future<void> _initializeAdMobSafely() async {
     );
 
     await MobileAds.instance.initialize();
-    print('✅ AdMob initialized');
+    debugPrint('✅ AdMob initialized');
   } catch (e) {
-    print('❌ AdMob initialization failed (non-critical): $e');
+    debugPrint('❌ AdMob initialization failed (non-critical): $e');
   }
 }
 
@@ -565,7 +584,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSubscription; // ✅ CORRECT: StreamSubscription<Uri?>
- final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();  @override
+  @override
   void initState() {
     super.initState();
     _initAppLinks();
@@ -793,3 +812,4 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
     );
   }
 }
+

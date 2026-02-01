@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -59,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final currentUserId = authProvider.user?.uid;
     
     if (currentUserId != null && currentUserId != _lastLoadedUserId) {
-      print('🔄 User changed from $_lastLoadedUserId to $currentUserId');
+      debugPrint('🔄 User changed from $_lastLoadedUserId to $currentUserId');
       _loadProfileData();
     }
   }
@@ -77,26 +78,26 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       
       final currentUser = authProvider.user;
       if (currentUser == null) {
-        print('❌ No user logged in');
+        debugPrint('❌ No user logged in');
         return;
       }
 
       // Also check FirebaseAuth directly
       final firebaseUser = FirebaseAuth.instance.currentUser;
       if (firebaseUser == null) {
-        print('❌ No Firebase user');
+        debugPrint('❌ No Firebase user');
         return;
       }
 
-      print('🔄 Loading profile data for user: ${currentUser.uid}...');
-      print('🔍 FirebaseAuth user: ${firebaseUser.uid}');
-      print('🔍 Last loaded user: $_lastLoadedUserId');
+      debugPrint('🔄 Loading profile data for user: ${currentUser.uid}...');
+      debugPrint('🔍 FirebaseAuth user: ${firebaseUser.uid}');
+      debugPrint('🔍 Last loaded user: $_lastLoadedUserId');
       
       // Check if user IDs match between providers
       if (currentUser.uid != firebaseUser.uid) {
-        print('⚠️ WARNING: AppAuthProvider and FirebaseAuth user IDs don\'t match!');
-        print('⚠️ AppAuthProvider: ${currentUser.uid}');
-        print('⚠️ FirebaseAuth: ${firebaseUser.uid}');
+        debugPrint('⚠️ WARNING: AppAuthProvider and FirebaseAuth user IDs don\'t match!');
+        debugPrint('⚠️ AppAuthProvider: ${currentUser.uid}');
+        debugPrint('⚠️ FirebaseAuth: ${firebaseUser.uid}');
         
         // Force clear data and use FirebaseAuth user
         profileProvider.clearAllUserData();
@@ -108,11 +109,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       
       // Check if we need to load data
       if (!forceRefresh && _lastLoadedUserId == targetUserId) {
-        print('✅ Already loaded data for user $targetUserId');
+        debugPrint('✅ Already loaded data for user $targetUserId');
       } else {
         // Clear old data if user changed
         if (_lastLoadedUserId != null && _lastLoadedUserId != targetUserId) {
-          print('🔄 Switching users from $_lastLoadedUserId to $targetUserId');
+          debugPrint('🔄 Switching users from $_lastLoadedUserId to $targetUserId');
           profileProvider.clearAllUserData();
         }
         
@@ -125,11 +126,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         
         // Update last loaded user
         _lastLoadedUserId = targetUserId;
-        print('✅ Profile data loaded successfully for user: $targetUserId');
+        debugPrint('✅ Profile data loaded successfully for user: $targetUserId');
       }
       
     } catch (e) {
-      print('❌ Error loading profile data: $e');
+      debugPrint('❌ Error loading profile data: $e');
       if (mounted) {
         SnackbarHelper.showError(context, 'Failed to load profile data');
       }
@@ -144,15 +145,15 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   void _onRefresh() async {
-    print('🔄 Pull to refresh triggered');
+    debugPrint('🔄 Pull to refresh triggered');
     
     try {
       await _loadProfileData(forceRefresh: true);
       _refreshController.refreshCompleted();
-      print('✅ Profile refresh completed');
+      debugPrint('✅ Profile refresh completed');
     } catch (e) {
       _refreshController.refreshFailed();
-      print('❌ Profile refresh failed: $e');
+      debugPrint('❌ Profile refresh failed: $e');
     }
   }
 
@@ -172,6 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     
     if (mounted) {
       await _loadProfileData();
+      if (!mounted) return;
     }
   }
 
@@ -183,6 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     
     if (mounted) {
       await _loadProfileData();
+      if (!mounted) return;
     }
   }
 
@@ -194,6 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     
     if (mounted) {
       await _loadProfileData();
+      if (!mounted) return;
     }
   }
 
@@ -217,11 +221,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
     // Debug info
     final firebaseUser = FirebaseAuth.instance.currentUser;
-    print('🔍 BUILD - AppAuth user: ${authProvider.user?.uid}');
-    print('🔍 BUILD - FirebaseAuth user: ${firebaseUser?.uid}');
-    print('🔍 BUILD - Last loaded: $_lastLoadedUserId');
-    print('🔍 BUILD - ProfileProvider isDataForCurrentUser: ${profileProvider.isDataForCurrentUser}');
-    print('🔍 BUILD - ProfileProvider _loadedUserId: ${profileProvider.currentUserId}');
+    debugPrint('🔍 BUILD - AppAuth user: ${authProvider.user?.uid}');
+    debugPrint('🔍 BUILD - FirebaseAuth user: ${firebaseUser?.uid}');
+    debugPrint('🔍 BUILD - Last loaded: $_lastLoadedUserId');
+    debugPrint('🔍 BUILD - ProfileProvider isDataForCurrentUser: ${profileProvider.isDataForCurrentUser}');
+    debugPrint('🔍 BUILD - ProfileProvider _loadedUserId: ${profileProvider.currentUserId}');
 
     // Check for user changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -301,7 +305,7 @@ if (_isLoadingProfile) {
                     margin: EdgeInsets.only(bottom: 16),
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.orange),
                     ),
@@ -428,7 +432,7 @@ Widget _buildProfileHeader(UserModel user) {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -450,12 +454,12 @@ Widget _buildProfileHeader(UserModel user) {
                   shape: BoxShape.circle,
                   gradient: avatarGradient, // ✅ Old gradient restored
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -495,7 +499,7 @@ Widget _buildProfileHeader(UserModel user) {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
@@ -559,12 +563,12 @@ Widget _buildProfileHeader(UserModel user) {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: user.isAdmin
-                    ? Colors.orange.withOpacity(0.15)
+                    ? Colors.orange.withValues(alpha: 0.15)
                     : AppColors.surface(context),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: user.isAdmin
-                      ? Colors.orange.withOpacity(0.4)
+                      ? Colors.orange.withValues(alpha: 0.4)
                       : AppColors.border(context),
                 ),
               ),
@@ -649,7 +653,7 @@ Widget _buildStatCard({
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -754,7 +758,7 @@ Widget _buildRecentProgramsList(List<Map<String, dynamic>> programs) {
       border: Border.all(color: AppColors.border(context)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -846,7 +850,7 @@ Widget _buildProgramListItem(Map<String, dynamic> program) {
               width: 36, // ⬇️
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.1),
+                color: AppColors.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -893,13 +897,13 @@ Widget _buildProgramListItem(Map<String, dynamic> program) {
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: hasPaid
-                    ? Colors.green.withOpacity(0.12)
-                    : Colors.orange.withOpacity(0.12),
+                    ? Colors.green.withValues(alpha: 0.12)
+                    : Colors.orange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
                   color: hasPaid
-                      ? Colors.green.withOpacity(0.35)
-                      : Colors.orange.withOpacity(0.35),
+                      ? Colors.green.withValues(alpha: 0.35)
+                      : Colors.orange.withValues(alpha: 0.35),
                 ),
               ),
               child: Text(
@@ -957,7 +961,7 @@ Widget _buildRecentContributionsList(
       border: Border.all(color: AppColors.border(context)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -1056,7 +1060,7 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution) {
               width: 34, // ⬇️
               height: 34,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.12),
+                color: Colors.green.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -1122,7 +1126,7 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution) {
       border: Border.all(color: AppColors.border(context)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -1230,3 +1234,4 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution) {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+

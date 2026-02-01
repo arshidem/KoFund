@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -104,6 +104,7 @@ Future<void> _loadDevelopers() async {
 
       // Refresh list
       await _loadDevelopers();
+      if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -200,7 +201,7 @@ Future<void> _loadDevelopers() async {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: AppColors.primary(context).withOpacity(0.1),
+          backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
           child: Icon(
             Icons.person,
             color: AppColors.primary(context),
@@ -241,7 +242,7 @@ Future<void> _loadDevelopers() async {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
+color: Colors.blue.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue, width: 1),
                 ),
                 child: Text(
@@ -260,7 +261,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                  borderRadius:
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius: BorderRadius.circular(12),
+color: Colors.green.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green, width: 1),
                 ),
                 child: Text(
@@ -453,7 +454,7 @@ color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius
                       ),
                       Chip(
                         label: Text('${_developers.length} users'),
-                        backgroundColor: AppColors.primary(context).withOpacity(0.1),
+                        backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
                         labelStyle: TextStyle(
                           color: AppColors.primary(context),
                           fontWeight: FontWeight.bold,
@@ -547,3 +548,4 @@ color: Color(Colors.green.value).withOpacity(0.1),                  borderRadius
     );
   }
 }
+

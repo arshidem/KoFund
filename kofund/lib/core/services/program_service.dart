@@ -1,4 +1,4 @@
-// lib/core/services/program_service.dart
+﻿// lib/core/services/program_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -50,17 +50,17 @@ Future<String> createProgram(ProgramModel program) async {
         programId: programId,
         senderName: currentUser.displayName ?? 'User',
       );
-      print('📢 Community notification sent for new program: $programId');
+      debugPrint('📢 Community notification sent for new program: $programId');
     } catch (notificationError) {
-      print('⚠️ Failed to send notification (non-critical): $notificationError');
+      debugPrint('⚠️ Failed to send notification (non-critical): $notificationError');
       // Don't fail the program creation if notification fails
     }
 
-    print('✅ Program created: $programId');
+    debugPrint('✅ Program created: $programId');
     
     return programId;
   } catch (e) {
-    print('❌ Error creating program: $e');
+    debugPrint('❌ Error creating program: $e');
     throw Exception('Failed to create program: $e');
   }
 }
@@ -69,7 +69,7 @@ Future<String> createProgram(ProgramModel program) async {
   // -------------------------------------------------------------
 Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
   try {
-    print('📥 Loading programs for community: $communityId');
+    debugPrint('📥 Loading programs for community: $communityId');
     
     final snapshot = await _firestore
         .collection('programs')
@@ -82,7 +82,7 @@ Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
         .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
 
-    print('✅ Loaded ${programs.length} programs from Firestore');
+    debugPrint('✅ Loaded ${programs.length} programs from Firestore');
     
     // 🔄 NEW: Sync status for programs that need updating
     // This now returns updated programs with computed status
@@ -90,7 +90,7 @@ Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
     
     return updatedPrograms;
   } catch (e) {
-    print('❌ Error in getProgramsByCommunity: $e');
+    debugPrint('❌ Error in getProgramsByCommunity: $e');
     throw Exception('Failed to load programs: $e');
   }
 }
@@ -103,7 +103,7 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
     final updatedPrograms = <ProgramModel>[];
     final programsToUpdateInFirestore = <ProgramModel>[];
     
-    print('🔄 Checking status for ${programs.length} program(s)');
+    debugPrint('🔄 Checking status for ${programs.length} program(s)');
     
     // Process each program
     for (final program in programs) {
@@ -119,13 +119,13 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         programsToUpdateInFirestore.add(program);
         updatedCount++;
         
-        print('   • "${program.title}": ${program.status} → $computedStatus');
+        debugPrint('   • "${program.title}": ${program.status} → $computedStatus');
       }
     }
     
     // Batch update Firestore for programs that changed
     if (programsToUpdateInFirestore.isNotEmpty) {
-      print('🔄 Found $updatedCount program(s) needing Firestore update');
+      debugPrint('🔄 Found $updatedCount program(s) needing Firestore update');
       
       for (final program in programsToUpdateInFirestore) {
         final programRef = _firestore
@@ -138,18 +138,18 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         });
       }
       
-      print('🔄 Committing batch update for $updatedCount program(s)...');
+      debugPrint('🔄 Committing batch update for $updatedCount program(s)...');
       await batch.commit();
-      print('✅ Successfully updated $updatedCount program(s) in Firestore');
+      debugPrint('✅ Successfully updated $updatedCount program(s) in Firestore');
     } else {
-      print('✅ All programs already have correct status in Firestore');
+      debugPrint('✅ All programs already have correct status in Firestore');
     }
     
     // Return the updated programs (with computed status in memory)
     return updatedPrograms;
     
   } catch (e) {
-    print('⚠️ Error syncing program status: $e');
+    debugPrint('⚠️ Error syncing program status: $e');
     // If sync fails, return original programs as fallback
     return programs;
   }
@@ -308,7 +308,7 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
       final participants = await getParticipantsWithUnpaidContributions(programId);
       
       if (participants.isEmpty) {
-        print('📭 No participants need reminders for program: ${program.title}');
+        debugPrint('📭 No participants need reminders for program: ${program.title}');
         return;
       }
       
@@ -317,16 +317,16 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         try {
           await _sendParticipantReminder(program, participant);
         } catch (e) {
-          print('⚠️ Failed to send reminder to ${participant.userName}: $e');
+          debugPrint('⚠️ Failed to send reminder to ${participant.userName}: $e');
         }
       }
       
       // Update next reminder date
       await _updateNextReminderDate(programId);
       
-      print('✅ Sent reminders to ${participants.length} participants for program: ${program.title}');
+      debugPrint('✅ Sent reminders to ${participants.length} participants for program: ${program.title}');
     } catch (e) {
-      print('❌ Error sending contribution reminders: $e');
+      debugPrint('❌ Error sending contribution reminders: $e');
       throw Exception('Failed to send reminders: $e');
     }
   }
@@ -348,7 +348,7 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
       // Filter participants who haven't fully paid
       return participants.where((participant) => !participant.hasPaidContribution).toList();
     } catch (e) {
-      print('❌ Error getting unpaid participants: $e');
+      debugPrint('❌ Error getting unpaid participants: $e');
       return [];
     }
   }
@@ -372,9 +372,9 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         'enableAutoReminders': true, // Auto-enable reminders when dates are added
       });
       
-      print('✅ Added reminder date: ${DateFormat.yMMMd().format(date)}');
+      debugPrint('✅ Added reminder date: ${DateFormat.yMMMd().format(date)}');
     } catch (e) {
-      print('❌ Error adding reminder date: $e');
+      debugPrint('❌ Error adding reminder date: $e');
       throw Exception('Failed to add reminder date: $e');
     }
   }
@@ -394,9 +394,9 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         'updatedAt': FieldValue.serverTimestamp(),
       });
       
-      print('✅ Removed reminder date: ${DateFormat.yMMMd().format(date)}');
+      debugPrint('✅ Removed reminder date: ${DateFormat.yMMMd().format(date)}');
     } catch (e) {
-      print('❌ Error removing reminder date: $e');
+      debugPrint('❌ Error removing reminder date: $e');
       throw Exception('Failed to remove reminder date: $e');
     }
   }
@@ -423,9 +423,9 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
       
       await _firestore.collection('programs').doc(programId).update(updates);
       
-      print('✅ Updated reminder settings for program: $programId');
+      debugPrint('✅ Updated reminder settings for program: $programId');
     } catch (e) {
-      print('❌ Error updating reminder settings: $e');
+      debugPrint('❌ Error updating reminder settings: $e');
       throw Exception('Failed to update reminder settings: $e');
     }
   }
@@ -438,9 +438,9 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         'updatedAt': FieldValue.serverTimestamp(),
       });
       
-      print('✅ Cleared all reminder dates for program: $programId');
+      debugPrint('✅ Cleared all reminder dates for program: $programId');
     } catch (e) {
-      print('❌ Error clearing reminder dates: $e');
+      debugPrint('❌ Error clearing reminder dates: $e');
       throw Exception('Failed to clear reminder dates: $e');
     }
   }
@@ -474,9 +474,9 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         senderName: 'KoFund Reminder System',
       );
       
-      print('📧 Reminder sent to ${participant.userName}');
+      debugPrint('📧 Reminder sent to ${participant.userName}');
     } catch (e) {
-      print('❌ Error sending participant reminder: $e');
+      debugPrint('❌ Error sending participant reminder: $e');
       rethrow;
     }
   }
@@ -494,16 +494,16 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
         'lastReminderSent': FieldValue.serverTimestamp(),
       });
       
-      print('📅 Next reminder scheduled for: ${DateFormat.yMMMd().format(nextReminderDate)}');
+      debugPrint('📅 Next reminder scheduled for: ${DateFormat.yMMMd().format(nextReminderDate)}');
     } catch (e) {
-      print('⚠️ Error updating next reminder date: $e');
+      debugPrint('⚠️ Error updating next reminder date: $e');
     }
   }
 
   // 🆕 CHECK AND SEND REMINDERS FOR ALL PROGRAMS
   Future<void> checkAndSendDueReminders() async {
     try {
-      print('🔍 Checking for due reminders...');
+      debugPrint('🔍 Checking for due reminders...');
       final now = DateTime.now();
       
       // Get all active programs with reminders enabled
@@ -527,14 +527,14 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
             await sendContributionReminder(program.programId);
             remindersSent++;
           } catch (e) {
-            print('⚠️ Failed to send reminder for program ${program.title}: $e');
+            debugPrint('⚠️ Failed to send reminder for program ${program.title}: $e');
           }
         }
       }
       
-      print('✅ Checked ${programsSnapshot.docs.length} programs, sent $remindersSent reminders');
+      debugPrint('✅ Checked ${programsSnapshot.docs.length} programs, sent $remindersSent reminders');
     } catch (e) {
-      print('❌ Error checking reminders: $e');
+      debugPrint('❌ Error checking reminders: $e');
     }
   }
 
@@ -571,9 +571,9 @@ Future<void> updateProgramReminderSettings({
     
     await _firestore.collection('programs').doc(programId).update(updates);
     
-    print('✅ Updated reminder settings for program: $programId');
+    debugPrint('✅ Updated reminder settings for program: $programId');
   } catch (e) {
-    print('❌ Error updating reminder settings: $e');
+    debugPrint('❌ Error updating reminder settings: $e');
     throw Exception('Failed to update reminder settings: $e');
   }
 }
@@ -661,7 +661,7 @@ Future<void> sendProgramContributionReminders({
           .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
-      print('❌ Error getting programs with upcoming reminders: $e');
+      debugPrint('❌ Error getting programs with upcoming reminders: $e');
       return [];
     }
   }
@@ -855,7 +855,7 @@ Future<Map<String, bool>> getMonthlyPaymentStatus(
     
     return paymentStatus;
   } catch (e) {
-    print('❌ Error getting monthly payment status: $e');
+    debugPrint('❌ Error getting monthly payment status: $e');
     return {};
   }
 }
@@ -896,8 +896,10 @@ Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
     
     return result;
   } catch (e) {
-    print('❌ Error getting participants with monthly status: $e');
+    debugPrint('❌ Error getting participants with monthly status: $e');
     return [];
   }
 }
 }
+
+

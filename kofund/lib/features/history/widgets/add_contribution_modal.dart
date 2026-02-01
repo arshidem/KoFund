@@ -1,4 +1,4 @@
-// lib/features/history/widgets/add_contribution_modal.dart
+﻿// lib/features/history/widgets/add_contribution_modal.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -138,7 +138,7 @@ Container(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -158,7 +158,7 @@ Container(
                     '3/3',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -173,7 +173,7 @@ Container(
                       decoration: BoxDecoration(
                         color: _currentStep >= 0 
                             ? Colors.white
-                            : Colors.white.withOpacity(0.3),
+                            : Colors.white.withValues(alpha: 0.3),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(2),
                           bottomLeft: Radius.circular(2),
@@ -187,7 +187,7 @@ Container(
                       decoration: BoxDecoration(
                         color: _currentStep >= 1 
                             ? Colors.white
-                            : Colors.white.withOpacity(0.3),
+                            : Colors.white.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
@@ -197,7 +197,7 @@ Container(
                       decoration: BoxDecoration(
                         color: _currentStep >= 2 
                             ? Colors.white
-                            : Colors.white.withOpacity(0.3),
+                            : Colors.white.withValues(alpha: 0.3),
                         borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(2),
                           bottomRight: Radius.circular(2),
@@ -218,7 +218,7 @@ Container(
                       fontSize: 11,
                       color: _currentStep >= 0 
                           ? Colors.white 
-                          : Colors.white.withOpacity(0.5),
+                          : Colors.white.withValues(alpha: 0.5),
                       fontWeight: _currentStep >= 0 
                           ? FontWeight.w600 
                           : FontWeight.normal,
@@ -230,7 +230,7 @@ Container(
                       fontSize: 11,
                       color: _currentStep >= 1 
                           ? Colors.white 
-                          : Colors.white.withOpacity(0.5),
+                          : Colors.white.withValues(alpha: 0.5),
                       fontWeight: _currentStep >= 1 
                           ? FontWeight.w600 
                           : FontWeight.normal,
@@ -242,7 +242,7 @@ Container(
                       fontSize: 11,
                       color: _currentStep >= 2 
                           ? Colors.white 
-                          : Colors.white.withOpacity(0.5),
+                          : Colors.white.withValues(alpha: 0.5),
                       fontWeight: _currentStep >= 2 
                           ? FontWeight.w600 
                           : FontWeight.normal,
@@ -396,7 +396,7 @@ Expanded(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.textTertiary(context).withOpacity(0.1),
+                        color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -415,7 +415,7 @@ Expanded(
                                 child: Container(
                                   height: 18,
                                   decoration: BoxDecoration(
-                                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
@@ -428,7 +428,7 @@ Expanded(
                                   width: 55,
                                   height: 20,
                                   decoration: BoxDecoration(
-                                    color: AppColors.textTertiary(context).withOpacity(0.1),
+                                    color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
@@ -441,7 +441,7 @@ Expanded(
                             height: 15,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: AppColors.textTertiary(context).withOpacity(0.1),
+                              color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -456,7 +456,7 @@ Expanded(
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: AppColors.textTertiary(context).withOpacity(0.1),
+                          color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -472,7 +472,7 @@ Expanded(
             Divider(
               height: 1,
               thickness: 1,
-              color: AppColors.border(context).withOpacity(0.3),
+              color: AppColors.border(context).withValues(alpha: 0.3),
               indent: 16,
               endIndent: 16,
             ),
@@ -490,7 +490,7 @@ Expanded(
               Icon(
                 Icons.error_outline,
                 size: 44,
-                color: Color(Colors.red.value).withOpacity(0.7),
+                color: Colors.red.withValues(alpha: 0.7),
               ),
               const SizedBox(height: 16),
               Text(
@@ -619,8 +619,8 @@ Expanded(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isMonthly 
-                                ? Color(Colors.green.value).withOpacity(0.1)
-                                : AppColors.primary(context).withOpacity(0.1),
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : AppColors.primary(context).withValues(alpha: 0.1),
                           ),
                           child: Icon(
                             isMonthly ? Icons.calendar_month : Icons.event,
@@ -659,9 +659,9 @@ Expanded(
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-color: Color(Colors.green.value).withOpacity(0.1),                                          borderRadius: BorderRadius.circular(4),
+color: Colors.green.withValues(alpha: 0.1),                                          borderRadius: BorderRadius.circular(4),
                                           border: Border.all(
-                                            color: Color(Colors.green.value).withOpacity(0.3),
+                                            color: Colors.green.withValues(alpha: 0.3),
                                             width: 1,
                                           ),
                                         ),
@@ -856,7 +856,7 @@ Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.textTertiary(context).withOpacity(0.1),
+                      color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -873,7 +873,7 @@ Container(
                           height: 18,
                           margin: const EdgeInsets.only(bottom: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.textTertiary(context).withOpacity(0.1),
+                            color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -884,7 +884,7 @@ Container(
                           height: 15,
                           margin: const EdgeInsets.only(bottom: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.textTertiary(context).withOpacity(0.1),
+                            color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -896,7 +896,7 @@ Container(
                             height: 16,
                             margin: const EdgeInsets.only(top: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.textTertiary(context).withOpacity(0.1),
+                              color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -909,7 +909,7 @@ Container(
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: AppColors.textTertiary(context).withOpacity(0.1),
+                      color: AppColors.textTertiary(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -923,7 +923,7 @@ Container(
             Divider(
               height: 1,
               thickness: 1,
-              color: AppColors.border(context).withOpacity(0.3),
+              color: AppColors.border(context).withValues(alpha: 0.3),
               indent: 16,
               endIndent: 16,
             ),
@@ -941,7 +941,7 @@ Container(
               Icon(
                 Icons.error_outline,
                 size: 44,
-                color: Color(Colors.red.value).withOpacity(0.7),
+                color: Colors.red.withValues(alpha: 0.7),
               ),
               const SizedBox(height: 16),
               Text(
@@ -1055,7 +1055,7 @@ Container(
                       children: [
                         // Avatar
                         CircleAvatar(
-                          backgroundColor: AppColors.primary(context).withOpacity(0.1),
+                          backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
                           radius: 20,
                           child: Text(
                             user.displayName?.isNotEmpty == true 
@@ -1104,10 +1104,10 @@ Container(
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _getRoleColor(user.role!).withOpacity(0.1),
+                                    color: _getRoleColor(user.role!).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color: _getRoleColor(user.role!).withOpacity(0.3),
+                                      color: _getRoleColor(user.role!).withValues(alpha: 0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -1449,7 +1449,7 @@ Color _getRoleColor(String role) {
                   padding: const EdgeInsets.symmetric(vertical: 16),
 backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                  disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1607,7 +1607,7 @@ backgroundColor: Theme.of(context).colorScheme.primary,
                             decoration: BoxDecoration(
                               color: isSelected 
                                   ? AppColors.primary(context)
-                                  : (isCurrentMonth ? AppColors.primary(context).withOpacity(0.1) : Colors.transparent),
+                                  : (isCurrentMonth ? AppColors.primary(context).withValues(alpha: 0.1) : Colors.transparent),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected 
@@ -1634,7 +1634,7 @@ backgroundColor: Theme.of(context).colorScheme.primary,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: isSelected 
-                                        ? Colors.white.withOpacity(0.9)
+                                        ? Colors.white.withValues(alpha: 0.9)
                                         : AppColors.textSecondary(context),
                                   ),
                                 ),
@@ -1648,7 +1648,7 @@ backgroundColor: Theme.of(context).colorScheme.primary,
                                     decoration: BoxDecoration(
                                       color: isSelected 
                                           ? Colors.white
-                                          : AppColors.primary(context).withOpacity(0.2),
+                                          : AppColors.primary(context).withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -1679,7 +1679,7 @@ backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withOpacity(0.1),
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -1819,6 +1819,7 @@ Future<void> _submitContribution() async {
     );
 
     await _contributionService.addContribution(contribution);
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1840,3 +1841,4 @@ Future<void> _submitContribution() async {
 
 
 }
+

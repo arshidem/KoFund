@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class SimpleBannerAd extends StatefulWidget {
@@ -28,14 +29,14 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          print('✅ TEST Banner ad loaded successfully!');
+          debugPrint('✅ TEST Banner ad loaded successfully!');
           setState(() {
             _isLoaded = true;
           });
         },
         onAdFailedToLoad: (ad, error) {
-          print('❌ Failed to load TEST banner ad: ${error.message}');
-          print('❌ Error code: ${error.code}');
+          debugPrint('❌ Failed to load TEST banner ad: ${error.message}');
+          debugPrint('❌ Error code: ${error.code}');
           ad.dispose();
         },
       ),
@@ -76,3 +77,4 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
     );
   }
 }
+

@@ -193,11 +193,11 @@ class _HeroInviteCode extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
-          colors: [primary.withOpacity(0.15), primary.withOpacity(0.05)],
+          colors: [primary.withValues(alpha: 0.15), primary.withValues(alpha: 0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: primary.withOpacity(0.25)),
+        border: Border.all(color: primary.withValues(alpha: 0.25)),
       ),
       child: Column(
         children: [
@@ -263,14 +263,14 @@ class _InviteLinkCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
-            secondary.withOpacity(0.15),
-            secondary.withOpacity(0.05),
+            secondary.withValues(alpha: 0.15),
+            secondary.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border.all(
-          color: secondary.withOpacity(0.25),
+          color: secondary.withValues(alpha: 0.25),
         ),
       ),
       child: Column(
@@ -288,7 +288,7 @@ class _InviteLinkCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade300),
             ),
@@ -319,7 +319,7 @@ class _InviteLinkCard extends StatelessWidget {
                   label: Text(copied ? 'Copied' : 'Copy'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: secondary,
-                    side: BorderSide(color: secondary.withOpacity(0.4)),
+                    side: BorderSide(color: secondary.withValues(alpha: 0.4)),
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -358,7 +358,7 @@ class _HowItWorks extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.08),
+        color: Colors.blue.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(

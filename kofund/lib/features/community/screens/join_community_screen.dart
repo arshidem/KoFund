@@ -90,8 +90,8 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     // ✅ SAME gradient system used app-wide
     gradient: LinearGradient(
       colors: [
-        Colors.blue.withOpacity(0.15),
-        Colors.blue.withOpacity(0.05),
+        Colors.blue.withValues(alpha: 0.15),
+        Colors.blue.withValues(alpha: 0.05),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -99,13 +99,13 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
 
     // ✅ SAME border style
     border: Border.all(
-      color: Colors.blue.withOpacity(0.25),
+      color: Colors.blue.withValues(alpha: 0.25),
     ),
 
     // ✅ SAME soft shadow
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.06),
+        color: Colors.black.withValues(alpha: 0.06),
         blurRadius: 12,
         offset: const Offset(0, 4),
       ),
@@ -356,7 +356,7 @@ Widget build(BuildContext context) {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary(context).withOpacity(0.3),
+                            color: AppColors.primary(context).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -394,9 +394,9 @@ Widget build(BuildContext context) {
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Color(Colors.green.value).withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(Colors.green.value).withOpacity(0.3)),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -475,18 +475,18 @@ Widget build(BuildContext context) {
                           borderRadius: BorderRadius.circular(24),
                           gradient: LinearGradient(
                             colors: [
-                              Colors.blue.withOpacity(0.15),
-                              Colors.blue.withOpacity(0.05),
+                              Colors.blue.withValues(alpha: 0.15),
+                              Colors.blue.withValues(alpha: 0.05),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.25),
+                            color: Colors.blue.withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),

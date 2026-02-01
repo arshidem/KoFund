@@ -28,7 +28,7 @@ class ProgramListSkeleton extends StatelessWidget {
           BoxShadow(
             blurRadius: 6,
             spreadRadius: 1,
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
           ),
         ],
       ),

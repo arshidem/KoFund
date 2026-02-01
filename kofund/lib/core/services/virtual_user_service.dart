@@ -1,7 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:developer' as developer;
 import '../../../features/auth/models/user_model.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class VirtualUserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -263,9 +264,9 @@ Future<List<UserModel>> createMultipleVirtualUsers({
         await virtualUserRef.update(updateData);
       }
       
-      print('✅ DEBUG: Virtual user $userId updated successfully');
+      debugPrint('✅ DEBUG: Virtual user $userId updated successfully');
     } catch (e) {
-      print('❌ DEBUG: Error updating virtual user: $e');
+      debugPrint('❌ DEBUG: Error updating virtual user: $e');
       throw Exception('Failed to update virtual user: $e');
     }
   }
@@ -567,3 +568,4 @@ Future<List<UserModel>> createMultipleVirtualUsers({
         .toSet();
   }
 }
+

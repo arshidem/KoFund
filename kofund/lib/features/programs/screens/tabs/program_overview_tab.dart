@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/program_model.dart';
@@ -11,7 +12,6 @@ import '../../../participants/providers/participant_provider.dart';
 import '../../../programs/providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
 import '../../../../core/constants/app_colors.dart';
-import 'dart:ui';
 
 class ProgramOverviewTab extends StatelessWidget {
   final ProgramModel program;
@@ -89,7 +89,7 @@ Widget _buildProgramHeader(
             BoxShadow(
               blurRadius: 8,
               offset: const Offset(0, 2),
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
             ),
           ],
         ),
@@ -114,8 +114,8 @@ Widget _buildProgramHeader(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: isFull
-                    ? AppColors.error(context).withOpacity(0.08)
-                    : AppColors.primary(context).withOpacity(0.08),
+                    ? AppColors.error(context).withValues(alpha: 0.08)
+                    : AppColors.primary(context).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -250,10 +250,10 @@ Widget _buildHeaderInfoTile(
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: AppColors.primary(context).withOpacity(0.05),
+      color: AppColors.primary(context).withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(10),
       border: Border.all(
-        color: AppColors.border(context).withOpacity(0.3),
+        color: AppColors.border(context).withValues(alpha: 0.3),
         width: 0.8,
       ),
     ),
@@ -470,10 +470,10 @@ Widget _buildProgramInfoCard(
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _getStatusColor(program.status, context).withOpacity(0.1),
+              color: _getStatusColor(program.status, context).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: _getStatusColor(program.status, context).withOpacity(0.3),
+                color: _getStatusColor(program.status, context).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -531,7 +531,7 @@ Widget _buildDetailTile(
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withOpacity(0.1),
+          color: AppColors.primary(context).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(
@@ -598,7 +598,7 @@ Widget _buildModernInfoTile(
   return Container(
     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
     decoration: BoxDecoration(
-      color: AppColors.primary(context).withOpacity(0.05),
+      color: AppColors.primary(context).withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
@@ -608,7 +608,7 @@ Widget _buildModernInfoTile(
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.primary(context).withOpacity(0.12),
+            color: AppColors.primary(context).withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -685,7 +685,7 @@ Widget _buildFinancialSummaryCard(
                     BoxShadow(
                       blurRadius: 10,
                       offset: const Offset(0, 4),
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                     ),
                   ],
                 ),
@@ -751,7 +751,7 @@ Widget _buildFinancialSummaryCard(
                       'Collection Progress',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textCards(context).withOpacity(0.85),
+                        color: AppColors.textCards(context).withValues(alpha: 0.85),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -787,7 +787,7 @@ Widget _buildFinancialSummaryCard(
                             : 0,
                         minHeight: 6,
                         backgroundColor: AppColors.textCards(context)
-                            .withOpacity(0.25),
+                            .withValues(alpha: 0.25),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppColors.textCards(context),
                         ),
@@ -803,7 +803,7 @@ Widget _buildFinancialSummaryCard(
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textCards(context)
-                              .withOpacity(0.75),
+                              .withValues(alpha: 0.75),
                         ),
                       )
                     else if (program.suggestedContribution != null)
@@ -812,7 +812,7 @@ Widget _buildFinancialSummaryCard(
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textCards(context)
-                              .withOpacity(0.75),
+                              .withValues(alpha: 0.75),
                         ),
                       ),
 
@@ -825,7 +825,7 @@ Widget _buildFinancialSummaryCard(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: AppColors.warning(context)
-                              .withOpacity(0.15),
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -883,7 +883,7 @@ Widget _buildSummaryMetric(
         label,
         style: TextStyle(
           fontSize: 11,
-          color: AppColors.textCards(context).withOpacity(0.8),
+          color: AppColors.textCards(context).withValues(alpha: 0.8),
         ),
       ),
       const SizedBox(height: 2),
@@ -1011,7 +1011,7 @@ Widget _buildModernStatTile({
   return Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: accentColor.withOpacity(0.08),
+      color: accentColor.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
@@ -1020,7 +1020,7 @@ Widget _buildModernStatTile({
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.15),
+            color: accentColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -1069,7 +1069,7 @@ Widget _buildModernStatTile({
           title,
           style: TextStyle(
             fontSize: 11, // Reduced from 12
-            color: AppColors.textCards(context).withOpacity(0.85),
+            color: AppColors.textCards(context).withValues(alpha: 0.85),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -1093,7 +1093,7 @@ Widget _buildModernStatTile({
           width: 32, // Reduced from 36
           height: 32, // Reduced from 36
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 18), // Reduced from 20
@@ -1275,7 +1275,7 @@ Widget _buildStatusBadge(String text, Color color) {
     padding:
         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
@@ -1299,7 +1299,7 @@ Widget _buildStatusTile(
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
@@ -1307,7 +1307,7 @@ Widget _buildStatusTile(
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 16, color: color),
@@ -1353,7 +1353,7 @@ Widget _buildCapacityIndicator(
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
@@ -1430,9 +1430,9 @@ Widget _buildCapacityIndicator(
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), // Reduced from 12,4
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10), // Reduced from 12
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Text(
             value,
@@ -1487,6 +1487,8 @@ Widget _buildCapacityIndicator(
 
       await participantProvider.joinProgram(participant);
       
+      if (!context.mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Successfully joined the program!'),
@@ -1494,6 +1496,8 @@ Widget _buildCapacityIndicator(
         ),
       );
     } catch (e) {
+      if (!context.mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to join program: $e'),
@@ -1510,6 +1514,8 @@ Widget _buildCapacityIndicator(
       
       await participantProvider.leaveProgram(program.programId, currentUser.uid);
       
+      if (!context.mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Left the program successfully!'),
@@ -1517,6 +1523,8 @@ Widget _buildCapacityIndicator(
         ),
       );
     } catch (e) {
+      if (!context.mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to leave program: $e'),
@@ -1528,6 +1536,7 @@ Widget _buildCapacityIndicator(
 
   void _shareProgram() {
     // Implement share functionality
-    print('Share program: ${program.title}');
+    debugPrint('Share program: ${program.title}');
   }
 }
+

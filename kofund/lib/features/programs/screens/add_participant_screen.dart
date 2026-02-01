@@ -277,12 +277,12 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -306,7 +306,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                       bottomLeft: Radius.circular(18),
                     ),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       width: 0,
                     ),
                   ),
@@ -393,7 +393,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary(context).withOpacity(0.1),
+            color: AppColors.primary(context).withValues(alpha: 0.1),
           ),
           child: Center(
             child: Text(
@@ -459,7 +459,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary(context).withOpacity(0.1),
+            color: AppColors.primary(context).withValues(alpha: 0.1),
           ),
           child: Center(
             child: Text(
@@ -499,7 +499,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                 margin: const EdgeInsets.only(top: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -516,7 +516,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                 margin: const EdgeInsets.only(top: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withOpacity(0.1),
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -667,7 +667,7 @@ Widget _buildLoadingState() {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.primary(context).withOpacity(0.1),
+                            color: AppColors.primary(context).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -713,8 +713,8 @@ Widget _buildLoadingState() {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: _filteredNonParticipants.isEmpty
-                              ? AppColors.textTertiary(context).withOpacity(0.1)
-                              : AppColors.success(context).withOpacity(0.1),
+                              ? AppColors.textTertiary(context).withValues(alpha: 0.1)
+                              : AppColors.success(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

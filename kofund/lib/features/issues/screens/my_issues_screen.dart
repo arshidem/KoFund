@@ -60,7 +60,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: _statusColors[status]!.withOpacity(0.1),
+        color: _statusColors[status]!.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _statusColors[status]!),
       ),
@@ -97,7 +97,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: typeColors[type]!.withOpacity(0.1),
+        color: typeColors[type]!.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -131,7 +131,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: _statusColors[issue.status]!.withOpacity(0.1),
+            color: _statusColors[issue.status]!.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(

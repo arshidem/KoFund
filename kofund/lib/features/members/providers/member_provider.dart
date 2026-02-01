@@ -1,4 +1,4 @@
-// lib/features/members/providers/member_provider.dart
+﻿// lib/features/members/providers/member_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
@@ -666,7 +666,7 @@ void resetPagination() {
       
       return true;
     } catch (e) {
-      print('❌ DEBUG: Error deleting virtual users: $e');
+      debugPrint('❌ DEBUG: Error deleting virtual users: $e');
       _error = 'Failed to delete virtual users: $e';
       notifyListeners();
       return false;
@@ -754,9 +754,27 @@ void resetPagination() {
 
   bool _disposed = false;
 
+  /// Clear all data (for logout)
+  void clearAllData() {
+    _members = [];
+    _selectedMember = null;
+    _memberParticipationHistory = [];
+    _memberContributionHistory = [];
+    _isLoading = false;
+    _isLoadingMore = false;
+    _loadingMemberHistory = false;
+    _error = null;
+    _lastDocument = null;
+    _hasMoreData = true;
+    _currentFilter = 'all';
+    _isLoadingPage = false;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _disposed = true;
     super.dispose();
   }
 }
+

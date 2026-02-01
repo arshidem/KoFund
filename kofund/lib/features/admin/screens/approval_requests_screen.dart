@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -148,12 +148,12 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -195,7 +195,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                     bottomLeft: Radius.circular(18),
                   ),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     width: 0,
                   ),
                 ),
@@ -241,7 +241,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.primary(context).withOpacity(0.06),
+      color: AppColors.primary(context).withValues(alpha: 0.06),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: AppColors.primary(context)),
@@ -259,7 +259,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.18),
+              color: AppColors.primary(context).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -442,7 +442,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                       Icon(
                         Icons.people_outline,
                         size: 48,
-                        color: AppColors.primary(context).withOpacity(0.5),
+                        color: AppColors.primary(context).withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -450,7 +450,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary(context).withOpacity(0.7),
+                          color: AppColors.textPrimary(context).withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -480,13 +480,16 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                           isCurrentUser: _isCurrentUser(user),
                           onApprove: () async {
                             await userProvider.approveUser(user.uid, communityId);
+                            if (!mounted) return;
                             SnackbarHelper.showSuccess(context, 'User approved');
                             await userProvider.loadCommunityMembers(communityId);
                           },
                           onReject: () async {
                             final confirmed = await _showRejectConfirmation(context, user);
+                            if (!mounted) return;
                             if (confirmed == true) {
                               await userProvider.rejectUser(user.uid);
+                              if (!mounted) return;
                               SnackbarHelper.showInfo(context, 'User rejected');
                               await userProvider.loadCommunityMembers(communityId);
                             }
@@ -569,7 +572,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                       Icon(
                         Icons.group_add,
                         size: 48,
-                        color: AppColors.primary(context).withOpacity(0.5),
+                        color: AppColors.primary(context).withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -577,7 +580,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary(context).withOpacity(0.7),
+                          color: AppColors.textPrimary(context).withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -607,8 +610,10 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                           isCurrentUser: _isCurrentUser(user),
                           onRemove: () async {
                             final confirmed = await _showRemoveConfirmation(context, user);
+                            if (!mounted) return;
                             if (confirmed == true) {
                               await userProvider.unapproveUser(user.uid);
+                              if (!mounted) return;
                               SnackbarHelper.showInfo(context, 'User removed');
                               await userProvider.loadCommunityMembers(communityId);
                             }
@@ -697,8 +702,8 @@ class _MemberCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: isApproved 
-                      ? AppColors.primary(context).withOpacity(0.12)
-                      : Colors.orange.withOpacity(0.12),
+                      ? AppColors.primary(context).withValues(alpha: 0.12)
+                      : Colors.orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
@@ -747,10 +752,10 @@ class _MemberCard extends StatelessWidget {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                     decoration: BoxDecoration(
-                                      color: Color(Colors.blue.value).withOpacity(0.1),
+                                      color: Colors.blue.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
-                                        color: Color(Colors.blue.value).withOpacity(0.3),
+                                        color: Colors.blue.withValues(alpha: 0.3),
                                       ),
                                     ),
                                     child: Text(
@@ -822,7 +827,7 @@ class _MemberCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.border(context).withOpacity(0.1),
+                    color: AppColors.border(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),

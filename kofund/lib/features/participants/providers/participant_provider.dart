@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../../../core/services/participant_service.dart';
 import '../models/participant_model.dart';
 
@@ -22,7 +23,7 @@ class ParticipantProvider with ChangeNotifier {
     try {
       _programParticipants = await _participantService.getProgramParticipants(programId);
     } catch (e) {
-      print('Error loading participants: $e');
+      debugPrint('Error loading participants: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -123,3 +124,4 @@ Stream<int> streamProgramParticipantCount(String programId) {
     }
   }
 }
+

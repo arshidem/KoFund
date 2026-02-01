@@ -213,6 +213,8 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       validUsers,
     );
 
+    if (!mounted) return;
+
     if (virtualUserProvider.errorMessages.isNotEmpty) {
       showDialog(
         context: context,
@@ -256,16 +258,15 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
         ),
       );
       
-    final currentContext = context; // Store context
-Future.delayed(const Duration(seconds: 1), () {
-  if (!mounted) return; // Check if widget is still mounted
-  setState(() {
-    _users.clear();
-    _users.add({'name': '', 'phone': '', 'email': ''});
-  });
-  virtualUserProvider.resetCreationState();
-  Navigator.of(currentContext).pop(virtualUserProvider.successfulCreations); // ✅ FIXED
-});
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        setState(() {
+          _users.clear();
+          _users.add({'name': '', 'phone': '', 'email': ''});
+        });
+        virtualUserProvider.resetCreationState();
+        if (mounted) Navigator.of(context).pop(virtualUserProvider.successfulCreations);
+      });
     }
   }
 
@@ -354,7 +355,7 @@ Future.delayed(const Duration(seconds: 1), () {
   Widget _buildHeaderInfo() {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: AppColors.primary(context).withOpacity(0.08),
+      color: AppColors.primary(context).withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -417,7 +418,7 @@ Future.delayed(const Duration(seconds: 1), () {
               const SizedBox(width: 8),
               Chip(
                 label: Text('${_users.where((u) => (u['name'] as String).isNotEmpty).length} valid'),
-                backgroundColor: Color(Colors.green.value).withOpacity(0.1),
+                backgroundColor: Colors.green.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.green),
               ),
             ],
@@ -605,7 +606,7 @@ Future.delayed(const Duration(seconds: 1), () {
         boxShadow: _showBulkInput
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),

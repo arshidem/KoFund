@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -40,21 +40,26 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   Future<void> _updatePrivacySetting(bool newValue) async {
     final profileProvider = context.read<ProfileProvider>();
-    
+    final authProvider = context.read<AppAuthProvider>();
+
     try {
       final success = await profileProvider.updatePrivacySettings(newValue);
-      
+
+      if (!mounted) return;
+
       if (success) {
         setState(() => _showDetailedProfile = newValue);
         SnackbarHelper.showSuccess(context, 'Privacy settings updated!');
-        
-        // Refresh the user data in AppAuthProvider
-        await context.read<AppAuthProvider>().refreshUserData();
+
+        // Refresh the user data in AppAuthProvider using the captured provider
+        await authProvider.refreshUserData();
+        if (!mounted) return;
       } else {
         SnackbarHelper.showError(context, profileProvider.error ?? 'Failed to update privacy settings');
         setState(() => _showDetailedProfile = !newValue);
       }
     } catch (e) {
+      if (!mounted) return;
       SnackbarHelper.showError(context, 'Failed to update privacy settings: $e');
       setState(() => _showDetailedProfile = !newValue);
     }
@@ -207,8 +212,8 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: _showDetailedProfile 
-                              ? AppColors.success(context).withOpacity(0.1)
-                              : AppColors.info(context).withOpacity(0.1),
+                              ? AppColors.success(context).withValues(alpha: 0.1)
+                              : AppColors.info(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: _showDetailedProfile 
@@ -297,7 +302,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               // Admin Note
               if (user.role == 'admin') ...[
                 Card(
-                  color: AppColors.surface(context).withOpacity(1),
+                  color: AppColors.surface(context).withValues(alpha: 1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

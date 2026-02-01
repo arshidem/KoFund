@@ -1,4 +1,4 @@
-// 📁 lib/features/contributions/screens/program_deleted_contributions_screen.dart
+﻿// 📁 lib/features/contributions/screens/program_deleted_contributions_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -161,7 +161,7 @@ String _formatTime(DateTime date) {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
+                        color: Colors.black.withValues(alpha: 0.25),
                         blurRadius: 32,
                         spreadRadius: 0,
                         offset: const Offset(0, -8),
@@ -178,7 +178,7 @@ String _formatTime(DateTime date) {
                             width: 48,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: AppColors.border(context).withOpacity(0.4),
+                              color: AppColors.border(context).withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -209,7 +209,7 @@ String _formatTime(DateTime date) {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Color(Colors.red.value).withOpacity(0.1),
+                                      color: Colors.red.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -442,7 +442,7 @@ String _formatTime(DateTime date) {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 20,
                               spreadRadius: 0,
                               offset: const Offset(0, -4),
@@ -490,7 +490,7 @@ String _formatTime(DateTime date) {
                                     ),
                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                     elevation: 4,
-                                    shadowColor: Color(Colors.green.value).withOpacity(0.3),
+                                    shadowColor: Colors.green.withValues(alpha: 0.3),
                                   ),
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -539,7 +539,7 @@ String _formatTime(DateTime date) {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -689,12 +689,12 @@ String _formatTime(DateTime date) {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -718,7 +718,7 @@ String _formatTime(DateTime date) {
                           bottomLeft: Radius.circular(18),
                         ),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           width: 0,
                         ),
                       ),
@@ -919,7 +919,7 @@ String _formatTime(DateTime date) {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -1049,7 +1049,7 @@ String _formatTime(DateTime date) {
                         border: Border.all(color: AppColors.border(context)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -1131,7 +1131,7 @@ String _formatTime(DateTime date) {
           // Loading overlay
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
@@ -1141,4 +1141,6 @@ String _formatTime(DateTime date) {
     );
   }
 }
+
+
 

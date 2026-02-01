@@ -45,7 +45,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
           boxShadow: [
             if (!hasGradient)
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -104,7 +104,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                     width: 60,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -125,16 +125,16 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 70,
                             height: 70,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(35),
-                              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
                             ),
                             child: Center(
                               child: Container(
                                 width: 28,
                                 height: 28,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.3),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -155,7 +155,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                         width: 180,
                                         height: 28,
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.3),
+                                          color: Colors.white.withValues(alpha: 0.3),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                       ),
@@ -171,7 +171,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                       width: 16,
                                       height: 16,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
@@ -180,7 +180,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                       width: 200,
                                       height: 16,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
@@ -195,7 +195,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                       width: 16,
                                       height: 16,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
@@ -204,7 +204,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                       width: 140,
                                       height: 16,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.3),
+                                        color: Colors.white.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
@@ -224,7 +224,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Center(
@@ -232,7 +232,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
@@ -324,7 +324,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                       const SizedBox(height: 12),
                       Container(
                         height: 1,
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                       ),
                       const SizedBox(height: 12),
                       
@@ -377,7 +377,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                       const SizedBox(height: 12),
                       Container(
                         height: 1,
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                       ),
                       const SizedBox(height: 12),
                       
@@ -385,7 +385,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                         width: 100,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -473,7 +473,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 60,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
@@ -488,7 +488,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 80,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
@@ -497,7 +497,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 80,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
@@ -513,7 +513,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: dark ? Colors.grey[850] : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,7 +524,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                     width: 40,
                                     height: 40,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                   ),
@@ -588,7 +588,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                     width: 70,
                                     height: 24,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
@@ -600,7 +600,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                               Container(
                                 height: 6,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
@@ -611,7 +611,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                   width: 80,
                                   height: 10,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: Colors.white.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
@@ -626,14 +626,14 @@ class MemberDetailsSkeleton extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Container(
                             width: 150,
                             height: 14,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -676,7 +676,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 100,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
@@ -691,7 +691,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 80,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
@@ -700,7 +700,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                             width: 120,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
@@ -716,7 +716,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: dark ? Colors.grey[850] : Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
                           child: Row(
                             children: [
@@ -724,7 +724,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
@@ -807,14 +807,14 @@ class MemberDetailsSkeleton extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Container(
                             width: 140,
                             height: 14,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -834,7 +834,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: dark ? Colors.grey[850] : Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [

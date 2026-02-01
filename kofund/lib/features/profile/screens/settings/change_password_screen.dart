@@ -380,7 +380,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppColors.primary(context),
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.primary(context).withOpacity(0.5),
+                      disabledBackgroundColor: AppColors.primary(context).withValues(alpha: 0.5),
                       disabledForegroundColor: Colors.white70,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -456,7 +456,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.error(context).withOpacity(0.1),
+                        color: AppColors.error(context).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.error(context)),
                       ),
@@ -497,7 +497,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: AppColors.success(context).withOpacity(0.1),
+            color: AppColors.success(context).withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -538,9 +538,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.info(context).withOpacity(0.1),
+            color: AppColors.info(context).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.info(context).withOpacity(0.3)),
+            border: Border.all(color: AppColors.info(context).withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

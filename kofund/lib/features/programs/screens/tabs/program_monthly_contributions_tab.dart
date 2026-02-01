@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -60,7 +61,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
       
       await _loadMonthData();
     } catch (e) {
-      print('❌ Error initializing monthly contributions: $e');
+      debugPrint('❌ Error initializing monthly contributions: $e');
       final currentMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
       if (_selectedMonth == null) _selectedMonth = currentMonth;
       if (_availableMonths.isEmpty) _availableMonths = [currentMonth];
@@ -93,7 +94,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
 
   Future<void> _loadMonthData() async {
     if (_selectedMonth == null || !_availableMonths.contains(_selectedMonth)) {
-      print('⚠️ Cannot load data: Invalid selected month $_selectedMonth');
+      debugPrint('⚠️ Cannot load data: Invalid selected month $_selectedMonth');
       return;
     }
     
@@ -122,7 +123,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
         });
       }
     } catch (e) {
-      print('❌ Error loading month data: $e');
+      debugPrint('❌ Error loading month data: $e');
     }
   }
 
@@ -233,7 +234,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-color: Color(Colors.blue.value).withOpacity(0.1),                              borderRadius: BorderRadius.circular(4),
+color: Colors.blue.withValues(alpha: 0.1),                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               'Current',
@@ -260,7 +261,7 @@ color: Color(Colors.blue.value).withOpacity(0.1),                              b
   Widget _buildHeaderRow() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withOpacity(0.05),
+        color: AppColors.primary(context).withValues(alpha: 0.05),
         border: Border(
           bottom: BorderSide(color: AppColors.border(context), width: 1),
         ),
@@ -341,9 +342,9 @@ color: Color(Colors.blue.value).withOpacity(0.1),                              b
       decoration: BoxDecoration(
         color: index.isEven 
             ? AppColors.card(context)
-            : AppColors.card(context).withOpacity(0.5),
+            : AppColors.card(context).withValues(alpha: 0.5),
         border: Border(
-          bottom: BorderSide(color: AppColors.border(context).withOpacity(0.3), width: 1),
+          bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.3), width: 1),
         ),
       ),
       child: Row(
@@ -413,8 +414,8 @@ color: Color(Colors.blue.value).withOpacity(0.1),                              b
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: hasPaid 
-                      ? Color(Colors.green.value).withOpacity(0.1) 
-                      : Color(Colors.red.value).withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1) 
+                      : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: hasPaid ? Colors.green : Colors.red,
@@ -486,10 +487,10 @@ color: Color(Colors.blue.value).withOpacity(0.1),                              b
                     height: 36,
                     width: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary(context).withOpacity(0.1),
+                      color: AppColors.primary(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppColors.primary(context).withOpacity(0.3),
+                        color: AppColors.primary(context).withValues(alpha: 0.3),
                       ),
                     ),
                     child: IconButton(
@@ -530,7 +531,7 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
         border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -645,7 +646,7 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 20, color: color),
@@ -785,7 +786,7 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
             Icon(
               Icons.calendar_today,
               size: 64,
-              color: AppColors.textSecondary(context).withOpacity(0.5),
+              color: AppColors.textSecondary(context).withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Text(
@@ -839,7 +840,7 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
                         Icon(
                           Icons.people_outline,
                           size: 64,
-                          color: AppColors.textSecondary(context).withOpacity(0.5),
+                          color: AppColors.textSecondary(context).withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -870,3 +871,4 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
     super.dispose();
   }
 }
+

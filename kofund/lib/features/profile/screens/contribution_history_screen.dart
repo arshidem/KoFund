@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
@@ -38,7 +39,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DEBUG: ContributionHistoryScreen initState called');
+    debugPrint('🔄 DEBUG: ContributionHistoryScreen initState called');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadHistory();
@@ -48,14 +49,14 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print('🔄 DEBUG: didChangeDependencies called');
+    debugPrint('🔄 DEBUG: didChangeDependencies called');
     
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
     
     // Check if user has changed
     if (user != null && user.uid != _currentUserId) {
-      print('👤 DEBUG: User changed from $_currentUserId to ${user.uid}');
+      debugPrint('👤 DEBUG: User changed from $_currentUserId to ${user.uid}');
       _currentUserId = user.uid;
       
       // Reset screen state for new user
@@ -68,7 +69,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     }
     
     if (user != null && _isInitialLoad && _currentUserId == null) {
-      print('👤 DEBUG: First load for user ${user.uid}');
+      debugPrint('👤 DEBUG: First load for user ${user.uid}');
       _currentUserId = user.uid;
       _checkAuthAndLoadHistory();
     }
@@ -77,7 +78,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   void _resetScreenForNewUser() {
     if (!mounted) return;
     
-    print('🔄 DEBUG: Resetting contribution screen for new user');
+    debugPrint('🔄 DEBUG: Resetting contribution screen for new user');
     
     setState(() {
       _isInitialLoad = true;
@@ -89,7 +90,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   }
 void _debugFirestoreContribution(String contributionId) async {
   try {
-    print('🔍 DEBUG: Fetching contribution $contributionId directly from Firestore');
+    debugPrint('🔍 DEBUG: Fetching contribution $contributionId directly from Firestore');
     
     final doc = await FirebaseFirestore.instance
         .collection('contributions')
@@ -98,27 +99,27 @@ void _debugFirestoreContribution(String contributionId) async {
     
     if (doc.exists) {
       final data = doc.data();
-      print('✅ Contribution exists in Firestore');
-      print('📋 All fields:');
+      debugPrint('✅ Contribution exists in Firestore');
+      debugPrint('📋 All fields:');
       data?.forEach((key, value) {
-        print('  - $key: $value (type: ${value.runtimeType})');
+        debugPrint('  - $key: $value (type: ${value.runtimeType})');
       });
       
       // Check specifically for edit-related fields
-      print('🔎 Edit-related fields check:');
+      debugPrint('🔎 Edit-related fields check:');
       final editFields = ['isEdited', 'editHistory', 'lastEditedAt', 'lastEditedByUserId', 'editReason'];
       for (var field in editFields) {
         if (data?.containsKey(field) ?? false) {
-          print('  ✅ $field exists: ${data![field]}');
+          debugPrint('  ✅ $field exists: ${data![field]}');
         } else {
-          print('  ❌ $field does NOT exist');
+          debugPrint('  ❌ $field does NOT exist');
         }
       }
     } else {
-      print('❌ Contribution does not exist in Firestore');
+      debugPrint('❌ Contribution does not exist in Firestore');
     }
   } catch (e) {
-    print('❌ Error fetching from Firestore: $e');
+    debugPrint('❌ Error fetching from Firestore: $e');
   }
 }
   void _checkAuthAndLoadHistory() {
@@ -127,24 +128,24 @@ void _debugFirestoreContribution(String contributionId) async {
     final authProvider = context.read<AppAuthProvider>();
     final user = authProvider.user;
     
-    print('🔍 DEBUG: Checking auth state for contributions - UID: ${user?.uid}');
+    debugPrint('🔍 DEBUG: Checking auth state for contributions - UID: ${user?.uid}');
     
     if (user == null) {
-      print('❌ DEBUG: No user found for contributions');
+      debugPrint('❌ DEBUG: No user found for contributions');
       setState(() {
         _isInitialLoad = false;
       });
       return;
     }
     
-    print('✅ DEBUG: User found, loading contribution history...');
+    debugPrint('✅ DEBUG: User found, loading contribution history...');
     _loadContributionHistory();
   }
 
   Future<void> _loadContributionHistory() async {
     if (!mounted) return;
     
-    print('🔄 DEBUG: Loading contribution history...');
+    debugPrint('🔄 DEBUG: Loading contribution history...');
     
     try {
       final profileProvider = context.read<ProfileProvider>();
@@ -154,27 +155,27 @@ void _debugFirestoreContribution(String contributionId) async {
         setState(() {
           _isInitialLoad = false;
         });
-        print('✅ DEBUG: Contribution history loaded successfully');
+        debugPrint('✅ DEBUG: Contribution history loaded successfully');
       }
     } catch (error) {
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
         });
-        print('❌ DEBUG: Error loading contribution history: $error');
+        debugPrint('❌ DEBUG: Error loading contribution history: $error');
       }
     }
   }
 
   Future<void> _refreshData() async {
-    print('🔄 DEBUG: Refreshing contribution history');
+    debugPrint('🔄 DEBUG: Refreshing contribution history');
     
     try {
       final profileProvider = context.read<ProfileProvider>();
       await profileProvider.getUserContributionHistory();
-      print('✅ DEBUG: Refresh completed successfully');
+      debugPrint('✅ DEBUG: Refresh completed successfully');
     } catch (e) {
-      print('❌ DEBUG: Refresh failed: $e');
+      debugPrint('❌ DEBUG: Refresh failed: $e');
     }
   }
 
@@ -426,7 +427,7 @@ itemBuilder: (context, index) {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -440,7 +441,7 @@ itemBuilder: (context, index) {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 20, color: Colors.white),
@@ -459,7 +460,7 @@ itemBuilder: (context, index) {
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
@@ -470,7 +471,7 @@ itemBuilder: (context, index) {
                   subtitle,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -511,8 +512,8 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isEdited 
-                      ? Colors.orange.withOpacity(0.1)
-                      : Color(Colors.green.value).withOpacity(0.1),
+                      ? Colors.orange.withValues(alpha: 0.1)
+                      : Colors.green.withValues(alpha: 0.1),
                   ),
                   child: Icon(
                     Icons.payments,
@@ -550,10 +551,10 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
+                                  color: Colors.orange.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: Colors.orange.withOpacity(0.3),
+                                    color: Colors.orange.withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Text(
@@ -655,12 +656,12 @@ String _formatTime(DateTime dt) {
 }
 // Add debug method
 void _debugContributionData(Map<String, dynamic> contribution) {
-  print('🔍 DEBUG Contribution Data:');
-  print('  - isEdited: ${contribution['isEdited']} (type: ${contribution['isEdited']?.runtimeType})');
-  print('  - has editHistory: ${contribution['editHistory'] != null}');
-  print('  - editHistory type: ${contribution['editHistory']?.runtimeType}');
-  print('  - editHistory length: ${(contribution['editHistory'] as List?)?.length ?? 0}');
-  print('  - All keys: ${contribution.keys.toList()}');
+  debugPrint('🔍 DEBUG Contribution Data:');
+  debugPrint('  - isEdited: ${contribution['isEdited']} (type: ${contribution['isEdited']?.runtimeType})');
+  debugPrint('  - has editHistory: ${contribution['editHistory'] != null}');
+  debugPrint('  - editHistory type: ${contribution['editHistory']?.runtimeType}');
+  debugPrint('  - editHistory length: ${(contribution['editHistory'] as List?)?.length ?? 0}');
+  debugPrint('  - All keys: ${contribution.keys.toList()}');
 }
 // Show contribution details method with premium design - FIXED VERSION
 void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
@@ -684,10 +685,10 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
   // Get changes description from edit history
   final changesDescription = _getChangesDescription(formattedEditHistory);
 
-  print('🔍 DEBUG _showContributionDetails:');
-  print('  isEdited: $isEdited');
-  print('  formattedEditHistory length: ${formattedEditHistory.length}');
-  print('  changesDescription: $changesDescription');
+  debugPrint('🔍 DEBUG _showContributionDetails:');
+  debugPrint('  isEdited: $isEdited');
+  debugPrint('  formattedEditHistory length: ${formattedEditHistory.length}');
+  debugPrint('  changesDescription: $changesDescription');
 
   showModalBottomSheet(
     context: context,
@@ -716,7 +717,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 32,
                       spreadRadius: 0,
                       offset: const Offset(0, -8),
@@ -733,7 +734,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                           width: 48,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppColors.border(context).withOpacity(0.4),
+                            color: AppColors.border(context).withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -764,7 +765,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary(context).withOpacity(0.08),
+                                    color: AppColors.primary(context).withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -785,15 +786,15 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    Colors.orange.withOpacity(0.15),
-                                    Colors.orange.withOpacity(0.08),
+                                    Colors.orange.withValues(alpha: 0.15),
+                                    Colors.orange.withValues(alpha: 0.08),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.orange.withOpacity(0.2),
+                                  color: Colors.orange.withValues(alpha: 0.2),
                                   width: 1.5,
                                 ),
                               ),
@@ -981,7 +982,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.10),
+                                          color: Colors.orange.withValues(alpha: 0.10),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: const Icon(
@@ -1069,7 +1070,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                             spreadRadius: 0,
                             offset: const Offset(0, -4),
@@ -1117,7 +1118,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   elevation: 4,
-                                  shadowColor: AppColors.primary(context).withOpacity(0.3),
+                                  shadowColor: AppColors.primary(context).withValues(alpha: 0.3),
                                 ),
                                 child: const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1164,7 +1165,7 @@ String _getMonthDisplayName(String? monthId) {
       return '$monthName $year';
     }
   } catch (e) {
-    print('Error parsing monthId $monthId: $e');
+    debugPrint('Error parsing monthId $monthId: $e');
     return monthId;
   }
   return monthId;
@@ -1363,7 +1364,7 @@ Widget _buildSectionHeader(BuildContext context, {required String title, require
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withOpacity(0.1),
+          color: AppColors.primary(context).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -1471,6 +1472,7 @@ Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution,
     
     // Get user name
     final contributorName = await _getUserName(authProvider.user?.uid ?? '');
+    if (!mounted) return;
     
     if (!context.mounted) return;
     
@@ -1504,9 +1506,9 @@ Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution,
 
 ContributionModel _convertMapToContributionModel(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
   // Debug: Print contribution data
-  print('🔄 Converting contribution: ${contribution['contributionId']}');
-  print('  isEdited value: ${contribution['isEdited']}');
-  print('  editHistory: ${contribution['editHistory']}');
+  debugPrint('🔄 Converting contribution: ${contribution['contributionId']}');
+  debugPrint('  isEdited value: ${contribution['isEdited']}');
+  debugPrint('  editHistory: ${contribution['editHistory']}');
   
   return ContributionModel(
     contributionId: contribution['contributionId'] ?? '',
@@ -1603,6 +1605,7 @@ Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
     
     // Get user name
     final contributorName = await _getUserName(item.userId);
+    if (!mounted) return;
     
     if (!context.mounted) return;
     
@@ -1681,3 +1684,5 @@ Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
     }
   }
 }
+
+
