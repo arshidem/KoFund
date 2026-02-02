@@ -1103,20 +1103,22 @@ exports.sendProgramContributionReminders = onCall(
       const communityData = communityDoc.data();
       const communityName = communityData.name || 'Community';
       
-      // 2. Get target programs
+      // 2. Get target programs - FIXED: Programs in root 'programs' collection
       let programsSnapshot = [];
       
       if (programId) {
+        // FIXED: Query root 'programs' collection
         const programDoc = await db.collection('programs').doc(programId).get();
         
         if (programDoc.exists) {
           const programData = programDoc.data();
+          // Check if program belongs to this community
           if (programData.communityId === communityId && programData.status === 'active') {
             programsSnapshot = [programDoc];
           } else {
             return {
               success: true,
-              message: "Program not found or not active",
+              message: "Program not found or not active in this community",
               remindersSent: 0,
               communityId,
               communityName,
@@ -1134,6 +1136,7 @@ exports.sendProgramContributionReminders = onCall(
           };
         }
       } else {
+        // FIXED: Query root 'programs' collection
         const programsQuery = db
           .collection('programs')
           .where('communityId', '==', communityId)
@@ -1175,7 +1178,7 @@ exports.sendProgramContributionReminders = onCall(
           continue;
         }
         
-        const suggestedContribution = program.suggestedContribution || 0;
+        const suggestedContribution = parseFloat(program.suggestedContribution) || 0;
         
         if (suggestedContribution <= 0) {
           console.log(`⏭️ Skipping - no suggested contribution amount`);
@@ -1184,12 +1187,11 @@ exports.sendProgramContributionReminders = onCall(
         
         console.log(`💰 Suggested contribution: ${suggestedContribution}`);
         
-        // 4. Get all participants for this program
+        // 4. Get all participants for this program - FIXED: Participants in root 'participants' collection
         const participantsSnapshot = await db
           .collection('participants')
           .where('programId', '==', program.id)
           .where('status', '==', 'joined')
-          .where('communityId', '==', communityId)
           .get();
         
         console.log(`👥 Found ${participantsSnapshot.size} participants in program ${program.id}`);
@@ -1218,16 +1220,21 @@ exports.sendProgramContributionReminders = onCall(
           
           // Get user info
           const userDoc = await db.collection('users').doc(participant.userId).get();
-          if (!userDoc.exists) continue;
+          if (!userDoc.exists) {
+            console.log(`⏭️ Skipping - user ${participant.userId} not found`);
+            continue;
+          }
           
           const userData = userDoc.data();
           
-          // Check eligibility
-          if ( !userData.isApproved) {
+          // Check eligibility - FIXED: Match your Flutter logic
+          if (!userData.isApproved) {
+            console.log(`⏭️ Skipping - user ${participant.userId} not approved`);
             continue;
           }
           
           if (userData.communityId !== communityId) {
+            console.log(`⏭️ Skipping - user ${participant.userId} not in community`);
             continue;
           }
           
@@ -1236,12 +1243,13 @@ exports.sendProgramContributionReminders = onCall(
             .collection('contributions')
             .where('programId', '==', program.id)
             .where('userId', '==', participant.userId)
+            .where('status', '==', 'completed') // Added status check
             .get();
           
           let totalPaid = 0;
           contributionsSnapshot.forEach((doc) => {
             const contribution = doc.data();
-            const amount = contribution.amount || 0;
+            const amount = parseFloat(contribution.amount) || 0;
             if (amount > 0) {
               totalPaid += amount;
             }
@@ -1260,16 +1268,21 @@ exports.sendProgramContributionReminders = onCall(
               amountRemaining,
               personalizedBody: `Hi ${userData.displayName || participant.userName || 'User'}, you have $${amountRemaining.toFixed(2)} remaining of your $${suggestedContribution.toFixed(2)} contribution for ${program.title}.`,
             });
+            
+            console.log(`🔔 User ${participant.userId} needs reminder: paid $${totalPaid.toFixed(2)}, remaining $${amountRemaining.toFixed(2)}`);
+          } else {
+            console.log(`✅ User ${participant.userId} already fully paid: $${totalPaid.toFixed(2)}`);
           }
         }
         
         console.log(`🔔 ${participantsToRemind.length} participants need reminders for program ${program.id}`);
         
         if (participantsToRemind.length === 0) {
+          console.log(`⏭️ Skipping program - no participants need reminders`);
           continue;
         }
         
-        // 6. Create notifications - ONE personalized notification per user
+        // 6. Create notifications
         const reminderTitle = `⏰ Contribution Reminder: ${program.title}`;
         const batch = db.batch();
         let programNotificationsCreated = 0;
@@ -1292,7 +1305,7 @@ exports.sendProgramContributionReminders = onCall(
             continue;
           }
           
-          // Create SINGLE notification document with personalized message
+          // Create notification
           const notificationRef = db
             .collection('users')
             .doc(userId)
@@ -1302,7 +1315,7 @@ exports.sendProgramContributionReminders = onCall(
           const notification = {
             id: notificationId,
             title: reminderTitle,
-            body: personalizedBody, // ✅ Personalized body for storage
+            body: personalizedBody,
             type: 'reminder',
             subtype: 'contribution',
             priority: 'high',
@@ -1345,111 +1358,110 @@ exports.sendProgramContributionReminders = onCall(
           console.log(`✅ Created ${programNotificationsCreated} notifications in Firestore`);
         }
         
-        // 7. Get tokens for participants
-// 7. Get tokens directly from users collection (SIMPLER!)
-let pushNotificationsSent = 0;
-const pushPromises = [];
-
-for (const participant of participantsToRemind) {
-  const { userId, personalizedBody } = participant;
-  
-  try {
-    // Get user document
-    const userDoc = await db.collection('users').doc(userId).get();
-    
-    if (!userDoc.exists) continue;
-    
-    const userData = userDoc.data();
-    const fcmTokens = userData.fcmTokens || [];
-    
-    if (fcmTokens.length === 0) {
-      console.log(`⚠️ No FCM tokens found for user ${userId}`);
-      continue;
-    }
-    
-    console.log(`📱 User ${userId} has ${fcmTokens.length} token(s)`);
-    
-    // Send to all tokens for this user
-    const message = {
-      notification: {
-        title: reminderTitle,
-        body: personalizedBody,
-      },
-      data: {
-        communityId,
-        programId: program.id,
-        type: 'reminder',
-        subtype: 'contribution',
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        senderName: 'KoFund Reminder',
-        sentFromApp: 'true',
-        notificationId: baseNotificationId,
-      },
-      tokens: fcmTokens,
-      android: {
-        priority: 'high',
-      },
-      apns: {
-        payload: {
-          aps: {
-            contentAvailable: true,
-            badge: 1,
-            sound: 'default',
-          },
-        },
-      },
-    };
-    
-    // Send push notification
-    const pushPromise = messaging.sendEachForMulticast(message)
-      .then(response => {
-        console.log(`✅ Sent to ${userId}: ${response.successCount} successful, ${response.failureCount} failed`);
-        pushNotificationsSent += response.successCount;
-        totalRemindersSent += response.successCount;
+        // 7. Send push notifications
+        let pushNotificationsSent = 0;
+        const pushPromises = [];
         
-        // Clean invalid tokens
-        if (response.failureCount > 0) {
-          const invalidTokens = [];
-          response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-              const failedToken = fcmTokens[idx];
-              console.log(`❌ Failed token ${failedToken.substring(0, 20)}...: ${resp.error?.message}`);
-              
-              if (resp.error?.code === 'messaging/registration-token-not-registered' ||
-                  resp.error?.code === 'messaging/invalid-registration-token') {
-                invalidTokens.push(failedToken);
-              }
-            }
-          });
+        for (const participant of participantsToRemind) {
+          const { userId, personalizedBody } = participant;
           
-          // Remove invalid tokens from user's document
-          if (invalidTokens.length > 0) {
-            return db.collection('users').doc(userId).update({
-              fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens)
-            }).then(() => {
-              console.log(`🗑️ Removed ${invalidTokens.length} invalid tokens from ${userId}`);
-            });
+          try {
+            // Get user document
+            const userDoc = await db.collection('users').doc(userId).get();
+            
+            if (!userDoc.exists) continue;
+            
+            const userData = userDoc.data();
+            const fcmTokens = userData.fcmTokens || [];
+            
+            if (fcmTokens.length === 0) {
+              console.log(`⚠️ No FCM tokens found for user ${userId}`);
+              continue;
+            }
+            
+            console.log(`📱 User ${userId} has ${fcmTokens.length} token(s)`);
+            
+            // Send to all tokens for this user
+            const message = {
+              notification: {
+                title: reminderTitle,
+                body: personalizedBody,
+              },
+              data: {
+                communityId,
+                programId: program.id,
+                type: 'reminder',
+                subtype: 'contribution',
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                senderName: 'KoFund Reminder',
+                sentFromApp: 'true',
+                notificationId: baseNotificationId,
+              },
+              tokens: fcmTokens,
+              android: {
+                priority: 'high',
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    contentAvailable: true,
+                    badge: 1,
+                    sound: 'default',
+                  },
+                },
+              },
+            };
+            
+            // Send push notification
+            const pushPromise = messaging.sendEachForMulticast(message)
+              .then(response => {
+                console.log(`✅ Sent to ${userId}: ${response.successCount} successful, ${response.failureCount} failed`);
+                pushNotificationsSent += response.successCount;
+                totalRemindersSent += response.successCount;
+                
+                // Clean invalid tokens
+                if (response.failureCount > 0) {
+                  const invalidTokens = [];
+                  response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                      const failedToken = fcmTokens[idx];
+                      console.log(`❌ Failed token ${failedToken.substring(0, 20)}...: ${resp.error?.message}`);
+                      
+                      if (resp.error?.code === 'messaging/registration-token-not-registered' ||
+                          resp.error?.code === 'messaging/invalid-registration-token') {
+                        invalidTokens.push(failedToken);
+                      }
+                    }
+                  });
+                  
+                  // Remove invalid tokens from user's document
+                  if (invalidTokens.length > 0) {
+                    return db.collection('users').doc(userId).update({
+                      fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens)
+                    }).then(() => {
+                      console.log(`🗑️ Removed ${invalidTokens.length} invalid tokens from ${userId}`);
+                    });
+                  }
+                }
+              })
+              .catch(error => {
+                console.error(`❌ Error sending to ${userId}:`, error.message);
+              });
+            
+            pushPromises.push(pushPromise);
+            
+          } catch (userError) {
+            console.error(`❌ Error processing user ${userId}:`, userError.message);
           }
         }
-      })
-      .catch(error => {
-        console.error(`❌ Error sending to ${userId}:`, error.message);
-      });
-    
-    pushPromises.push(pushPromise);
-    
-  } catch (userError) {
-    console.error(`❌ Error processing user ${userId}:`, userError.message);
-  }
-}
-
-// Wait for all push notifications to be sent
-if (pushPromises.length > 0) {
-  await Promise.all(pushPromises);
-  console.log(`✅ Total push notifications sent: ${pushNotificationsSent}`);
-}
         
-        // 9. Record result for this program
+        // Wait for all push notifications to be sent
+        if (pushPromises.length > 0) {
+          await Promise.all(pushPromises);
+          console.log(`✅ Total push notifications sent: ${pushNotificationsSent}`);
+        }
+        
+        // 8. Record result for this program
         results.push({
           programId: program.id,
           programName: program.title,
@@ -1461,7 +1473,7 @@ if (pushPromises.length > 0) {
         });
       }
       
-      // 10. Return final results
+      // 9. Return final results
       const result = {
         success: true,
         message: sendTest 

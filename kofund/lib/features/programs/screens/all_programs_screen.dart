@@ -1244,16 +1244,16 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
           ],
         ),
       ),
-      PopupMenuItem<String>(
-        value: 'reminders',
-        child: Row(
-          children: [
-            Icon(Icons.notifications_active, color: Colors.orange),
-            const SizedBox(width: 8),
-            Text('Set Reminders'),
-          ],
-        ),
-      ),
+      // PopupMenuItem<String>(
+      //   value: 'reminders',
+      //   child: Row(
+      //     children: [
+      //       Icon(Icons.notifications_active, color: Colors.orange),
+      //       const SizedBox(width: 8),
+      //       Text('Set Reminders'),
+      //     ],
+      //   ),
+      // ),
       PopupMenuItem<String>(
         value: 'delete',
         child: Row(

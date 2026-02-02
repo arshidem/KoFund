@@ -21,10 +21,16 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "public": "build/web",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "redirects": [
+      {
+        "source": "/join/:code",
+        "destination": "/?code=:code",
+        "type": 301
+      }
+    ],
     "rewrites": [
- 
       {
         "source": "**",
         "destination": "/index.html"

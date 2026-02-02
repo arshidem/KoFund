@@ -48,8 +48,27 @@ import 'core/providers/theme_provider.dart';
 // 🚀 Routing
 import 'routing/app_router.dart';
 import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
+import 'dart:js' as js;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// ✨ Extract invite code from web URL
+String? extractWebInviteCode() {
+  if (defaultTargetPlatform != TargetPlatform.iOS && 
+      defaultTargetPlatform != TargetPlatform.android) {
+    try {
+      // Try to get from window.inviteCode (set in index.html)
+      final inviteCode = js.context['inviteCode'] as String?;
+      if (inviteCode != null && inviteCode.isNotEmpty) {
+        debugPrint('🎯 Web Invite Code Found: $inviteCode');
+        return inviteCode;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not extract web invite code: $e');
+    }
+  }
+  return null;
+}
 // =============================
 // 🚀 MAIN() - FIXED VERSION
 // =============================
@@ -307,12 +326,22 @@ class _AppProvidersState extends State<AppProviders> {
   late final FCMTokenService fcmTokenService;
   late final NotificationService notificationService;
   
+  String? _webInviteCode;
+  
   late AppAuthProvider _authProvider;
   bool _isAuthInitialized = false;
   
   @override
   void initState() {
     super.initState();
+    
+    // 🎯 Extract web invite code early
+    _webInviteCode = extractWebInviteCode();
+    if (_webInviteCode != null) {
+      debugPrint('💾 Storing invite code for later use: $_webInviteCode');
+      // Save to SharedPreferences for use throughout app
+      _saveWebInviteCode(_webInviteCode!);
+    }
     
     // Initialize services
     authService = FirebaseAuthService();
@@ -371,6 +400,39 @@ class _AppProvidersState extends State<AppProviders> {
       setState(() {
         _isAuthInitialized = true; // Still mark as initialized to show UI
       });
+    }
+  }
+
+  // 🎯 Save web invite code to SharedPreferences
+  Future<void> _saveWebInviteCode(String code) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('web_invite_code', code);
+      debugPrint('✅ Invite code saved to SharedPreferences');
+    } catch (e) {
+      debugPrint('❌ Error saving invite code: $e');
+    }
+  }
+
+  // 🎯 Retrieve web invite code from SharedPreferences
+  static Future<String?> getWebInviteCode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('web_invite_code');
+    } catch (e) {
+      debugPrint('❌ Error retrieving invite code: $e');
+      return null;
+    }
+  }
+
+  // 🎯 Clear web invite code from SharedPreferences
+  static Future<void> clearWebInviteCode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('web_invite_code');
+      debugPrint('✅ Invite code cleared');
+    } catch (e) {
+      debugPrint('❌ Error clearing invite code: $e');
     }
   }
   

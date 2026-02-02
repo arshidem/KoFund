@@ -29,10 +29,54 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>kofund</title>
+  <title>KoFund - Community Fund Management</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
 </head>
 <body>
+  <!-- Invite Code Handler -->
+  <script>
+    // Extract invite code from URL and store globally
+    function extractInviteCode() {
+      const path = window.location.pathname;
+      const segments = path.split('/').filter(s => s);
+      
+      // Format 1: /join/CUOVUA3H
+      if (segments.length >= 2 && segments[0] === 'join') {
+        return segments[1];
+      }
+      
+      // Format 2: /?code=CUOVUA3H
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeFromQuery = urlParams.get('code');
+      if (codeFromQuery) {
+        return codeFromQuery;
+      }
+      
+      return null;
+    }
+    
+    // Store invite code globally for Flutter to access
+    window.inviteCode = extractInviteCode();
+    console.log('Invite Code Found:', window.inviteCode);
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Script to pass invite code to Flutter app -->
+  <script>
+    // Once Flutter is ready, navigate to join screen if invite code exists
+    window.addEventListener('flutter-initialized', function() {
+      if (window.inviteCode) {
+        // Send message to Flutter app
+        Dart_PostMessage('inviteCode', window.inviteCode);
+      }
+    });
+  </script>
 </body>
 </html>
