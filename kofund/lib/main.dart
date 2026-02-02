@@ -47,25 +47,29 @@ import 'core/providers/theme_provider.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
-import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
-import 'dart:js' as js;
+import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// ✨ Extract invite code from web URL
+// ✨ Extract invite code from web URL (kIsWeb-safe)
 String? extractWebInviteCode() {
-  if (defaultTargetPlatform != TargetPlatform.iOS && 
-      defaultTargetPlatform != TargetPlatform.android) {
-    try {
-      // Try to get from window.inviteCode (set in index.html)
-      final inviteCode = js.context['inviteCode'] as String?;
-      if (inviteCode != null && inviteCode.isNotEmpty) {
-        debugPrint('🎯 Web Invite Code Found: $inviteCode');
-        return inviteCode;
-      }
-    } catch (e) {
-      debugPrint('⚠️ Could not extract web invite code: $e');
+  if (!kIsWeb) return null;
+  try {
+    // Query parameter: ?code=XXXX
+    final qp = Uri.base.queryParameters['code'];
+    if (qp != null && qp.isNotEmpty) {
+      debugPrint('🎯 Web Invite Code (query): $qp');
+      return qp;
     }
+
+    // Path style: /join/XXXX
+    final segments = Uri.base.pathSegments.where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2 && segments[0] == 'join') {
+      debugPrint('🎯 Web Invite Code (path): ${segments[1]}');
+      return segments[1];
+    }
+  } catch (e) {
+    debugPrint('⚠️ extractWebInviteCode error: $e');
   }
   return null;
 }

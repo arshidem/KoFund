@@ -45,25 +45,60 @@
     function extractInviteCode() {
       const path = window.location.pathname;
       const segments = path.split('/').filter(s => s);
-      
-      // Format 1: /join/CUOVUA3H
-      if (segments.length >= 2 && segments[0] === 'join') {
-        return segments[1];
-      }
-      
-      // Format 2: /?code=CUOVUA3H
+      // Format 1: /join/CODE
+      if (segments.length >= 2 && segments[0] === 'join') return segments[1];
+      // Format 2: ?code=CODE
       const urlParams = new URLSearchParams(window.location.search);
-      const codeFromQuery = urlParams.get('code');
-      if (codeFromQuery) {
-        return codeFromQuery;
-      }
-      
-      return null;
+      return urlParams.get('code');
     }
-    
-    // Store invite code globally for Flutter to access
+
     window.inviteCode = extractInviteCode();
     console.log('Invite Code Found:', window.inviteCode);
+
+    // If invite code exists, attempt to open native app first.
+    // Use an Android Intent fallback (stronger than custom scheme) and
+    // also try iframe + location for broader coverage. If the app isn't
+    // installed, remain on the web.
+    (function tryOpenApp() {
+      const code = window.inviteCode;
+      if (!code) return;
+
+      const schemeLink = `kofund://join?code=${code}`;
+      const start = Date.now();
+      let opened = false;
+
+      const onVisibility = () => { if (document.hidden) opened = true; };
+      document.addEventListener('visibilitychange', onVisibility);
+
+      // 1) If Android, try intent:// which can specify the package
+      const isAndroid = /Android/i.test(navigator.userAgent || '');
+      if (isAndroid) {
+        const packageName = 'com.kofund.app';
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        const intentUrl = `intent://join?code=${code}#Intent;scheme=kofund;package=${packageName};S.browser_fallback_url=${fallbackUrl};end`;
+        // Attempt intent navigation
+        try { window.location = intentUrl; } catch (e) { /* ignore */ }
+      }
+
+      // 2) iframe attempt (works for many Android browsers)
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = schemeLink;
+      document.body.appendChild(iframe);
+
+      // 3) Also try direct location change (helps iOS)
+      setTimeout(() => { try { window.location = schemeLink; } catch (e) {} }, 120);
+
+      // After timeout, if app was not opened, remove iframe and continue with web
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', onVisibility);
+        try { document.body.removeChild(iframe); } catch (e) {}
+        if (!opened && Date.now() - start > 1600) {
+          console.log('Native app not opened — staying on web.');
+          document.body.classList.add('app-not-installed');
+        }
+      }, 2000);
+    })();
   </script>
 
   <script src="flutter_bootstrap.js" async></script>

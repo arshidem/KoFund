@@ -84,37 +84,22 @@
         function extractInviteCode() {
             const path = window.location.pathname; // e.g., "/join/CUOVUA3H"
             const segments = path.split('/').filter(s => s);
-            
-            // Format 1: /join/CUOVUA3H
-            if (segments.length >= 2 && segments[0] === 'join') {
-                return segments[1];
-            }
-            
-            // Format 2: /?code=CUOVUA3H (query parameter)
+            // Format 1: /join/CODE
+            if (segments.length >= 2 && segments[0] === 'join') return segments[1];
+            // Format 2: ?code=CODE
             const urlParams = new URLSearchParams(window.location.search);
-            const codeFromQuery = urlParams.get('code');
-            if (codeFromQuery) {
-                return codeFromQuery;
-            }
-            
-            return null;
+            return urlParams.get('code');
         }
-        
-        // Copy code to clipboard
+
         function copyCode() {
             const code = extractInviteCode();
-            if (code) {
-                navigator.clipboard.writeText(code);
-                alert('Code copied: ' + code);
-            }
+            if (code) navigator.clipboard.writeText(code).then(()=> alert('Code copied: ' + code));
         }
-        
-        // Main function
+
+        // Try to open native app; if not installed, show manual fallback UI
         function handleInviteLink() {
             const inviteCode = extractInviteCode();
-            
             if (!inviteCode) {
-                // No code found, show generic page
                 document.getElementById('redirecting').innerHTML = `
                     <h1>🎯 KoFund</h1>
                     <p>Community Fund Management App</p>
@@ -122,25 +107,46 @@
                 `;
                 return;
             }
-            
-            // Show the code while redirecting
-            document.getElementById('invite-code-display').textContent = 
-                `Invite Code: ${inviteCode}`;
+
+            document.getElementById('invite-code-display').textContent = `Invite Code: ${inviteCode}`;
             document.getElementById('code-display').textContent = inviteCode;
-            
-            // 1. Try to open app with deep link
-            const appDeepLink = `kofund://join?code=${inviteCode}`;
-            console.log('Redirecting to app:', appDeepLink);
-            window.location.href = appDeepLink;
-            
-            // 2. If app doesn't open, show manual option after 2 seconds
+
+            const schemeLink = `kofund://join?code=${inviteCode}`;
+            const start = Date.now();
+            let opened = false;
+
+            const onVisibility = () => { if (document.hidden) opened = true; };
+            document.addEventListener('visibilitychange', onVisibility);
+
+            // Android intent fallback (stronger on many devices)
+            const isAndroid = /Android/i.test(navigator.userAgent || '');
+            if (isAndroid) {
+                const packageName = 'com.kofund.app';
+                const fallbackUrl = encodeURIComponent(window.location.href);
+                const intentUrl = `intent://join?code=${inviteCode}#Intent;scheme=kofund;package=${packageName};S.browser_fallback_url=${fallbackUrl};end`;
+                try { window.location = intentUrl; } catch(e){}
+            }
+
+            // iframe attempt
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = schemeLink;
+            document.body.appendChild(iframe);
+
+            // also try location for iOS
+            setTimeout(() => { try { window.location = schemeLink; } catch(e){} }, 120);
+
+            // After timeout show manual fallback if app didn't open
             setTimeout(() => {
-                document.getElementById('redirecting').style.display = 'none';
-                document.getElementById('manual-fallback').style.display = 'block';
+                document.removeEventListener('visibilitychange', onVisibility);
+                try { document.body.removeChild(iframe); } catch(e){}
+                if (!opened && Date.now() - start > 1600) {
+                    document.getElementById('redirecting').style.display = 'none';
+                    document.getElementById('manual-fallback').style.display = 'block';
+                }
             }, 2000);
         }
-        
-        // Run on page load
+
         window.onload = handleInviteLink;
     </script>
 </body>
