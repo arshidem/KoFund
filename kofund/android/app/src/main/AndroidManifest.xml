@@ -117,9 +117,13 @@
                     android:pathPrefix="/" />
             </intent-filter>
 
-            <!-- 4. HTTPS FALLBACK (Optional - looks like web link but uses custom scheme) -->
-            <!-- This makes links look like https://kofund.app/join but actually use custom scheme -->
-            <intent-filter>
+            <!-- 4. HTTPS FALLBACK / App Links
+                 Add explicit App Link filters for web paths so HTTPS links
+                 like https://kofund.app/join and https://kofund.app/invite
+                 can open the app when installed. Use `autoVerify` to enable
+                 Android's App Links verification (requires hosting
+                 /.well-known/assetlinks.json on the domain). -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -127,6 +131,17 @@
                     android:scheme="https"
                     android:host="kofund.app"
                     android:pathPrefix="/join" />
+            </intent-filter>
+
+            <!-- Explicit App Link for /invite -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="kofund.app"
+                    android:pathPrefix="/invite" />
             </intent-filter>
 
             <!-- ==================== END DEEP LINKING ==================== -->

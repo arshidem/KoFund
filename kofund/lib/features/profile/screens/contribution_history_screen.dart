@@ -15,6 +15,8 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:intl/intl.dart';
+import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 // Move ChangeEntry to top level
 class ChangeEntry {
@@ -35,6 +37,8 @@ class ContributionHistoryScreen extends StatefulWidget {
 class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   String? _currentUserId;
   bool _isInitialLoad = true;
+  bool _isRefreshing = false;
+  final RefreshController _refreshController = RefreshController();
   
   @override
   void initState() {
@@ -44,6 +48,12 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadHistory();
     });
+  }
+
+  @override
+  void dispose() {
+    _refreshController.dispose();
+    super.dispose();
   }
 
   @override
@@ -170,12 +180,29 @@ void _debugFirestoreContribution(String contributionId) async {
   Future<void> _refreshData() async {
     debugPrint('🔄 DEBUG: Refreshing contribution history');
     
+    if (!mounted) return;
+    setState(() {
+      _isRefreshing = true;
+    });
+    
     try {
       final profileProvider = context.read<ProfileProvider>();
       await profileProvider.getUserContributionHistory();
       debugPrint('✅ DEBUG: Refresh completed successfully');
+      if (mounted) {
+        _refreshController.refreshCompleted();
+      }
     } catch (e) {
       debugPrint('❌ DEBUG: Refresh failed: $e');
+      if (mounted) {
+        _refreshController.refreshFailed();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
     }
   }
 
@@ -214,59 +241,69 @@ HistoryItem _convertToHistoryItem(Map<String, dynamic> contribution, String user
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-   appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'My Contributions',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+      appBar: AppBar(
+        toolbarHeight: 80,
+        title: const Text(
+          'My Contributions',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
       ),
-    ),
-  ),
-  actions: [
-    if (currentUser != null)
-      IconButton(
-        icon: const Icon(Icons.refresh, color: Colors.white),
-        onPressed: _refreshData,
-        tooltip: 'Refresh',
-      ),
-  ],
-),
-      body: RefreshIndicator(
+      body: SmartRefresher(
+        controller: _refreshController,
         onRefresh: _refreshData,
-        child: _buildContent(profileProvider, authProvider, currentUser),
+        enablePullDown: true,
+        enablePullUp: false,
+        physics: const BouncingScrollPhysics(),
+        header: ClassicHeader(
+          idleText: 'Pull down to refresh',
+          releaseText: 'Release to refresh',
+          refreshingText: '',
+          completeText: 'Refresh complete',
+          failedText: 'Refresh failed',
+          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+          refreshingIcon: SizedBox.shrink(),
+          completeIcon: Icon(Icons.check, color: Colors.green),
+          failedIcon: Icon(Icons.error, color: Colors.red),
+        ),
+        child: _isRefreshing 
+          ? ContributionHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
+          : _buildContent(profileProvider, authProvider, currentUser),
       ),
     );
   }
 
   Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvider, UserModel? currentUser) {
     // Show loading on initial load
-    if (_isInitialLoad) {
-      return const LoadingIndicator();
-    }
+      if (_isInitialLoad) {
+    return ContributionHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark);
+  }
 
     // Check if user is not logged in
     if (currentUser == null) {
@@ -394,7 +431,7 @@ itemBuilder: (context, index) {
             child: _buildStatCard(
               title: 'Total Paid',
               value: '₹${totalAmount.toStringAsFixed(2)}',
-              icon: Icons.attach_money,
+              icon: Icons.currency_rupee,
               color: Colors.white,
             ),
           ),

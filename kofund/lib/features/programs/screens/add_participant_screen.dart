@@ -270,115 +270,119 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     }
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          color: Colors.transparent,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Row(
-              children: [
-                // Search Icon
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(18),
-                      bottomLeft: Radius.circular(18),
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      width: 0,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.search,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-                
-                // Search Field
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                    cursorColor: Colors.white,
-                    cursorWidth: 2,
-                    cursorHeight: 20,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                      hintText: 'Search members...',
-                      hintStyle: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      border: InputBorder.none,
-                      filled: false,
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.only(right: 0),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(
-                                    Icons.close,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) {
-                      setState(() => _searchQuery = value);
-                    },
-                  ),
+  Widget _buildModernSearchBar() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.5),
+                width: 1.5, // Increased border width
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
+              color: Colors.transparent, // Transparent background
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Row(
+                  children: [
+                    // 🔍 SEARCH ICON - Transparent with white border
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent, // Transparent background
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          bottomLeft: Radius.circular(18),
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          width: 0, // Same border width
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.white, // White icon
+                        size: 22,
+                      ),
+                    ),
+                    
+                    // 📝 SEARCH FIELD
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white, // Always white text
+                          letterSpacing: 0.5,
+                        ),
+                        cursorColor: Colors.white, // White cursor
+                        cursorWidth: 2,
+                        cursorHeight: 20,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          hintText: 'Search members...',
+                          hintStyle: const TextStyle(
+                            color: Colors.white70, // White hint with 70% opacity
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          border: InputBorder.none,
+                          filled: false,
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.only(right: 0),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                        FocusScope.of(context).unfocus();
+                                      },
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildParticipantCard(ParticipantModel participant) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(12),
@@ -425,14 +429,27 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: IconButton(
-          icon: Icon(
-            Icons.remove_circle,
-            color: AppColors.error(context),
-            size: 24,
+        trailing: Container(
+          width: 80,
+          child: ElevatedButton.icon(
+            onPressed: () => _removeParticipant(participant.userId),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error(context).withValues(alpha: 0.1),
+              foregroundColor: AppColors.error(context),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+            label: const Text(
+              'Remove',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          onPressed: () => _removeParticipant(participant.userId),
-          tooltip: 'Remove from program',
         ),
       ),
     );
@@ -444,7 +461,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     final email = member.email ?? 'No email';
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(12),
@@ -532,25 +549,60 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
         ),
         trailing: isAdding
             ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.primary(context),
+                width: 80,
+                child: ElevatedButton.icon(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success(context).withValues(alpha: 0.1),
+                    foregroundColor: AppColors.success(context),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  icon: SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(AppColors.success(context)),
+                    ),
+                  ),
+                  label: const Text(
+                    'Adding',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               )
-            : IconButton(
-                icon: Icon(
-                  Icons.add_circle,
-                  color: AppColors.success(context),
-                  size: 24,
+            : Container(
+                width: 80,
+                child: ElevatedButton.icon(
+                  onPressed: () => _addParticipant(
+                    member.uid,
+                    displayName,
+                    email,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success(context).withValues(alpha: 0.1),
+                    foregroundColor: AppColors.success(context),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  label: const Text(
+                    'Add',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                onPressed: () => _addParticipant(
-                  member.uid,
-                  displayName,
-                  email,
-                ),
-                tooltip: 'Add to program',
               ),
       ),
     );
@@ -569,11 +621,11 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     );
   }
 
-Widget _buildLoadingState() {
-  return AddParticipantSkeleton(
-    isDarkMode: Theme.of(context).brightness == Brightness.dark,
-  );
-}
+  Widget _buildLoadingState() {
+    return AddParticipantSkeleton(
+      isDarkMode: Theme.of(context).brightness == Brightness.dark,
+    );
+  }
 
   Widget _buildEmptyState(String message, IconData icon) {
     return Center(
@@ -605,14 +657,9 @@ Widget _buildLoadingState() {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
+        title: Text(
           'Add Participants',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -634,25 +681,22 @@ Widget _buildLoadingState() {
             ),
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(70),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _buildModernSearchBar(),
           ),
-          onPressed: () => Navigator.pop(context, true),
         ),
-        automaticallyImplyLeading: true,
       ),
       body: _isLoading
           ? _buildLoadingState()
           : Column(
               children: [
-                _buildSearchBar(),
-                
                 // Current Participants Section
                 if (_currentParticipants.isNotEmpty) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Row(
                       children: [
                         Text(

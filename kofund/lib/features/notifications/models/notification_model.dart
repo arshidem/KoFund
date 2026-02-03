@@ -179,7 +179,7 @@ class AppNotification {
       case NotificationType.community:
         return Icons.groups;
       case NotificationType.contribution:
-        return Icons.attach_money;
+        return Icons.currency_rupee;
     }
   }
 

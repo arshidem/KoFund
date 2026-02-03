@@ -24,10 +24,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="kofund">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="assets/logos/KoFund.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="assets/logos/KoFund.png"/>
 
   <title>KoFund - Community Fund Management</title>
   <link rel="manifest" href="manifest.json">
@@ -56,9 +56,8 @@
     console.log('Invite Code Found:', window.inviteCode);
 
     // If invite code exists, attempt to open native app first.
-    // Use an Android Intent fallback (stronger than custom scheme) and
-    // also try iframe + location for broader coverage. If the app isn't
-    // installed, remain on the web.
+    // Use the custom URL scheme (kofund://) and a short timeout fallback
+    // so mobile browsers stay on the web when the app isn't installed.
     (function tryOpenApp() {
       const code = window.inviteCode;
       if (!code) return;
@@ -70,23 +69,13 @@
       const onVisibility = () => { if (document.hidden) opened = true; };
       document.addEventListener('visibilitychange', onVisibility);
 
-      // 1) If Android, try intent:// which can specify the package
-      const isAndroid = /Android/i.test(navigator.userAgent || '');
-      if (isAndroid) {
-        const packageName = 'com.kofund.app';
-        const fallbackUrl = encodeURIComponent(window.location.href);
-        const intentUrl = `intent://join?code=${code}#Intent;scheme=kofund;package=${packageName};S.browser_fallback_url=${fallbackUrl};end`;
-        // Attempt intent navigation
-        try { window.location = intentUrl; } catch (e) { /* ignore */ }
-      }
-
-      // 2) iframe attempt (works for many Android browsers)
+      // Try custom scheme via hidden iframe (works on many Android browsers)
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
       iframe.src = schemeLink;
       document.body.appendChild(iframe);
 
-      // 3) Also try direct location change (helps iOS)
+      // Also try direct navigation (helps iOS and some browsers)
       setTimeout(() => { try { window.location = schemeLink; } catch (e) {} }, 120);
 
       // After timeout, if app was not opened, remove iframe and continue with web

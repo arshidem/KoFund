@@ -627,7 +627,7 @@ Widget _buildStatisticsCards(
         child: _buildStatCard(
           title: 'Contributions',
           value: contributions.toString(),
-          icon: Icons.attach_money,
+          icon: Icons.currency_rupee,
           onTap: _navigateToContributionHistory,
         ),
       ),

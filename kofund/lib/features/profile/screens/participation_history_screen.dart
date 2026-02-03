@@ -9,6 +9,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
 
 class ParticipationHistoryScreen extends StatefulWidget {
   const ParticipationHistoryScreen({super.key});
@@ -21,6 +22,7 @@ class ParticipationHistoryScreen extends StatefulWidget {
 class _ParticipationHistoryScreenState
     extends State<ParticipationHistoryScreen> {
   final RefreshController _refreshController = RefreshController();
+  bool _isRefreshing = false;
   
   @override
   void initState() {
@@ -36,13 +38,28 @@ class _ParticipationHistoryScreenState
   void _onRefresh() async {
     debugPrint('🔄 Pull to refresh triggered in Participation History');
     
+    if (!mounted) return;
+    setState(() {
+      _isRefreshing = true;
+    });
+    
     try {
       await _loadParticipationHistory();
-      _refreshController.refreshCompleted();
+      if (mounted) {
+        _refreshController.refreshCompleted();
+      }
       debugPrint('✅ Participation History refresh completed');
     } catch (e) {
-      _refreshController.refreshFailed();
+      if (mounted) {
+        _refreshController.refreshFailed();
+      }
       debugPrint('❌ Participation History refresh failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
     }
   }
 
@@ -100,23 +117,18 @@ appBar: AppBar(
         header: ClassicHeader(
           idleText: 'Pull down to refresh',
           releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing programs...',
+          refreshingText: '',
           completeText: 'Refresh complete',
           failedText: 'Refresh failed',
           idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
           releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-            ),
-          ),
+          refreshingIcon: SizedBox.shrink(),
           completeIcon: Icon(Icons.check, color: Colors.green),
           failedIcon: Icon(Icons.error, color: Colors.red),
         ),
-        child: _buildContent(profileProvider, participationHistory),
+        child: _isRefreshing
+          ? ParticipationHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
+          : _buildContent(profileProvider, participationHistory),
       ),
     );
   }
@@ -126,7 +138,7 @@ appBar: AppBar(
     List<Map<String, dynamic>> participationHistory,
   ) {
     if (profileProvider.isLoading) {
-      return const Center(child: LoadingIndicator());
+      return ParticipationHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark);
     }
 
     if (profileProvider.error != null) {
