@@ -3121,27 +3121,51 @@ Future<String> _getUserName(String userId, BuildContext context) async {
     }
   }
 
-  // =================== COMMON ACTIONS ===================
+// =================== COMMON ACTIONS ===================
 
 Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Confirm Delete'),
+      backgroundColor: AppColors.card(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        'Confirm Delete',
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontSize: 16,
+        ),
+      ),
       content: Text(
         'Are you sure you want to delete this ${item.type == HistoryItemType.contribution ? 'contribution' : 'expense'}? This action cannot be undone.',
+        style: TextStyle(
+          color: AppColors.textSecondary(context),
+          fontSize: 13,
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 13,
+            ),
           ),
-          child: const Text('Delete'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(
+            'Delete',
+            style: TextStyle(
+              color: AppColors.error(context),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ),
       ],
     ),
@@ -3151,7 +3175,7 @@ Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
     try {
       if (item.type == HistoryItemType.contribution) {
         // For contributions: Clean the ID if needed
-        String contributionId = item.id;
+        var contributionId = item.id;
         
         // DEBUG: Check what ID we have
         debugPrint('🔍 Original contribution ID from item: $contributionId');
@@ -3172,15 +3196,22 @@ Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
         await provider.deleteContribution(contributionId, reason);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contribution deleted successfully'),
+          SnackBar(
+            content: Text(
+              'Contribution deleted successfully',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
         
       } else if (item.type == HistoryItemType.expense) {
         // For expenses: Clean the ID if needed
-        String expenseId = item.id;
+        var expenseId = item.id;
         
         // DEBUG: Check what ID we have
         debugPrint('🔍 Original expense ID from item: $expenseId');
@@ -3195,9 +3226,16 @@ Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
         await expenseProvider.deleteExpense(expenseId);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Expense deleted successfully'),
+          SnackBar(
+            content: Text(
+              'Expense deleted successfully',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
@@ -3211,8 +3249,15 @@ Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
       debugPrint('❌ Error deleting item: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete: ${e.toString()}'),
+          content: Text(
+            'Failed to delete: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
       );
     }
@@ -3223,41 +3268,107 @@ Future<void> _deleteItem(BuildContext context, HistoryItem item) async {
 Future<String?> _showDeleteReasonDialog(BuildContext context, String itemType) async {
   final reasonController = TextEditingController();
   
-  return await showDialog<String>(
+  return await showDialog<String?>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Delete $itemType'),
+      backgroundColor: AppColors.card(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        _capitalizeFirst('Delete $itemType'),
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontSize: 16,
+        ),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Please provide a reason for deleting this $itemType:'),
-          const SizedBox(height: 16),
+          Text(
+            'Please provide a reason for deleting this $itemType:',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: reasonController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Enter reason...',
-              border: OutlineInputBorder(),
+              hintStyle: TextStyle(
+                color: AppColors.textSecondary(context).withOpacity(0.6),
+                fontSize: 13,
+              ),
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 1.5,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                ),
+              ),
+            ),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 13,
             ),
             maxLines: 3,
+            textInputAction: TextInputAction.done,
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 13,
+            ),
+          ),
         ),
-        ElevatedButton(
+        TextButton(
           onPressed: () {
             final reason = reasonController.text.trim();
-            Navigator.pop(context, reason.isNotEmpty ? reason : 'Deleted from history screen');
+            Navigator.pop(
+              context, 
+              reason.isNotEmpty ? reason : 'Deleted from history screen'
+            );
           },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('Delete'),
+          child: Text(
+            'Delete',
+            style: TextStyle(
+              color: AppColors.error(context),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ),
       ],
     ),
   );
+}
+
+// Helper function for capitalizing strings
+String _capitalizeFirst(String text) {
+  if (text.isEmpty) return text;
+  return "${text[0].toUpperCase()}${text.substring(1)}";
 }
 
   // =================== HELPER METHODS ===================

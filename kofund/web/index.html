@@ -1,105 +1,312 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Manage contributions and expenses efficiently">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="kofund">
-  <link rel="apple-touch-icon" href="assets/logos/KoFund.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kofund">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="assets/logos/KoFund.png"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>KoFund - Community Fund Management</title>
+  <!-- Android/Chrome theme color -->
+  <meta name="theme-color" content="#00BFA6" />
+  
+  <!-- Windows meta tags -->
+  <meta name="msapplication-TileColor" content="#00BFA6">
+  <meta name="msapplication-TileImage" content="icons/Icon-192.png">
+
+  <title>Kofund - Community Fund Management</title>
   <link rel="manifest" href="manifest.json">
+  
   <style>
     body {
       margin: 0;
       padding: 0;
+      overflow: hidden;
+    }
+    
+    /* Loading styles */
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #00BFA6 0%, #00897b 100%);
+      transition: opacity 0.3s ease;
+    }
+    
+    .loading-spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid white;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Hide loading when app loaded */
+    .flutter-loaded #loading {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    /* Flutter app container */
+    #flutter-app {
+      width: 100%;
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <!-- Invite Code Handler -->
+  <!-- Loading screen -->
+  <div id="loading" class="loading">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- Flutter app container -->
+  <div id="flutter-app"></div>
+
+  <!-- Flutter initialization -->
   <script>
-    // Extract invite code from URL and store globally
+    // Service worker version - IMPORTANT!
+    var serviceWorkerVersion = null;
+    
+    // Extract invite code
     function extractInviteCode() {
-      const path = window.location.pathname;
-      const segments = path.split('/').filter(s => s);
-      // Format 1: /join/CODE
-      if (segments.length >= 2 && segments[0] === 'join') return segments[1];
-      // Format 2: ?code=CODE
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('code');
+      try {
+        const path = window.location.pathname;
+        const segments = path.split('/').filter(s => s);
+        
+        // Format 1: /join/CODE
+        if (segments.length >= 2 && segments[0] === 'join') {
+          return segments[1];
+        }
+        
+        // Format 2: URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('code') || urlParams.get('invite');
+      } catch (e) {
+        console.error('Error extracting invite code:', e);
+        return null;
+      }
     }
 
+    // Store invite code globally
     window.inviteCode = extractInviteCode();
-    console.log('Invite Code Found:', window.inviteCode);
+    if (window.inviteCode) {
+      console.log('Invite Code Found:', window.inviteCode);
+      // Clean code
+      window.inviteCode = window.inviteCode.replace(/[^a-zA-Z0-9]/g, '');
+    }
 
-    // If invite code exists, attempt to open native app first.
-    // Use the custom URL scheme (kofund://) and a short timeout fallback
-    // so mobile browsers stay on the web when the app isn't installed.
-    (function tryOpenApp() {
-      const code = window.inviteCode;
-      if (!code) return;
-
-      const schemeLink = `kofund://join?code=${code}`;
-      const start = Date.now();
-      let opened = false;
-
-      const onVisibility = () => { if (document.hidden) opened = true; };
-      document.addEventListener('visibilitychange', onVisibility);
-
-      // Try custom scheme via hidden iframe (works on many Android browsers)
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = schemeLink;
-      document.body.appendChild(iframe);
-
-      // Also try direct navigation (helps iOS and some browsers)
-      setTimeout(() => { try { window.location = schemeLink; } catch (e) {} }, 120);
-
-      // After timeout, if app was not opened, remove iframe and continue with web
-      setTimeout(() => {
-        document.removeEventListener('visibilitychange', onVisibility);
-        try { document.body.removeChild(iframe); } catch (e) {}
-        if (!opened && Date.now() - start > 1600) {
-          console.log('Native app not opened — staying on web.');
-          document.body.classList.add('app-not-installed');
-        }
-      }, 2000);
-    })();
-  </script>
-
-  <script src="flutter_bootstrap.js" async></script>
-
-  <!-- Script to pass invite code to Flutter app -->
-  <script>
-    // Once Flutter is ready, navigate to join screen if invite code exists
+    // Handle Flutter events
     window.addEventListener('flutter-initialized', function() {
-      if (window.inviteCode) {
-        // Send message to Flutter app
-        Dart_PostMessage('inviteCode', window.inviteCode);
+      console.log('Flutter initialized');
+      
+      // Hide loading screen
+      const loading = document.getElementById('loading');
+      if (loading) {
+        loading.style.opacity = '0';
+        setTimeout(() => {
+          loading.style.display = 'none';
+        }, 300);
       }
+      
+      // Add loaded class to body
+      document.body.classList.add('flutter-loaded');
+      
+      // Send invite code to Flutter if exists
+      if (window.inviteCode && window._flutter) {
+        // Flutter's message channel
+        window._flutter.flutterChannel = window._flutter.flutterChannel || {
+          postMessage: function(message) {
+            // This will be called from Flutter
+            console.log('Message to Flutter:', message);
+          }
+        };
+      }
+    });
+
+    // Handle Flutter errors
+    window.addEventListener('flutter-loading-error', function(event) {
+      console.error('Flutter failed to load:', event);
+      const loading = document.getElementById('loading');
+      if (loading) {
+        loading.innerHTML = `
+          <div style="text-align: center; color: white; padding: 20px;">
+            <h3>Failed to load application</h3>
+            <p>Please refresh the page or check your connection.</p>
+            <button onclick="window.location.reload()" 
+                    style="background: white; color: #00BFA6; border: none; 
+                           padding: 10px 20px; border-radius: 5px; cursor: pointer;
+                           margin-top: 20px;">
+              Refresh Page
+            </button>
+          </div>
+        `;
+      }
+    });
+
+    // Load Flutter when page loads
+    window.addEventListener('load', function() {
+      console.log('Page loaded, initializing Flutter...');
+      
+      // Create and load flutter.js script
+      const flutterScript = document.createElement('script');
+      flutterScript.src = 'flutter.js';
+      flutterScript.type = 'application/javascript';
+      
+      flutterScript.onload = function() {
+        console.log('flutter.js loaded, initializing Flutter engine...');
+        
+        // Check if Flutter loader is available
+        if (typeof _flutter !== 'undefined' && _flutter.loader) {
+          _flutter.loader.loadEntrypoint({
+            serviceWorker: {
+              serviceWorkerVersion: serviceWorkerVersion,
+            },
+            onEntrypointLoaded: async function(engineInitializer) {
+              try {
+                console.log('Flutter engine initializing...');
+                
+                // Initialize the engine with explicit container
+                const appRunner = await engineInitializer.initializeEngine({
+                  // Explicitly set renderer if needed
+                  renderer: 'canvaskit',
+                });
+                
+                console.log('Flutter engine initialized, running app...');
+                
+                // Run the app in our container
+                await appRunner.runApp({
+                  hostElement: document.getElementById('flutter-app')
+                });
+                
+                console.log('Flutter app running');
+                
+                // Dispatch initialized event
+                window.dispatchEvent(new CustomEvent('flutter-initialized'));
+                
+              } catch (error) {
+                console.error('Failed to initialize Flutter:', error);
+                
+                // Show error
+                const loading = document.getElementById('loading');
+                if (loading) {
+                  loading.innerHTML = `
+                    <div style="text-align: center; color: white; padding: 20px;">
+                      <h3>Failed to initialize application</h3>
+                      <p>${error.message || 'Unknown error'}</p>
+                      <button onclick="window.location.reload()" 
+                              style="background: white; color: #00BFA6; border: none; 
+                                     padding: 10px 20px; border-radius: 5px; cursor: pointer;
+                                     margin-top: 20px;">
+                        Retry
+                      </button>
+                    </div>
+                  `;
+                }
+              }
+            }
+          });
+        } else {
+          console.error('Flutter loader not found');
+          const loading = document.getElementById('loading');
+          if (loading) {
+            loading.innerHTML = `
+              <div style="text-align: center; color: white; padding: 20px;">
+                <h3>Failed to load Flutter runtime</h3>
+                <p>The Flutter engine could not be loaded.</p>
+                <button onclick="window.location.reload()" 
+                        style="background: white; color: #00BFA6; border: none; 
+                               padding: 10px 20px; border-radius: 5px; cursor: pointer;
+                               margin-top: 20px;">
+                  Retry
+                </button>
+              </div>
+            `;
+          }
+        }
+      };
+      
+      flutterScript.onerror = function(error) {
+        console.error('Failed to load flutter.js:', error);
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.innerHTML = `
+            <div style="text-align: center; color: white; padding: 20px;">
+              <h3>Failed to load application resources</h3>
+              <p>Please check your internet connection.</p>
+              <button onclick="window.location.reload()" 
+                      style="background: white; color: #00BFA6; border: none; 
+                             padding: 10px 20px; border-radius: 5px; cursor: pointer;
+                             margin-top: 20px;">
+                Retry
+              </button>
+            </div>
+          `;
+        }
+      };
+      
+      // Add script to document
+      document.body.appendChild(flutterScript);
+      
+      // Your existing app opening logic
+      (function tryOpenApp() {
+        const code = window.inviteCode;
+        if (!code) return;
+
+        const schemeLink = `kofund://join?code=${code}`;
+        const start = Date.now();
+        let opened = false;
+
+        const onVisibility = () => { if (document.hidden) opened = true; };
+        document.addEventListener('visibilitychange', onVisibility);
+
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = schemeLink;
+        document.body.appendChild(iframe);
+
+        setTimeout(() => { 
+          try { 
+            window.location = schemeLink; 
+          } catch (e) {
+            console.log('Could not redirect to app:', e);
+          }
+        }, 120);
+
+        setTimeout(() => {
+          document.removeEventListener('visibilitychange', onVisibility);
+          try { 
+            document.body.removeChild(iframe); 
+          } catch (e) {
+            console.log('Could not remove iframe:', e);
+          }
+          if (!opened && Date.now() - start > 1600) {
+            console.log('Native app not opened — staying on web.');
+          }
+        }, 2000);
+      })();
     });
   </script>
 </body>

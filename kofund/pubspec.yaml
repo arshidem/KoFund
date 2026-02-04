@@ -7,14 +7,17 @@ version: 1.1.0+1
 environment:
   sdk: ^3.9.2
 
-
+# ✅ CORRECT CONFIGURATION:
 flutter_icons:
   android: "launcher_icon"
   ios: true
+  web:
+    generate: true  # ✅ Web requires a map, not just true/false
+    image_path: "assets/logos/KoFund.png"
+    background_color: "#00bfa6"  # Optional: background color for icons
   image_path: "assets/logos/KoFund.png"
   adaptive_icon_background: "#00bfa6"
   adaptive_icon_foreground: "assets/logos/KoFund.png"
-
 
 dependencies:
   flutter:
@@ -75,4 +78,3 @@ flutter:
     - assets/logos/KoFund.png
     - assets/fonts/NotoSans-Regular.ttf
     - assets/icons/checked.png
-

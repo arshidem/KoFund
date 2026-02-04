@@ -296,7 +296,8 @@ Widget _buildContributionSummary(BuildContext context) {
           ? (totalCollected / targetAmount).clamp(0, 1)
           : 0;
       
-      final double progressPercentage = widget.program.calculateProgress(totalCollected);
+      // ✅ FIXED: Calculate percentage directly from progress
+      final double progressPercentage = progress * 100;
 
       return Container(
         width: double.infinity,
@@ -421,36 +422,37 @@ Widget _buildContributionSummary(BuildContext context) {
 
             const SizedBox(height: 12),
 
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppColors.textCards(context),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Progress stats row
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${progressPercentage.toStringAsFixed(1)}% collected',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textCards(context).withValues(alpha: 0.85),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            // Progress bar (only show if there's a target)
+            if (targetAmount > 0) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.textCards(context),
                   ),
                 ),
-                if (targetAmount > totalCollected)
+              ),
+
+              const SizedBox(height: 8),
+
+              // Progress stats row
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      // ✅ FIXED: Now shows percentage based on progress
+                      '${progressPercentage.toStringAsFixed(1)}% collected',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textCards(context).withValues(alpha: 0.85),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   Expanded(
                     child: Text(
                       '₹${(targetAmount - totalCollected).toStringAsFixed(0)} remaining',
@@ -463,8 +465,40 @@ Widget _buildContributionSummary(BuildContext context) {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-              ],
-            ),
+                ],
+              ),
+            ] else ...[
+              // Alternative display when no target is set
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.textCards(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: AppColors.textCards(context),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "No target amount set",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textCards(context).withValues(alpha: 0.85),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -2105,29 +2139,93 @@ Future<String?> _showDeleteReasonDialog(BuildContext context) async {
   return await showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Delete Contribution'),
-      content: TextField(
-        controller: reasonController,
-        decoration: InputDecoration(
-          hintText: 'Enter reason for deletion...',
-          border: OutlineInputBorder(),
+      backgroundColor: AppColors.card(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        'Delete Contribution',
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontSize: 16,
         ),
-        maxLines: 3,
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Please provide a reason for deleting this contribution:',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: reasonController,
+            decoration: InputDecoration(
+              hintText: 'Enter reason for deletion...',
+              hintStyle: TextStyle(
+                color: AppColors.textSecondary(context).withOpacity(0.6),
+                fontSize: 13,
+              ),
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 1.5,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                ),
+              ),
+            ),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 13,
+            ),
+            maxLines: 3,
+            textInputAction: TextInputAction.done,
+          ),
+        ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
+          child: Text(
+            'Cancel',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 13,
+            ),
+          ),
         ),
-        ElevatedButton(
+        TextButton(
           onPressed: () {
             final reason = reasonController.text.trim();
             if (reason.isNotEmpty) {
               Navigator.pop(context, reason);
             }
           },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: Text('Delete'),
+          child: Text(
+            'Delete',
+            style: TextStyle(
+              color: AppColors.error(context),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ),
       ],
     ),
