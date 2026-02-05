@@ -398,13 +398,44 @@ Widget _buildCommunityTypeDropdown() {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(
-      title: const Text('Create Community'),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Navigator.pop(context),
+   appBar: AppBar(
+  toolbarHeight: 80,
+  title: const Text(
+    'Create Community',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () => Navigator.pop(context),
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness:
+        Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
     ),
+  ),
+),
     body: SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -512,7 +543,7 @@ _buildInputField(
   controller: _locationController,
   label: 'Location',
   icon: Icons.location_on,
-  hint: 'e.g., Kochi, Chennai, Bangalore, or "Online"',
+  hint: 'e.g., Kochi, Chennai, Bangalore',
   isRequired: true,
   validator: (value) {
     if (value == null || value.isEmpty) {

@@ -325,16 +325,46 @@ Future<void> _joinCommunity() async {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(
-      title: const Text('Join Community'),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          // Navigate to login screen when back is pressed
-          Navigator.pushReplacementNamed(context, RouteNames.login);
-        },
+ appBar: AppBar(
+  toolbarHeight: 80,
+  title: const Text(
+    'Join Community',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () {
+      Navigator.pushReplacementNamed(context, RouteNames.login);
+    },
+  ),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness:
+        Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
     ),
+  ),
+),
     body: SafeArea(
       // ... rest of the body code remains the same
       child: Padding(

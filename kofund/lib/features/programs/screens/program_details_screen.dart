@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
 import 'package:shimmer/shimmer.dart';
-
+import 'package:kofund/ads/simple_banner_ad.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
 import '../../../features/participants/providers/participant_provider.dart';
@@ -179,6 +179,7 @@ Future<void> _refreshAllData() async {
 Widget build(BuildContext context) {
   final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
   final currentUserId = authProvider.user?.uid;
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
   return Scaffold(
     appBar: AppBar(
@@ -290,7 +291,7 @@ Widget build(BuildContext context) {
           color: Colors.transparent,
           child: TabBar(
             controller: _tabController,
-            isScrollable: true, // Changed from false to true
+            isScrollable: true,
             dividerColor: Colors.transparent,
             dividerHeight: 0,
             labelColor: Colors.white,
@@ -298,7 +299,7 @@ Widget build(BuildContext context) {
             indicatorColor: Colors.white,
             indicatorWeight: 3,
             indicatorPadding: EdgeInsets.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 8), // Added this for overall padding
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             labelPadding: const EdgeInsets.symmetric(horizontal: 12),
             labelStyle: const TextStyle(
               fontSize: 14,
@@ -332,88 +333,110 @@ Widget build(BuildContext context) {
         ),
       ),
     ),
-    body: _isProgramLoading
-        ? _buildTabSkeleton(_tabController.index)
-        : _cachedProgram != null
-            ? SmartRefresher(
-                controller: _refreshController,
-                onRefresh: _onRefresh,
-                enablePullDown: true,
-                enablePullUp: false,
-                physics: const BouncingScrollPhysics(),
-                header: ClassicHeader(
-                  idleText: 'Pull down to refresh',
-                  releaseText: 'Release to refresh',
-                  refreshingText: 'Refreshing program data...',
-                  completeText: 'Refresh complete',
-                  failedText: 'Refresh failed',
-                  idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-                  releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-                  refreshingIcon: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-                    ),
-                  ),
-                  completeIcon: Icon(Icons.check, color: Colors.green),
-                  failedIcon: Icon(Icons.error, color: Colors.red),
-                ),
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    ProgramOverviewTab(program: _cachedProgram!),
-                    ProgramParticipantsTab(program: _cachedProgram!),
-                    ProgramContributionsTab(program: _cachedProgram!),
-                    ProgramExpensesTab(program: _cachedProgram!),
-                  ],
-                ),
-              )
-            : SmartRefresher(
-                controller: _refreshController,
-                onRefresh: _onRefresh,
-                enablePullDown: true,
-                enablePullUp: false,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: AppColors.error(context),
-                        size: 48,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Program not found',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'The program you are looking for does not exist',
-                        style: TextStyle(
-                          fontSize: 12,
+    body: Column(
+      children: [
+        // Main content area
+        Expanded(
+          child: _isProgramLoading
+              ? _buildTabSkeleton(_tabController.index)
+              : _cachedProgram != null
+                  ? SmartRefresher(
+                      controller: _refreshController,
+                      onRefresh: _onRefresh,
+                      enablePullDown: true,
+                      enablePullUp: false,
+                      physics: const BouncingScrollPhysics(),
+                      header: ClassicHeader(
+                        idleText: 'Pull down to refresh',
+                        releaseText: 'Release to refresh',
+                        refreshingText: 'Refreshing program data...',
+                        completeText: 'Refresh complete',
+                        failedText: 'Refresh failed',
+                        idleIcon: Icon(
+                          Icons.arrow_downward,
                           color: AppColors.textSecondary(context),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _onRefresh,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary(context),
-                          foregroundColor: Colors.white,
+                        releaseIcon: Icon(
+                          Icons.arrow_upward,
+                          color: AppColors.primary(context),
                         ),
-                        child: const Text('Retry'),
+                        refreshingIcon: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(AppColors.primary(context)),
+                          ),
+                        ),
+                        completeIcon: const Icon(Icons.check, color: Colors.green),
+                        failedIcon: const Icon(Icons.error, color: Colors.red),
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          ProgramOverviewTab(program: _cachedProgram!),
+                          ProgramParticipantsTab(program: _cachedProgram!),
+                          ProgramContributionsTab(program: _cachedProgram!),
+                          ProgramExpensesTab(program: _cachedProgram!),
+                        ],
+                      ),
+                    )
+                  : SmartRefresher(
+                      controller: _refreshController,
+                      onRefresh: _onRefresh,
+                      enablePullDown: true,
+                      enablePullUp: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: AppColors.error(context),
+                              size: 48,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Program not found',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'The program you are looking for does not exist',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _onRefresh,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary(context),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+        ),
+        
+        // Banner ad (shows in all states: loading, content, error)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    ),
   );
 }
 

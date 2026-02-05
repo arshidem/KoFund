@@ -20,7 +20,7 @@ import 'package:kofund/features/virtual_users/screens/edit_virtual_user_screen.d
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
-
+import 'package:kofund/ads/simple_banner_ad.dart';
 // =================== MAIN SCREEN ===================
 class MemberDetailsScreen extends StatelessWidget {
   final UserModel? member;
@@ -205,89 +205,37 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     if (!mounted) return;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = context.read<AppAuthProvider>().user;
-    final memberProvider = context.watch<MemberProvider>();
-    final member = _currentMember;
+@override
+Widget build(BuildContext context) {
+  final currentUser = context.read<AppAuthProvider>().user;
+  final memberProvider = context.watch<MemberProvider>();
+  final member = _currentMember;
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Add this
 
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: AppColors.background(context),
-        body: MemberDetailsSkeleton(),
-      );
-    }
-
-    if (member == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background(context),
-        appBar: AppBar(
-          title: const Text(
-            'Member Details',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+  if (_isLoading) {
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      body: Column(
+        children: [
+          Expanded(
+            child: MemberDetailsSkeleton(),
           ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
+          // Banner ad in loading state
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+            child: const SimpleBannerAd(),
           ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: AppColors.textSecondary(context),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Member not found',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Go Back'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
 
-    final isAdmin = currentUser?.isAdmin == true;
-    final canSeeDetails = isAdmin || member.showDetailedProfile;
-    final isVirtualUser = member.isVirtualUser;
-
+  if (member == null) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        toolbarHeight: 80,
         title: const Text(
           'Member Details',
           style: TextStyle(
@@ -309,95 +257,189 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
             ),
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            size: 24,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing...',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.textSecondary(context),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Member not found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Go Back'),
+                  ),
+                ],
+              ),
             ),
           ),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
-        ),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              // Profile Header Card
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: _buildProfileHeaderCard(member, isAdmin, isVirtualUser),
-              ),
-
-              // Virtual User Info Card (if virtual user)
-              if (isVirtualUser)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _buildVirtualUserInfoCard(member),
-                ),
-              const SizedBox(height: 12),
-
-              // Member Information
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: _buildMemberInfoCard(member, canSeeDetails, isAdmin, isVirtualUser),
-              ),
-              const SizedBox(height: 12),
-
-              // Participation History (Only if detailed profile enabled and not virtual user)
-              if (canSeeDetails) 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _buildParticipationHistoryCard(memberProvider),
-                ),
-                            const SizedBox(height: 12),
-
-              // Contribution History (Only if detailed profile enabled and not virtual user)
-              if (canSeeDetails) 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _buildContributionHistoryCard(memberProvider),
-                ),
-              const SizedBox(height: 12),
-
-              // Privacy Notice (if details are hidden)
-              if (!canSeeDetails && !isAdmin && !isVirtualUser) 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildPrivacyNotice(),
-                ),
-
-              const SizedBox(height: 32),
-            ],
+          // Banner ad in error state
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+            child: const SimpleBannerAd(),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  final isAdmin = currentUser?.isAdmin == true;
+  final canSeeDetails = isAdmin || member.showDetailedProfile;
+  final isVirtualUser = member.isVirtualUser;
+
+  return Scaffold(
+    backgroundColor: AppColors.background(context),
+    appBar: AppBar(
+      toolbarHeight: 80,
+      title: const Text(
+        'Member Details',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient(context),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
+      ),
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back,
+          size: 24,
+          color: Colors.white,
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+    body: Column(
+      children: [
+        // Main content
+        Expanded(
+          child: SmartRefresher(
+            controller: _refreshController,
+            onRefresh: _onRefresh,
+            enablePullDown: true,
+            enablePullUp: false,
+            physics: const BouncingScrollPhysics(),
+            header: ClassicHeader(
+              idleText: 'Pull down to refresh',
+              releaseText: 'Release to refresh',
+              refreshingText: 'Refreshing...',
+              completeText: 'Refresh complete',
+              failedText: 'Refresh failed',
+              idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+              releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+              refreshingIcon: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+                ),
+              ),
+              completeIcon: Icon(Icons.check, color: Colors.green),
+              failedIcon: Icon(Icons.error, color: Colors.red),
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Profile Header Card
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _buildProfileHeaderCard(member, isAdmin, isVirtualUser),
+                  ),
+
+                  // Virtual User Info Card (if virtual user)
+                  if (isVirtualUser)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _buildVirtualUserInfoCard(member),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Member Information
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _buildMemberInfoCard(member, canSeeDetails, isAdmin, isVirtualUser),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Participation History (Only if detailed profile enabled and not virtual user)
+                  if (canSeeDetails) 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _buildParticipationHistoryCard(memberProvider),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Contribution History (Only if detailed profile enabled and not virtual user)
+                  if (canSeeDetails) 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _buildContributionHistoryCard(memberProvider),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Privacy Notice (if details are hidden)
+                  if (!canSeeDetails && !isAdmin && !isVirtualUser) 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildPrivacyNotice(),
+                    ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+        
+        // Banner ad
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    ),
+  );
+}
 
   // Profile Header Card (Horizontal Rectangle)
   Widget _buildProfileHeaderCard(UserModel member, bool isAdmin, bool isVirtualUser) {

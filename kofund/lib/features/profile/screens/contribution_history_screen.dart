@@ -17,7 +17,7 @@ import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
-
+import 'package:kofund/ads/simple_banner_ad.dart';
 // Move ChangeEntry to top level
 class ChangeEntry {
   final String fieldName;
@@ -299,52 +299,127 @@ HistoryItem _convertToHistoryItem(Map<String, dynamic> contribution, String user
     );
   }
 
-  Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvider, UserModel? currentUser) {
-    // Show loading on initial load
-      if (_isInitialLoad) {
-    return ContributionHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark);
-  }
+Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvider, UserModel? currentUser) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Add this
 
-    // Check if user is not logged in
-    if (currentUser == null) {
-      return _buildAuthRequiredState();
-    }
-
-    // Show provider loading state
-    if (profileProvider.isLoading) {
-      return const LoadingIndicator();
-    }
-
-    // Show provider error state
-    if (profileProvider.error != null) {
-      return _buildErrorState(profileProvider.error!);
-    }
-
-    final contributionHistory = profileProvider.contributionHistory;
-
-    // Check if no contributions
-    if (contributionHistory.isEmpty) {
-      return _buildEmptyState();
-    }
-
+  // Show loading on initial load
+  if (_isInitialLoad) {
     return Column(
       children: [
-        _buildStatsCards(contributionHistory),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            itemCount: contributionHistory.length,
-          // In your list builder, add debug logging:
-itemBuilder: (context, index) {
-  final contribution = contributionHistory[index];
-  _debugContributionData(contribution); // Add this line
-  return _buildContributionListItem(contribution, authProvider);
-},
+          child: ContributionHistorySkeleton(
+            isDarkMode: Theme.of(context).brightness == Brightness.dark
           ),
+        ),
+        // Banner ad in loading state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
         ),
       ],
     );
   }
+
+  // Check if user is not logged in
+  if (currentUser == null) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildAuthRequiredState(),
+        ),
+        // Banner ad in auth required state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  // Show provider loading state
+  if (profileProvider.isLoading) {
+    return Column(
+      children: [
+        Expanded(
+          child: const LoadingIndicator(),
+        ),
+        // Banner ad in loading state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  // Show provider error state
+  if (profileProvider.error != null) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildErrorState(profileProvider.error!),
+        ),
+        // Banner ad in error state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  final contributionHistory = profileProvider.contributionHistory;
+
+  // Check if no contributions
+  if (contributionHistory.isEmpty) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildEmptyState(),
+        ),
+        // Banner ad in empty state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  return Column(
+    children: [
+      _buildStatsCards(contributionHistory),
+      Expanded(
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          itemCount: contributionHistory.length,
+          itemBuilder: (context, index) {
+            final contribution = contributionHistory[index];
+            _debugContributionData(contribution);
+            return _buildContributionListItem(contribution, authProvider);
+          },
+        ),
+      ),
+      // Banner ad in content state
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+        child: const SimpleBannerAd(),
+      ),
+    ],
+  );
+}
 
   Widget _buildAuthRequiredState() {
     return Center(

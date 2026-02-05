@@ -10,7 +10,7 @@ import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
-
+import 'package:kofund/ads/simple_banner_ad.dart';
 class ParticipationHistoryScreen extends StatefulWidget {
   const ParticipationHistoryScreen({super.key});
 
@@ -133,31 +133,87 @@ appBar: AppBar(
     );
   }
 
-  Widget _buildContent(
-    ProfileProvider profileProvider,
-    List<Map<String, dynamic>> participationHistory,
-  ) {
-    if (profileProvider.isLoading) {
-      return ParticipationHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark);
-    }
+Widget _buildContent(
+  ProfileProvider profileProvider,
+  List<Map<String, dynamic>> participationHistory,
+) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Add this
 
-    if (profileProvider.error != null) {
-      return _buildErrorState(profileProvider.error!);
-    }
-
-    if (participationHistory.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(8), // ✅ Padding 8px only
-      itemCount: participationHistory.length,
-      itemBuilder: (context, index) {
-        final participation = participationHistory[index];
-        return _buildParticipationCard(participation);
-      },
+  if (profileProvider.isLoading) {
+    return Column(
+      children: [
+        Expanded(
+          child: ParticipationHistorySkeleton(
+            isDarkMode: isDarkMode,
+          ),
+        ),
+        // Banner ad in loading state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
     );
   }
+
+  if (profileProvider.error != null) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildErrorState(profileProvider.error!),
+        ),
+        // Banner ad in error state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  if (participationHistory.isEmpty) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildEmptyState(),
+        ),
+        // Banner ad in empty state
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+          child: const SimpleBannerAd(),
+        ),
+      ],
+    );
+  }
+
+  return Column(
+    children: [
+      Expanded(
+        child: ListView.builder(
+          padding: const EdgeInsets.all(8), // ✅ Padding 8px only
+          itemCount: participationHistory.length,
+          itemBuilder: (context, index) {
+            final participation = participationHistory[index];
+            return _buildParticipationCard(participation);
+          },
+        ),
+      ),
+      // Banner ad in content state
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+        child: const SimpleBannerAd(),
+      ),
+    ],
+  );
+}
 
   Widget _buildParticipationCard(Map<String, dynamic> participation) {
     final programTitle = participation['programTitle'] ?? 'Unnamed Program';

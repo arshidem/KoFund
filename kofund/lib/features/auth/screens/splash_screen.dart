@@ -163,7 +163,7 @@ class _SplashScreenState extends State<SplashScreen> {
 /// Main initialization with timeout
 Future<void> _initializeAppWithTimeout() async {
   try {
-    _updateStatus('Starting app...');
+    _updateStatus('');
     
     final authProvider = Provider.of<app_auth.AppAuthProvider>(context, listen: false);
     
@@ -219,7 +219,7 @@ Future<void> _performInitialization(app_auth.AppAuthProvider authProvider) async
       return;
     }
     
-    _updateStatus('Checking account...');
+    _updateStatus('');
     
     // ⭐ NEW LOGIC: Only check email verification if user has no community
     if (user.communityId == null || user.communityId!.isEmpty) {

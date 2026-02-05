@@ -1,0 +1,13 @@
+flutter_launcher_icons:
+  android: true
+  ios: false
+
+  image_path: assets/logos/KoFund.png
+
+  adaptive_icon_background: "#00BFA6"
+  adaptive_icon_foreground: assets/logos/KoFund.png
+
+  web:
+    generate: true
+    image_path: assets/logos/KoFund.png
+    background_color: "#00BFA6"

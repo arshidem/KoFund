@@ -7,6 +7,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../screens/join_community_screen.dart';
+import 'package:flutter/services.dart';
 class PendingApprovalScreen extends StatefulWidget {
   const PendingApprovalScreen({super.key});
 
@@ -97,9 +98,41 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     final authProvider = Provider.of<AppAuthProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pending Approval'),
+     appBar: AppBar(
+  toolbarHeight: 80,
+  title: const Text(
+    'Pending Approval',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  centerTitle: true,
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 0,
+  automaticallyImplyLeading: false, // This removes the default back button
+  systemOverlayStyle: SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.background(context),
+    systemNavigationBarIconBrightness:
+        Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: AppColors.primaryGradient(context),
+      borderRadius: const BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        bottomRight: Radius.circular(20),
       ),
+    ),
+  ),
+),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -112,6 +145,8 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Status Icon
+                                            const SizedBox(height: 30),
+
                       Container(
                         width: 120,
                         height: 120,

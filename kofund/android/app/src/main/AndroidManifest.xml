@@ -55,7 +55,7 @@
     <application
         android:name="${applicationName}"
         android:label="KoFund"
-        android:icon="@mipmap/launcher_icon"
+        android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:theme="@style/LaunchTheme">
