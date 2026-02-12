@@ -174,7 +174,8 @@ Widget build(BuildContext context) {
                 pinned: true,
                 delegate: _PinnedStatsHeaderDelegate(
                   minExtent: 120, // adjust as needed
-                  maxExtent: 185, // adjust as needed
+                  // Increase maxExtent to prevent content overflow on smaller devices
+                  maxExtent: 200,
                   child: _buildContributionSummary(context),
                 ),
               ),

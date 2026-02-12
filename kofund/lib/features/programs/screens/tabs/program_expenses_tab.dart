@@ -565,23 +565,34 @@ Widget _buildExpenseSummary(BuildContext context) {
                         fontSize: 11,
                       ),
                     ),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.receipt_long,
-                          color: AppColors.textCards(context),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${expenses.length} expenses',
-                          style: TextStyle(
-                            color: AppColors.textCards(context),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 2),
+                    Text(
+                      "All Time Summary",
+                      style: TextStyle(
+                        color: AppColors.textCards(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Top-right icon + count (mirrors contributions card)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      color: AppColors.textCards(context),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${expenses.length}',
+                      style: TextStyle(
+                        color: AppColors.textCards(context),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

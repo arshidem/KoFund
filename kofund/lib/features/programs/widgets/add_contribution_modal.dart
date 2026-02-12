@@ -52,6 +52,14 @@ int get _displayCurrentStep {
   bool _isMonthlyProgram = false;
   String? _selectedMonth;
   List<String> _availableMonths = [];
+  // Search
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  // Cache users future to avoid reloading on each setState
+  Future<List<UserModel>>? _usersFuture;
+  String? _lastCommunityId;
+  // Amount controller to allow programmatic updates (auto-fill)
+  late TextEditingController _amountController;
 // Add these to your _AddContributionModalState class variables
 int _currentDisplayYear = DateTime.now().year;
 bool _showMonthSelector = true; // Set to true to show by default for monthly programs
@@ -137,6 +145,7 @@ void _goToNextYear() {
 @override
 void initState() {
   super.initState();
+  _amountController = TextEditingController();
   
   // If program is pre-selected, mark that we need to skip initial step
   if (widget.preSelectedProgramId != null) {
@@ -152,6 +161,13 @@ void initState() {
       _initializeMonths();
     }
   }
+}
+
+@override
+void dispose() {
+  _searchController.dispose();
+  _amountController.dispose();
+  super.dispose();
 }
 
 
@@ -669,8 +685,14 @@ Widget _buildProgramSelectionStep(String communityId) {
   }
 
   Widget _buildUserList(String communityId) {
+    // Cache the future so typing in the search field doesn't re-trigger the network call
+    if (_usersFuture == null || _lastCommunityId != communityId) {
+      _lastCommunityId = communityId;
+      _usersFuture = _userService.getUsersByCommunity(communityId);
+    }
+
     return FutureBuilder<List<UserModel>>(
-      future: _userService.getUsersByCommunity(communityId),
+      future: _usersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -683,21 +705,42 @@ Widget _buildProgramSelectionStep(String communityId) {
         }
 
         final users = snapshot.data ?? [];
-        final filteredUsers = users.where((user) => user.isApproved).toList();
+        var filteredUsers = users.where((user) => user.isApproved).toList();
+        if (_searchQuery.isNotEmpty) {
+          filteredUsers = filteredUsers.where((user) {
+            final name = (user.displayName ?? '').toLowerCase();
+            final email = (user.email ?? '').toLowerCase();
+            return name.contains(_searchQuery) || email.contains(_searchQuery);
+          }).toList();
+        }
 
         return Column(
           children: [
             // Search bar
             TextField(
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search members...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
               ),
               onChanged: (value) {
-                // Implement search functionality
+                setState(() {
+                  _searchQuery = value.trim().toLowerCase();
+                });
               },
             ),
             const SizedBox(height: 16),
@@ -745,14 +788,7 @@ Widget _buildProgramSelectionStep(String communityId) {
   }
 
 Widget _buildContributionDetailsStep() {
-  // Auto-fill amount with suggested contribution
-  if (_amount == 0 && _selectedProgram != null && _selectedProgram!.suggestedContribution != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _amount = _selectedProgram!.suggestedContribution!;
-      });
-    });
-  }
+  // auto-fill handled via controller when program is selected
 
   return SingleChildScrollView(
     child: Column(
@@ -776,55 +812,123 @@ Widget _buildContributionDetailsStep() {
         ),
         const SizedBox(height: 20),
 
-        // ✅ ADD: Month selector for monthly programs (ALWAYS SHOW IF MONTHLY PROGRAM)
-        if (_isMonthlyProgram && _availableMonths.isNotEmpty) ...[
-          _buildMonthGridSelector(context),
+        // For monthly programs show Amount + Payment Method in one row above month grid
+        if (_isMonthlyProgram) ...[
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Amount',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    suffix: _selectedProgram?.suggestedContribution != null
+                        ? Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Text(
+                              'Suggested: ₹${_selectedProgram!.suggestedContribution}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  keyboardType: TextInputType.number,
+                  controller: _amountController,
+                  onChanged: (value) {
+                    setState(() {
+                      _amount = double.tryParse(value) ?? 0;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: DropdownButtonFormField<String>(
+                  value: _paymentMethod,
+                  decoration: InputDecoration(
+                    labelText: 'Payment',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: _paymentMethods.map((method) {
+                    return DropdownMenuItem(
+                      value: method,
+                      child: Text(method[0].toUpperCase() + method.substring(1)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _paymentMethod = value!;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_availableMonths.isNotEmpty) _buildMonthGridSelector(context),
+          const SizedBox(height: 16),
+        ] else ...[
+          // Non-monthly: amount first then payment method (single column)
+          TextFormField(
+            controller: _amountController,
+            decoration: InputDecoration(
+              labelText: 'Amount',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              suffix: _selectedProgram?.suggestedContribution != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        'Suggested: ₹${_selectedProgram!.suggestedContribution}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              setState(() {
+                _amount = double.tryParse(value) ?? 0;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _paymentMethod,
+            decoration: InputDecoration(
+              labelText: 'Payment Method',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: _paymentMethods.map((method) {
+              return DropdownMenuItem(
+                value: method,
+                child: Text(method[0].toUpperCase() + method.substring(1)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _paymentMethod = value!;
+              });
+            },
+          ),
           const SizedBox(height: 16),
         ],
-
-        // Amount input
-        TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Amount',
-            prefixText: '₹ ',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            suffixText: _selectedProgram?.suggestedContribution != null 
-                ? 'Suggested: ₹${_selectedProgram!.suggestedContribution}'
-                : null,
-          ),
-          keyboardType: TextInputType.number,
-          initialValue: _amount > 0 ? _amount.toString() : null,
-          onChanged: (value) {
-            setState(() {
-              _amount = double.tryParse(value) ?? 0;
-            });
-          },
-        ),
-        const SizedBox(height: 16),
-
-        // Payment method dropdown
-        DropdownButtonFormField<String>(
-          initialValue: _paymentMethod,
-          decoration: InputDecoration(
-            labelText: 'Payment Method',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          items: _paymentMethods.map((method) {
-            return DropdownMenuItem(
-              value: method,
-              child: Text(method[0].toUpperCase() + method.substring(1)),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _paymentMethod = value!;
-            });
-          },
-        ),
         const SizedBox(height: 20),
 
         // Summary

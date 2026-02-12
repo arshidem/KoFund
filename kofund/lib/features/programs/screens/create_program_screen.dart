@@ -177,20 +177,54 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
     }
   }
 
-  void _handleParticipantTypeChange(String value) {
+  void _handleParticipantTypeChange(String newType) {
     setState(() {
-      _participantType = value;
+      _participantType = newType;
       _lastEditedField = 'none';
-      
-      if (value == 'fixed') {
-        if (_maxParticipantsController.text.isEmpty) {
-          _maxParticipantsController.text = '50';
-        }
-        if (_contributionController.text.isNotEmpty) {
-          _recalculateFromContribution();
+    });
+
+    // Only perform calculations when switching to 'fixed' type
+    if (newType == 'fixed') {
+      _isUpdating = true;
+
+      final hasContribution = _contributionController.text.isNotEmpty &&
+          double.tryParse(_contributionController.text) != null;
+      final hasTotalAmount = _totalProgramAmountController.text.isNotEmpty &&
+          double.tryParse(_totalProgramAmountController.text) != null;
+      final hasParticipants = _maxParticipantsController.text.isNotEmpty &&
+          int.tryParse(_maxParticipantsController.text) != null;
+
+      // Case 1: We have total amount and participants -> calculate contribution
+      if (hasTotalAmount && hasParticipants) {
+        final total = double.parse(_totalProgramAmountController.text);
+        final participants = int.parse(_maxParticipantsController.text);
+        if (total > 0 && participants > 0) {
+          final contribution = total / participants;
+          final roundedContribution = (contribution * 100).round() / 100;
+          _contributionController.removeListener(_onContributionChanged);
+          _contributionController.text = roundedContribution.toStringAsFixed(
+            roundedContribution.truncateToDouble() == roundedContribution ? 0 : 2
+          );
+          _contributionController.addListener(_onContributionChanged);
         }
       }
-    });
+      // Case 2: We have contribution and participants -> calculate total
+      else if (hasContribution && hasParticipants) {
+        final contribution = double.parse(_contributionController.text);
+        final participants = int.parse(_maxParticipantsController.text);
+        if (contribution > 0 && participants > 0) {
+          final totalAmount = contribution * participants;
+          _totalProgramAmountController.removeListener(_onTotalAmountChanged);
+          _totalProgramAmountController.text = totalAmount.toStringAsFixed(0);
+          _totalProgramAmountController.addListener(_onTotalAmountChanged);
+        }
+      }
+      // Case 3: We have only total amount -> keep as is
+      // Case 4: We have only contribution -> keep as is
+      // Case 5: We have neither -> leave empty
+
+      _isUpdating = false;
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -240,6 +274,11 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
       LengthLimitingTextInputFormatter(maxLength),
     ];
 
+    // Only add asterisk to label if isRequired is true and label does not already have one
+    String displayLabel = label;
+    if (isRequired && !label.trim().endsWith('*')) {
+      displayLabel = '$label *';
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -258,7 +297,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
             fontSize: 14,
           ),
           decoration: InputDecoration(
-            labelText: isRequired ? '$label *' : label,
+            labelText: displayLabel,
             labelStyle: TextStyle(
               color: AppColors.textSecondary(context),
               fontSize: 14,
@@ -306,7 +345,6 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
             counterText: '', // Always hide default counter
           ),
         ),
-        
         // Custom character counter - ONLY shown for title field
         if (showCharacterCounter)
           Padding(
@@ -320,7 +358,6 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                   final remaining = maxLength - currentLength;
                   final hasText = currentLength > 0;
                   final isFocused = focusNode?.hasFocus ?? false;
-                  
                   if (isFocused || hasText) {
                     return Text(
                       '$currentLength/$maxLength',
@@ -767,6 +804,43 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         automaticallyImplyLeading: true,
+        actions: [
+          StatefulBuilder(
+            builder: (context, setState) {
+              return _isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: StreamBuilder<bool>(
+                        stream: NetworkService().onConnectionChanged,
+                        initialData: true,
+                        builder: (context, snapshot) {
+                          final bool isOnline = snapshot.data ?? true;
+                          return IconButton(
+                            icon: isOnline
+                                ? const Icon(Icons.check, color: Colors.white, size: 26)
+                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                            tooltip: isOnline 
+                                ? 'Create Program'
+                                : 'Offline - No Connection',
+                            onPressed: isOnline ? _createProgram : null,
+                          );
+                        },
+                      ),
+                    );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -844,23 +918,23 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                       // 4. Suggested Contribution
                       _buildInputField(
                         controller: _contributionController,
-                        label: _participantType == 'fixed' 
-                            ? 'Suggested Contribution' 
+                        label: (_participantType == 'fixed' || _isMonthlyPaymentProgram)
+                            ? 'Suggested Contribution'
                             : 'Suggested Contribution (Optional)',
                         icon: Icons.currency_rupee,
-                        hint: _participantType == 'fixed'
+                        hint: (_participantType == 'fixed' || _isMonthlyPaymentProgram)
                             ? 'e.g., 500, 1000, 2000'
                             : 'e.g., 500, 1000, 2000 (optional)',
                         maxLength: 10,
                         showCharacterCounter: false, // No counter
                         focusNode: _contributionFocusNode,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        isRequired: _participantType == 'fixed',
+                        isRequired: _participantType == 'fixed' || _isMonthlyPaymentProgram,
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                         ],
                         validator: (value) {
-                          if (_participantType == 'fixed') {
+                          if (_isMonthlyPaymentProgram || _participantType == 'fixed') {
                             if (value == null || value.isEmpty) {
                               return 'Please enter contribution amount';
                             }
@@ -885,9 +959,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                       if (!_isMonthlyPaymentProgram)
                         _buildInputField(
                           controller: _totalProgramAmountController,
-                          label: _participantType == 'fixed' 
-                              ? 'Total Program Amount' 
-                              : 'Total Program Amount *',
+                          label: _participantType == 'unlimited' ? 'Total Program Amount *' : 'Total Program Amount',
                           icon: Icons.currency_rupee,
                           hint: _participantType == 'fixed'
                               ? 'e.g., 50000, 100000 (auto-calculates contribution)'
@@ -1032,91 +1104,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
                       const SizedBox(height: 20),
 
-                      // 9. Create Button
-                      FutureBuilder<bool>(
-                        future: NetworkService().isConnected,
-                        builder: (context, snapshot) {
-                          final bool isOnline = snapshot.data ?? true;
-                          
-                          return StreamBuilder<bool>(
-                            stream: NetworkService().onConnectionChanged,
-                            builder: (context, streamSnapshot) {
-                              final bool currentIsOnline = streamSnapshot.data ?? isOnline;
-                              final bool isDisabled = _isLoading || !currentIsOnline;
-                              
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  SizedBox(
-                                    height: 52,
-                                    child: ElevatedButton(
-                                      onPressed: isDisabled ? null : _createProgram,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary(context),
-                                        foregroundColor: Colors.white,
-                                        disabledBackgroundColor:
-                                            AppColors.primary(context).withValues(alpha: 0.5),
-                                        disabledForegroundColor: Colors.white70,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                      ),
-                                      child: _isLoading
-                                          ? const SizedBox(
-                                              height: 22,
-                                              width: 22,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.5,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  currentIsOnline ? Icons.add_circle_outline : Icons.wifi_off,
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Text(
-                                                  currentIsOnline ? 'Create Program' : 'Offline',
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                    ),
-                                  ),
-                                  
-                                  if (!currentIsOnline)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Row(
-                                        children: const [
-                                          Icon(
-                                            Icons.info_outline,
-                                            size: 14,
-                                            color: Colors.redAccent,
-                                          ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Internet connection required',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.redAccent,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                      ),
+                      // ...existing code...
                     ],
                   ),
                 ),

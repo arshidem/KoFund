@@ -885,13 +885,16 @@ class _HistoryTile extends StatelessWidget {
             itemData = await _fetchExpenseData(item.id);
           }
           
-          // Show bottom sheet
+          // Show bottom sheet: start at 50% height, allow expanding to 90%
           showModalBottomSheet(
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
             context: context,
+            isScrollControlled: true,
             builder: (_) {
+              // _BottomDetails contains a DraggableScrollableSheet that will
+              // control initial/min/max sizes (50% -> 90%).
               return _BottomDetails(
                 item: item,
                 currentUid: currentUid,
@@ -1025,9 +1028,9 @@ Widget build(BuildContext context) {
     expand: false,
     snap: true,
     snapSizes: const [0.4, 0.6, 0.9],
-    initialChildSize: 1.0,
+    initialChildSize: .6,
     minChildSize: 0.4,
-    maxChildSize: 1.0,
+    maxChildSize: 0.9,
     builder: (context, scrollController) {
       return Container(
         decoration: BoxDecoration(
