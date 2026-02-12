@@ -28,10 +28,13 @@ class EditProgramScreen extends StatefulWidget {
 class _EditProgramScreenState extends State<EditProgramScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
+  // Remove description and location controllers
   final TextEditingController _suggestedContributionController = TextEditingController();
   final TextEditingController _totalProgramAmountController = TextEditingController();
+  final TextEditingController _maxParticipantsController = TextEditingController();
+
+  // For auto-calculation
+    // final TextEditingController _maxParticipantsController = TextEditingController(); // Already declared above
   final TextEditingController _maxParticipantsController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
@@ -64,12 +67,11 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
     final program = widget.program;
     
     _titleController.text = program.title;
-    _descriptionController.text = program.description;
-    _locationController.text = program.location;
+    // Remove description and location initialization
     _selectedDate = program.programDate;
     _programType = program.programType;
     _participantType = program.participantType;
-    _isMonthlyPaymentProgram = program.isMonthlyPaymentProgram;
+      // _maxParticipantsController.text = program.maxParticipants.toString(); // Removed as it was using a removed controller
 
     if (program.suggestedContribution != null) {
       _suggestedContributionController.text = program.suggestedContribution!.toStringAsFixed(2);
@@ -78,15 +80,14 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
     if (program.totalProgramAmount != null) {
       _totalProgramAmountController.text = program.totalProgramAmount!.toStringAsFixed(2);
     }
-
+      // _maxParticipantsController.dispose(); // Removed as it was using a removed controller
     _maxParticipantsController.text = program.maxParticipants.toString();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
-    _locationController.dispose();
+    // Remove description and location dispose
     _suggestedContributionController.dispose();
     _totalProgramAmountController.dispose();
     _maxParticipantsController.dispose();
@@ -710,101 +711,36 @@ Widget _buildInputField({
                       const SizedBox(height: 12),
 
                       // Program Title
-               // Program Title
-// Program Title
-_buildInputField(
-  controller: _titleController,
-  label: 'Program Title',
-  icon: Icons.event,
-  hint: 'e.g., Monthly Savings, Trip to Goa, Birthday Fund',
-  isRequired: true,
-  maxLength: 50,
-  showCharacterCounter: true, // Add this line
-  validator: (value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a program title';
-    }
-    final alphabetCount = value.replaceAll(RegExp(r'[^a-zA-Z]'), '').length;
-    if (alphabetCount < 3) {
-      return 'Title must have at least 3 alphabet characters';
-    }
-    return null;
-  },
-),
+                      _buildInputField(
+                        controller: _titleController,
+                        label: 'Program Title',
+                        icon: Icons.event,
+                        hint: 'e.g., Monthly Savings, Trip to Goa, Birthday Fund',
+                        isRequired: true,
+                        maxLength: 50,
+                        showCharacterCounter: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a program title';
+                          }
+                          final alphabetCount = value.replaceAll(RegExp(r'[^a-zA-Z]'), '').length;
+                          if (alphabetCount < 3) {
+                            return 'Title must have at least 3 alphabet characters';
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 12),
 
                       // Program Type Dropdown
                       _buildProgramTypeDropdown(),
-
                       const SizedBox(height: 12),
-
-               
 
                       // Program Date (Only show for non-monthly programs)
                       if (!_isMonthlyPaymentProgram) ...[
                         _buildDatePickerField(),
+                        const SizedBox(height: 12),
                       ],
-
-                      // Description
-                      _buildInputField(
-                        controller: _descriptionController,
-                        label: 'Description',
-                        icon: Icons.description,
-                        hint: 'Describe the program purpose, activities, rules...',
-                        maxLines: 3,
-                        maxLength: 200,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Location
-                      _buildInputField(
-                        controller: _locationController,
-                        label: 'Location',
-                        icon: Icons.location_on,
-                         maxLength: 20,
-                        hint: 'e.g., Community Hall, Online Meeting, Resort Name',
-                        validator: (value) {
-                          // Location is optional, no validation needed
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Suggested Contribution
-                      _buildInputField(
-                        controller: _suggestedContributionController,
-                        label: 'Suggested Contribution',
-                        icon: Icons.currency_rupee,
-                        hint: 'e.g., 500, 1000, 2000',
-                        maxLength: 10,
-                        keyboardType: TextInputType.number,
-                        isRequired: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter contribution amount';
-                          }
-                          final amount = double.tryParse(value);
-                          if (amount == null || amount <= 0) {
-                            return 'Please enter a valid amount';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Total Program Amount (Only show for non-monthly programs)
-                      if (!_isMonthlyPaymentProgram)
-                        _buildInputField(
-                          controller: _totalProgramAmountController,
-                          label: 'Total Program Amount',
-                          maxLength: 10,
-                          icon: Icons.currency_rupee,
-                          hint: 'e.g., 50000, 100000 (optional)',
-                          keyboardType: TextInputType.number,
-                       
-                        ),
-
-                      if (!_isMonthlyPaymentProgram) const SizedBox(height: 12),
 
                       // Participant Type Selection
                       Container(
@@ -849,7 +785,12 @@ _buildInputField(
                                     value: 'fixed',
                                     groupValue: _participantType,
                                     activeColor: AppColors.primary(context),
-                                    onChanged: (value) => setState(() => _participantType = value!),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _participantType = value!;
+                                        if (_isAutoCalculate) _autoCalculateSuggestedAmount();
+                                      });
+                                    },
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                                   ),
                                 ),
@@ -872,7 +813,12 @@ _buildInputField(
                                     value: 'unlimited',
                                     groupValue: _participantType,
                                     activeColor: AppColors.primary(context),
-                                    onChanged: (value) => setState(() => _participantType = value!),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _participantType = value!;
+                                        if (_isAutoCalculate) _autoCalculateSuggestedAmount();
+                                      });
+                                    },
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                                   ),
                                 ),
@@ -908,8 +854,82 @@ _buildInputField(
                             }
                             return null;
                           },
+                          // Add onChanged for auto-calc
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                         ),
+                      if (_participantType == 'fixed') const SizedBox(height: 12),
 
+                      // Total Program Amount (auto-calc toggle)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInputField(
+                              controller: _totalProgramAmountController,
+                              label: 'Total Program Amount',
+                              maxLength: 10,
+                              icon: Icons.currency_rupee,
+                              hint: 'e.g., 50000, 100000',
+                              keyboardType: TextInputType.number,
+                              isRequired: true,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter total program amount';
+                                }
+                                final amount = double.tryParse(value);
+                                if (amount == null || amount <= 0) {
+                                  return 'Please enter a valid amount';
+                                }
+                                return null;
+                              },
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            children: [
+                              Checkbox(
+                                value: _isAutoCalculate,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _isAutoCalculate = val ?? true;
+                                    if (_isAutoCalculate) _autoCalculateSuggestedAmount();
+                                  });
+                                },
+                              ),
+                              const Text('Auto', style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Suggested Contribution (auto-calculated if enabled)
+                      _buildInputField(
+                        controller: _suggestedContributionController,
+                        label: 'Suggested Contribution',
+                        icon: Icons.currency_rupee,
+                        hint: 'e.g., 500, 1000, 2000',
+                        maxLength: 10,
+                        keyboardType: TextInputType.number,
+                        isRequired: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter contribution amount';
+                          }
+                          final amount = double.tryParse(value);
+                          if (amount == null || amount <= 0) {
+                            return 'Please enter a valid amount';
+                          }
+                          return null;
+                        },
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                        ],
+                      ),
                       const SizedBox(height: 16),
 
                       // 🆕 Reactivate Info (only for completed/cancelled programs)
@@ -918,8 +938,9 @@ _buildInputField(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-color: Colors.green.withValues(alpha: 0.1),                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withOpacity(0.3)),
                           ),
                           child: Row(
                             children: [
@@ -939,8 +960,7 @@ color: Colors.green.withValues(alpha: 0.1),                            borderRad
                         ),
 
                       // Action Buttons
-                   // Action Button (without cancel button)
-
+                      // ...existing code...
                     ],
                   ),
                 ),
@@ -950,6 +970,31 @@ color: Colors.green.withValues(alpha: 0.1),                            borderRad
         ),
       ),
     );
+    // Auto-calculate suggested amount
+    void _autoCalculateSuggestedAmount() {
+      if (!_isAutoCalculate) return;
+      final total = double.tryParse(_totalProgramAmountController.text);
+      final max = int.tryParse(_maxParticipantsController.text);
+      if (total != null && max != null && max > 0) {
+        final perPerson = (total / max).ceil();
+        _suggestedContributionController.text = perPerson.toString();
+      }
+    }
+
+    @override
+    void didChangeDependencies() {
+      super.didChangeDependencies();
+      // Add listeners for auto-calc
+      _totalProgramAmountController.addListener(_autoCalculateSuggestedAmount);
+      _maxParticipantsController.addListener(_autoCalculateSuggestedAmount);
+    }
+
+    @override
+    void deactivate() {
+      _totalProgramAmountController.removeListener(_autoCalculateSuggestedAmount);
+      _maxParticipantsController.removeListener(_autoCalculateSuggestedAmount);
+      super.deactivate();
+    }
   }
 
   Widget _buildProgramStatusWarning(bool isCompleted) {
