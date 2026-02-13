@@ -41,7 +41,7 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
   String _lastEditedField = 'none';
   bool _isUpdating = false;
 
-  DateTime _selectedDate = DateTime.now();
+  DateTime? _selectedDate;
   String? _programType;
   String _participantType = 'fixed';
   bool _isLoading = false;
@@ -507,22 +507,30 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
     }
 
     // For non-monthly programs, validate date
-    if (!_isMonthlyPaymentProgram) {
-      final today = DateTime.now();
-      final todayOnly = DateTime(today.year, today.month, today.day);
-      final selectedOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-      
-      if (selectedOnly.isBefore(todayOnly) || selectedOnly.isAtSameMomentAs(todayOnly)) {
-        setState(() {
-          if (selectedOnly.isBefore(todayOnly)) {
-            _dateError = 'Cannot select a past date';
-          } else {
-            _dateError = 'Program date must be at least 1 day from today';
-          }
-        });
-        hasErrors = true;
-      }
+// ✅ Fix: For non-monthly programs, validate date is not null and is valid
+if (!_isMonthlyPaymentProgram) {
+  if (_selectedDate == null) {
+    setState(() {
+      _dateError = 'Please select a program date';
+    });
+    hasErrors = true;
+  } else {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final selectedOnly = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+    
+    if (selectedOnly.isBefore(todayOnly) || selectedOnly.isAtSameMomentAs(todayOnly)) {
+      setState(() {
+        if (selectedOnly.isBefore(todayOnly)) {
+          _dateError = 'Cannot select a past date';
+        } else {
+          _dateError = 'Program date must be at least 1 day from today';
+        }
+      });
+      hasErrors = true;
     }
+  }
+}
 
     return !hasErrors;
   }
@@ -652,132 +660,136 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
     );
   }
 
-  Widget _buildDatePickerField() {
-    // Helper method to check if date is valid
-    String? _validateDate(DateTime date) {
-      final today = DateTime.now();
-      final todayOnly = DateTime(today.year, today.month, today.day);
-      final selectedOnly = DateTime(date.year, date.month, date.day);
-      
-      if (selectedOnly.isBefore(todayOnly)) {
-        return 'Cannot select a past date';
-      }
-      if (selectedOnly.isAtSameMomentAs(todayOnly)) {
-        return 'Program date must be at least 1 day from today';
-      }
-      return null;
+Widget _buildDatePickerField() {
+  // Helper method to check if date is valid
+  String? _validateDate(DateTime? date) {
+    if (date == null) return null;
+    
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final selectedOnly = DateTime(date.year, date.month, date.day);
+    
+    if (selectedOnly.isBefore(todayOnly)) {
+      return 'Cannot select a past date';
     }
+    if (selectedOnly.isAtSameMomentAs(todayOnly)) {
+      return 'Program date must be at least 1 day from today';
+    }
+    return null;
+  }
 
-    // Check for current error
-    final currentDateError = _validateDate(_selectedDate);
+  // Check for current error
+  final currentDateError = _dateError ?? _validateDate(_selectedDate);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: AppColors.surface(context),
-            border: Border.all(
-              color: currentDateError != null 
-                  ? Colors.red.withValues(alpha: 0.8) 
-                  : AppColors.border(context),
-              width: currentDateError != null ? 1.5 : 1,
-            ),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface(context),
+          border: Border.all(
+            color: currentDateError != null 
+                ? Colors.red.withValues(alpha: 0.8) 
+                : AppColors.border(context),
+            width: currentDateError != null ? 1.5 : 1,
           ),
-          child: ListTile(
-            onTap: () => _selectDate(context),
-            leading: Icon(
-              Icons.calendar_today,
-              color: currentDateError != null 
-                  ? Colors.red 
-                  : AppColors.primary(context),
-              size: 20,
-            ),
-            title: Text(
-              'Program Date *',
-              style: TextStyle(
-                fontSize: 14,
-                color: currentDateError != null 
-                    ? Colors.red 
-                    : AppColors.textSecondary(context),
-              ),
-            ),
-            subtitle: Text(
-              DateFormat('MMM dd, yyyy').format(_selectedDate),
-              style: TextStyle(
-                fontSize: 15,
-                color: currentDateError != null 
-                    ? Colors.red.withValues(alpha: 0.8) 
-                    : AppColors.textPrimary(context),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            trailing: Icon(
-              Icons.arrow_drop_down,
+        ),
+        child: ListTile(
+          onTap: () => _selectDate(context),
+          leading: Icon(
+            Icons.calendar_today,
+            color: currentDateError != null 
+                ? Colors.red 
+                : AppColors.primary(context),
+            size: 20,
+          ),
+          title: Text(
+            'Program Date *',
+            style: TextStyle(
+              fontSize: 14,
               color: currentDateError != null 
                   ? Colors.red 
                   : AppColors.textSecondary(context),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          subtitle: Text(
+            _selectedDate != null
+                ? DateFormat('MMM dd, yyyy').format(_selectedDate!)
+                : 'Select a date',
+            style: TextStyle(
+              fontSize: 15,
+              color: currentDateError != null 
+                  ? Colors.red.withValues(alpha: 0.8) 
+                  : AppColors.textPrimary(context),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          trailing: Icon(
+            Icons.arrow_drop_down,
+            color: currentDateError != null 
+                ? Colors.red 
+                : AppColors.textSecondary(context),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+      
+      if (currentDateError != null)
+        Padding(
+          padding: const EdgeInsets.only(left: 6, top: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 14,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                currentDateError,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+              ),
+            ],
           ),
         ),
-        
-        if (currentDateError != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 6, top: 4),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  currentDateError,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+      const SizedBox(height: 16),
+    ],
+  );
+}
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary(context),
-              onPrimary: Colors.white,
-              onSurface: AppColors.textPrimary(context),
-            ),
-            dialogBackgroundColor: AppColors.card(context),
+Future<void> _selectDate(BuildContext context) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+    firstDate: DateTime.now(),
+    lastDate: DateTime(2100),
+    builder: (BuildContext context, Widget? child) {
+      return Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary(context),
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary(context),
           ),
-          child: child!,
-        );
-      },
-    );
-    
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dateError = null;
-      });
-    }
+          dialogBackgroundColor: AppColors.card(context),
+        ),
+        child: child!,
+      );
+    },
+  );
+  
+  if (picked != null && picked != _selectedDate) {
+    setState(() {
+      _selectedDate = picked;
+      _dateError = null;
+    });
   }
+}
 
   Future<void> _updateProgram() async {
     if (!_validateProgram()) {
@@ -799,44 +811,62 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
       final bool isCurrentlyCompleted = widget.program.isCompleted;
       final bool isCurrentlyCancelled = widget.program.isCancelled;
       
-      if ((isCurrentlyCompleted || isCurrentlyCancelled) && 
-          _selectedDate.isAfter(DateTime.now())) {
-        newStatus = 'active';
-        shouldReactivate = true;
-      }
-      
-      if (widget.program.status == 'active' && 
-          _selectedDate.isBefore(DateTime.now())) {
-        newStatus = 'completed';
-      }
+     // ✅ Fix: Handle nullable _selectedDate
+if ((isCurrentlyCompleted || isCurrentlyCancelled) && 
+    _selectedDate != null && 
+    _selectedDate!.isAfter(DateTime.now())) {
+  newStatus = 'active';
+  shouldReactivate = true;
+}
 
-      // Create updated program
-      final updatedProgram = widget.program.copyWith(
-        title: _titleController.text.trim(),
-        programDate: _selectedDate,
-        suggestedContribution: _suggestedContributionController.text.isNotEmpty
-            ? double.tryParse(_suggestedContributionController.text)
-            : null,
-        totalProgramAmount: _totalProgramAmountController.text.isNotEmpty
-            ? double.tryParse(_totalProgramAmountController.text)
-            : null,
-        maxParticipants: int.tryParse(_maxParticipantsController.text) ?? 0,
-        participantType: _participantType,
-        programType: _programType!,
-        isMonthlyPaymentProgram: _isMonthlyPaymentProgram,
-        status: newStatus,
-      );
+
+      
+// ✅ Fix: Only check date for non-monthly programs
+if (!_isMonthlyPaymentProgram && 
+    widget.program.status == 'active' && 
+    _selectedDate != null && 
+    _selectedDate!.isBefore(DateTime.now())) {
+  newStatus = 'completed';
+}
+
+  // Create updated program with nullable fields
+final updatedProgram = widget.program.copyWith(
+  title: _titleController.text.trim(),
+  // ✅ Fix: For monthly programs, set programDate to null
+  programDate: _isMonthlyPaymentProgram ? null : _selectedDate,
+  suggestedContribution: _suggestedContributionController.text.isNotEmpty
+      ? double.tryParse(_suggestedContributionController.text)
+      : null,
+  // ✅ Fix: For monthly programs, totalProgramAmount should be null
+  totalProgramAmount: _isMonthlyPaymentProgram 
+      ? null 
+      : (_totalProgramAmountController.text.isNotEmpty
+          ? double.tryParse(_totalProgramAmountController.text)
+          : null),
+  maxParticipants: int.tryParse(_maxParticipantsController.text) ?? 0,
+  participantType: _participantType,
+  programType: _programType!,
+  isMonthlyPaymentProgram: _isMonthlyPaymentProgram,
+  status: newStatus,
+);
 
       await programProvider.updateProgram(updatedProgram);
       if (!mounted) return;
       
       if (mounted) {
         if (shouldReactivate) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Program reactivated! New date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'
-          );
-        } else if (isCurrentlyCompleted && newStatus == 'active') {
+  String dateText = '';
+  if (_selectedDate != null) {
+    dateText = '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}';
+  } else {
+    dateText = 'date set';
+  }
+  
+  SnackbarHelper.showSuccess(
+    context, 
+    'Program reactivated! New date: $dateText'
+  );
+} else if (isCurrentlyCompleted && newStatus == 'active') {
           SnackbarHelper.showSuccess(
             context, 
             'Program reactivated! It is now active again.'

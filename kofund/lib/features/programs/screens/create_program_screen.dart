@@ -90,35 +90,38 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
     super.dispose();
   }
 
-  void _onContributionChanged() {
-    if (_participantType != 'fixed' || _isUpdating) return;
-    
-    if (_contributionController.text.isNotEmpty && 
-        _contributionFocusNode.hasFocus) {
-      _lastEditedField = 'contribution';
-      _recalculateFromContribution();
-    }
+void _onContributionChanged() {
+  // ✅ Skip auto-calculation for monthly payment programs
+  if (_participantType != 'fixed' || _isMonthlyPaymentProgram || _isUpdating) return;
+  
+  if (_contributionController.text.isNotEmpty && 
+      _contributionFocusNode.hasFocus) {
+    _lastEditedField = 'contribution';
+    _recalculateFromContribution();
   }
+}
 
-  void _onTotalAmountChanged() {
-    if (_participantType != 'fixed' || _isUpdating) return;
-    
-    if (_totalProgramAmountController.text.isNotEmpty && 
-        _totalAmountFocusNode.hasFocus) {
-      _lastEditedField = 'total';
-      _recalculateFromTotal();
-    }
+void _onTotalAmountChanged() {
+  // ✅ Skip auto-calculation for monthly payment programs
+  if (_participantType != 'fixed' || _isMonthlyPaymentProgram || _isUpdating) return;
+  
+  if (_totalProgramAmountController.text.isNotEmpty && 
+      _totalAmountFocusNode.hasFocus) {
+    _lastEditedField = 'total';
+    _recalculateFromTotal();
   }
+}
 
-  void _onParticipantsChanged() {
-    if (_participantType != 'fixed' || _isUpdating) return;
-    
-    if (_maxParticipantsController.text.isNotEmpty && 
-        _participantsFocusNode.hasFocus) {
-      _lastEditedField = 'participants';
-      _recalculateFromParticipants();
-    }
+void _onParticipantsChanged() {
+  // ✅ Skip auto-calculation for monthly payment programs
+  if (_participantType != 'fixed' || _isMonthlyPaymentProgram || _isUpdating) return;
+  
+  if (_maxParticipantsController.text.isNotEmpty && 
+      _participantsFocusNode.hasFocus) {
+    _lastEditedField = 'participants';
+    _recalculateFromParticipants();
   }
+}
 
   void _recalculateFromContribution() {
     if (_isUpdating) return;
@@ -177,55 +180,53 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
     }
   }
 
-  void _handleParticipantTypeChange(String newType) {
-    setState(() {
-      _participantType = newType;
-      _lastEditedField = 'none';
-    });
+ void _handleParticipantTypeChange(String newType) {
+  setState(() {
+    _participantType = newType;
+    _lastEditedField = 'none';
+  });
 
-    // Only perform calculations when switching to 'fixed' type
-    if (newType == 'fixed') {
-      _isUpdating = true;
+  // ✅ Only perform calculations for non-monthly fixed type programs
+  if (newType == 'fixed' && !_isMonthlyPaymentProgram) {
+    _isUpdating = true;
 
-      final hasContribution = _contributionController.text.isNotEmpty &&
-          double.tryParse(_contributionController.text) != null;
-      final hasTotalAmount = _totalProgramAmountController.text.isNotEmpty &&
-          double.tryParse(_totalProgramAmountController.text) != null;
-      final hasParticipants = _maxParticipantsController.text.isNotEmpty &&
-          int.tryParse(_maxParticipantsController.text) != null;
+    final hasContribution = _contributionController.text.isNotEmpty &&
+        double.tryParse(_contributionController.text) != null;
+    final hasTotalAmount = _totalProgramAmountController.text.isNotEmpty &&
+        double.tryParse(_totalProgramAmountController.text) != null;
+    final hasParticipants = _maxParticipantsController.text.isNotEmpty &&
+        int.tryParse(_maxParticipantsController.text) != null;
 
-      // Case 1: We have total amount and participants -> calculate contribution
-      if (hasTotalAmount && hasParticipants) {
-        final total = double.parse(_totalProgramAmountController.text);
-        final participants = int.parse(_maxParticipantsController.text);
-        if (total > 0 && participants > 0) {
-          final contribution = total / participants;
-          final roundedContribution = (contribution * 100).round() / 100;
-          _contributionController.removeListener(_onContributionChanged);
-          _contributionController.text = roundedContribution.toStringAsFixed(
-            roundedContribution.truncateToDouble() == roundedContribution ? 0 : 2
-          );
-          _contributionController.addListener(_onContributionChanged);
-        }
+    // Case 1: We have total amount and participants -> calculate contribution
+    if (hasTotalAmount && hasParticipants) {
+      final total = double.parse(_totalProgramAmountController.text);
+      final participants = int.parse(_maxParticipantsController.text);
+      if (total > 0 && participants > 0) {
+        final contribution = total / participants;
+        final roundedContribution = (contribution * 100).round() / 100;
+        _contributionController.removeListener(_onContributionChanged);
+        _contributionController.text = roundedContribution.toStringAsFixed(
+          roundedContribution.truncateToDouble() == roundedContribution ? 0 : 2
+        );
+        _contributionController.addListener(_onContributionChanged);
       }
-      // Case 2: We have contribution and participants -> calculate total
-      else if (hasContribution && hasParticipants) {
-        final contribution = double.parse(_contributionController.text);
-        final participants = int.parse(_maxParticipantsController.text);
-        if (contribution > 0 && participants > 0) {
-          final totalAmount = contribution * participants;
-          _totalProgramAmountController.removeListener(_onTotalAmountChanged);
-          _totalProgramAmountController.text = totalAmount.toStringAsFixed(0);
-          _totalProgramAmountController.addListener(_onTotalAmountChanged);
-        }
-      }
-      // Case 3: We have only total amount -> keep as is
-      // Case 4: We have only contribution -> keep as is
-      // Case 5: We have neither -> leave empty
-
-      _isUpdating = false;
     }
+    // Case 2: We have contribution and participants -> calculate total
+    else if (hasContribution && hasParticipants) {
+      final contribution = double.parse(_contributionController.text);
+      final participants = int.parse(_maxParticipantsController.text);
+      if (contribution > 0 && participants > 0) {
+        final totalAmount = contribution * participants;
+        _totalProgramAmountController.removeListener(_onTotalAmountChanged);
+        _totalProgramAmountController.text = totalAmount.toStringAsFixed(0);
+        _totalProgramAmountController.addListener(_onTotalAmountChanged);
+      }
+    }
+    // Case 3-5: Keep as is or leave empty
+
+    _isUpdating = false;
   }
+}
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -711,13 +712,16 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
         communityId: authProvider.user!.communityId!,
         title: _titleController.text,
         description: _descriptionController.text.trim(),
-        programDate: _isMonthlyPaymentProgram ? DateTime.now() : _selectedDate,
+        programDate: _isMonthlyPaymentProgram ? null : _selectedDate,
         location: _locationController.text.trim(),
         suggestedContribution: _contributionController.text.isNotEmpty 
             ? double.parse(_contributionController.text)
             : null,
-        totalProgramAmount: totalProgramAmount,
-        maxParticipants: _participantType == 'fixed' 
+ totalProgramAmount: _isMonthlyPaymentProgram 
+      ? null  // Monthly programs don't have a total amount
+      : (_totalProgramAmountController.text.isNotEmpty 
+          ? double.tryParse(_totalProgramAmountController.text) 
+          : null),        maxParticipants: _participantType == 'fixed' 
             ? int.parse(_maxParticipantsController.text)
             : 9999,
         participantType: _participantType,
@@ -906,9 +910,21 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                             ),
                           ),
                           value: _isMonthlyPaymentProgram,
-                          onChanged: (value) {
-                            setState(() => _isMonthlyPaymentProgram = value);
-                          },
+                          // In the SwitchListTile onChanged:
+onChanged: (value) {
+  setState(() {
+    _isMonthlyPaymentProgram = value;
+    // ✅ Clear total amount field when monthly is enabled
+    if (value) {
+      _totalProgramAmountController.removeListener(_onTotalAmountChanged);
+      _totalProgramAmountController.clear();
+      _totalProgramAmountController.addListener(_onTotalAmountChanged);
+      
+      // Also clear any auto-calculation state
+      _lastEditedField = 'none';
+    }
+  });
+},
                           activeColor: AppColors.primary(context),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                         ),

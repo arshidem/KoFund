@@ -7,6 +7,8 @@ import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../expenses/providers/expense_provider.dart';
 import '../../../expenses/models/expense_model.dart';
+import '../../../auth/models/user_model.dart';
+import 'package:kofund/core/services/user_service.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../participants/providers/participant_provider.dart';
 import '../../../programs/providers/program_provider.dart';
@@ -17,13 +19,13 @@ class ProgramOverviewTab extends StatelessWidget {
   final ProgramModel program;
 
   const ProgramOverviewTab({super.key, required this.program});
-
   @override
   Widget build(BuildContext context) {
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final participantProvider = Provider.of<ParticipantProvider>(context);
     final programProvider = Provider.of<ProgramProvider>(context);
+    final userService = Provider.of<UserService>(context, listen: false);
 
 return SingleChildScrollView(
   padding: const EdgeInsets.all(12),
@@ -47,7 +49,7 @@ return SingleChildScrollView(
       const SizedBox(height: 12),
 
       // 🔹 Program Information (Secondary)
-      _buildProgramInfoCard(context, participantProvider),
+      _buildProgramInfoCard(context, participantProvider, userService),
 
       const SizedBox(height: 12),
 
@@ -183,13 +185,15 @@ Widget _buildProgramHeader(
             ),
             children: [
               // 📅 DATE
-              _buildHeaderInfoTile(
-                context,
-                icon: Icons.calendar_today_rounded,
-                title: 'Date',
-                value: DateFormat('MMM dd, yyyy').format(program.programDate)
-,                valueColor: AppColors.primary(context),
-              ),
+           // Only show date for non-monthly programs with a valid date
+if (!program.isMonthlyPaymentProgram && program.programDate != null)
+  _buildHeaderInfoTile(
+    context,
+    icon: Icons.calendar_today_rounded,
+    title: 'Date',
+    value: DateFormat('MMM dd, yyyy').format(program.programDate!),
+    valueColor: AppColors.primary(context),
+  ),
 
    _buildHeaderInfoTile(
                 context,
@@ -217,12 +221,12 @@ Widget _buildProgramHeader(
                         ? AppColors.textTertiary(context)
                         : AppColors.error(context),
               ),
-              // 📍 LOCATION
-  _buildHeaderInfoTile(
+// In _buildProgramHeader, replace the existing Estimated Total tile with:
+_buildHeaderInfoTile(
   context,
   icon: Icons.assessment_rounded,
-  title: 'Estimated Total', // Changed from 'label' to 'title'
-  value: '₹${program.estimatedTotalAmount.toStringAsFixed(0)}', // Removed space after ₹
+  title: 'Estimated Total',
+  value: _calculateEstimatedTotal(program, participantCount),
   valueColor: AppColors.primary(context),
 ),
               // 💰 CONTRIBUTION
@@ -315,6 +319,7 @@ Widget _buildHeaderInfoTile(
 Widget _buildProgramInfoCard(
   BuildContext context,
   ParticipantProvider participantProvider,
+  UserService _userService,
 ) {
   return Card(
     color: AppColors.card(context),
@@ -353,25 +358,18 @@ Widget _buildProgramInfoCard(
 
           const SizedBox(height: 16),
 
-          // 📅 FULL DATE WITH DAY
-          _buildDetailTile(
-            context,
-            icon: Icons.calendar_today_rounded,
-            label: 'Program Date',
-            value: DateFormat('EEEE, MMMM dd, yyyy').format(program.programDate),
-          ),
+        // 📅 FULL DATE WITH DAY
+if (program.programDate != null && !program.isMonthlyPaymentProgram)
+  _buildDetailTile(
+    context,
+    icon: Icons.calendar_today_rounded,
+    label: 'Program Date',
+    value: DateFormat('EEEE, MMMM dd, yyyy').format(program.programDate!),
+  ),
 
           const SizedBox(height: 12),
 
-          // 📍 LOCATION WITH MAP ICON
-          _buildDetailTile(
-            context,
-            icon: Icons.location_on_rounded,
-            label: 'Location',
-            value: program.location,
-          ),
-
-          const SizedBox(height: 12),
+        
 
           // 💰 SUGGESTED CONTRIBUTION DETAILS
           if (program.suggestedContribution != null)
@@ -403,20 +401,26 @@ Widget _buildProgramInfoCard(
               ],
             ),
 
-          // 📊 ESTIMATED TOTAL
-          if (program.hasFinancialGoals)
-            Column(
-              children: [
-                _buildDetailTile(
-                  context,
-                  icon: Icons.assessment_rounded,
-                  label: 'Estimated Total Collection',
-                  value: '₹ ${program.estimatedTotalAmount.toStringAsFixed(0)}',
-                  valueColor: AppColors.primary(context),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
+       // 📊 ESTIMATED TOTAL - Replace the existing section
+StreamBuilder<int>(
+  stream: participantProvider.streamProgramParticipantCount(program.programId),
+  builder: (context, snapshot) {
+    final participantCount = snapshot.data ?? 0;
+    
+    return Column(
+      children: [
+        _buildDetailTile(
+          context,
+          icon: Icons.assessment_rounded,
+          label: 'Estimated Total Collection',
+          value: _calculateEstimatedTotal(program, participantCount),
+          valueColor: AppColors.primary(context),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  },
+),
 
           // 👥 PARTICIPANT DETAILS
           StreamBuilder<int>(
@@ -441,14 +445,38 @@ Widget _buildProgramInfoCard(
             },
           ),
 
-          // 👤 CREATED BY
-          _buildDetailTile(
-            context,
-            icon: Icons.person_outline_rounded,
-            label: 'Organized By',
-            value: program.createdBy,
-          ),
-
+      // 👤 CREATED BY
+// 👤 CREATED BY
+FutureBuilder<UserModel?>(
+  future: _userService.getUserById(program.createdBy),
+  builder: (context, snapshot) {
+    String displayValue = program.createdBy; // Default fallback to UID
+    
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      displayValue = 'Loading...';
+    } else if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+      displayValue = program.createdBy; // Fallback to UID on error
+    } else {
+      final user = snapshot.data!;
+      displayValue = user.displayName ?? 
+                     user.email ?? 
+                     user.phoneNumber ?? 
+                     program.createdBy;
+    }
+    
+    return Column(
+      children: [
+        _buildDetailTile(
+          context,
+          icon: Icons.person_outline_rounded,
+          label: 'Organized By',
+          value: displayValue,
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  },
+),
           const SizedBox(height: 12),
 
           // 🏷️ PARTICIPANT TYPE
@@ -571,7 +599,22 @@ Widget _buildDetailTile(
   );
 }
 
-
+String _calculateEstimatedTotal(ProgramModel program, int participantCount) {
+  double total = 0.0;
+  
+  // 1. Use totalProgramAmount if it exists and is positive
+  if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
+    total = program.totalProgramAmount!;
+  }
+  // 2. Fallback to suggestedContribution * participantCount
+  else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
+    final count = participantCount > 0 ? participantCount : 
+                 (program.isFixedParticipants ? program.maxParticipants : 1);
+    total = program.suggestedContribution! * count;
+  }
+  
+  return '₹${total.toStringAsFixed(0)}';
+}
 
 // Helper to get status icon
 IconData _getStatusIcon(String status) {
@@ -671,186 +714,209 @@ Widget _buildFinancialSummaryCard(
               final totalExpenses = expenseSnapshot.data ?? 0.0;
               final balanceAmount = totalCollected - totalExpenses;
 
-              final totalExpected = program.estimatedTotalAmount;
-              final progressPercentage =
-                  program.calculateProgress(totalCollected);
+              // ✅ Get participant count
+              return StreamBuilder<int>(
+                stream: participantProvider
+                    .streamProgramParticipantCount(program.programId),
+                builder: (context, participantSnapshot) {
+                  final participantCount = participantSnapshot.data ?? 0;
+                  
+                  // ✅ Calculate totalExpected with proper fallback
+                  final double totalExpected;
+                  
+                  if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
+                    totalExpected = program.totalProgramAmount!;
+                  } else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
+                    // Use actual participant count for calculation
+                    final count = participantCount > 0 ? participantCount : 
+                                 (program.isFixedParticipants ? program.maxParticipants : 1);
+                    totalExpected = program.suggestedContribution! * count;
+                  } else {
+                    totalExpected = 0.0;
+                  }
 
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient(context),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                      color: Colors.black.withValues(alpha: 0.08),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 🔹 Header
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.account_balance_wallet_rounded,
-                          size: 18,
-                          color: AppColors.textCards(context),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Financial Summary',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textCards(context),
-                          ),
-                        ),
-                      ],
-                    ),
+                  final progressPercentage = totalExpected > 0 
+                      ? (totalCollected / totalExpected) * 100 
+                      : 0.0;
 
-                    const SizedBox(height: 14),
-
-                    // 🔹 Top Stats (Collected / Expenses / Balance)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildSummaryMetric(
-                          context,
-                          label: 'Collected',
-                          value: totalCollected,
-                          icon: Icons.payments_rounded,
-                          accent: AppColors.textCards(context),
-                        ),
-                        _buildSummaryMetric(
-                          context,
-                          label: 'Expenses',
-                          value: totalExpenses,
-                          icon: Icons.receipt_long_rounded,
-                          accent: AppColors.textCards(context),
-                        ),
-                        _buildSummaryMetric(
-                          context,
-                          label: 'Balance',
-                          value: balanceAmount,
-                          icon: Icons.account_balance_rounded,
-                          accent: balanceAmount >= 0
-                              ? AppColors.textCards(context)
-                              : AppColors.warning(context),
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient(context),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                          color: Colors.black.withValues(alpha: 0.08),
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // 🔹 Progress Section
-                    Text(
-                      'Collection Progress',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textCards(context).withValues(alpha: 0.85),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '₹${totalCollected.toStringAsFixed(0)} / ₹${totalExpected.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textCards(context),
-                          ),
-                        ),
-                        Text(
-                          '${progressPercentage.toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textCards(context),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: totalExpected > 0
-                            ? totalCollected / totalExpected
-                            : 0,
-                        minHeight: 6,
-                        backgroundColor: AppColors.textCards(context)
-                            .withValues(alpha: 0.25),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.textCards(context),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    // 🔹 Target / Estimate Info
-                    if (program.totalProgramAmount != null)
-                      Text(
-                        'Target Budget: ₹${program.totalProgramAmount!.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textCards(context)
-                              .withValues(alpha: 0.75),
-                        ),
-                      )
-                    else if (program.suggestedContribution != null)
-                      Text(
-                        'Estimated: ₹${program.suggestedContribution!.toStringAsFixed(0)} × ${program.currentParticipants} participants',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textCards(context)
-                              .withValues(alpha: 0.75),
-                        ),
-                      ),
-
-                    const SizedBox(height: 10),
-
-                    // 🔹 Financial Warning
-                    if (balanceAmount < 0)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning(context)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
+                        // 🔹 Header
+                        Row(
                           children: [
                             Icon(
-                              Icons.warning_amber_rounded,
-                              size: 16,
-                              color: AppColors.warning(context),
+                              Icons.account_balance_wallet_rounded,
+                              size: 18,
+                              color: AppColors.textCards(context),
                             ),
                             const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Expenses exceed contributions by ₹${balanceAmount.abs().toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.warning(context),
-                                ),
+                            Text(
+                              'Financial Summary',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textCards(context),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                  ],
-                ),
+
+                        const SizedBox(height: 14),
+
+                        // 🔹 Top Stats (Collected / Expenses / Balance)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildSummaryMetric(
+                              context,
+                              label: 'Collected',
+                              value: totalCollected,
+                              icon: Icons.payments_rounded,
+                              accent: AppColors.textCards(context),
+                            ),
+                            _buildSummaryMetric(
+                              context,
+                              label: 'Expenses',
+                              value: totalExpenses,
+                              icon: Icons.receipt_long_rounded,
+                              accent: AppColors.textCards(context),
+                            ),
+                            _buildSummaryMetric(
+                              context,
+                              label: 'Balance',
+                              value: balanceAmount,
+                              icon: Icons.account_balance_rounded,
+                              accent: balanceAmount >= 0
+                                  ? AppColors.textCards(context)
+                                  : AppColors.warning(context),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 🔹 Progress Section
+                        Text(
+                          'Collection Progress',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textCards(context).withValues(alpha: 0.85),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '₹${totalCollected.toStringAsFixed(0)} / ₹${totalExpected.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textCards(context),
+                              ),
+                            ),
+                            Text(
+                              '${progressPercentage.toStringAsFixed(1)}%',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textCards(context),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: totalExpected > 0
+                                ? totalCollected / totalExpected
+                                : 0,
+                            minHeight: 6,
+                            backgroundColor: AppColors.textCards(context)
+                                .withValues(alpha: 0.25),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.textCards(context),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // 🔹 Target / Estimate Info - USING ACTUAL PARTICIPANT COUNT
+                        if (program.totalProgramAmount != null && program.totalProgramAmount! > 0)
+                          Text(
+                            'Target Budget: ₹${program.totalProgramAmount!.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textCards(context)
+                                  .withValues(alpha: 0.75),
+                            ),
+                          )
+                        else if (program.suggestedContribution != null && program.suggestedContribution! > 0)
+                          Text(
+                            'Estimated: ₹${program.suggestedContribution!.toStringAsFixed(0)} × ${participantCount.toString()} participants',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textCards(context)
+                                  .withValues(alpha: 0.75),
+                            ),
+                          ),
+
+                        const SizedBox(height: 10),
+
+                        // 🔹 Financial Warning
+                        if (balanceAmount < 0)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning(context)
+                                  .withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 16,
+                                  color: AppColors.warning(context),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Expenses exceed contributions by ₹${balanceAmount.abs().toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.warning(context),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           );

@@ -6,7 +6,7 @@ class ProgramModel {
   final String communityId; // Community it belongs to
   final String title; // Event title
   final String description; // Event description
-  final DateTime programDate; // Event date (no time)
+  final DateTime? programDate; // Event date (no time)
   final String location; // Venue or location
   final double? suggestedContribution; // Optional: Suggested contribution per participant
   final double? totalProgramAmount; // Optional: Total amount needed for the program
@@ -57,80 +57,88 @@ class ProgramModel {
   });
 
   // ✅ Convert Firestore document → ProgramModel
-  factory ProgramModel.fromMap(Map<String, dynamic> map, String documentId) {
-    return ProgramModel(
-      programId: documentId,
-      communityId: map['communityId'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      programDate: (map['programDate'] as Timestamp).toDate(),
-      location: map['location'] ?? '',
-      suggestedContribution: map['suggestedContribution'] != null 
-          ? (map['suggestedContribution'] as num).toDouble()
-          : null,
-      totalProgramAmount: map['totalProgramAmount'] != null
-          ? (map['totalProgramAmount'] as num).toDouble()
-          : null,
-      maxParticipants: (map['maxParticipants'] ?? 0) as int,
-      participantType: map['participantType'] ?? 'fixed',
-      status: map['status'] ?? 'active',
-      createdBy: map['createdBy'] ?? '',
-      createdAt: map['createdAt'] ?? Timestamp.now(),
-      currentParticipants: (map['currentParticipants'] ?? 0) as int,
-      programType: map['programType'] ?? 'general',
-      isMonthlyPaymentProgram: map['isMonthlyPaymentProgram'] ?? false,
-      contributionReminderDates: (map['contributionReminderDates'] != null)
-          ? List.from(map['contributionReminderDates'])
-              .map((e) => (e as Timestamp).toDate())
-              .toList()
-          : [],
-      enableAutoReminders: map['enableAutoReminders'] ?? false,
-      reminderDaysBefore: (map['reminderDaysBefore'] ?? 7) as int,
-      reminderFrequency: map['reminderFrequency'] ?? 'monthly',
-      firstPaymentDueDate: map['firstPaymentDueDate'] != null 
-          ? (map['firstPaymentDueDate'] as Timestamp).toDate()
-          : null,
-      nextReminderDate: map['nextReminderDate'] != null 
-          ? (map['nextReminderDate'] as Timestamp).toDate()
-          : null,
-      updatedAt: map['updatedAt'] as Timestamp?,
-      lastReminderSent: map['lastReminderSent'] as Timestamp?,
-    );
-  }
+// ✅ Convert Firestore document → ProgramModel
+factory ProgramModel.fromMap(Map<String, dynamic> map, String documentId) {
+  return ProgramModel(
+    programId: documentId,
+    communityId: map['communityId'] ?? '',
+    title: map['title'] ?? '',
+    description: map['description'] ?? '',
+    // ✅ Fix: Handle null programDate from Firestore
+    programDate: map['programDate'] != null 
+        ? (map['programDate'] as Timestamp).toDate()
+        : null,
+    location: map['location'] ?? '',
+    suggestedContribution: map['suggestedContribution'] != null 
+        ? (map['suggestedContribution'] as num).toDouble()
+        : null,
+    totalProgramAmount: map['totalProgramAmount'] != null
+        ? (map['totalProgramAmount'] as num).toDouble()
+        : null,
+    maxParticipants: (map['maxParticipants'] ?? 0) as int,
+    participantType: map['participantType'] ?? 'fixed',
+    status: map['status'] ?? 'active',
+    createdBy: map['createdBy'] ?? '',
+    createdAt: map['createdAt'] ?? Timestamp.now(),
+    currentParticipants: (map['currentParticipants'] ?? 0) as int,
+    programType: map['programType'] ?? 'general',
+    isMonthlyPaymentProgram: map['isMonthlyPaymentProgram'] ?? false,
+    contributionReminderDates: (map['contributionReminderDates'] != null)
+        ? List.from(map['contributionReminderDates'])
+            .map((e) => (e as Timestamp).toDate())
+            .toList()
+        : [],
+    enableAutoReminders: map['enableAutoReminders'] ?? false,
+    reminderDaysBefore: (map['reminderDaysBefore'] ?? 7) as int,
+    reminderFrequency: map['reminderFrequency'] ?? 'monthly',
+    firstPaymentDueDate: map['firstPaymentDueDate'] != null 
+        ? (map['firstPaymentDueDate'] as Timestamp).toDate()
+        : null,
+    nextReminderDate: map['nextReminderDate'] != null 
+        ? (map['nextReminderDate'] as Timestamp).toDate()
+        : null,
+    updatedAt: map['updatedAt'] as Timestamp?,
+    lastReminderSent: map['lastReminderSent'] as Timestamp?,
+  );
+}
 
   // ✅ Convert ProgramModel → Firestore document
-  Map<String, dynamic> toMap() {
-    return {
-      'communityId': communityId,
-      'title': title,
-      'description': description,
-      'programDate': Timestamp.fromDate(_stripTime(programDate)),
-      'location': location,
-      'suggestedContribution': suggestedContribution,
-      'totalProgramAmount': totalProgramAmount,
-      'maxParticipants': maxParticipants,
-      'participantType': participantType,
-      'status': status,
-      'createdBy': createdBy,
-      'createdAt': createdAt,
-      'currentParticipants': currentParticipants,
-      'programType': programType,
-      'isMonthlyPaymentProgram': isMonthlyPaymentProgram,
-      'contributionReminderDates': contributionReminderDates
-          .map((date) => Timestamp.fromDate(date))
-          .toList(),
-      'enableAutoReminders': enableAutoReminders,
-      'reminderDaysBefore': reminderDaysBefore,
-      'reminderFrequency': reminderFrequency,
-      'firstPaymentDueDate': firstPaymentDueDate != null 
-          ? Timestamp.fromDate(firstPaymentDueDate!)
-          : null,
-      'nextReminderDate': nextReminderDate != null 
-          ? Timestamp.fromDate(nextReminderDate!)
-          : null,
-      'updatedAt': updatedAt ?? Timestamp.now(),
-    };
-  }
+// ✅ Convert ProgramModel → Firestore document
+Map<String, dynamic> toMap() {
+  return {
+    'communityId': communityId,
+    'title': title,
+    'description': description,
+    // ✅ Fix: Handle null programDate for monthly programs
+    'programDate': programDate != null 
+        ? Timestamp.fromDate(_stripTime(programDate!))
+        : null,
+    'location': location,
+    'suggestedContribution': suggestedContribution,
+    'totalProgramAmount': totalProgramAmount,
+    'maxParticipants': maxParticipants,
+    'participantType': participantType,
+    'status': status,
+    'createdBy': createdBy,
+    'createdAt': createdAt,
+    'currentParticipants': currentParticipants,
+    'programType': programType,
+    'isMonthlyPaymentProgram': isMonthlyPaymentProgram,
+    'contributionReminderDates': contributionReminderDates
+        .map((date) => Timestamp.fromDate(date))
+        .toList(),
+    'enableAutoReminders': enableAutoReminders,
+    'reminderDaysBefore': reminderDaysBefore,
+    'reminderFrequency': reminderFrequency,
+    'firstPaymentDueDate': firstPaymentDueDate != null 
+        ? Timestamp.fromDate(firstPaymentDueDate!)
+        : null,
+    'nextReminderDate': nextReminderDate != null 
+        ? Timestamp.fromDate(nextReminderDate!)
+        : null,
+    'updatedAt': updatedAt ?? Timestamp.now(),
+  };
+}
 
   // ✅ copyWith method (updated)
   ProgramModel copyWith({
@@ -237,6 +245,7 @@ bool get isCancelled => status == 'cancelled';
 bool get isActive => status == 'active';
 
 // ✅ Computed status that automatically updates based on program date
+// ✅ Computed status that automatically updates based on program date
 String get computedStatus {
   // For monthly payment programs, always return 'active'
   if (isMonthlyPaymentProgram) {
@@ -246,13 +255,15 @@ String get computedStatus {
   if (status == 'cancelled' || status == 'completed') {
     return status;
   }
-  // Check if program date has passed (compare dates only, not time)
-  final now = DateTime.now();
-  final programDateOnly = DateTime(programDate.year, programDate.month, programDate.day);
-  final nowOnly = DateTime(now.year, now.month, now.day);
-  final isDatePassed = programDateOnly.isBefore(nowOnly);
-  if (isDatePassed) {
-    return 'completed';
+  // Only check date if programDate is not null
+  if (programDate != null) {
+    final now = DateTime.now();
+    final programDateOnly = DateTime(programDate!.year, programDate!.month, programDate!.day);
+    final nowOnly = DateTime(now.year, now.month, now.day);
+    final isDatePassed = programDateOnly.isBefore(nowOnly);
+    if (isDatePassed) {
+      return 'completed';
+    }
   }
   // Otherwise return the original status
   return status;
@@ -270,8 +281,9 @@ Future<void> syncComputedStatusToFirestore() async {
   }
 }
 // Add this new getter for date-based display
-bool get isDatePast => programDate.isBefore(DateTime.now());
-bool get isDateFuture => programDate.isAfter(DateTime.now());
+// Update these getters to handle null
+bool get isDatePast => programDate != null ? programDate!.isBefore(DateTime.now()) : false;
+bool get isDateFuture => programDate != null ? programDate!.isAfter(DateTime.now()) : false;
   // ✅ Helper method to strip time from DateTime
   static DateTime _stripTime(DateTime date) {
     return DateTime(date.year, date.month, date.day);

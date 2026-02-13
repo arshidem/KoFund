@@ -696,29 +696,33 @@ Widget _buildProgramCard(
                   return StreamBuilder<List<ParticipantModel>>(
                     stream: participantProvider.streamProgramParticipants(program.programId),
                     builder: (context, participantSnapshot) {
-                      final participants = participantSnapshot.data ?? [];
-                      final totalParticipants = participants.length;
-                      final maxParticipants = program.maxParticipants ?? 0;
+                final participants = participantSnapshot.data ?? [];
+final totalParticipants = participants.length;
+final maxParticipants = program.maxParticipants ?? 0;
 
-                      final participantCount = program.isFixedParticipants
-                          ? maxParticipants
-                          : totalParticipants;
+// ✅ Calculate program amount with proper fallback
+double programAmount = 0.0;
 
-                      final programAmount = suggestedAmount > 0
-                          ? suggestedAmount * participantCount
-                          : 0.0;
+if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
+  // Use totalProgramAmount if available
+  programAmount = program.totalProgramAmount!;
+} else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
+  // Calculate based on participant count
+  final participantCount = program.isFixedParticipants
+      ? maxParticipants
+      : totalParticipants;
+  programAmount = program.suggestedContribution! * totalParticipants;
+}
 
-                      final progress =
-                          programAmount > 0 ? collectedAmount / programAmount : 0.0;
-
+final progress = programAmount > 0 ? collectedAmount / programAmount : 0.0;
                       // Only calculate days for NON-monthly programs
-                      final now = DateTime.now();
-                      final daysLeft = program.isMonthlyPaymentProgram 
-                          ? null 
-                          : program.programDate.difference(now).inDays;
-                      final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
-                      final hasEnded = daysLeft != null && daysLeft < 0;
-                      
+                    final now = DateTime.now();
+final daysLeft = program.isMonthlyPaymentProgram || program.programDate == null
+    ? null 
+    : program.programDate!.difference(now).inDays;
+final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
+final hasEnded = daysLeft != null && daysLeft < 0;
+
                       final programColor =
                           _getProgramColor(program.programType);
 
@@ -911,20 +915,24 @@ color: Colors.blue.withValues(alpha: 0.1),                                      
                               ),
                               
                               // Conditionally show days OR monthly indicator
-                              if (program.isMonthlyPaymentProgram)
-                                _buildStatItem(
-                                  icon: Icons.calendar_month,
-                                  value: 'Monthly',
-                                  label: 'Recurring',
-                                  color: Colors.blue,
-                                )
-                              else
-                                _buildStatItem(
-                                  icon: Icons.schedule,
-                                  value: hasEnded ? 'Ended' : (isEnding ? '$daysLeft' : '$daysLeft'),
-                                  label: 'Days',
-                                  color: hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor),
-                                ),
+                             if (program.isMonthlyPaymentProgram)
+  _buildStatItem(
+    icon: Icons.calendar_month,
+    value: 'Monthly',
+    label: 'Recurring',
+    color: Colors.blue,
+  )
+else
+  _buildStatItem(
+    icon: Icons.schedule,
+    value: daysLeft == null 
+        ? 'N/A' 
+        : (hasEnded ? 'Ended' : (isEnding ? '$daysLeft' : '$daysLeft')),
+    label: 'Days',
+    color: daysLeft == null 
+        ? Colors.grey 
+        : (hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor)),
+  ),
                             ],
                           ),
 

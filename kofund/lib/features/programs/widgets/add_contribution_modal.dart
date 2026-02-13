@@ -548,22 +548,26 @@ Widget _buildProgramSelectionStep(String communityId) {
                           ],
                         ],
                       ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${program.programDate.day}/${program.programDate.month}/${program.programDate.year}',
-                          ),
-                          if (program.suggestedContribution != null && program.suggestedContribution! > 0)
-                            Text(
-                              'Suggested: ₹${program.suggestedContribution}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green[700],
-                              ),
-                            ),
-                        ],
-                      ),
+                     // In _buildProgramSelectionStep, update the subtitle section:
+
+subtitle: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      program.programDate != null
+          ? '${program.programDate!.day}/${program.programDate!.month}/${program.programDate!.year}'
+          : 'Monthly Program',
+    ),
+    if (program.suggestedContribution != null && program.suggestedContribution! > 0)
+      Text(
+        'Suggested: ₹${program.suggestedContribution}',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.green[700],
+        ),
+      ),
+  ],
+),
                       trailing: _selectedProgram?.programId == program.programId
                           ? Icon(
                               Icons.check_circle, 

@@ -177,19 +177,30 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
   // -------------------------------------------------------------
   // Stream programs by community (real-time)
   // -------------------------------------------------------------
-  Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
-    return _firestore
-        .collection('programs')
-        .where('communityId', isEqualTo: communityId)
-        .snapshots()
-        .map((snapshot) {
-      final programs = snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .toList();
-      programs.sort((a, b) => a.programDate.compareTo(b.programDate));
-      return programs;
+Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
+  return _firestore
+      .collection('programs')
+      .where('communityId', isEqualTo: communityId)
+      .snapshots()
+      .map((snapshot) {
+    final programs = snapshot.docs
+        .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+    
+    // ✅ Fix: Handle null programDate values
+    programs.sort((a, b) {
+      // If both dates are null, consider them equal
+      if (a.programDate == null && b.programDate == null) return 0;
+      // Put null dates at the end
+      if (a.programDate == null) return 1;
+      if (b.programDate == null) return -1;
+      // Both are non-null, compare normally
+      return a.programDate!.compareTo(b.programDate!);
     });
-  }
+    
+    return programs;
+  });
+}
 
   // -------------------------------------------------------------
   // Stream ACTIVE programs by community (real-time)
@@ -245,29 +256,30 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
       throw Exception('Failed to update program: $e');
     }
   }
-
-  // Alias used by some providers: update full model
-  Future<void> updateProgramModel(ProgramModel program) async {
-    try {
-      await _firestore.collection('programs').doc(program.programId).update({
-        'title': program.title,
-        'description': program.description,
-        'programDate': Timestamp.fromDate(program.programDate),
-        'location': program.location,
-        'suggestedContribution': program.suggestedContribution,
-        'totalProgramAmount': program.totalProgramAmount,
-        'maxParticipants': program.maxParticipants,
-        'participantType': program.participantType,
-        'status': program.status,
-        'programType': program.programType,
-        'updatedAt': Timestamp.now(),
-        'isMonthlyPaymentProgram': program.isMonthlyPaymentProgram,
-      });
-    } catch (e) {
-      throw Exception('Failed to update program model: $e');
-    }
+// Alias used by some providers: update full model
+Future<void> updateProgramModel(ProgramModel program) async {
+  try {
+    await _firestore.collection('programs').doc(program.programId).update({
+      'title': program.title,
+      'description': program.description,
+      // ✅ Fix: Handle null programDate
+      'programDate': program.programDate != null 
+          ? Timestamp.fromDate(program.programDate!)
+          : null,
+      'location': program.location,
+      'suggestedContribution': program.suggestedContribution,
+      'totalProgramAmount': program.totalProgramAmount,
+      'maxParticipants': program.maxParticipants,
+      'participantType': program.participantType,
+      'status': program.status,
+      'programType': program.programType,
+      'updatedAt': Timestamp.now(),
+      'isMonthlyPaymentProgram': program.isMonthlyPaymentProgram,
+    });
+  } catch (e) {
+    throw Exception('Failed to update program model: $e');
   }
-
+}
   // -------------------------------------------------------------
   // Update program status
   // -------------------------------------------------------------
@@ -446,40 +458,60 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
   }
 
 
-  // 🆕 SEND REMINDER TO INDIVIDUAL PARTICIPANT
-  Future<void> _sendParticipantReminder(ProgramModel program, ParticipantModel participant) async {
-    try {
-      final notificationService = NotificationService();
-      final programAmount = program.suggestedContribution ?? 0;
-      final paidAmount = participant.contributionPaid ?? 0;
-      final remainingAmount = programAmount - paidAmount;
-      
-      await notificationService.sendUserNotification(
-        userId: participant.userId,
-        title: 'Contribution Reminder 💰',
-        body: 'Reminder for ${program.title}. '
-              'Amount: \$${remainingAmount.toStringAsFixed(2)} remaining. '
-              'Due date: ${DateFormat.yMMMd().format(program.firstPaymentDueDate ?? program.programDate)}',
-        type: NotificationType.reminder,
-        data: {
-          'programId': program.programId,
-          'programTitle': program.title,
-          'remainingAmount': remainingAmount,
-          'totalAmount': programAmount,
-          'paidAmount': paidAmount,
-          'dueDate': program.firstPaymentDueDate?.toIso8601String() ?? program.programDate.toIso8601String(),
-        },
-        programId: program.programId,
-        communityId: program.communityId,
-        senderName: 'KoFund Reminder System',
-      );
-      
-      debugPrint('📧 Reminder sent to ${participant.userName}');
-    } catch (e) {
-      debugPrint('❌ Error sending participant reminder: $e');
-      rethrow;
+ // 🆕 SEND REMINDER TO INDIVIDUAL PARTICIPANT
+Future<void> _sendParticipantReminder(ProgramModel program, ParticipantModel participant) async {
+  try {
+    final notificationService = NotificationService();
+    final programAmount = program.suggestedContribution ?? 0;
+    final paidAmount = participant.contributionPaid ?? 0;
+    final remainingAmount = programAmount - paidAmount;
+    
+    // ✅ Fix: Handle null dates properly
+    String dueDateText;
+    if (program.firstPaymentDueDate != null) {
+      dueDateText = DateFormat.yMMMd().format(program.firstPaymentDueDate!);
+    } else if (program.programDate != null) {
+      dueDateText = DateFormat.yMMMd().format(program.programDate!);
+    } else {
+      dueDateText = 'Monthly (No specific due date)';
     }
+    
+    // ✅ Fix: Handle null dates for ISO string
+    String dueDateIso;
+    if (program.firstPaymentDueDate != null) {
+      dueDateIso = program.firstPaymentDueDate!.toIso8601String();
+    } else if (program.programDate != null) {
+      dueDateIso = program.programDate!.toIso8601String();
+    } else {
+      dueDateIso = DateTime.now().toIso8601String(); // Fallback to current date
+    }
+    
+    await notificationService.sendUserNotification(
+      userId: participant.userId,
+      title: 'Contribution Reminder 💰',
+      body: 'Reminder for ${program.title}. '
+            'Amount: \$${remainingAmount.toStringAsFixed(2)} remaining. '
+            'Due date: $dueDateText',
+      type: NotificationType.reminder,
+      data: {
+        'programId': program.programId,
+        'programTitle': program.title,
+        'remainingAmount': remainingAmount,
+        'totalAmount': programAmount,
+        'paidAmount': paidAmount,
+        'dueDate': dueDateIso,
+      },
+      programId: program.programId,
+      communityId: program.communityId,
+      senderName: 'KoFund Reminder System',
+    );
+    
+    debugPrint('📧 Reminder sent to ${participant.userName}');
+  } catch (e) {
+    debugPrint('❌ Error sending participant reminder: $e');
+    rethrow;
   }
+}
 
   // 🆕 UPDATE NEXT REMINDER DATE
   Future<void> _updateNextReminderDate(String programId) async {
@@ -808,10 +840,15 @@ List<String> generateMonthList(ProgramModel program) {
     return months;
   }
   
-  // Use firstPaymentDueDate if available, otherwise use programDate
+  // ✅ Fix: Handle null dates
   final startDate = program.firstPaymentDueDate ?? program.programDate;
   
-  // Generate 12 months from start date (or customize as needed)
+  // If no start date available, return empty list
+  if (startDate == null) {
+    debugPrint('⚠️ No start date available for monthly program: ${program.title}');
+    return months;
+  }
+  
   final now = DateTime.now();
   final startYear = startDate.year;
   final startMonth = startDate.month;
@@ -820,7 +857,7 @@ List<String> generateMonthList(ProgramModel program) {
   for (int i = 0; i < 15; i++) { // 15 months: 12 past + 3 future
     final date = DateTime(startYear, startMonth + i, 1);
     
-    // Don't generate dates in the past before program start
+    // ✅ Fix: startDate is now guaranteed non-null here
     if (date.isBefore(startDate) && i > 0) continue;
     
     // Don't generate too far in the future

@@ -589,13 +589,14 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                       color: AppColors.textSecondary(context),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      _formatDate(widget.program.programDate),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
+                  if (!widget.program.isMonthlyPaymentProgram && widget.program.programDate != null)
+  Text(
+    _formatDate(widget.program.programDate!),
+    style: TextStyle(
+      fontSize: 11,
+      color: AppColors.textSecondary(context),
+    ),
+  ),
                     if (widget.program.location != null && widget.program.location!.isNotEmpty) ...[
                       const SizedBox(width: 16),
                       Icon(

@@ -309,19 +309,31 @@ Widget _buildProgramSelectionStep(String communityId) {
           ),
         ),
         child: TextField(
-          onChanged: (value) {
-            setState(() {
-              _programSearchQuery = value.toLowerCase();
-              if (_allPrograms.isNotEmpty) {
-                _filteredPrograms = _allPrograms.where((program) {
-                  return program.title.toLowerCase().contains(_programSearchQuery) ||
-                         (program.suggestedContribution != null && 
-                          program.suggestedContribution.toString().contains(_programSearchQuery)) ||
-                         DateFormat('dd/MM/yyyy').format(program.programDate).contains(_programSearchQuery);
-                }).toList();
-              }
-            });
-          },
+         onChanged: (value) {
+  setState(() {
+    _programSearchQuery = value.toLowerCase();
+    if (_allPrograms.isNotEmpty) {
+      _filteredPrograms = _allPrograms.where((program) {
+        // Title search
+        final titleMatch = program.title.toLowerCase().contains(_programSearchQuery);
+        
+        // Contribution amount search
+        final contributionMatch = program.suggestedContribution != null && 
+            program.suggestedContribution.toString().contains(_programSearchQuery);
+        
+        // ✅ Fix: Date search with null check
+        bool dateMatch = false;
+        if (program.programDate != null) {
+          dateMatch = DateFormat('dd/MM/yyyy')
+              .format(program.programDate!)
+              .contains(_programSearchQuery);
+        }
+        
+        return titleMatch || contributionMatch || dateMatch;
+      }).toList();
+    }
+  });
+},
 decoration: InputDecoration(
   hintText: 'Search programs...',
   hintStyle: TextStyle(
@@ -534,15 +546,25 @@ Expanded(
       final programs = snapshot.data ?? [];
       _allPrograms = programs;
       
-      // Apply search filter if query exists
-      final displayPrograms = _programSearchQuery.isEmpty 
-          ? programs 
-          : programs.where((program) {
-              return program.title.toLowerCase().contains(_programSearchQuery) ||
-                     (program.suggestedContribution != null && 
-                      program.suggestedContribution.toString().contains(_programSearchQuery)) ||
-                     DateFormat('dd/MM/yyyy').format(program.programDate).contains(_programSearchQuery);
-            }).toList();
+  // Apply search filter if query exists
+final displayPrograms = _programSearchQuery.isEmpty 
+    ? programs 
+    : programs.where((program) {
+        // ✅ Fix: Handle null programDate in search
+        bool titleMatch = program.title.toLowerCase().contains(_programSearchQuery);
+        bool contributionMatch = program.suggestedContribution != null && 
+            program.suggestedContribution.toString().contains(_programSearchQuery);
+        
+        // ✅ Fix: Safely format date only if programDate is not null
+        bool dateMatch = false;
+        if (program.programDate != null) {
+          dateMatch = DateFormat('dd/MM/yyyy')
+              .format(program.programDate!)
+              .contains(_programSearchQuery);
+        }
+        
+        return titleMatch || contributionMatch || dateMatch;
+      }).toList();
 
       if (displayPrograms.isEmpty) {
         return Center(
@@ -678,15 +700,17 @@ color: Colors.green.withValues(alpha: 0.1),                                     
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                '${DateFormat('dd/MM/yyyy').format(program.programDate)} • Suggested: ₹${program.suggestedContribution?.toStringAsFixed(2) ?? '0.00'}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary(context),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            Text(
+  program.programDate != null
+      ? '${DateFormat('dd/MM/yyyy').format(program.programDate!)} • Suggested: ₹${program.suggestedContribution?.toStringAsFixed(2) ?? '0.00'}'
+      : 'Monthly Program • Suggested: ₹${program.suggestedContribution?.toStringAsFixed(2) ?? '0.00'}',
+  style: TextStyle(
+    fontSize: 13,
+    color: AppColors.textSecondary(context),
+  ),
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+),
                             ],
                           ),
                         ),

@@ -15,6 +15,7 @@ import '../../../../features/programs/widgets/add_contribution_modal.dart';
 import 'package:kofund/features/history/screens/edit_contribution_screen.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
+import '../../../participants/providers/participant_provider.dart';
 class ProgramContributionsTab extends StatefulWidget {
   final ProgramModel program;
 
@@ -169,13 +170,10 @@ Widget build(BuildContext context) {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // ======= PINNED STATS HEADER =======
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _PinnedStatsHeaderDelegate(
-                  minExtent: 120, // adjust as needed
-                  // Increase maxExtent to prevent content overflow on smaller devices
-                  maxExtent: 200,
+              // ======= SCROLLABLE STATS CARD (moved to normal sliver) =======
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: _buildContributionSummary(context),
                 ),
               ),
@@ -288,220 +286,235 @@ Widget _buildContributionSummary(BuildContext context) {
       final double totalCollected = data['totalCollected'] ?? 0.0;
       final int totalContributions = data['totalContributions'] ?? 0;
 
-      // Use program's total amount if available, otherwise use estimated total
-      final double targetAmount = widget.program.totalProgramAmount != null
-          ? widget.program.totalProgramAmount!
-          : widget.program.estimatedTotalAmount;
-
-      final double progress = targetAmount > 0
-          ? (totalCollected / targetAmount).clamp(0, 1)
-          : 0;
+      // ✅ FIX: Get participant count from provider
+      final participantProvider = Provider.of<ParticipantProvider>(context, listen: false);
       
-      // ✅ FIXED: Calculate percentage directly from progress
-      final double progressPercentage = progress * 100;
+      return StreamBuilder<int>(
+        stream: participantProvider.streamProgramParticipantCount(widget.program.programId),
+        builder: (context, participantSnapshot) {
+          final participantCount = participantSnapshot.data ?? widget.program.currentParticipants;
+          
+          // ✅ Calculate target amount with proper fallback
+          final double targetAmount;
+          
+          if (widget.program.totalProgramAmount != null && widget.program.totalProgramAmount! > 0) {
+            targetAmount = widget.program.totalProgramAmount!;
+          } else if (widget.program.suggestedContribution != null && widget.program.suggestedContribution! > 0) {
+            final count = participantCount > 0 ? participantCount : 
+                         (widget.program.isFixedParticipants ? widget.program.maxParticipants : 1);
+            targetAmount = widget.program.suggestedContribution! * count;
+          } else {
+            targetAmount = 0.0;
+          }
 
-      return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-              color: Colors.black.withValues(alpha: 0.06),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Contributions Overview",
-                      style: TextStyle(
-                        color: AppColors.textCards(context).withValues(alpha: 0.9),
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    if (widget.program.isMonthlyPaymentProgram)
-                      Text(
-                        "Monthly Contributions",
-                        style: TextStyle(
-                          color: AppColors.textCards(context),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    else
-                      Text(
-                        "All Time Summary",
-                        style: TextStyle(
-                          color: AppColors.textCards(context),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.payments,
-                      color: AppColors.textCards(context),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      totalContributions.toString(),
-                      style: TextStyle(
-                        color: AppColors.textCards(context),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+          final double progress = targetAmount > 0
+              ? (totalCollected / targetAmount).clamp(0, 1)
+              : 0;
+          
+          final double progressPercentage = progress * 100;
+
+          return Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient(context),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.06),
                 ),
               ],
             ),
-
-            const SizedBox(height: 12),
-
-            // Amount display with automatic scaling
-            SizedBox(
-              width: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "₹${totalCollected.toStringAsFixed(0)}",
-                  style: TextStyle(
-                    color: AppColors.textCards(context),
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            
-            // Target information
-            if (targetAmount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  "of ₹${targetAmount.toStringAsFixed(0)} target",
-                  style: TextStyle(
-                    color: AppColors.textCards(context).withValues(alpha: 0.85),
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              )
-            else if (widget.program.suggestedContribution != null && 
-                     widget.program.currentParticipants > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  "₹${widget.program.suggestedContribution!.toStringAsFixed(0)} × ${widget.program.currentParticipants} participants",
-                  style: TextStyle(
-                    color: AppColors.textCards(context).withValues(alpha: 0.85),
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-            const SizedBox(height: 12),
-
-            // Progress bar (only show if there's a target)
-            if (targetAmount > 0) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.textCards(context),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Progress stats row
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      // ✅ FIXED: Now shows percentage based on progress
-                      '${progressPercentage.toStringAsFixed(1)}% collected',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textCards(context).withValues(alpha: 0.85),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '₹${(targetAmount - totalCollected).toStringAsFixed(0)} remaining',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textCards(context).withValues(alpha: 0.85),
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              // Alternative display when no target is set
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.textCards(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppColors.textCards(context),
-                      size: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "No target amount set",
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textCards(context).withValues(alpha: 0.85),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Contributions Overview",
+                          style: TextStyle(
+                            color: AppColors.textCards(context).withValues(alpha: 0.9),
+                            fontSize: 11,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        const SizedBox(height: 2),
+                        if (widget.program.isMonthlyPaymentProgram)
+                          Text(
+                            "Monthly Contributions",
+                            style: TextStyle(
+                              color: AppColors.textCards(context),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        else
+                          Text(
+                            "All Time Summary",
+                            style: TextStyle(
+                              color: AppColors.textCards(context),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.payments,
+                          color: AppColors.textCards(context),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          totalContributions.toString(),
+                          style: TextStyle(
+                            color: AppColors.textCards(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-            ],
-          ],
-        ),
+
+                const SizedBox(height: 12),
+
+                // Amount display with automatic scaling
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "₹${totalCollected.toStringAsFixed(0)}",
+                      style: TextStyle(
+                        color: AppColors.textCards(context),
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Target information
+                if (targetAmount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "of ₹${targetAmount.toStringAsFixed(0)} target",
+                      style: TextStyle(
+                        color: AppColors.textCards(context).withValues(alpha: 0.85),
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                else if (widget.program.suggestedContribution != null && participantCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "₹${widget.program.suggestedContribution!.toStringAsFixed(0)} × ${participantCount} participants",
+                      style: TextStyle(
+                        color: AppColors.textCards(context).withValues(alpha: 0.85),
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                const SizedBox(height: 12),
+
+                // Progress bar (only show if there's a target)
+                if (targetAmount > 0) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: AppColors.textCards(context).withValues(alpha: 0.25),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.textCards(context),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Progress stats row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${progressPercentage.toStringAsFixed(1)}% collected',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textCards(context).withValues(alpha: 0.85),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '₹${(targetAmount - totalCollected).toStringAsFixed(0)} remaining',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textCards(context).withValues(alpha: 0.85),
+                          ),
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  // Alternative display when no target is set
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.textCards(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: AppColors.textCards(context),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "No target amount set",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textCards(context).withValues(alpha: 0.85),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       );
     },
   );
