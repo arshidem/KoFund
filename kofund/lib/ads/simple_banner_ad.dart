@@ -13,8 +13,8 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
 
-  // 🔥 CHANGE THIS TO GOOGLE'S TEST AD UNIT ID
-  final adUnitId = 'ca-app-pub-5527433846571653/3489282899'; // TEST ID
+  // 🔴 REPLACE THIS WITH YOUR REAL ADMOB BANNER AD UNIT ID
+  final String adUnitId = 'ca-app-pub-5527433846571653/3489282899'; // Your real ad unit ID
 
   @override
   void initState() {
@@ -29,13 +29,13 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          debugPrint('✅ TEST Banner ad loaded successfully!');
+          debugPrint('✅ Banner ad loaded successfully');
           setState(() {
             _isLoaded = true;
           });
         },
         onAdFailedToLoad: (ad, error) {
-          debugPrint('❌ Failed to load TEST banner ad: ${error.message}');
+          debugPrint('❌ Failed to load banner ad: ${error.message}');
           debugPrint('❌ Error code: ${error.code}');
           ad.dispose();
         },
@@ -55,15 +55,11 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
       return Container(
         width: 320,
         height: 50,
-        color: Colors.blue[50],
+        color: Colors.grey[200],
         child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Loading TEST ad...', style: TextStyle(fontSize: 12)),
-              SizedBox(height: 4),
-              Text('(Google Test Ad Unit)', style: TextStyle(fontSize: 8)),
-            ],
+          child: Text(
+            'Loading ad...',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
       );
@@ -77,4 +73,3 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
     );
   }
 }
-
