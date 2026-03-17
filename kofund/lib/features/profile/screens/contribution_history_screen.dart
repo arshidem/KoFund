@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +7,7 @@ import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/features/history/providers/history_provider.dart';
+
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
@@ -208,30 +208,7 @@ void _debugFirestoreContribution(String contributionId) async {
 
   
 
-HistoryItem _convertToHistoryItem(Map<String, dynamic> contribution, String userId) {
-  final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-  final amount = (contribution['amount'] ?? 0).toDouble();
-  final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
-  final contributionId = contribution['contributionId'] ?? 'unknown_id';
-  final programId = contribution['programId'] ?? '';
-  
-  // FIX: Get contributorName from the contribution map
-  final contributorName = contribution['contributorName'] ?? '';
 
-  return HistoryItem(
-    id: 'contrib_$contributionId',
-    type: HistoryItemType.contribution,
-    title: programTitle,
-    subtitle: 'Paid via ${_formatPaymentMethod(paymentMethod)}',
-    amount: amount,
-    date: createdAt,
-    userId: userId,
-    contributorName: contributorName, // Now this variable exists
-    programId: programId,
-    category: 'Contribution',
-  );
-}
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
@@ -1672,83 +1649,7 @@ Future<String> _getUserName(String? userId) async {
   }
 }
 
-// Convert HistoryItem to ContributionModel (kept for backward compatibility)
-ContributionModel _convertToContributionModel(HistoryItem item) {
-  return ContributionModel(
-    contributionId: item.id.replaceAll('contrib_', ''),
-    programId: item.programId ?? '',
-    userId: item.userId ?? '',
-    contributorName: item.contributorName ?? '',
-    communityId: '',
-    amount: item.amount,
-    paymentMethod: 'cash',
-    isMonthlyContribution: false,
-    monthId: null,
-    addedByUserId: null,
-    addedByUserName: null,
-    addedAt: Timestamp.now(),
-    isEdited: false,
-    lastEditedByUserId: null,
-    lastEditedByUserName: null,
-    lastEditedAt: null,
-    editReason: null,
-    editHistory: const [],
-    createdAt: Timestamp.fromDate(item.date),
-  );
-}
 
-// Generate receipt method for HistoryItem (for backward compatibility)
-Future<void> _generateReceipt(HistoryItem item, String communityLabel) async {
-  final authProvider = context.read<AppAuthProvider>();
-  
-  if (!context.mounted) return;
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
-  );
-
-  try {
-    // Convert HistoryItem to ContributionModel
-    final contribution = _convertToContributionModel(item);
-    
-    // Get user name
-    final contributorName = await _getUserName(item.userId);
-    if (!mounted) return;
-    
-    if (!context.mounted) return;
-    
-    Navigator.of(context).pop();
-
-    // Generate and show receipt
-    await ContributionReceiptPdf.generateAndShowReceipt(
-      context: context,
-      contribution: contribution,
-      contributorName: contributorName,
-      programName: item.title,
-      communityName: communityLabel.isNotEmpty ? communityLabel : null,
-    );
-
-  } catch (e, st) {
-    if (context.mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-
-    debugPrint('Receipt error: $e\n$st');
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate receipt: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}
 
   Widget _buildEmptyState() {
     return Center(

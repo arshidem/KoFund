@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // Add this import
@@ -11,7 +11,7 @@ import '../../../auth/providers/app_auth_provider.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
-import 'package:kofund/features/history/screens/edit_expense_screen.dart';
+import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 
 // Add this class at the top of your file, after the imports

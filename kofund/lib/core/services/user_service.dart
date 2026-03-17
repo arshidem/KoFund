@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../features/auth/models/user_model.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
@@ -28,7 +28,7 @@ class UserService {
           .collection('participants')
           .where('userId', isEqualTo: userId)
           .where('programId', isEqualTo: programId)
-          .where('status', isEqualTo: 'joined') // ✅ ADD THIS - only active participants
+          .where('status', isEqualTo: 'joined')
           .limit(1)
           .get();
       
@@ -42,102 +42,67 @@ class UserService {
     }
   }
 
-/// Fetch all users in a specific community with optional pagination
-Future<List<UserModel>> getUsersByCommunity(
-  String communityId, {
-  String filterType = 'all', // 'all', 'real', 'virtual'
-  int limit = 100, // Default to 100 for backward compatibility
-  DocumentSnapshot? lastDocument, // For pagination
-  bool loadMore = false, // Whether to load next page
-}) async {
-  try {
-    debugPrint('🔍 DEBUG: Fetching $filterType users for community $communityId');
-    
-    if (filterType == 'real') {
-      debugPrint('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
+  /// Fetch all users in a specific community
+  Future<List<UserModel>> getUsersByCommunity(
+    String communityId, {
+    String filterType = 'all', // 'all', 'real', 'virtual'
+  }) async {
+    try {
+      debugPrint('🔍 DEBUG: Fetching all $filterType users for community $communityId');
       
-      // For real users, we need to get ALL users first, then filter
-      // because real users might not have the isVirtualUser field
-      Query query = usersCollection
-          .where('communityId', isEqualTo: communityId)
-          .orderBy('displayName')
-          .limit(limit * 3); // Get more to account for filtering
-      
-      if (loadMore && lastDocument != null) {
-        query = query.startAfterDocument(lastDocument);
-        debugPrint('📄 DEBUG: Loading next page from cursor');
+      if (filterType == 'real') {
+        debugPrint('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
+        
+        Query query = usersCollection
+            .where('communityId', isEqualTo: communityId)
+            .orderBy('displayName');
+        
+        final snapshot = await query.get();
+        debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
+        
+        final users = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['isVirtualUser'] = data['isVirtualUser'] ?? false;
+          data['isApproved'] = data['isApproved'] ?? true;
+          
+          return UserModel.fromMap(data);
+        }).where((user) => !user.isVirtualUser)
+          .toList();
+        
+        debugPrint('✅ DEBUG: After filtering - got ${users.length} real users');
+        return users;
+        
+      } else {
+        debugPrint('🎯 ${filterType.toUpperCase()} USERS: Querying directly');
+        
+        Query query = usersCollection
+            .where('communityId', isEqualTo: communityId)
+            .orderBy('displayName');
+        
+        if (filterType == 'virtual') {
+          query = query.where('isVirtualUser', isEqualTo: true);
+          debugPrint('🎯 Added isVirtualUser = true filter');
+        }
+        
+        final snapshot = await query.get();
+        debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
+        
+        final users = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['isVirtualUser'] = data['isVirtualUser'] ?? false;
+          data['isApproved'] = data['isApproved'] ?? true;
+          
+          return UserModel.fromMap(data);
+        }).toList();
+        
+        return users;
       }
       
-      debugPrint('📊 DEBUG: Executing query with limit ${limit * 3} for real users (will filter)');
-      
-      final snapshot = await query.get();
-      debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
-      
-      // Convert and filter in code
-      final users = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        
-        // IMPORTANT: Default isVirtualUser to false if field is missing
-        // Missing field means it's a real user
-        data['isVirtualUser'] = data['isVirtualUser'] ?? false;
-        data['isApproved'] = data['isApproved'] ?? true;
-        
-        return UserModel.fromMap(data);
-      }).where((user) => !user.isVirtualUser) // Filter out virtual users
-        .take(limit) // Apply limit after filtering
-        .toList();
-      
-      debugPrint('✅ DEBUG: After filtering - got ${users.length} real users');
-      return users;
-      
-    } else {
-      // For 'all' and 'virtual' users, we can query directly
-      debugPrint('🎯 $filterType.toUpperCase() USERS: Querying directly');
-      
-      Query query = usersCollection
-          .where('communityId', isEqualTo: communityId)
-          .orderBy('displayName')
-          .limit(limit);
-      
-      // Apply server-side filtering for virtual users
-      if (filterType == 'virtual') {
-        query = query.where('isVirtualUser', isEqualTo: true);
-        debugPrint('🎯 Added isVirtualUser = true filter');
-      }
-      // For 'all', no additional filter
-      
-      // Apply pagination if loading more
-      if (loadMore && lastDocument != null) {
-        query = query.startAfterDocument(lastDocument);
-        debugPrint('📄 DEBUG: Loading next page from cursor');
-      }
-      
-      debugPrint('📊 DEBUG: Executing query with limit $limit for $filterType users');
-      
-      final snapshot = await query.get();
-      debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
-      
-      // Convert documents to UserModel
-      final users = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        
-        // Ensure required fields exist
-        // For 'all' query: default isVirtualUser to false if missing
-        // For 'virtual' query: should already have isVirtualUser = true
-        data['isVirtualUser'] = data['isVirtualUser'] ?? false;
-        data['isApproved'] = data['isApproved'] ?? true;
-        
-        return UserModel.fromMap(data);
-      }).toList();
-      
-      return users;
+    } catch (e) {
+      debugPrint('❌ DEBUG: Error fetching community members: $e');
+      throw 'Failed to fetch community members: $e';
     }
-    
-  } catch (e) {
-    debugPrint('❌ DEBUG: Error fetching community members: $e');
-    throw 'Failed to fetch community members: $e';
   }
-}
 
   /// Get pending users (not approved yet)
   Future<List<UserModel>> getPendingUsers(String communityId) async {
@@ -168,61 +133,51 @@ Future<List<UserModel>> getUsersByCommunity(
     }
   }
 
-/// Reject user (removes community info completely)
-Future<void> rejectUser(String uid, String communityId) async {
-  try {
-    final batch = FirebaseFirestore.instance.batch();
-    
-    // References
-    final userRef = usersCollection.doc(uid);
-    final communityRef = FirebaseFirestore.instance
-        .collection('communities')
-        .doc(communityId);
-    final memberRef = communityRef.collection('members').doc(uid);
+  /// Reject user (removes community info completely)
+  Future<void> rejectUser(String uid, String communityId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // References
+      final userRef = usersCollection.doc(uid);
+      final communityRef = FirebaseFirestore.instance
+          .collection('communities')
+          .doc(communityId);
+      final memberRef = communityRef.collection('members').doc(uid);
 
-    // 1. Clear user's community data
-    batch.update(userRef, {
-      'communityId': FieldValue.delete(),
-      'communityCode': FieldValue.delete(),
-      'communityName': FieldValue.delete(), // Keep if your UserModel has it
-      'role': FieldValue.delete(),
-      'isApproved': false,
-      'isAdmin': false,
-      'approvedAt': FieldValue.delete(),
-      'rejectedAt': FieldValue.serverTimestamp(), // Add timestamp for rejection
-      'rejectedByAdmin': true, // Flag to distinguish
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    // 2. Remove user from community members subcollection
-    batch.delete(memberRef);
-
-    // 3. Check if user was pending to decrement correct counter
-    final memberDoc = await memberRef.get();
-    final isPending = memberDoc.exists ? 
-        (memberDoc.data()?['isApproved'] == false) : false;
-
-    // 4. Decrement appropriate counter in community
-    if (isPending) {
-      batch.update(communityRef, {
-        'pendingMembers': FieldValue.increment(-1),
-        'lastActivityAt': FieldValue.serverTimestamp(),
+      // 1. Clear user's community data
+      batch.update(userRef, {
+        'communityId': FieldValue.delete(),
+        'communityCode': FieldValue.delete(),
+        'communityName': FieldValue.delete(),
+        'role': FieldValue.delete(),
+        'isApproved': false,
+        'isAdmin': false,
+        'approvedAt': FieldValue.delete(),
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'rejectedByAdmin': true,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
-    } else {
+
+      // 2. Remove user from community members subcollection
+      batch.delete(memberRef);
+
+      // 3. Increment/Decrement appropriate counter in community
+      // (Simplified logic: we just decrement members if not pending)
       batch.update(communityRef, {
         'totalMembers': FieldValue.increment(-1),
         'lastActivityAt': FieldValue.serverTimestamp(),
       });
-    }
 
-    await batch.commit();
-    debugPrint('✅ Admin rejected user $uid from community $communityId');
-    
-  } catch (e) {
-    debugPrint('❌ Error rejecting user: $e');
-    throw 'Failed to reject user: $e';
+      await batch.commit();
+      debugPrint('✅ Admin rejected user $uid from community $communityId');
+      
+    } catch (e) {
+      debugPrint('❌ Error rejecting user: $e');
+      throw 'Failed to reject user: $e';
+    }
   }
-}
+
   /// Unapprove user (make inactive but keep community link)
   Future<void> unapproveUser(String uid) async {
     try {
@@ -235,7 +190,7 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
   }
 
-  // ✅ ADD THIS MISSING METHOD: Update user role
+  /// Update user role
   Future<void> updateUserRole(String uid, bool isAdmin) async {
     try {
       await usersCollection.doc(uid).update({
@@ -248,15 +203,15 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
   }
 
-  /// ✅ FIXED: Update user's profile (displayName, phone)
+  /// Update user's profile (displayName, phone)
   Future<void> updateUserProfile({
     required String uid,
-    String? displayName, // ✅ CHANGED: name → displayName
+    String? displayName,
     String? phoneNumber,
   }) async {
     try {
       await usersCollection.doc(uid).update({
-        if (displayName != null) 'displayName': displayName, // ✅ CHANGED: 'name' → 'displayName'
+        if (displayName != null) 'displayName': displayName,
         if (phoneNumber != null) 'phoneNumber': phoneNumber,
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -265,7 +220,6 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
   }
 
-  // Add this to your UserService class
   /// Update user's privacy settings
   Future<void> updateUserPrivacySettings(String uid, bool showDetailedProfile) async {
     try {
@@ -278,7 +232,7 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
   }
 
-  /// Delete current user's account (self-delete only)
+  /// Delete current user's account
   Future<void> deleteUser(String uid) async {
     try {
       await usersCollection.doc(uid).delete();
@@ -287,103 +241,82 @@ Future<void> rejectUser(String uid, String communityId) async {
     }
   }
 
-/// Leave community (for normal users)
-Future<void> leaveCommunity(String uid, String communityId) async {
-  try {
-    final batch = FirebaseFirestore.instance.batch();
-    final userRef = usersCollection.doc(uid);
-    final communityRef = FirebaseFirestore.instance
-        .collection('communities')
-        .doc(communityId);
-    final memberRef = communityRef.collection('members').doc(uid);
+  /// Leave community
+  Future<void> leaveCommunity(String uid, String communityId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final userRef = usersCollection.doc(uid);
+      final communityRef = FirebaseFirestore.instance
+          .collection('communities')
+          .doc(communityId);
+      final memberRef = communityRef.collection('members').doc(uid);
 
-    // 1. Update user document
-    batch.update(userRef, {
-      'communityId': FieldValue.delete(),
-      'communityName': FieldValue.delete(),
-      'communityCode': FieldValue.delete(), // 🆕 Also remove invite code
-      'role': FieldValue.delete(),
-      'isApproved': false,
-      'isAdmin': false,
-      'approvedAt': FieldValue.delete(),
-      'leftAt': FieldValue.serverTimestamp(),
-      // ✅ Keep: 'uid', 'email', 'displayName', 'phoneNumber', 'createdAt', 'showDetailedProfile'
-    });
-
-    // 2. Remove user from community members subcollection
-    batch.delete(memberRef);
-
-    // 3. Decrement total members count in community
-    batch.update(communityRef, {
-      'totalMembers': FieldValue.increment(-1),
-      'lastActivityAt': FieldValue.serverTimestamp(),
-    });
-
-    await batch.commit();
-    
-    debugPrint('✅ User $uid successfully left community $communityId');
-    
-  } catch (e) {
-    debugPrint('❌ Error leaving community: $e');
-    throw 'Failed to leave community: $e';
-  }
-}
-
-Future<void> removeFromCommunity(String uid, String communityId) async {
-  try {
-    final batch = FirebaseFirestore.instance.batch();
-    
-    // References to all documents involved
-    final userRef = usersCollection.doc(uid);
-    final communityRef = FirebaseFirestore.instance
-        .collection('communities')
-        .doc(communityId);
-    final memberRef = communityRef.collection('members').doc(uid);
-
-    // 1. Clear user's community data
-    batch.update(userRef, {
-      'communityId': FieldValue.delete(),  // Use delete instead of null
-      'communityName': FieldValue.delete(), // Use delete instead of null
-      'communityCode': FieldValue.delete(), // 🆕 Also remove invite code
-      'role': FieldValue.delete(),
-      'isApproved': false,
-      'isAdmin': false,
-      'approvedAt': FieldValue.delete(),
-      'removedAt': FieldValue.serverTimestamp(), // Add timestamp for removal
-      'removedByAdmin': true, // Flag to distinguish from voluntary leaving
-      'updatedAt': FieldValue.serverTimestamp(),
-      // ✅ Keep: 'uid', 'email', 'displayName', 'phoneNumber', 'createdAt', 'showDetailedProfile'
-    });
-
-    // 2. Remove user from community members subcollection
-    batch.delete(memberRef);
-
-    // 3. Check if user was pending to decide which counter to decrement
-    final memberDoc = await memberRef.get();
-    final isPending = memberDoc.exists ? 
-        (memberDoc.data()?['isApproved'] == false) : false;
-
-    // 4. Decrement appropriate counter in community
-    if (isPending) {
-      batch.update(communityRef, {
-        'pendingMembers': FieldValue.increment(-1),
-        'lastActivityAt': FieldValue.serverTimestamp(),
+      batch.update(userRef, {
+        'communityId': FieldValue.delete(),
+        'communityName': FieldValue.delete(),
+        'communityCode': FieldValue.delete(),
+        'role': FieldValue.delete(),
+        'isApproved': false,
+        'isAdmin': false,
+        'approvedAt': FieldValue.delete(),
+        'leftAt': FieldValue.serverTimestamp(),
       });
-    } else {
+
+      batch.delete(memberRef);
+
       batch.update(communityRef, {
         'totalMembers': FieldValue.increment(-1),
         'lastActivityAt': FieldValue.serverTimestamp(),
       });
-    }
 
-    await batch.commit();
-    debugPrint('✅ Admin removed user $uid from community $communityId');
-    
-  } catch (e) {
-    debugPrint('❌ Error removing user from community: $e');
-    throw 'Failed to remove user from community: $e';
+      await batch.commit();
+      debugPrint('✅ User $uid successfully left community $communityId');
+      
+    } catch (e) {
+      debugPrint('❌ Error leaving community: $e');
+      throw 'Failed to leave community: $e';
+    }
   }
-}
+
+  /// Remove user from community (by admin)
+  Future<void> removeFromCommunity(String uid, String communityId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      
+      final userRef = usersCollection.doc(uid);
+      final communityRef = FirebaseFirestore.instance
+          .collection('communities')
+          .doc(communityId);
+      final memberRef = communityRef.collection('members').doc(uid);
+
+      batch.update(userRef, {
+        'communityId': FieldValue.delete(),
+        'communityName': FieldValue.delete(),
+        'communityCode': FieldValue.delete(),
+        'role': FieldValue.delete(),
+        'isApproved': false,
+        'isAdmin': false,
+        'approvedAt': FieldValue.delete(),
+        'removedAt': FieldValue.serverTimestamp(),
+        'removedByAdmin': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      batch.delete(memberRef);
+
+      batch.update(communityRef, {
+        'totalMembers': FieldValue.increment(-1),
+        'lastActivityAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+      debugPrint('✅ Admin removed user $uid from community $communityId');
+      
+    } catch (e) {
+      debugPrint('❌ Error removing user from community: $e');
+      throw 'Failed to remove user from community: $e';
+    }
+  }
 
   /// Fetch a single user by UID
   Future<UserModel?> getUserById(String uid) async {
@@ -398,30 +331,3 @@ Future<void> removeFromCommunity(String uid, String communityId) async {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

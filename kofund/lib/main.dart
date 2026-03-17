@@ -1,4 +1,4 @@
-﻿// main.dart - UPDATED VERSION with proper Firebase initialization and deep linking
+// main.dart - UPDATED VERSION with proper Firebase initialization and deep linking
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +36,7 @@ import 'features/contributions/providers/contribution_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/members/providers/member_provider.dart';
 import 'features/dashboard/providers/dashboard_provider.dart';
-import 'features/history/providers/history_provider.dart';
+
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
 import 'features/issues/providers/issue_provider.dart';
@@ -537,25 +537,7 @@ class _AppProvidersState extends State<AppProviders> {
           },
         ),
 
-        // 🕐 History Provider - FIXED: Use the existing auth provider
-        ChangeNotifierProxyProvider<AppAuthProvider, HistoryProvider>(
-          create: (_) => HistoryProvider(
-            contributionService: contributionService,
-            expenseService: expenseService,
-            programService: programService,
-            userService: userService,
-            authProvider: _authProvider,
-          ),
-          update: (_, authProvider, previousHistoryProvider) {
-            return previousHistoryProvider ?? HistoryProvider(
-              contributionService: contributionService,
-              expenseService: expenseService,
-              programService: programService,
-              userService: userService,
-              authProvider: authProvider,
-            );
-          },
-        ),
+
 
         // 👤 Profile Provider - FIXED
         ChangeNotifierProxyProvider4<

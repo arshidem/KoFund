@@ -1,4 +1,4 @@
-﻿// lib/features/community/screens/dashboard_screen.dart
+// lib/features/community/screens/dashboard_screen.dart
 import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 import 'package:kofund/core/skeleton/stats_card_skeleton.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
@@ -9,7 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:clipboard/clipboard.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/members_widget.dart';
-import '../widgets/history_widget.dart';
+
 import '../widgets/pending_requests_widget.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
@@ -32,7 +32,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 
 // ADD THESE IMPORTS
-import 'package:kofund/features/history/providers/history_provider.dart';
+
 import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/core/services/contribution_service.dart';
@@ -115,10 +115,7 @@ void _resetWidgetProviders(String userId, String communityId) {
     memberProvider.clearDataForUserChange();
     memberProvider.refreshForUser(communityId);
     
-    // Reset HistoryProvider
-    final historyProvider = context.read<HistoryProvider>();
-    historyProvider.clearDataForUserChange();
-    historyProvider.setUserCommunity(communityId);
+
     
     // ✅ RESET USER PROVIDER
     final userProvider = context.read<UserProvider>();
@@ -188,9 +185,7 @@ void _resetWidgetProviders(String userId, String communityId) {
       final memberProvider = context.read<MemberProvider>();
       memberProvider.clearDataForUserChange();
       
-      // Reset HistoryProvider
-      final historyProvider = context.read<HistoryProvider>();
-      historyProvider.clearDataForUserChange();
+
       
       // Load fresh data
       _loadInitialData();
@@ -240,9 +235,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
   debugPrint('🔄 DEBUG: Initializing widget providers');
   
   try {
-    // Initialize HistoryProvider
-    final historyProvider = context.read<HistoryProvider>();
-    historyProvider.setUserCommunity(communityId);
+
     
     // Initialize MemberProvider
     final memberProvider = context.read<MemberProvider>();
@@ -433,15 +426,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
 
    return MultiProvider(
   providers: [
-    ChangeNotifierProvider(
-      create: (_) => HistoryProvider(
-        contributionService: ContributionService(),
-        expenseService: ExpenseService(),
-        programService: ProgramService(),
-        userService: UserService(),
-        authProvider: auth,
-      ),
-    ),
+
     ChangeNotifierProvider(
       create: (_) => MemberProvider(
         userService: UserService(),
@@ -541,7 +526,6 @@ void _initializeWidgetProviders(String userId, String communityId) {
                       // const SizedBox(height: 24),
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
                             const SizedBox(height: 16),
-                            HistoryWidget(key: ValueKey('history-$userId-$cid')),
                             const SizedBox(height: 20),
                           ],
                         ),

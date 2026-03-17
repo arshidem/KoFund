@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -12,7 +12,7 @@ import '../../../../core/constants/app_colors.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../features/programs/widgets/add_contribution_modal.dart';
-import 'package:kofund/features/history/screens/edit_contribution_screen.dart';
+import 'package:kofund/features/contributions/screens/edit_contribution_screen.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';

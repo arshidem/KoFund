@@ -1,4 +1,4 @@
-﻿// lib/features/members/providers/member_provider.dart
+// lib/features/members/providers/member_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
@@ -17,15 +17,8 @@ class MemberProvider with ChangeNotifier {
   final ContributionService _contributionService;
   final VirtualUserService _virtualUserService;
 
-  // Pagination state
-  final int _pageSize = 15;
-  DocumentSnapshot? _lastDocument;
-  String _currentFilter = 'all';
-  bool _hasMoreData = true;
-  
   // Loading states
   bool _isLoading = false;
-  bool _isLoadingMore = false;
   String? _error;
   
   // Data
@@ -36,9 +29,9 @@ class MemberProvider with ChangeNotifier {
   List<Map<String, dynamic>> _memberParticipationHistory = [];
   List<Map<String, dynamic>> _memberContributionHistory = [];
   bool _loadingMemberHistory = false;
-
-  // Add pagination lock
-  bool _isLoadingPage = false;
+  
+  // Filter
+  String _currentFilter = 'all';
 
   MemberProvider({
     required UserService userService,
@@ -52,24 +45,20 @@ class MemberProvider with ChangeNotifier {
         _contributionService = contributionService,
         _virtualUserService = virtualUserService;
 
-  // Getters
   bool get isLoading => _isLoading;
-  bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
   List<UserModel> get members => _members;
   UserModel? get selectedMember => _selectedMember;
-  bool get hasMoreData => _hasMoreData;
   
   // Member history getters
   List<Map<String, dynamic>> get memberParticipationHistory => _memberParticipationHistory;
   List<Map<String, dynamic>> get memberContributionHistory => _memberContributionHistory;
   bool get loadingMemberHistory => _loadingMemberHistory;
 
-  // ==================== PAGINATION METHODS ====================
-/// Load first page of members with server-side filtering
+  // ==================== LOAD ALL MEMBERS ====================
+/// Load all members at once (no pagination)
 Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
-  // Prevent concurrent loads
-  if (_isLoadingPage) {
+  if (_isLoading) {
     developer.log('⏸️ MemberProvider: loadMembers skipped - already loading');
     return;
   }
@@ -82,43 +71,20 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
     return;
   }
   
-  developer.log('🔄 MemberProvider: loadMembers called - filter: $filterType, reset: $reset');
-  developer.log('📊 Current state: _currentFilter: $_currentFilter, _hasMoreData: $_hasMoreData, _lastDocument: ${_lastDocument != null}');
+  developer.log('🔄 MemberProvider: loadMembers called - filter: $filterType');
   
-  // Reset pagination for new filter or reset request
-  if (reset || filterType != _currentFilter) {
-    developer.log('🔄 Resetting pagination - new filter: $filterType, old filter: $_currentFilter');
-    _resetPagination();
-    _currentFilter = filterType;
-  }
-  
+  _currentFilter = filterType;
   _isLoading = true;
-  _isLoadingPage = true;
   _error = null;
   _safeNotifyListeners();
   
   try {
-    developer.log('🔍 MemberProvider: Fetching users for community: ${user.communityId}, filter: $filterType');
-    
     final users = await _userService.getUsersByCommunity(
       user.communityId!,
       filterType: filterType,
-      limit: _pageSize,
-      lastDocument: null,
-      loadMore: false,
     );
     
     developer.log('📥 MemberProvider: Received ${users.length} users');
-    
-    // Update pagination state
-    if (users.isNotEmpty) {
-      developer.log('📄 MemberProvider: Getting last document snapshot...');
-      _lastDocument = await _getLastDocumentSnapshot(users.last, user.communityId!, filterType);
-      developer.log('✅ MemberProvider: Got last document: ${_lastDocument != null}');
-    }
-    
-    _hasMoreData = users.length == _pageSize;
-    developer.log('📊 MemberProvider: _hasMoreData set to $_hasMoreData (pageSize: $_pageSize, users: ${users.length})');
     
     _members = users;
     
@@ -127,156 +93,14 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
     
     developer.log('✅ MemberProvider: Loaded ${_members.length} members (filter: $filterType)');
     
-    // Debug: List all loaded members
-    for (var member in _members) {
-      developer.log('👤 Member: ${member.displayName} | isVirtualUser: ${member.isVirtualUser} | uid: ${member.uid}');
-    }
-    
   } catch (e, stackTrace) {
     _error = 'Failed to load members: $e';
     developer.log('❌ MemberProvider Error: $e', error: e, stackTrace: stackTrace);
     _members = [];
   } finally {
     _isLoading = false;
-    _isLoadingPage = false;
     _safeNotifyListeners();
   }
-}
-
-/// Load next page of members
-Future<void> loadMoreMembers({String filterType = 'all'}) async {
-  developer.log('🔄 MemberProvider: loadMoreMembers called - filter: $filterType');
-  developer.log('📊 Current state: _isLoadingMore: $_isLoadingMore, _hasMoreData: $_hasMoreData, _lastDocument: ${_lastDocument != null}, _isLoadingPage: $_isLoadingPage');
-  developer.log('📊 Current filter: $_currentFilter, requested filter: $filterType');
-  
-  if (_isLoadingMore) {
-    developer.log('⏸️ MemberProvider: loadMoreMembers skipped - already loading more');
-    return;
-  }
-  
-  if (!_hasMoreData) {
-    developer.log('⏸️ MemberProvider: loadMoreMembers skipped - no more data');
-    return;
-  }
-  
-  if (_lastDocument == null) {
-    developer.log('⏸️ MemberProvider: loadMoreMembers skipped - no last document');
-    return;
-  }
-  
-  if (_isLoadingPage) {
-    developer.log('⏸️ MemberProvider: loadMoreMembers skipped - page loading');
-    return;
-  }
-  
-  // ⚠️ IMPORTANT: Check if filter changed
-  if (filterType != _currentFilter) {
-    developer.log('⚠️ MemberProvider: Filter mismatch! Current: $_currentFilter, Requested: $filterType');
-    developer.log('🔄 MemberProvider: Calling loadMembers with new filter instead');
-    await loadMembers(filterType: filterType, reset: true);
-    return;
-  }
-  
-  final user = _authProvider.user;
-  if (user == null || user.communityId == null) {
-    developer.log('⚠️ MemberProvider: No user or community ID for loadMore');
-    return;
-  }
-  
-  _isLoadingMore = true;
-  _isLoadingPage = true;
-  _safeNotifyListeners();
-  
-  try {
-    developer.log('🔍 MemberProvider: Fetching more users for community: ${user.communityId}, filter: $filterType');
-    developer.log('📄 Using last document: ${_lastDocument!.id}');
-    
-    final users = await _userService.getUsersByCommunity(
-      user.communityId!,
-      filterType: filterType,
-      limit: _pageSize,
-      lastDocument: _lastDocument,
-      loadMore: true,
-    );
-    
-    developer.log('📥 MemberProvider: Received ${users.length} more users');
-    
-    if (users.isNotEmpty) {
-      // Update pagination cursor
-      developer.log('📄 MemberProvider: Getting new last document snapshot...');
-      _lastDocument = await _getLastDocumentSnapshot(users.last, user.communityId!, filterType);
-      developer.log('✅ MemberProvider: New last document: ${_lastDocument != null}');
-      
-      _hasMoreData = users.length == _pageSize;
-      developer.log('📊 MemberProvider: _hasMoreData set to $_hasMoreData (pageSize: $_pageSize, users: ${users.length})');
-      
-      // Add to existing members
-      _members.addAll(users);
-      
-      // Re-sort
-      _members.sort((a, b) => (a.displayName ?? '').compareTo(b.displayName ?? ''));
-      
-      developer.log('✅ MemberProvider: Loaded ${users.length} more members (total: ${_members.length})');
-      
-      // Debug: List newly loaded members
-      for (var member in users) {
-        developer.log('👤+ More Member: ${member.displayName} | isVirtualUser: ${member.isVirtualUser}');
-      }
-    } else {
-      _hasMoreData = false;
-      developer.log('📊 MemberProvider: No more users, _hasMoreData set to false');
-    }
-    
-  } catch (e, stackTrace) {
-    _error = 'Failed to load more members: $e';
-    developer.log('❌ MemberProvider Error loading more: $e', error: e, stackTrace: stackTrace);
-  } finally {
-    _isLoadingMore = false;
-    _isLoadingPage = false;
-    _safeNotifyListeners();
-  }
-}
-
-/// Get last document snapshot for pagination
-Future<DocumentSnapshot?> _getLastDocumentSnapshot(
-  UserModel lastUser, 
-  String communityId, 
-  String filterType
-) async {
-  try {
-    developer.log('🔍 _getLastDocumentSnapshot: Getting snapshot for user ${lastUser.uid}, filter: $filterType');
-    
-    Query query = FirebaseFirestore.instance
-        .collection('users')
-        .where('communityId', isEqualTo: communityId)
-        .where('uid', isEqualTo: lastUser.uid)
-        .limit(1);
-    
-    if (filterType == 'real') {
-      query = query.where('isVirtualUser', isEqualTo: false);
-      developer.log('🎯 Adding isVirtualUser = false filter');
-    } else if (filterType == 'virtual') {
-      query = query.where('isVirtualUser', isEqualTo: true);
-      developer.log('🎯 Adding isVirtualUser = true filter');
-    }
-    
-    final snapshot = await query.get();
-    developer.log('📄 _getLastDocumentSnapshot: Query returned ${snapshot.docs.length} documents');
-    
-    return snapshot.docs.isNotEmpty ? snapshot.docs.first : null;
-  } catch (e, stackTrace) {
-    developer.log('❌ Error getting last document: $e', error: e, stackTrace: stackTrace);
-    return null;
-  }
-}
-
-/// Reset pagination state
-void resetPagination() {
-  developer.log('🔄 MemberProvider: Pagination reset');
-  _lastDocument = null;
-  _hasMoreData = true;
-  _currentFilter = 'all';
-  _isLoadingPage = false;
 }
 
  
@@ -348,9 +172,7 @@ void resetPagination() {
     _memberContributionHistory.clear();
     _loadingMemberHistory = false;
     _isLoading = false;
-    _isLoadingMore = false;
-    _isLoadingPage = false;
-    resetPagination();
+    _currentFilter = 'all';
     developer.log('🔄 MemberProvider: Reset for new user');
   }
 
@@ -362,8 +184,7 @@ void resetPagination() {
     _memberContributionHistory.clear();
     _loadingMemberHistory = false;
     _isLoading = false;
-    _isLoadingMore = false;
-    _isLoadingPage = false;
+    _currentFilter = 'all';
     _safeNotifyListeners();
     developer.log('🔄 MemberProvider: Data cleared for user change');
   }
@@ -724,23 +545,14 @@ void resetPagination() {
 
   // ==================== PRIVATE HELPERS ====================
 
-  void _resetPagination() {
-    _lastDocument = null;
-    _hasMoreData = true;
-    _isLoadingPage = false;
-  }
-
   void _setLoading(bool value) {
     _isLoading = value;
-    if (!value) _isLoadingPage = false;
     _safeNotifyListeners();
   }
 
   void _setError(String message) {
     _error = message;
     _isLoading = false;
-    _isLoadingMore = false;
-    _isLoadingPage = false;
     _safeNotifyListeners();
   }
 
@@ -761,13 +573,9 @@ void resetPagination() {
     _memberParticipationHistory = [];
     _memberContributionHistory = [];
     _isLoading = false;
-    _isLoadingMore = false;
     _loadingMemberHistory = false;
     _error = null;
-    _lastDocument = null;
-    _hasMoreData = true;
     _currentFilter = 'all';
-    _isLoadingPage = false;
     notifyListeners();
   }
 

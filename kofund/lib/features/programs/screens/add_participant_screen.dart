@@ -30,8 +30,6 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
   List<ParticipantModel> _currentParticipants = [];
   List<String> _addingParticipants = [];
   bool _isLoading = true;
-  bool _hasMoreData = true;
-  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -89,39 +87,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     }
   }
 
-  Future<void> _loadMoreMembers() async {
-    if (_isLoadingMore || !_hasMoreData) return;
-    
-    developer.log('🔄 AddParticipantScreen: Loading more members');
-    
-    setState(() => _isLoadingMore = true);
-    
-    try {
-      final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadMoreMembers(filterType: 'all');
-      
-      if (mounted) {
-        setState(() {
-          _allCommunityUsers = memberProvider.members;
-          _hasMoreData = memberProvider.hasMoreData;
-          _isLoadingMore = false;
-        });
-      }
-      
-      developer.log('✅ AddParticipantScreen: Loaded ${_allCommunityUsers.length} total members, hasMore: $_hasMoreData');
-    } catch (e, stackTrace) {
-      developer.log('❌ AddParticipantScreen Error loading more: $e', error: e, stackTrace: stackTrace);
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load more members: $e'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
-      }
-    }
-  }
+
 
   List<UserModel> get _nonParticipants {
     final currentParticipantIds = _currentParticipants.map((p) => p.userId).toSet();
@@ -380,17 +346,10 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     );
   }
 
-  Widget _buildParticipantCard(ParticipantModel participant) {
+  Widget _buildParticipantCardFull(ParticipantModel participant) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context),
-          width: 1,
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      color: Colors.transparent,
       child: ListTile(
         leading: Container(
           width: 40,
@@ -455,21 +414,88 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     );
   }
 
+  Widget _buildParticipantChip(ParticipantModel participant) {
+    return Container(
+      width: 72,
+      margin: const EdgeInsets.only(right: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: AppColors.primary(context).withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    participant.userName.substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      color: AppColors.primary(context),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -2,
+                right: -2,
+                child: GestureDetector(
+                  onTap: () => _removeParticipant(participant.userId),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.error(context),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.background(context), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            participant.userName,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMemberCard(UserModel member) {
     final isAdding = _addingParticipants.contains(member.uid);
     final displayName = member.displayName ?? 'Unknown User';
     final email = member.email ?? 'No email';
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context),
-          width: 1,
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      color: Colors.transparent,
       child: ListTile(
         leading: Container(
           width: 40,
@@ -608,17 +634,157 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     );
   }
 
-  Widget _buildLoadingIndicator() {
-    if (!_isLoadingMore) return const SizedBox.shrink();
-    
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary(context),
-        ),
+  void _showCurrentParticipantsSheet() {
+    // Local variable for the search query in the bottom sheet must be outside builder
+    String localSearchQuery = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, controller) {
+          return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setModalState) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background(context),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      height: 4,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.border(context),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Current Participants',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary(context),
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary(context).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _currentParticipants.length.toString(),
+                              style: TextStyle(
+                                color: AppColors.primary(context),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Local Search Bar for Bottom Sheet
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.card(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.border(context),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextField(
+                          onChanged: (value) {
+                            setModalState(() {
+                              localSearchQuery = value.toLowerCase();
+                            });
+                          },
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 15,
+                          ),
+                          decoration: InputDecoration(
+                            icon: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
+                            hintText: 'Search added members...',
+                            hintStyle: TextStyle(
+                              color: AppColors.textSecondary(context),
+                              fontSize: 15,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          // Filter participants locally
+                          final filteredParticipants = _currentParticipants.where((p) {
+                            final nameMatch = p.userName.toLowerCase().contains(localSearchQuery);
+                            final emailMatch = p.userEmail.toLowerCase().contains(localSearchQuery);
+                            return nameMatch || emailMatch;
+                          }).toList();
+
+                          if (_currentParticipants.isEmpty) {
+                            return _buildEmptyState(
+                              'No participants added yet',
+                              Icons.group_add_outlined,
+                            );
+                          } else if (filteredParticipants.isEmpty && localSearchQuery.isNotEmpty) {
+                            return _buildEmptyState(
+                              'No matching participants found',
+                              Icons.search_off,
+                            );
+                          }
+
+                          return ListView.separated(
+                            controller: controller,
+                            padding: const EdgeInsets.only(bottom: 20),
+                            itemCount: filteredParticipants.length,
+                            separatorBuilder: (context, index) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              return _buildParticipantCardFull(filteredParticipants[index]);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const SizedBox.shrink();
   }
 
   Widget _buildLoadingState() {
@@ -657,9 +823,9 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Add Participants',
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -691,125 +857,116 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       ),
       body: _isLoading
           ? _buildLoadingState()
-          : Column(
+          : Stack(
               children: [
-                // Current Participants Section
-                if (_currentParticipants.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Current Participants',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary(context),
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary(context).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _currentParticipants.length.toString(),
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Available Members',
                             style: TextStyle(
-                              color: AppColors.primary(context),
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              color: AppColors.textPrimary(context),
+                              fontSize: 16,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: _currentParticipants.length,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const ClampingScrollPhysics(),
-                      itemCount: _currentParticipants.length,
-                      itemBuilder: (context, index) {
-                        return _buildParticipantCard(_currentParticipants[index]);
-                      },
-                    ),
-                  ),
-                ],
-                
-                // Available Members Section
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Available Members',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
-                          fontSize: 16,
-                        ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _filteredNonParticipants.isEmpty
+                                  ? AppColors.textTertiary(context).withValues(alpha: 0.1)
+                                  : AppColors.success(context).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _filteredNonParticipants.length.toString(),
+                              style: TextStyle(
+                                color: _filteredNonParticipants.isEmpty
+                                    ? AppColors.textTertiary(context)
+                                    : AppColors.success(context),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    ),
+                    Expanded(
+                      child: _filteredNonParticipants.isEmpty
+                          ? _buildEmptyState(
+                              _searchQuery.isEmpty
+                                  ? 'All community members are already participants'
+                                  : 'No matching members found',
+                              _searchQuery.isEmpty ? Icons.people_outline : Icons.search_off,
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.only(bottom: 100), // padding for bottom bar
+                              itemCount: _filteredNonParticipants.length,
+                              separatorBuilder: (context, index) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                return _buildMemberCard(_filteredNonParticipants[index]);
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+                
+                // Floating Bottom Bar for Current Participants
+                if (_currentParticipants.isNotEmpty)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 24,
+                    child: GestureDetector(
+                      onTap: _showCurrentParticipantsSheet,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         decoration: BoxDecoration(
-                          color: _filteredNonParticipants.isEmpty
-                              ? AppColors.textTertiary(context).withValues(alpha: 0.1)
-                              : AppColors.success(context).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.primary(context),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary(context).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          _filteredNonParticipants.length.toString(),
-                          style: TextStyle(
-                            color: _filteredNonParticipants.isEmpty
-                                ? AppColors.textTertiary(context)
-                                : AppColors.success(context),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.group, color: Colors.white, size: 20),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '${_currentParticipants.length} Participants Added',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Text(
+                              'View',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.normal,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-                
-                // Members List with pagination
-                Expanded(
-                  flex: 3,
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (scrollNotification) {
-                      if (scrollNotification is ScrollEndNotification &&
-                          scrollNotification.metrics.extentAfter == 0 &&
-                          _hasMoreData &&
-                          !_isLoadingMore) {
-                        _loadMoreMembers();
-                        return true;
-                      }
-                      return false;
-                    },
-                    child: _filteredNonParticipants.isEmpty
-                        ? _buildEmptyState(
-                            _searchQuery.isEmpty
-                                ? 'All community members are already participants'
-                                : 'No matching members found',
-                            _searchQuery.isEmpty ? Icons.people_outline : Icons.search_off,
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const ClampingScrollPhysics(),
-                            itemCount: _filteredNonParticipants.length + (_isLoadingMore ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == _filteredNonParticipants.length) {
-                                return _buildLoadingIndicator();
-                              }
-                              return _buildMemberCard(_filteredNonParticipants[index]);
-                            },
-                          ),
-                  ),
-                ),
               ],
             ),
     );

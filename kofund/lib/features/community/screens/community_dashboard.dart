@@ -7,7 +7,7 @@ import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/routing/route_names.dart';
 import './tabs/dashboard_tab.dart';
 import './tabs/programs_tab.dart';
-import './tabs/history_tab.dart';
+
 import './tabs/members_tab.dart';
 import './tabs/profile_tab.dart';
 // Import your skeleton
@@ -23,11 +23,11 @@ class CommunityDashboard extends StatefulWidget {
 class _CommunityDashboardState extends State<CommunityDashboard> {
   int _currentIndex = 0;
   bool _isCheckingAuth = true;
+  late PageController _pageController;
 
   final List<Widget> _tabs = [
     const DashboardTab(),
     const ProgramsTab(),
-    const HistoryTab(),
     const MembersTab(),
     const ProfileTab(),
   ];
@@ -35,7 +35,14 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
     _checkAuthStatus();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkAuthStatus() async {
@@ -106,7 +113,15 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
         children: [
           // Main content
           Expanded(
-            child: _tabs[_currentIndex],
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              children: _tabs,
+            ),
           ),
           
           // Banner ad
@@ -137,9 +152,11 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
@@ -165,11 +182,6 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
             icon: Icon(Icons.event_outlined),
             activeIcon: Icon(Icons.event),
             label: 'Programs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history),
-            label: 'History',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_outlined),

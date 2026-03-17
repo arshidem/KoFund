@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -81,16 +81,12 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   // Filter state
   String _selectedFilter = 'all'; // 'all', 'real', 'virtual'
 
-  // Pagination controller
+  // Pagination controller - kept for general scrolling
   final ScrollController _scrollController = ScrollController();
-  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    
-    // Setup scroll listener for pagination
-    _scrollController.addListener(_scrollListener);
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadMembers();
@@ -140,11 +136,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       _isLoading = false;
       _errorMessage = null;
       _selectedFilter = 'all';
-      _isLoadingMore = false;
     });
-    
-    final memberProvider = context.read<MemberProvider>();
-    memberProvider.resetPagination();
   }
 
   void _checkAuthAndLoadMembers() {
@@ -174,32 +166,22 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     _loadMembers();
   }
 
-  Future<void> _loadMembers({bool loadMore = false}) async {
+  Future<void> _loadMembers() async {
     if (!mounted) return;
     
     setState(() {
-      if (!loadMore) {
-        _isLoading = true;
-      } else {
-        _isLoadingMore = true;
-      }
+      _isLoading = true;
       _errorMessage = null;
     });
     
     try {
       final memberProvider = context.read<MemberProvider>();
-      
-      if (loadMore) {
-        await memberProvider.loadMoreMembers(filterType: _selectedFilter);
-      } else {
-        await memberProvider.loadMembers(filterType: _selectedFilter);
-      }
+      await memberProvider.loadMembers(filterType: _selectedFilter);
       
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
           _isLoading = false;
-          _isLoadingMore = false;
         });
       }
     } catch (error) {
@@ -207,7 +189,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
         setState(() {
           _isInitialLoad = false;
           _isLoading = false;
-          _isLoadingMore = false;
           _errorMessage = 'Failed to load members: $error';
         });
       }
@@ -236,17 +217,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
   }
 
-  void _scrollListener() {
-    final memberProvider = context.read<MemberProvider>();
-    
-    if (_scrollController.position.pixels == 
-        _scrollController.position.maxScrollExtent &&
-        memberProvider.hasMoreData &&
-        !_isLoadingMore &&
-        !memberProvider.isLoading) {
-      _loadMembers(loadMore: true);
-    }
-  }
+
 
   void _navigateToCreateVirtualUsers() {
     final authProvider = context.read<AppAuthProvider>();
@@ -909,14 +880,6 @@ Widget build(BuildContext context) {
           _buildEmptyState()
         else ...[
           ...displayedMembers.map((member) => _buildMemberCard(member, currentUser)).toList(),
-          
-          // Pagination Loader
-          if (_isLoadingMore || memberProvider.isLoadingMore)
-            _buildPaginationLoader(),
-            
-          // No More Data
-          if (!memberProvider.hasMoreData && displayedMembers.isNotEmpty)
-            _buildNoMoreData(),
         ],
       ],
     );
@@ -1377,28 +1340,6 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildPaginationLoader() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-
-  Widget _buildNoMoreData() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Text(
-          'No more members',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildMemberCard(UserModel member, UserModel? currentUser) {
     final isCurrentUser = currentUser?.uid == member.uid;
