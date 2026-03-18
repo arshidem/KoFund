@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 
 class CreateVirtualUsersScreen extends StatefulWidget {
   final String communityId;
@@ -299,8 +301,8 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),
@@ -354,7 +356,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
 
   Widget _buildHeaderInfo() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppStyles.paddingMedium,
       color: AppColors.primary(context).withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +388,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                 ),
               ),
@@ -468,7 +470,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
             height: 120,
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border(context)),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             child: TextField(
               focusNode: _bulkFocus,
@@ -531,9 +533,12 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
 
   Widget _buildUserCard(int index, Map<String, dynamic> user) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppDimensions.spaceMedium),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AppStyles.paddingMedium,
         child: Column(
           children: [
             Row(

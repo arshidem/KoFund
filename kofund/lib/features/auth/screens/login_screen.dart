@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +15,8 @@ import 'package:kofund/core/services/network_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:kofund/features/profile/screens/settings/terms_of_service_screen.dart';
 import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -462,7 +464,7 @@ void _showError(String message) {
       backgroundColor: Colors.red,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
       ),
       duration: const Duration(seconds: 3),
     ),
@@ -477,7 +479,7 @@ void _showError(String message) {
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         ),
       ),
     );
@@ -544,15 +546,15 @@ Widget _buildInputField({
         vertical: 18,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         borderSide: BorderSide(
           color: AppColors.primary(context),
           width: 2,
@@ -599,7 +601,7 @@ Widget _buildTermsCheckbox() {
                     });
                   },
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4), // ⭐ Control border radius
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall / 2), // 4
                   ),
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -731,7 +733,7 @@ Widget _buildInviteBanner() {
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
       color: Colors.blue.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
     ),
     child: Row(
       children: [
@@ -787,7 +789,7 @@ Widget _buildInviteBanner() {
       backgroundColor: AppColors.background(context),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

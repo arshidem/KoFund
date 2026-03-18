@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_dimensions.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -44,7 +45,7 @@ class CustomTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hintText,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

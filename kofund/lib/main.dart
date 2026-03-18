@@ -11,6 +11,7 @@ import 'core/constants/app_colors.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_links/app_links.dart';    
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🧩 Services
 import 'core/services/firebase_auth_service.dart';
 import 'core/services/community_firestore_service.dart';
@@ -24,6 +25,7 @@ import 'core/services/virtual_user_service.dart';
 import 'core/services/issue_service.dart';
 import 'core/services/notification_storage_service.dart';
 import 'core/services/fcm_token_service.dart';
+import 'core/services/secure_storage_service.dart';
 
 // 🧠 Providers
 import 'features/auth/providers/app_auth_provider.dart';
@@ -47,7 +49,7 @@ import 'core/providers/theme_provider.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
-import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb, kDebugMode;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -79,12 +81,21 @@ String? extractWebInviteCode() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
   try {
-    await validateFirebaseConfig();
-    debugPrint('✅ Firebase config validated successfully');
+    await dotenv.load(fileName: ".env");
+    debugPrint('✅ .env loaded');
   } catch (e) {
-    debugPrint('❌ Firebase config error: $e');
-    // Consider showing an error screen instead of crashing
+    debugPrint('⚠️ .env load failed: $e');
+  }
+
+  try {
+    if (kDebugMode) {
+      await validateFirebaseConfig();
+      debugPrint('✅ Firebase config validated');
+    }
+  } catch (e) {
+    if (kDebugMode) debugPrint('❌ Firebase config error: $e');
   }
   // Set portrait orientation
   await SystemChrome.setPreferredOrientations([
@@ -97,38 +108,45 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('✅ Firebase initialized SUCCESSFULLY');
+    if (kDebugMode) debugPrint('✅ Firebase initialized');
   } catch (e) {
-    debugPrint('❌ Firebase initialization FAILED: $e');
-    // Even if Firebase fails, we can still run the app in offline mode
+    if (kDebugMode) debugPrint('❌ Firebase init FAILED: $e');
   }
 
-  // Set Firebase Auth persistence (requires Firebase to be initialized)
+  // Set Firebase Auth persistence
   try {
     await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-    debugPrint('✅ Firebase Auth persistence: LOCAL (offline supported)');
+    if (kDebugMode) debugPrint('✅ Auth persistence: LOCAL');
   } catch (e) {
-    debugPrint('⚠️ Auth persistence error: $e');
+    if (kDebugMode) debugPrint('⚠️ Auth persistence error: $e');
   }
 
-  // Initialize Shared Preferences
+  // Initialize Storage & Migration
   await SharedPreferences.getInstance();
-  debugPrint('✅ Shared Preferences initialized');
+  await SecureStorageService().migrateFromSharedPrefs([
+    'kofund_auth_state',
+    'kofund_user_data',
+    'kofund_last_login',
+    'cached_community'
+  ]);
+  if (kDebugMode) debugPrint('✅ Storage migrated/initialized');
 
-  // Register Background FCM Handler (requires Firebase to be initialized)
+  // Register Background FCM Handler
   FirebaseMessaging.onBackgroundMessage(
     NotificationService.firebaseMessagingBackgroundHandler
   );
-  debugPrint('✅ Background FCM handler registered');
+  if (kDebugMode) debugPrint('✅ FCM Background registered');
 
   // Initialize AdMob in background (non-critical)
   unawaited(_initializeAdMobSafely());
 
   // Global error handlers
   FlutterError.onError = (details) {
-    debugPrint('🐛 Flutter Error: ${details.exception}');
-    if (details.stack != null) {
-      debugPrint('📌 Stack: ${details.stack}');
+    if (kDebugMode) {
+      debugPrint('🐛 Flutter Error: ${details.exception}');
+      if (details.stack != null) {
+        debugPrint('📌 Stack: ${details.stack}');
+      }
     }
   };
 
@@ -161,8 +179,10 @@ void main() async {
   runZonedGuarded(() {
     runApp(const AppProviders());
   }, (error, stackTrace) {
-    debugPrint('🐛 Dart Error: $error');
-    debugPrint('📌 Stack: $stackTrace');
+    if (kDebugMode) {
+      debugPrint('🐛 Dart Error: $error');
+      debugPrint('📌 Stack: $stackTrace');
+    }
   });
 }
 // In main.dart - Add a Firebase config validation
@@ -170,17 +190,17 @@ Future<void> validateFirebaseConfig() async {
   try {
     final options = DefaultFirebaseOptions.currentPlatform;
     
-    debugPrint('📱 Platform: $defaultTargetPlatform');
-    debugPrint('🔥 Firebase App ID: ${options.appId}');
-    debugPrint('🌐 Project ID: ${options.projectId}');
-    debugPrint('🔑 API Key: ${options.apiKey}');
+    if (kDebugMode) {
+      debugPrint('📱 Platform: $defaultTargetPlatform');
+      debugPrint('🌐 Project ID: ${options.projectId}');
+    }
     
     // Validate required fields
     if (options.appId.isEmpty || options.projectId.isEmpty) {
       throw Exception('Firebase configuration is incomplete');
     }
   } catch (e) {
-    debugPrint('❌ Firebase config validation failed: $e');
+    if (kDebugMode) debugPrint('❌ Firebase config validation failed: $e');
     rethrow;
   }
 }
@@ -188,12 +208,14 @@ Future<void> validateFirebaseConfig() async {
 // 🔰 AdMob Initialization
 // =============================
 Future<void> _initializeAdMobSafely() async {
-  debugPrint('🔄 Initializing AdMob...');
+  if (kDebugMode) debugPrint('🔄 Initializing AdMob...');
 
   try {
+    final testDeviceId = dotenv.get('TEST_DEVICE_ID', fallback: '');
+    
     MobileAds.instance.updateRequestConfiguration(
       RequestConfiguration(
-        testDeviceIds: ['0C1F0F65AC946A5A803424C28073E8DD'],
+        testDeviceIds: [if (testDeviceId.isNotEmpty) testDeviceId],
       ),
     );
 

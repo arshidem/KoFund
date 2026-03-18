@@ -1,4 +1,4 @@
-﻿// lib/features/members/screens/member_details_screen.dart
+// lib/features/members/screens/member_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -7,6 +7,8 @@ import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/skeleton/member_details_skeleton.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/routing/route_names.dart';
@@ -252,8 +254,8 @@ Widget build(BuildContext context) {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),
@@ -286,7 +288,7 @@ Widget build(BuildContext context) {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                       ),
                     ),
                     child: const Text('Go Back'),
@@ -331,8 +333,8 @@ Widget build(BuildContext context) {
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
           borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+            bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+            bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
           ),
         ),
       ),
@@ -448,7 +450,7 @@ Widget build(BuildContext context) {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         boxShadow: [
           BoxShadow(
             color: ( AppColors.primary(context)).withValues(alpha: 0.2),
@@ -654,7 +656,7 @@ if (isVirtualUser) {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.primary(context).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
       ),
       child: Column(
@@ -691,7 +693,7 @@ if (isVirtualUser) {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.primary(context).withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             child: Row(
               children: [

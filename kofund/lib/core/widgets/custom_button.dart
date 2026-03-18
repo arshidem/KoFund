@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_dimensions.dart';
 
 enum ButtonVariant { filled, outlined }
 
@@ -23,7 +24,7 @@ class CustomButton extends StatelessWidget {
             backgroundColor: Theme.of(context).colorScheme.primary,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             padding: const EdgeInsets.symmetric(vertical: 16),
           )
@@ -31,7 +32,7 @@ class CustomButton extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.primary,
             side: BorderSide(color: Theme.of(context).colorScheme.primary),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             padding: const EdgeInsets.symmetric(vertical: 16),
           );

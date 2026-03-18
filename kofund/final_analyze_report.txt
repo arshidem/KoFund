@@ -1,0 +1,7 @@
+﻿Analyzing 3 items...                                            
+
+warning - Unnecessary cast - lib\core\services\participant_service.dart:144:39 - unnecessary_cast
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\providers\program_provider.dart:2:8 - unnecessary_import
+warning - Unnecessary cast - lib\features\programs\providers\program_provider.dart:597:46 - unnecessary_cast
+   info - The private field _programJoinSubscriptions could be 'final' - lib\features\programs\providers\program_provider.dart:813:35 - prefer_final_fields
+

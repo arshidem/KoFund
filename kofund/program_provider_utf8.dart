@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/participant_service.dart';
@@ -8,6 +8,7 @@ import 'dart:async';
 import '../models/program_model.dart';
 import '../../participants/models/participant_model.dart';
 import '../../contributions/models/contribution_model.dart';
+
 
 class ProgramProvider with ChangeNotifier {
   final ProgramService _programService;
@@ -34,6 +35,7 @@ class ProgramProvider with ChangeNotifier {
         _participantService = participantService,
         _contributionService = contributionService;
 
+
   void clearError() {
     _error = null;
     notifyListeners();
@@ -42,270 +44,149 @@ class ProgramProvider with ChangeNotifier {
     _error = error;
     notifyListeners();
   }
-
-  void clearUserData() {
-    _myParticipations.clear();
-    _programs.clear();
-    _isLoading = false;
-    _error = null;
-    notifyListeners();
-    debugPrint('🔄 ProgramProvider: User data cleared');
-  }
-
-  Future<void> refreshProgramData(String programId) async {
-    try {
-      debugPrint('🔄 ProgramProvider: Refreshing program data for $programId');
-      final index = _programs.indexWhere((p) => p.programId == programId);
-      if (index != -1) {
-        _programs.removeAt(index);
-      }
-      notifyListeners();
-      await _programService.getProgramById(programId);
-      debugPrint('✅ ProgramProvider: Program data refreshed for $programId');
-    } catch (e) {
-      debugPrint('❌ ProgramProvider: Error refreshing program data: $e');
-      rethrow;
+  // In lib/features/programs/providers/program_provider.dart
+void clearUserData() {
+  // Clear any user-specific caches
+  _myParticipations.clear();
+  _programs.clear(); // Clear programs cache if needed
+  _isLoading = false;
+  _error = null;
+  notifyListeners();
+  debugPrint('?? ProgramProvider: User data cleared');
+}
+// Add this to your ProgramProvider class
+Future<void> refreshProgramData(String programId) async {
+  try {
+    debugPrint('?? ProgramProvider: Refreshing program data for $programId');
+    
+    // Clear this specific program from cache to force re-fetch
+    final index = _programs.indexWhere((p) => p.programId == programId);
+    if (index != -1) {
+      _programs.removeAt(index);
     }
+    
+    // Force a re-fetch by triggering notifyListeners
+    // This will cause streams to re-fetch from Firestore
+    notifyListeners();
+    
+    // Optional: Force re-fetch the program
+    await _programService.getProgramById(programId);
+    
+    debugPrint('? ProgramProvider: Program data refreshed for $programId');
+  } catch (e) {
+    debugPrint('? ProgramProvider: Error refreshing program data: $e');
+    rethrow;
   }
-
-  void clearAllData() {
-    clearUserData();
-  }
-
-  // ✅ OPTIMIZED: Get participant with real-time contribution data
+}
+// Add this for compatibility
+void clearAllData() {
+  clearUserData();
+}
+  // ? ADDED: Method to get participant with real-time contribution data
   Future<ParticipantModel> getParticipantWithContribution(String programId, String userId) async {
     try {
+      // Get participant data
       final participant = await _participantService.getParticipant(programId, userId);
+      
+      // Get contribution data for this user in this program
       final contributions = await _contributionService.getContributionsByUserAndProgram(
         userId: userId,
         programId: programId,
       );
-      final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
-      final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
       
+      // Calculate total paid amount
+      final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
+      
+      // Get program suggested contribution
+      final program = await _firestore.collection('programs').doc(programId).get();
+      final suggestedContribution = (program.data()?['suggestedContribution'] ?? 0).toDouble();
+      
+      // Update participant with real-time contribution data
       return participant.copyWith(
         contributionPaid: totalPaid,
         hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
       );
     } catch (e) {
-      debugPrint('❌ Error getting participant with contribution: $e');
+      debugPrint('? Error getting participant with contribution: $e');
       rethrow;
     }
   }
-
-  // ✅ OPTIMIZED: Stream with monthly contributions - BATCH FETCHING
-  Stream<List<ParticipantModel>> streamProgramParticipantsWithMonthlyContributions(
-    String programId, 
-    String monthId
-  ) {
-    return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
-      if (participants.isEmpty) return [];
-      
-      try {
-        // 1. Fetch program document once
-        final programDoc = await _firestore.collection('programs').doc(programId).get();
-        final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
-        
-        // 2. Fetch all monthly contributions for this program-month once
-        final monthlyContributions = await _contributionService.getMonthlyContributionsForProgram(
-          programId,
-          monthId,
-        );
-        
-        // 3. Map contributions by userId for O(1) lookup
-        final Map<String, double> userPaidMap = {};
-        for (final contribution in monthlyContributions) {
-          userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
-        }
-        
-        // 4. Update participants using the map
-        return participants.map((participant) {
-          final amountPaid = userPaidMap[participant.userId] ?? 0.0;
-          final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
-          
-          return participant.copyWith(
-            contributionPaid: amountPaid,
-            hasPaidContribution: hasPaid,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('❌ Error in optimized monthly participants stream: $e');
-        return participants;
-      }
-    });
-  }
-
-  Future<Map<String, int>> getMonthlyPaymentCounts(String programId) async {
+// ? Stream with monthly contributions - CORRECTED VERSION
+// ? STREAM WITH MONTHLY CONTRIBUTIONS - CORRECTED with proper parameters
+Stream<List<ParticipantModel>> streamProgramParticipantsWithMonthlyContributions(
+  String programId, 
+  String monthId
+) {
+  return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
+    if (participants.isEmpty) return [];
+    
     try {
-      final contributions = await _contributionService.getProgramContributions(programId);
-      final counts = <String, int>{};
-      for (final contribution in contributions) {
-        if (contribution.isMonthlyContribution && contribution.monthId != null) {
-          counts[contribution.monthId!] = (counts[contribution.monthId!] ?? 0) + 1;
-        }
-      }
-      return counts;
-    } catch (e) {
-      debugPrint('❌ Error getting monthly payment counts: $e');
-      return {};
-    }
-  }
-
-  // ✅ OPTIMIZED: Monthly financial summary - REUSES PARTICIPANT STREAM
-  Stream<Map<String, dynamic>> streamProgramMonthlyFinancialSummary(
-    String programId, 
-    String monthId
-  ) {
-    return streamProgramParticipantsWithMonthlyContributions(programId, monthId)
-        .asyncMap((participants) async {
-      if (participants.isEmpty) {
-        return {
-          'totalParticipants': 0,
-          'paidParticipants': 0,
-          'pendingParticipants': 0,
-          'totalCollected': 0.0,
-          'totalExpected': 0.0,
-          'collectionRate': 0.0,
-          'monthId': monthId,
-        };
-      }
-
-      // 1. Fetch program once for suggested contribution
+      // 1. Fetch program document once
       final programDoc = await _firestore.collection('programs').doc(programId).get();
-      final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
+      final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
       
-      // 2. Calculate summary from already optimized participants list
-      int paidParticipants = 0;
-      double totalCollected = 0.0;
+      // 2. Fetch all monthly contributions for this program-month once
+      final monthlyContributions = await _contributionService.getMonthlyContributionsForProgram(
+        programId,
+        monthId,
+      );
       
-      for (final participant in participants) {
-        totalCollected += participant.contributionPaid ?? 0.0;
-        if (participant.hasPaidContribution) {
-          paidParticipants++;
-        }
-      }
-      
-      final totalExpected = suggestedContribution * participants.length;
-      final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
-
-      return {
-        'totalParticipants': participants.length,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': participants.length - paidParticipants,
-        'totalCollected': totalCollected,
-        'totalExpected': totalExpected,
-        'collectionRate': collectionRate,
-        'suggestedContribution': suggestedContribution,
-        'monthId': monthId,
-      };
-    });
-  }
-
-  // ✅ OPTIMIZED: Stream that includes contribution data - BATCH FETCHING
-  Stream<List<ParticipantModel>> streamProgramParticipantsWithContributions(String programId) {
-    return _participantService.streamProgramParticipants(programId).asyncMap((participants) async {
-      if (participants.isEmpty) return [];
-      
-      try {
-        // 1. Fetch program once
-        final programDoc = await _firestore.collection('programs').doc(programId).get();
-        final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
-        
-        // 2. Fetch ALL contributions for this program once
-        final allContributions = await _contributionService.getProgramContributions(programId);
-        
-        // 3. Map contributions by userId
-        final Map<String, double> userPaidMap = {};
-        for (final contribution in allContributions) {
-          userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
-        }
-        
-        // 4. Update participants
-        return participants.map((participant) {
-          final amountPaid = userPaidMap[participant.userId] ?? 0.0;
-          final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
-          
-          return participant.copyWith(
-            contributionPaid: amountPaid,
-            hasPaidContribution: hasPaid,
-          );
-        }).toList();
-      } catch (e) {
-        debugPrint('❌ Error in optimized participants stream: $e');
-        return participants;
-      }
-    });
-  }
-
-  // ✅ OPTIMIZED: Get program participants with real-time contribution data
-  Future<List<ParticipantModel>> getProgramParticipantsWithContributions(String programId) async {
-    try {
-      final participants = await _participantService.getProgramParticipants(programId);
-      if (participants.isEmpty) return [];
-
-      // 1. Fetch program once
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
-      final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
-
-      // 2. Fetch all contributions once
-      final allContributions = await _contributionService.getProgramContributions(programId);
-
-      // 3. Map by userId
+      // 3. Map contributions by userId for O(1) lookup
       final Map<String, double> userPaidMap = {};
-      for (final contribution in allContributions) {
+      for (final contribution in monthlyContributions) {
         userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
       }
-
-      // 4. Update participants
+      
+      // 4. Update participants using the map
       return participants.map((participant) {
         final amountPaid = userPaidMap[participant.userId] ?? 0.0;
         final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
+        
         return participant.copyWith(
           contributionPaid: amountPaid,
           hasPaidContribution: hasPaid,
         );
       }).toList();
-    } catch (e) {
-      debugPrint('❌ Error in optimized participants future: $e');
-      return [];
+    } catch ($e) {
+      debugPrint(' Error in optimized monthly participants stream: $e');
+      return participants;
     }
-  }
+  });
+}
 
-  // ✅ OPTIMIZED: Get program financial summary
-  Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async {
-    try {
-      final participants = await getProgramParticipantsWithContributions(programId);
-      
-      // 1. Fetch program once for suggested contribution calculation
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
-      final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
-      
-      int paidParticipants = 0;
-      double totalCollected = 0.0;
-      
-      for (final participant in participants) {
-        final contributionPaid = participant.contributionPaid ?? 0.0;
-        totalCollected += contributionPaid;
-        if (participant.hasPaidContribution) {
-          paidParticipants++;
-        }
+// ? Get payment counts per month
+Future<Map<String, int>> getMonthlyPaymentCounts(String programId) async {
+  try {
+    final contributions = await _contributionService.getProgramContributions(programId);
+    
+    final counts = <String, int>{};
+    
+    for (final contribution in contributions) {
+      if (contribution.isMonthlyContribution && contribution.monthId != null) {
+        counts[contribution.monthId!] = (counts[contribution.monthId!] ?? 0) + 1;
       }
-      
-      final totalExpected = suggestedContribution * participants.length;
-      final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
-
-      return {
-        'totalParticipants': participants.length,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': participants.length - paidParticipants,
-        'totalCollected': totalCollected,
-        'totalExpected': totalExpected,
-        'collectionRate': collectionRate,
-        'suggestedContribution': suggestedContribution,
-      };
-    } catch (e) {
-      debugPrint('❌ Error getting financial summary: $e');
+    }
+    
+    return counts;
+  } catch (e) {
+    debugPrint('? Error getting monthly payment counts: $e');
+    return {};
+  }
+}
+// ? FIXED: Monthly financial summary
+Stream<Map<String, dynamic>> streamProgramMonthlyFinancialSummary(
+  String programId, 
+  String monthId
+) {
+  return streamProgramParticipantsWithMonthlyContributions(programId, monthId)
+      .asyncMap((participants) async {
+Stream<Map<String, dynamic>> streamProgramMonthlyFinancialSummary(
+  String programId, 
+  String monthId
+) {
+  return streamProgramParticipantsWithMonthlyContributions(programId, monthId)
+      .asyncMap((participants) async {
+    if (participants.isEmpty) {
       return {
         'totalParticipants': 0,
         'paidParticipants': 0,
@@ -313,54 +194,212 @@ class ProgramProvider with ChangeNotifier {
         'totalCollected': 0.0,
         'totalExpected': 0.0,
         'collectionRate': 0.0,
-        'suggestedContribution': 0.0,
+        'monthId': monthId,
       };
     }
-  }
 
-  // ✅ OPTIMIZED: Stream program financial summary
-  Stream<Map<String, dynamic>> streamProgramFinancialSummary(String programId) {
-    return streamProgramParticipantsWithContributions(programId).asyncMap((participants) async {
-      if (participants.isEmpty) {
-        return {
-          'totalParticipants': 0,
-          'paidParticipants': 0,
-          'pendingParticipants': 0,
-          'totalCollected': 0.0,
-          'totalExpected': 0.0,
-          'collectionRate': 0.0,
-        };
+    // 1. Fetch program once for suggested contribution
+    final programDoc = await _firestore.collection('programs').doc(programId).get();
+    final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
+    
+    // 2. Calculate summary from already optimized participants list
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    for (final participant in participants) {
+      totalCollected += participant.contributionPaid ?? 0.0;
+      if (participant.hasPaidContribution) {
+        paidParticipants++;
       }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
 
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants,
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+      'monthId': monthId,
+    };
+  });
+}
+    
+    try {
       // 1. Fetch program once
       final programDoc = await _firestore.collection('programs').doc(programId).get();
-      final suggestedContribution = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
+      final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
       
-      int paidParticipants = 0;
-      double totalCollected = 0.0;
+      // 2. Fetch ALL contributions for this program once
+      final allContributions = await _contributionService.getProgramContributions(programId);
       
-      for (final participant in participants) {
-        totalCollected += participant.contributionPaid ?? 0.0;
-        if (participant.hasPaidContribution) {
-          paidParticipants++;
-        }
+      // 3. Map contributions by userId
+      final Map<String, double> userPaidMap = {};
+      for (final contribution in allContributions) {
+        userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
       }
       
-      final totalExpected = suggestedContribution * participants.length;
-      final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+      // 4. Update participants
+      return participants.map((participant) {
+        final amountPaid = userPaidMap[participant.userId] ?? 0.0;
+        final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
+        
+        return participant.copyWith(
+          contributionPaid: amountPaid,
+          hasPaidContribution: hasPaid,
+        );
+      }).toList();
+    } catch ($e) {
+      debugPrint(' Error in optimized participants stream: $e');
+      return participants;
+    }
+  });
+}
 
-      return {
-        'totalParticipants': participants.length,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': participants.length - paidParticipants,
-        'totalCollected': totalCollected,
-        'totalExpected': totalExpected,
-        'collectionRate': collectionRate,
-        'suggestedContribution': suggestedContribution,
-      };
-    });
+// ? ADDED: Get program participants with real-time contribution data
+Future<List<ParticipantModel>> getProgramParticipantsWithContributions(String programId) async {
+  try {
+    final participants = await _participantService.getProgramParticipants(programId);
+    if (participants.isEmpty) return [];
+
+    // 1. Fetch program once
+    final programDoc = await _firestore.collection('programs').doc(programId).get();
+    final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
+
+    // 2. Fetch all contributions once
+    final allContributions = await _contributionService.getProgramContributions(programId);
+
+    // 3. Map by userId
+    final Map<String, double> userPaidMap = {};
+    for (final contribution in allContributions) {
+      userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
+    }
+
+    // 4. Update participants
+    return participants.map((participant) {
+      final amountPaid = userPaidMap[participant.userId] ?? 0.0;
+      final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
+      return participant.copyWith(
+        contributionPaid: amountPaid,
+        hasPaidContribution: hasPaid,
+      );
+    }).toList();
+  } catch ($e) {
+    debugPrint(' Error in optimized participants future: $e');
+    return [];
   }
+}
+}
+  // ? ADDED: Get program financial summary with real-time data
+// ? FIXED: Get program financial summary
+Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async {
+  try {
+    final participants = await getProgramParticipantsWithContributions(programId);
+    final program = await _programService.getProgramById(programId);
+    
+    if (program == null) {
+      return {
+        'totalParticipants': 0,
+        'paidParticipants': 0,
+        'pendingParticipants': 0,
+        'totalCollected': 0.0,
+        'totalExpected': 0.0,
+        'collectionRate': 0.0,
+      };
+    }
 
+    final suggestedContribution = program.suggestedContribution ?? 0;
+    
+    // ? FIXED: Count only participants who paid full amount
+Future<Map<String, dynamic>> getProgramFinancialSummary(String programId) async {
+  try {
+    final participants = await getProgramParticipantsWithContributions(programId);
+    
+    // 1. Fetch program once for suggested contribution calculation
+    final programDoc = await _firestore.collection('programs').doc(programId).get();
+    final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
+    
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    for (final participant in participants) {
+      final contributionPaid = participant.contributionPaid ?? 0.0;
+      totalCollected += contributionPaid;
+      if (participant.hasPaidContribution) {
+        paidParticipants++;
+      }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants,
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+    };
+  } catch ($e) {
+    debugPrint(' Error getting financial summary: $e');
+    return {
+      'totalParticipants': 0,
+      'paidParticipants': 0,
+      'pendingParticipants': 0,
+      'totalCollected': 0.0,
+      'totalExpected': 0.0,
+      'collectionRate': 0.0,
+      'suggestedContribution': 0.0,
+    };
+  }
+}
+Stream<Map<String, dynamic>> streamProgramFinancialSummary(String programId) {
+  return streamProgramParticipantsWithContributions(programId).asyncMap((participants) async {
+    if (participants.isEmpty) {
+      return {
+        'totalParticipants': 0,
+        'paidParticipants': 0,
+        'pendingParticipants': 0,
+        'totalCollected': 0.0,
+        'totalExpected': 0.0,
+        'collectionRate': 0.0,
+      };
+    }
+
+    // 1. Fetch program once
+    final programDoc = await _firestore.collection('programs').doc(programId).get();
+    final suggestedContribution = (programDoc.data()?["suggestedContribution"] ?? 0).toDouble();
+    
+    int paidParticipants = 0;
+    double totalCollected = 0.0;
+    
+    for (final participant in participants) {
+      totalCollected += participant.contributionPaid ?? 0.0;
+      if (participant.hasPaidContribution) {
+        paidParticipants++;
+      }
+    }
+    
+    final totalExpected = suggestedContribution * participants.length;
+    final collectionRate = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+
+    return {
+      'totalParticipants': participants.length,
+      'paidParticipants': paidParticipants,
+      'pendingParticipants': participants.length - paidParticipants,
+      'totalCollected': totalCollected,
+      'totalExpected': totalExpected,
+      'collectionRate': collectionRate,
+      'suggestedContribution': suggestedContribution,
+    };
+  });
+}
   Future<void> createProgram(ProgramModel program) async {
     try {
       await _programService.createProgram(program);
@@ -370,41 +409,48 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadCommunityPrograms(String communityId) async {
-    _isLoading = true;
+  // ? Load community programs
+// ? Load community programs - MODIFIED to include status sync
+Future<void> loadCommunityPrograms(String communityId) async {
+  _isLoading = true;
+  notifyListeners();
+  try {
+    // Get programs from service
+    _programs = await _programService.getProgramsByCommunity(communityId);
+    
+    // ? CRITICAL: SYNC STATUS FOR ALL LOADED PROGRAMS
+    for (final program in _programs) {
+      try {
+        await program.syncComputedStatusToFirestore();
+      } catch (e) {
+        debugPrint('? Error syncing status for program ${program.programId}: $e');
+        // Continue with other programs even if one fails
+      }
+    }
+    
+  } catch (e) {
+    debugPrint('Error loading programs: $e');
+  } finally {
+    _isLoading = false;
     notifyListeners();
-    try {
-      _programs = await _programService.getProgramsByCommunity(communityId);
-      for (final program in _programs) {
-        try {
-          await program.syncComputedStatusToFirestore();
-        } catch (e) {
-          debugPrint('❌ Error syncing status for program ${program.programId}: $e');
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading programs: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
-
-  Future<void> syncAllProgramsStatus() async {
-    try {
-      for (final program in _programs) {
-        try {
-          await program.syncComputedStatusToFirestore();
-        } catch (e) {
-          debugPrint('❌ Error syncing status for program ${program.programId}: $e');
-        }
+}
+// ? ADD THIS METHOD to your ProgramProvider class
+Future<void> syncAllProgramsStatus() async {
+  try {
+    for (final program in _programs) {
+      try {
+        await program.syncComputedStatusToFirestore();
+      } catch (e) {
+        debugPrint('? Error syncing status for program ${program.programId}: $e');
       }
-      debugPrint('✅ Program status sync completed for ${_programs.length} programs');
-    } catch (e) {
-      debugPrint('❌ Error in syncAllProgramsStatus: $e');
     }
+    debugPrint('? Program status sync completed for ${_programs.length} programs');
+  } catch (e) {
+    debugPrint('? Error in syncAllProgramsStatus: $e');
   }
-
+}
+  // ? Join program - UPDATED for monthly payment program
   Future<void> joinProgram(
     ProgramModel program,
     String userId,
@@ -414,7 +460,7 @@ class ProgramProvider with ChangeNotifier {
   ) async {
     try {
       final participant = ParticipantModel(
-        participantId: '', 
+        participantId: '', // Will be generated by Firestore
         programId: program.programId,
         userId: userId,
         userName: userName,
@@ -427,6 +473,7 @@ class ProgramProvider with ChangeNotifier {
       );
 
       await _participantService.joinProgram(participant);
+      
       await loadMyParticipations(userId, communityId);
       notifyListeners();
     } catch (e) {
@@ -434,9 +481,11 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Leave program
   Future<void> leaveProgram(String programId, String userId) async {
     try {
       await _participantService.leaveProgram(programId, userId);
+      
       final program = await _programService.getProgramById(programId);
       if (program != null) {
         await loadMyParticipations(userId, program.communityId);
@@ -447,9 +496,13 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+
+  // ?? ADD REMINDER DATE
   Future<void> addContributionReminderDate(String programId, DateTime date) async {
     try {
       await _programService.addContributionReminderDate(programId, date);
+      
+      // Update local program if in list
       final index = _programs.indexWhere((p) => p.programId == programId);
       if (index != -1) {
         final program = _programs[index];
@@ -462,16 +515,20 @@ class ProgramProvider with ChangeNotifier {
           enableAutoReminders: true,
         );
       }
+      
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error adding reminder date: $e');
+      debugPrint('? Error adding reminder date: $e');
       rethrow;
     }
   }
   
+  // ?? REMOVE REMINDER DATE
   Future<void> removeContributionReminderDate(String programId, DateTime date) async {
     try {
       await _programService.removeContributionReminderDate(programId, date);
+      
+      // Update local program
       final index = _programs.indexWhere((p) => p.programId == programId);
       if (index != -1) {
         final program = _programs[index];
@@ -482,13 +539,15 @@ class ProgramProvider with ChangeNotifier {
           contributionReminderDates: updatedDates,
         );
       }
+      
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error removing reminder date: $e');
+      debugPrint('? Error removing reminder date: $e');
       rethrow;
     }
   }
   
+  // ?? UPDATE REMINDER SETTINGS
   Future<void> updateReminderSettings({
     required String programId,
     bool? enableAutoReminders,
@@ -504,6 +563,8 @@ class ProgramProvider with ChangeNotifier {
         reminderFrequency: reminderFrequency,
         firstPaymentDueDate: firstPaymentDueDate,
       );
+      
+      // Update local program
       final index = _programs.indexWhere((p) => p.programId == programId);
       if (index != -1) {
         final program = _programs[index];
@@ -514,16 +575,20 @@ class ProgramProvider with ChangeNotifier {
           firstPaymentDueDate: firstPaymentDueDate ?? program.firstPaymentDueDate,
         );
       }
+      
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error updating reminder settings: $e');
+      debugPrint('? Error updating reminder settings: $e');
       rethrow;
     }
   }
   
+  // ?? CLEAR ALL REMINDER DATES
   Future<void> clearAllReminderDates(String programId) async {
     try {
       await _programService.clearAllReminderDates(programId);
+      
+      // Update local program
       final index = _programs.indexWhere((p) => p.programId == programId);
       if (index != -1) {
         final program = _programs[index];
@@ -531,58 +596,67 @@ class ProgramProvider with ChangeNotifier {
           contributionReminderDates: [],
         );
       }
+      
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error clearing reminder dates: $e');
+      debugPrint('? Error clearing reminder dates: $e');
       rethrow;
     }
   }
 
+
+
+
+  // ?? SEND CONTRIBUTION REMINDER
   Future<void> sendContributionReminder(String programId) async {
     try {
       await _programService.sendContributionReminder(programId);
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error sending reminder: $e');
+      debugPrint('? Error sending reminder: $e');
       rethrow;
     }
   }
 
-  Future<void> updateProgramReminderSettings({
-    required String programId,
-    bool? enableAutoReminders,
-    int? reminderDaysBefore,
-    String? reminderFrequency,
-    List<DateTime>? contributionReminderDates,
-    DateTime? firstPaymentDueDate,
-    DateTime? nextReminderDate,
-  }) async {
-    try {
-      await _programService.updateProgramReminderSettings(
-        programId: programId,
-        enableAutoReminders: enableAutoReminders,
-        reminderDaysBefore: reminderDaysBefore,
-        reminderFrequency: reminderFrequency,
-        contributionReminderDates: contributionReminderDates,
-        firstPaymentDueDate: firstPaymentDueDate,
-        nextReminderDate: nextReminderDate,
-      );
-      notifyListeners();
-    } catch (e) {
-      debugPrint('❌ Error updating reminder settings: $e');
-      rethrow;
-    }
+  // ?? UPDATE REMINDER SETTINGS
+// ?? UPDATE REMINDER SETTINGS (updated)
+Future<void> updateProgramReminderSettings({
+  required String programId,
+  bool? enableAutoReminders,
+  int? reminderDaysBefore,
+  String? reminderFrequency,
+  List<DateTime>? contributionReminderDates,
+  DateTime? firstPaymentDueDate,
+  DateTime? nextReminderDate, // ? ADD THIS PARAMETER
+}) async {
+  try {
+    await _programService.updateProgramReminderSettings(
+      programId: programId,
+      enableAutoReminders: enableAutoReminders,
+      reminderDaysBefore: reminderDaysBefore,
+      reminderFrequency: reminderFrequency,
+      contributionReminderDates: contributionReminderDates,
+      firstPaymentDueDate: firstPaymentDueDate,
+      nextReminderDate: nextReminderDate, // ? PASS THIS
+    );
+    notifyListeners();
+  } catch (e) {
+    debugPrint('? Error updating reminder settings: $e');
+    rethrow;
   }
+}
 
+  // ?? GET UPCOMING REMINDERS
   Future<List<ProgramModel>> getProgramsWithUpcomingReminders(String communityId) async {
     try {
       return await _programService.getProgramsWithUpcomingReminders(communityId);
     } catch (e) {
-      debugPrint('❌ Error getting upcoming reminders: $e');
+      debugPrint('? Error getting upcoming reminders: $e');
       return [];
     }
   }
 
+  // ?? STREAM UPCOMING REMINDERS
   Stream<List<ProgramModel>> streamProgramsWithUpcomingReminders(String communityId) {
     return _firestore
         .collection('programs')
@@ -599,6 +673,7 @@ class ProgramProvider with ChangeNotifier {
     });
   }
 
+  // ?? CHECK REMINDER STATUS FOR A PROGRAM
   Future<Map<String, dynamic>> getReminderStatus(String programId) async {
     try {
       final program = await _programService.getProgramById(programId);
@@ -610,7 +685,9 @@ class ProgramProvider with ChangeNotifier {
           'status': 'no_program',
         };
       }
+      
       final unpaidParticipants = await _programService.getParticipantsWithUnpaidContributions(programId);
+      
       return {
         'hasReminders': program.enableAutoReminders,
         'nextReminder': program.nextReminderDate,
@@ -622,7 +699,7 @@ class ProgramProvider with ChangeNotifier {
         'status': program.enableAutoReminders ? 'active' : 'disabled',
       };
     } catch (e) {
-      debugPrint('❌ Error getting reminder status: $e');
+      debugPrint('? Error getting reminder status: $e');
       return {
         'hasReminders': false,
         'nextReminder': null,
@@ -632,6 +709,10 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+
+
+
+  // ? NEW: Get the monthly payment program for a community
   Future<ProgramModel?> getMonthlyPaymentProgram(String communityId) async {
     try {
       final programs = await _programService.getProgramsByCommunity(communityId);
@@ -649,16 +730,17 @@ class ProgramProvider with ChangeNotifier {
           status: 'active',
           createdBy: '',
           createdAt: Timestamp.now(),
-          programType: 'monthly',
+          programType: 'monthly', // ? ADDED
           isMonthlyPaymentProgram: false,
         ),
       );
     } catch (e) {
-      debugPrint('❌ Error getting monthly payment program: $e');
+      debugPrint('? Error getting monthly payment program: $e');
       return null;
     }
   }
 
+  // ? NEW: Get monthly payment program financial stats
   Future<Map<String, dynamic>> getMonthlyProgramFinancialStats(String communityId) async {
     try {
       final monthlyProgram = await getMonthlyPaymentProgram(communityId);
@@ -671,7 +753,9 @@ class ProgramProvider with ChangeNotifier {
           'balance': 0.0,
         };
       }
+
       final financialSummary = await getProgramFinancialSummary(monthlyProgram.programId);
+      
       return {
         'hasMonthlyProgram': true,
         'programId': monthlyProgram.programId,
@@ -684,7 +768,7 @@ class ProgramProvider with ChangeNotifier {
         'collectionRate': financialSummary['collectionRate'] ?? 0.0,
       };
     } catch (e) {
-      debugPrint('❌ Error getting monthly program stats: $e');
+      debugPrint('? Error getting monthly program stats: $e');
       return {
         'hasMonthlyProgram': false,
         'totalCollected': 0.0,
@@ -695,6 +779,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? NEW: Stream monthly payment program financial stats
   Stream<Map<String, dynamic>> streamMonthlyProgramFinancialStats(String communityId) {
     return _programService.streamProgramsByCommunity(communityId).asyncMap((programs) async {
       final monthlyProgram = programs.firstWhere(
@@ -711,7 +796,7 @@ class ProgramProvider with ChangeNotifier {
           status: 'active',
           createdBy: '',
           createdAt: Timestamp.now(),
-          programType: 'monthly',
+          programType: 'monthly', // ? ADDED
           isMonthlyPaymentProgram: false,
         ),
       );
@@ -725,7 +810,9 @@ class ProgramProvider with ChangeNotifier {
           'balance': 0.0,
         };
       }
+
       final financialSummary = await getProgramFinancialSummary(monthlyProgram.programId);
+      
       return {
         'hasMonthlyProgram': true,
         'programId': monthlyProgram.programId,
@@ -740,6 +827,7 @@ class ProgramProvider with ChangeNotifier {
     });
   }
 
+  // ? Load user participations
   Future<void> loadMyParticipations(String userId, String communityId) async {
     try {
       _myParticipations = await _participantService.getUserProgramParticipations(
@@ -752,6 +840,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Check if user joined
   bool hasUserJoined(String programId, String userId) {
     return _myParticipations.any(
       (p) => p.programId == programId && p.userId == userId && p.status == 'joined',
@@ -762,6 +851,7 @@ class ProgramProvider with ChangeNotifier {
 
   void watchUserParticipation(String communityId, String userId) {
     _participationSub?.cancel();
+
     _participationSub = FirebaseFirestore.instance
         .collection('communities')
         .doc(communityId)
@@ -772,10 +862,12 @@ class ProgramProvider with ChangeNotifier {
       _myParticipations = snapshot.docs
           .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
           .toList();
+
       notifyListeners();
     });
   }
 
+  // ? ADD: Real-time stream to check if user joined a specific program
   Stream<bool> streamUserJoinedStatus(String programId, String userId) {
     return _firestore
         .collection('communities')
@@ -788,6 +880,7 @@ class ProgramProvider with ChangeNotifier {
         .map((snapshot) => snapshot.docs.isNotEmpty);
   }
 
+  // ? ADD: Helper method to get community ID from program
   String _getCommunityIdFromProgram(String programId) {
     final program = _programs.firstWhere(
       (p) => p.programId == programId,
@@ -803,17 +896,20 @@ class ProgramProvider with ChangeNotifier {
         status: 'active',
         createdBy: '',
         createdAt: Timestamp.now(),
-        programType: 'general',
-        isMonthlyPaymentProgram: false,
+        programType: 'general', // ? ADDED
+        isMonthlyPaymentProgram: false, // ? ADDED
       ),
     );
     return program.communityId;
   }
 
+  // ? ADD: Better real-time participation watcher
   Map<String, StreamSubscription> _programJoinSubscriptions = {};
 
   void watchProgramJoinStatus(String programId, String userId, String communityId) {
+    // Cancel existing subscription for this program
     _programJoinSubscriptions[programId]?.cancel();
+
     _programJoinSubscriptions[programId] = _firestore
         .collection('communities')
         .doc(communityId)
@@ -822,24 +918,37 @@ class ProgramProvider with ChangeNotifier {
         .where('userId', isEqualTo: userId)
         .snapshots()
         .listen((snapshot) {
-      final hasJoined = snapshot.docs.isNotEmpty && snapshot.docs.first['status'] == 'joined';
+      // Update local participations list
+      final hasJoined = snapshot.docs.isNotEmpty && 
+          snapshot.docs.first['status'] == 'joined';
+      
       if (hasJoined) {
-        final participant = ParticipantModel.fromMap(snapshot.docs.first.data(), snapshot.docs.first.id);
+        // Add to participations if joined
+        final participant = ParticipantModel.fromMap(
+          snapshot.docs.first.data(), 
+          snapshot.docs.first.id
+        );
         if (!_myParticipations.any((p) => p.participantId == participant.participantId)) {
           _myParticipations.add(participant);
         }
       } else {
-        _myParticipations.removeWhere((p) => p.programId == programId && p.userId == userId);
+        // Remove from participations if left
+        _myParticipations.removeWhere((p) => 
+          p.programId == programId && p.userId == userId
+        );
       }
+      
       notifyListeners();
     });
   }
 
+  // ? ADD: Cancel specific program subscription
   void cancelProgramWatch(String programId) {
     _programJoinSubscriptions[programId]?.cancel();
     _programJoinSubscriptions.remove(programId);
   }
 
+  // ? Get real-time participant count for a program
   Future<int> getProgramParticipantCount(String programId) async {
     try {
       return await _participantService.getProgramParticipantCount(programId);
@@ -849,15 +958,18 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Stream for real-time participant count
   Stream<int> streamProgramParticipantCount(String programId) {
     return _participantService.streamProgramParticipantCount(programId);
   }
 
+  // ? Get program with real-time participant count
   Future<ProgramModel?> getProgramWithLiveCount(String programId) async {
     try {
       final program = await _programService.getProgramById(programId);
       if (program != null) {
         final participantCount = await getProgramParticipantCount(programId);
+        // Return a copy of the program with updated participant count
         return program.copyWith(currentParticipants: participantCount);
       }
       return null;
@@ -867,6 +979,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Stream for program with real-time participant count
   Stream<ProgramModel?> streamProgramWithLiveCount(String programId) {
     return _programService.getProgramStreamById(programId).asyncMap((program) async {
       if (program != null) {
@@ -877,9 +990,11 @@ class ProgramProvider with ChangeNotifier {
     });
   }
 
+  // ? Stream community programs with real-time participant counts
   Stream<List<ProgramModel>> streamCommunityProgramsWithLiveCounts(String communityId) {
     return _programService.streamProgramsByCommunity(communityId).asyncMap((programs) async {
       final List<ProgramModel> updatedPrograms = [];
+      
       for (final program in programs) {
         try {
           final participantCount = await getProgramParticipantCount(program.programId);
@@ -888,13 +1003,16 @@ class ProgramProvider with ChangeNotifier {
           updatedPrograms.add(program);
         }
       }
+      
       return updatedPrograms;
     });
   }
 
+  // ? NEW: Stream programs with financial goals
   Stream<List<ProgramModel>> streamProgramsWithFinancialGoals(String communityId) {
     return _programService.streamProgramsWithFinancialGoals(communityId).asyncMap((programs) async {
       final List<ProgramModel> updatedPrograms = [];
+      
       for (final program in programs) {
         try {
           final participantCount = await getProgramParticipantCount(program.programId);
@@ -903,10 +1021,12 @@ class ProgramProvider with ChangeNotifier {
           updatedPrograms.add(program);
         }
       }
+      
       return updatedPrograms;
     });
   }
 
+  // ? Add contribution
   Future<void> addProgramContribution(ContributionModel contribution) async {
     try {
       await _contributionService.addContribution(contribution);
@@ -916,6 +1036,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Get program contributions
   Future<List<ContributionModel>> getProgramContributions(String programId) async {
     try {
       return await _contributionService.getProgramContributions(programId);
@@ -930,6 +1051,7 @@ class ProgramProvider with ChangeNotifier {
     return programs.where((p) => p.isMonthlyPaymentProgram == false).toList();
   }
 
+  // ? Get total contributions
   Future<double> getProgramTotalContributions(String programId) async {
     try {
       return await _contributionService.getProgramTotalContributions(programId);
@@ -939,6 +1061,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? NEW: Calculate program financial progress
   Future<Map<String, dynamic>> getProgramFinancialProgress(String programId) async {
     try {
       final program = await _programService.getProgramById(programId);
@@ -950,17 +1073,23 @@ class ProgramProvider with ChangeNotifier {
           'hasFinancialGoals': false,
         };
       }
+
       final totalCollected = await getProgramTotalContributions(programId);
       final participantCount = await getProgramParticipantCount(programId);
+      
       double progressPercentage = 0;
       double estimatedTotal = 0;
+
       if (program.totalProgramAmount != null) {
+        // Use provided total program amount
         estimatedTotal = program.totalProgramAmount!;
         progressPercentage = estimatedTotal > 0 ? (totalCollected / estimatedTotal) * 100 : 0;
       } else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
+        // Calculate estimated total based on participants
         estimatedTotal = program.suggestedContribution! * participantCount;
         progressPercentage = estimatedTotal > 0 ? (totalCollected / estimatedTotal) * 100 : 0;
       }
+
       return {
         'totalCollected': totalCollected,
         'progressPercentage': progressPercentage,
@@ -984,18 +1113,22 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Stream user participations
   Stream<List<ParticipantModel>> streamUserParticipations(String userId, String communityId) {
     return _participantService.streamUserProgramParticipations(userId, communityId);
   }
 
+  // ? Stream program total contributions
   Stream<double> streamProgramTotalContributions(String programId) {
     return _contributionService.streamProgramTotalContributions(programId);
   }
 
+  // ? Get a single program as a stream
   Stream<ProgramModel?> getProgramById(String programId) {
     return _programService.getProgramStreamById(programId);
   }
 
+  // ? Get program participants
   Future<List<ParticipantModel>> getProgramParticipants(String programId) async {
     try {
       return await _participantService.getProgramParticipants(programId);
@@ -1005,10 +1138,12 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Stream program participants
   Stream<List<ParticipantModel>> streamProgramParticipants(String programId) {
     return _participantService.streamProgramParticipants(programId);
   }
 
+  // ? Update program status
   Future<void> updateProgramStatus(String programId, String status) async {
     try {
       await _programService.updateProgramStatus(programId, status);
@@ -1018,6 +1153,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Update program
   Future<void> updateProgram(ProgramModel program) async {
     try {
       await _programService.updateProgramModel(program);
@@ -1027,6 +1163,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? NEW: Update program financials only
   Future<void> updateProgramFinancials({
     required String programId,
     double? suggestedContribution,
@@ -1044,6 +1181,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Delete program
   Future<void> deleteProgram(String programId) async {
     try {
       await _programService.deleteProgram(programId);
@@ -1053,6 +1191,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Get participant by program and user
   Future<ParticipantModel?> getParticipantByProgramAndUser(String programId, String userId) async {
     try {
       return await _participantService.getParticipantByProgramAndUser(programId, userId);
@@ -1062,6 +1201,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Update participant payment status
   Future<void> updateParticipantPaymentStatus(
     String participantId, 
     double amountPaid, 
@@ -1075,9 +1215,12 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? NEW: Get programs with financial goals
   Future<List<ProgramModel>> getProgramsWithFinancialGoals(String communityId) async {
     try {
       final programs = await _programService.getProgramsWithFinancialGoals(communityId);
+      
+      // Add real-time participant counts
       final List<ProgramModel> updatedPrograms = [];
       for (final program in programs) {
         try {
@@ -1087,6 +1230,7 @@ class ProgramProvider with ChangeNotifier {
           updatedPrograms.add(program);
         }
       }
+      
       return updatedPrograms;
     } catch (e) {
       debugPrint('Error loading programs with financial goals: $e');
@@ -1094,6 +1238,7 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  // ? Refresh all data for a community
   Future<void> refreshCommunityData(String communityId, String userId) async {
     await Future.wait([
       loadCommunityPrograms(communityId),
@@ -1101,39 +1246,54 @@ class ProgramProvider with ChangeNotifier {
     ]);
   }
 
-  Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
-    String programId, 
-    String monthId,
-    String communityId
-  ) async {
-    try {
-      final contributionService = ContributionService();
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .where('communityId', isEqualTo: communityId)
-          .where('isApproved', isEqualTo: true)
-          .get();
-      final paymentStatus = await contributionService.getMonthlyPaymentStatus(programId, monthId);
-      final List<Map<String, dynamic>> result = [];
-      for (final userDoc in usersSnapshot.docs) {
-        final userData = userDoc.data();
-        final userId = userDoc.id;
-        result.add({
-          'userId': userId,
-          'userName': userData['displayName'] ?? 'Unknown User',
-          'userEmail': userData['email'] ?? '',
-          'userAvatar': userData['photoURL'] ?? '',
-          'hasPaidForMonth': paymentStatus[userId] ?? false,
-        });
-      }
-      result.sort((a, b) => (a['userName'] as String).compareTo(b['userName'] as String));
-      return result;
-    } catch (e) {
-      debugPrint('❌ Error getting participants with monthly status: $e');
-      return [];
-    }
-  }
+  // Add this method to your ProgramProvider class in program_provider.dart
 
+// ?? Get participants with monthly payment status
+Future<List<Map<String, dynamic>>> getParticipantsWithMonthlyStatus(
+  String programId, 
+  String monthId,
+  String communityId
+) async {
+  try {
+    // Get contribution service instance
+    final contributionService = ContributionService();
+    
+    // Get all approved users in the community
+    final usersSnapshot = await _firestore
+        .collection('users')
+        .where('communityId', isEqualTo: communityId)
+        .where('isApproved', isEqualTo: true)
+        .get();
+    
+    // Get monthly payment status for each user
+    final paymentStatus = await contributionService.getMonthlyPaymentStatus(programId, monthId);
+    
+    final List<Map<String, dynamic>> result = [];
+    
+    for (final userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      final userId = userDoc.id;
+      
+      result.add({
+        'userId': userId,
+        'userName': userData['displayName'] ?? 'Unknown User',
+        'userEmail': userData['email'] ?? '',
+        'userAvatar': userData['photoURL'] ?? '',
+        'hasPaidForMonth': paymentStatus[userId] ?? false,
+      });
+    }
+    
+    // Sort by name
+    result.sort((a, b) => (a['userName'] as String).compareTo(b['userName'] as String));
+    
+    return result;
+  } catch (e) {
+    debugPrint('? Error getting participants with monthly status: $e');
+    return [];
+  }
+}
+
+  // ? Clear all data
   void clearData() {
     _programs.clear();
     _myParticipations.clear();
@@ -1147,6 +1307,7 @@ class ProgramProvider with ChangeNotifier {
   }
 }
 
+// ? ADD THIS OUTSIDE AND AFTER ProgramProvider class
 class ProgramWithJoinStatus {
   final ProgramModel program;
   final bool hasJoined;
@@ -1158,3 +1319,4 @@ class ProgramWithJoinStatus {
     this.participant,
   });
 }
+

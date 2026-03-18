@@ -16,14 +16,15 @@ import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import '../../../features/programs/providers/program_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/dashboard/widgets/program_carousel_widget.dart';
 import 'package:kofund/features/polls/widgets/poll_dashboard_widget.dart';
-import 'package:kofund/features/notifications/widgets/notification_badge.dart';
-import 'package:kofund/features/programs/screens/program_details_screen.dart';
 import 'dart:ui';
+import 'package:kofund/core/widgets/glass_action_button.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
@@ -501,11 +502,11 @@ void _initializeWidgetProviders(String userId, String communityId) {
                         ),
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(12.0),
+                          padding: AppStyles.screenPadding / 1.5,
                           children: [
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppDimensions.spaceSmall),
                             _buildStatsCard(stats, isDarkMode),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppDimensions.spaceMedium),
                          
                             
                             ProgramCarouselWidget(
@@ -578,8 +579,8 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
     decoration: BoxDecoration(
       gradient: AppColors.primaryGradient(context),
       borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+        bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+        bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
       ),
       boxShadow: [
         BoxShadow(
@@ -625,7 +626,7 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
                           borderRadius: BorderRadius.circular(20),
                           onTap: _navigateToEditCommunity,
                           child: Padding(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(AppDimensions.spaceExtraSmall),
                             child: Icon(
                               Icons.edit_rounded,
                               size: 18,
@@ -694,113 +695,6 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
             //   ),
             // ),
             
-            // NEW: ADMIN PENDING REQUESTS ICON (SHOWS ONLY FOR ADMINS)
-            if (isAdmin) ...[
-              Consumer<UserProvider>(
-                builder: (context, userProvider, child) {
-                  final pendingCount = userProvider.pendingMembers.length;
-                  
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: GestureDetector(
-                        onTap: () {
-                          // Navigate to approval requests screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ApprovalRequestsScreen(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Main icon
-                              Icon(
-                                Icons.person_add_alt_1,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                              
-                              // Badge for pending count
-                              if (pendingCount > 0)
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
-                                    width: 18,
-                                    height: 18,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.warning(context),
-                                      shape: BoxShape.circle,
-                                    
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        pendingCount > 9 ? '9+' : pendingCount.toString(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ] else ...[
-              // For non-admin users, you can show notification icon or nothing
-              // Here I'm keeping it empty, but you can uncomment notification icon below:
-              
-              // NOTIFICATION ICON FOR NON-ADMINS (OPTIONAL - UNCOMMENT IF NEEDED)
-              /*
-              ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: const Center(
-                      child: NotificationBadge(
-                        iconSize: 22,
-                        badgeColor: Colors.redAccent,
-                        textColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              */
-            ],
           ],
         ),
       ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +9,12 @@ import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/skeleton/profile_screen_skeleton.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/widgets/glass_action_button.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:kofund/features/admin/providers/user_provider.dart';
+import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import './edit_profile_screen.dart';
 import './participation_history_screen.dart';
 import './contribution_history_screen.dart';
@@ -268,7 +273,7 @@ if (_isLoadingProfile) {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: _buildAppBar(showBackButton),
+      appBar: _buildAppBar(showBackButton, user),
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,
@@ -352,7 +357,7 @@ if (_isLoadingProfile) {
     );
   }
 
-AppBar _buildAppBar(bool showBackButton) {
+AppBar _buildAppBar(bool showBackButton, UserModel user) {
   return AppBar(
     toolbarHeight: 80, // Set your desired height here (default is 56)
     title: const Text(
@@ -388,22 +393,46 @@ AppBar _buildAppBar(bool showBackButton) {
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient(context),
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+          bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+          bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
         ),
       ),
     ),
     actions: [
-      Container(
-        margin: const EdgeInsets.only(right: 6),
-        child: IconButton(
-          icon: const Icon(
-            Icons.settings,
-            color: Colors.white, // Explicitly set white color for settings icon
-            size: 22,
+      if (user.isAdmin)
+        Consumer<UserProvider>(
+          builder: (context, userProvider, child) {
+            final pendingCount = userProvider.pendingMembers.length;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Center(
+                child: GlassActionButton(
+                  icon: Icons.person_add_alt_1,
+                  badgeCount: pendingCount,
+                  size: 48,
+                  iconSize: 22,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ApprovalRequestsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Center(
+          child: GlassActionButton(
+            icon: Icons.settings,
+            size: 48,
+            iconSize: 22,
+            onTap: _navigateToSettings,
           ),
-          onPressed: _navigateToSettings,
-          splashRadius: 22,
         ),
       ),
     ],
@@ -421,12 +450,12 @@ Widget _buildProfileHeader(UserModel user) {
           : 'U';
 
   return ClipRRect(
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
     child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.card(context), // ✅ Card background
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(
           color: AppColors.border(context),
         ),
@@ -643,11 +672,11 @@ Widget _buildStatCard({
   required VoidCallback onTap,
 }) {
   return ClipRRect(
-    borderRadius: BorderRadius.circular(24),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
     child: Container(
       decoration: BoxDecoration(
         color: AppColors.card(context), // ✅ CARD BG
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(
           color: AppColors.border(context),
         ),
@@ -765,7 +794,7 @@ Widget _buildRecentProgramsList(List<Map<String, dynamic>> programs) {
       ],
     ),
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      padding: AppStyles.paddingMedium,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

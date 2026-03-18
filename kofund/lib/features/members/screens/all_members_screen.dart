@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -14,6 +16,9 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/contribution_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
+import 'package:kofund/features/admin/providers/user_provider.dart';
+import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
+import 'package:kofund/core/widgets/glass_action_button.dart';
 import 'dart:ui';
 
 // =================== MAIN SCREEN ===================
@@ -702,8 +707,8 @@ Widget build(BuildContext context) {
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
           borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+            bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+            bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
           ),
         ),
       ),
@@ -716,6 +721,33 @@ Widget build(BuildContext context) {
               : _buildSearchBar(),
         ),
       ),
+      actions: [
+        if (isAdmin)
+          Consumer<UserProvider>(
+            builder: (context, userProvider, child) {
+              final pendingCount = userProvider.pendingMembers.length;
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Center(
+                  child: GlassActionButton(
+                    icon: Icons.person_add_alt_1,
+                    badgeCount: pendingCount,
+                    size: 48,
+                    iconSize: 22,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ApprovalRequestsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
     ),
 
     body: SafeArea(
@@ -727,7 +759,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: AppColors.card(context),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -794,7 +826,7 @@ Widget build(BuildContext context) {
       icon: const Icon(Icons.person_add, size: 22),
       label: const Text('Add Virtual'),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
       ),
     );
   }
@@ -1321,7 +1353,7 @@ Widget build(BuildContext context) {
       child: ElevatedButton.icon(
         onPressed: _navigateToCreateVirtualUsers,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple,
+          backgroundColor: AppColors.primary(context),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -1386,9 +1418,7 @@ Widget build(BuildContext context) {
                           height: 40,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            color: isVirtualUser 
-                                ? Colors.purple.withValues(alpha: 0.12)
-                                : AppColors.primary(context).withValues(alpha: 0.12),
+                            color: AppColors.primary(context).withValues(alpha: 0.12),
                           ),
                           child: Center(
                             child: Text(
@@ -1396,9 +1426,7 @@ Widget build(BuildContext context) {
                                   ? member.displayName![0].toUpperCase() 
                                   : '?'),
                               style: TextStyle(
-                                color: isVirtualUser 
-                                    ? Colors.purple[800]
-                                    : AppColors.primary(context),
+                                color: AppColors.primary(context),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -1470,7 +1498,7 @@ Widget build(BuildContext context) {
                               _buildChip('Admin', Colors.orange[800]!),
                             
                             if (isVirtualUser)
-                              _buildChip('Virtual', Colors.purple),
+                              _buildChip('Virtual', AppColors.primary(context)),
                           ],
                         ),
                         const SizedBox(height: 4),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +15,8 @@ import 'tabs/program_participants_tab.dart';
 import 'tabs/program_contributions_tab.dart';
 import 'tabs/program_expenses_tab.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/constants/app_styles.dart';
 
 // Import skeleton files
 import '../../../../core/skeleton/program_overview_skeleton.dart';
@@ -207,8 +209,8 @@ Widget build(BuildContext context) {
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
           borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+            bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+            bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
           ),
           boxShadow: [
             BoxShadow(
@@ -267,7 +269,7 @@ Widget build(BuildContext context) {
                                 vertical: 10,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                               ),
                               elevation: 2,
                               shadowColor: Colors.black.withValues(alpha: 0.5),
@@ -299,8 +301,8 @@ Widget build(BuildContext context) {
             indicatorColor: Colors.white,
             indicatorWeight: 3,
             indicatorPadding: EdgeInsets.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: AppStyles.screenPaddingHorizontal / 2,
+            labelPadding: AppStyles.screenPaddingHorizontal / 2,
             labelStyle: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -545,7 +547,7 @@ Widget build(BuildContext context) {
         backgroundColor: AppColors.card(context),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         ),
         title: Text(
           'Leave Program?',
@@ -580,7 +582,7 @@ Widget build(BuildContext context) {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               ),
             ),
             child: const Text('Leave Program'),

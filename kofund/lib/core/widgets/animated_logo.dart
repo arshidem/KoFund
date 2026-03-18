@@ -8,7 +8,7 @@ class AnimatedLogo extends StatefulWidget {
 
   const AnimatedLogo({
     Key? key,
-    this.size = 150,
+    this.size = 90,
     this.showBackground = false,
     this.backgroundColor = Colors.transparent,
     this.loopAnimation = true,
@@ -21,51 +21,28 @@ class AnimatedLogo extends StatefulWidget {
 class _AnimatedLogoState extends State<AnimatedLogo>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
-  late Animation<double> poly1;
-  late Animation<double> poly2;
-  late Animation<double> poly3;
-  late Animation<double> scale;
+  late Animation<double> _shimmerAnimation;
 
   @override
   void initState() {
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 4000), // Slowed down significantly
       vsync: this,
     );
 
-    poly1 = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+    _shimmerAnimation = Tween<double>(begin: -1.5, end: 2.5).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOutSine,
+      ),
     );
-
-    poly2 = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
-    );
-
-    poly3 = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
-    );
-
-    scale = Tween(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-
-    _controller.forward();
 
     if (widget.loopAnimation) {
-      _controller.addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          Future.delayed(const Duration(milliseconds: 600), () {
-            _controller.reset();
-            _controller.forward();
-          });
-        }
-      });
+      _controller.repeat();
+    } else {
+      _controller.forward();
     }
   }
 
@@ -81,35 +58,36 @@ class _AnimatedLogoState extends State<AnimatedLogo>
       width: widget.size,
       height: widget.size,
       child: AnimatedBuilder(
-        animation: _controller,
-        builder: (_, __) {
-          return Transform.scale(
-            scale: scale.value,
-            child: CustomPaint(
-              painter: _SvgLogoPainter(
-                poly1: poly1.value,
-                poly2: poly2.value,
-                poly3: poly3.value,
-              ),
-            ),
+        animation: _shimmerAnimation,
+        builder: (context, child) {
+          return ShaderMask(
+            blendMode: BlendMode.srcATop,
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.0),
+                  Colors.white.withValues(alpha: 0.5),
+                  Colors.white.withValues(alpha: 0.0),
+                ],
+                stops: const [0.4, 0.5, 0.6], // Tighter stops make the shimmer thinner
+                begin: Alignment(_shimmerAnimation.value - 1.0, _shimmerAnimation.value - 1.0),
+                end: Alignment(_shimmerAnimation.value + 1.0, _shimmerAnimation.value + 1.0),
+              ).createShader(bounds);
+            },
+            child: child,
           );
         },
+        child: CustomPaint(
+          painter: const _SvgLogoPainter(),
+        ),
       ),
     );
   }
 }
 
-/// 🎨 SVG Painter (1:1 with your SVG)
+/// 🎨 Static SVG Painter
 class _SvgLogoPainter extends CustomPainter {
-  final double poly1;
-  final double poly2;
-  final double poly3;
-
-  _SvgLogoPainter({
-    required this.poly1,
-    required this.poly2,
-    required this.poly3,
-  });
+  const _SvgLogoPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -128,8 +106,8 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(23.76 / 96 * w, 47.01 / 90.59 * h),
         Offset(89.84 / 96 * w, 0),
       ],
-      const Color(0xFF052224).withValues(alpha: poly1),
-      Offset(0, 10 * (1 - poly1)),
+      const Color(0xFF052224),
+      Offset.zero,
     );
 
     /// ⚪ Polygon 2 (Bottom White)
@@ -142,8 +120,8 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(48.04 / 96 * w, 53.24 / 90.59 * h),
         Offset(84.66 / 96 * w, h),
       ],
-      Colors.white.withValues(alpha: poly2),
-      Offset(5 * (1 - poly2), 5 * (1 - poly2)),
+      Colors.white,
+      Offset.zero,
     );
 
     /// ⚪ Polygon 3 (Top White)
@@ -155,8 +133,8 @@ class _SvgLogoPainter extends CustomPainter {
         Offset(54.5 / 96 * w, 46.73 / 90.59 * h),
         Offset(96 / 96 * w, 4.88 / 90.59 * h),
       ],
-      Colors.white.withValues(alpha: poly3),
-      Offset(-5 * (1 - poly3), -8 * (1 - poly3)),
+      Colors.white,
+      Offset.zero,
     );
   }
 
@@ -166,7 +144,10 @@ class _SvgLogoPainter extends CustomPainter {
     Color color,
     Offset offset,
   ) {
-    final paint = Paint()..color = color;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    
     final path = Path()..moveTo(points.first.dx + offset.dx, points.first.dy + offset.dy);
 
     for (int i = 1; i < points.length; i++) {
@@ -178,6 +159,6 @@ class _SvgLogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SvgLogoPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _SvgLogoPainter oldDelegate) => false;
 }
 

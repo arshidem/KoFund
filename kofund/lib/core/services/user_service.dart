@@ -10,7 +10,7 @@ class UserService {
   /// Fetch all users in the app (for admin)
   Future<List<UserModel>> getAllUsers() async {
     try {
-      final snapshot = await usersCollection.get();
+      final snapshot = await usersCollection.limit(100).get();
       return snapshot.docs
           .map((doc) => UserModel.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
@@ -55,7 +55,9 @@ class UserService {
         
         Query query = usersCollection
             .where('communityId', isEqualTo: communityId)
-            .orderBy('displayName');
+            .where('isApproved', isEqualTo: true)
+            .orderBy('displayName')
+            .limit(200);
         
         final snapshot = await query.get();
         debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
@@ -66,7 +68,7 @@ class UserService {
           data['isApproved'] = data['isApproved'] ?? true;
           
           return UserModel.fromMap(data);
-        }).where((user) => !user.isVirtualUser)
+        }).where((user) => !user.isVirtualUser && user.isApproved)
           .toList();
         
         debugPrint('✅ DEBUG: After filtering - got ${users.length} real users');
@@ -77,7 +79,9 @@ class UserService {
         
         Query query = usersCollection
             .where('communityId', isEqualTo: communityId)
-            .orderBy('displayName');
+            .where('isApproved', isEqualTo: true)
+            .orderBy('displayName')
+            .limit(200);
         
         if (filterType == 'virtual') {
           query = query.where('isVirtualUser', isEqualTo: true);
@@ -110,6 +114,7 @@ class UserService {
       final snapshot = await usersCollection
           .where('communityId', isEqualTo: communityId)
           .where('isApproved', isEqualTo: false)
+          .limit(50)
           .get();
 
       return snapshot.docs

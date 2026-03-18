@@ -1,16 +1,18 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
+import 'package:kofund/core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:developer' as developer; // ADD THIS for debugPrint
+import 'dart:developer' as developer;
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   static const String _authStateKey = 'kofund_auth_state';
   static const String _userDataKey = 'kofund_user_data';
@@ -24,13 +26,13 @@ class FirebaseAuthService {
       final User? firebaseUser = _auth.currentUser;
       
       if (firebaseUser != null) {
-        debugPrint('✅ Firebase Auth: User authenticated online');
+        if (kDebugMode) debugPrint('✅ Auth: Online session active');
         await _saveAuthStateLocally(firebaseUser);
         return firebaseUser;
       }
       
       // If Firebase returns null, try local storage (offline mode)
-      debugPrint('⚠️ Firebase Auth: No user found, checking local storage');
+      if (kDebugMode) debugPrint('⚠️ Auth: No online user, checking secure storage');
       return await _getUserFromLocalStorage();
       
     } catch (e) {
@@ -60,22 +62,21 @@ class FirebaseAuthService {
         'lastSaved': DateTime.now().millisecondsSinceEpoch,
       };
       
-      await prefs.setString(_authStateKey, json.encode(authState));
-      debugPrint('💾 Auth state saved locally for offline');
+      await _secureStorage.write(_authStateKey, json.encode(authState));
+      if (kDebugMode) debugPrint('💾 Auth state encrypted and saved');
       
     } catch (e) {
-      debugPrint('⚠️ Error saving auth state locally: $e');
+      if (kDebugMode) debugPrint('⚠️ Error saving auth state: $e');
     }
   }
 
   // Get user from local storage (offline mode)
   Future<User?> _getUserFromLocalStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final authStateJson = prefs.getString(_authStateKey);
+      final authStateJson = await _secureStorage.read(_authStateKey);
       
       if (authStateJson == null) {
-        debugPrint('📭 No saved auth state found locally');
+        if (kDebugMode) debugPrint('📭 No secured auth state found');
         return null;
       }
       
@@ -91,12 +92,12 @@ class FirebaseAuthService {
       final daysSinceSaved = DateTime.now().difference(savedDate).inDays;
       
       if (daysSinceSaved > 30) {
-        debugPrint('🗑️ Saved auth state is too old ($daysSinceSaved days), clearing');
-        await prefs.remove(_authStateKey);
+        if (kDebugMode) debugPrint('🗑️ Secured auth state expired ($daysSinceSaved days)');
+        await _secureStorage.delete(_authStateKey);
         return null;
       }
       
-      debugPrint('📱 Using saved auth state from ${daysSinceSaved} days ago');
+      if (kDebugMode) debugPrint('📱 Using secured auth from ${daysSinceSaved} days ago');
       
       // Create a mock user or just return null
       // For offline mode, we'll rely on the saved UID in providers
@@ -111,32 +112,29 @@ class FirebaseAuthService {
   // Clear local auth state
   Future<void> clearLocalAuthState() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_authStateKey);
-      await prefs.remove(_userDataKey);
-      await prefs.remove(_lastLoginKey);
-      debugPrint('🗑️ Local auth state cleared');
+      await _secureStorage.delete(_authStateKey);
+      await _secureStorage.delete(_userDataKey);
+      await _secureStorage.delete(_lastLoginKey);
+      if (kDebugMode) debugPrint('🗑️ Secure auth state cleared');
     } catch (e) {
-      debugPrint('⚠️ Error clearing local auth state: $e');
+      if (kDebugMode) debugPrint('⚠️ Error clearing secure state: $e');
     }
   }
 
   // Save user data locally
   Future<void> saveUserDataLocally(Map<String, dynamic> userData) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userDataKey, json.encode(userData));
-      debugPrint('💾 User data saved locally for offline');
+      await _secureStorage.write(_userDataKey, json.encode(userData));
+      if (kDebugMode) debugPrint('💾 User data encrypted and saved');
     } catch (e) {
-      debugPrint('⚠️ Error saving user data locally: $e');
+      if (kDebugMode) debugPrint('⚠️ Error saving user data: $e');
     }
   }
 
   // Get user data from local storage
   Future<Map<String, dynamic>?> getUserDataFromLocalStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userDataJson = prefs.getString(_userDataKey);
+      final userDataJson = await _secureStorage.read(_userDataKey);
       
       if (userDataJson == null) {
         return null;
@@ -144,7 +142,7 @@ class FirebaseAuthService {
       
       return json.decode(userDataJson) as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('⚠️ Error reading user data from local storage: $e');
+      if (kDebugMode) debugPrint('⚠️ Error reading secured user data: $e');
       return null;
     }
   }

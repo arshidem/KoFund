@@ -10,6 +10,7 @@ import './tabs/programs_tab.dart';
 
 import './tabs/members_tab.dart';
 import './tabs/profile_tab.dart';
+import 'package:kofund/features/admin/providers/user_provider.dart';
 // Import your skeleton
 import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 
@@ -133,12 +134,12 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(isDarkMode),
+      bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, authProvider),
     );
   }
 
   // Bottom Navigation Bar (unchanged)
-  Widget _buildBottomNavigationBar(bool isDarkMode) {
+  Widget _buildBottomNavigationBar(bool isDarkMode, AppAuthProvider authProvider) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -172,23 +173,51 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           fontSize: 12,
           color: isDarkMode ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
         ),
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.event_outlined),
             activeIcon: Icon(Icons.event),
             label: 'Programs',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_outlined),
-            activeIcon: Icon(Icons.people),
+            icon: Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                final pendingCount = userProvider.pendingMembers.length;
+                final isAdmin = authProvider.user?.isAdmin ?? false;
+                
+                if (isAdmin && pendingCount > 0) {
+                  return Badge(
+                    label: Text(pendingCount > 9 ? '9+' : pendingCount.toString()),
+                    backgroundColor: AppColors.warning(context),
+                    child: const Icon(Icons.people_outlined),
+                  );
+                }
+                return const Icon(Icons.people_outlined);
+              },
+            ),
+            activeIcon: Consumer<UserProvider>(
+              builder: (context, userProvider, child) {
+                final pendingCount = userProvider.pendingMembers.length;
+                final isAdmin = authProvider.user?.isAdmin ?? false;
+                
+                if (isAdmin && pendingCount > 0) {
+                  return Badge(
+                    label: Text(pendingCount > 9 ? '9+' : pendingCount.toString()),
+                    backgroundColor: AppColors.warning(context),
+                    child: const Icon(Icons.people),
+                  );
+                }
+                return const Icon(Icons.people);
+              },
+            ),
             label: 'Members',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outlined),
             activeIcon: Icon(Icons.person),
             label: 'Profile',

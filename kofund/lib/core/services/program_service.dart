@@ -1,4 +1,4 @@
-﻿// lib/core/services/program_service.dart
+// lib/core/services/program_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -75,6 +75,7 @@ Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
         .collection('programs')
         .where('communityId', isEqualTo: communityId)
         .orderBy('programDate')
+        .limit(100)
         .get();
 
     // Convert to ProgramModel
@@ -164,6 +165,7 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
           .where('communityId', isEqualTo: communityId)
           .where('status', isEqualTo: 'active')
           .orderBy('programDate')
+          .limit(50)
           .get();
 
       return snapshot.docs
@@ -181,6 +183,7 @@ Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
   return _firestore
       .collection('programs')
       .where('communityId', isEqualTo: communityId)
+      .limit(100)
       .snapshots()
       .map((snapshot) {
     final programs = snapshot.docs
@@ -211,6 +214,7 @@ Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
         .where('communityId', isEqualTo: communityId)
         .where('status', isEqualTo: 'active')
         .orderBy('programDate')
+        .limit(50)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
@@ -543,6 +547,7 @@ Future<void> _sendParticipantReminder(ProgramModel program, ParticipantModel par
           .collection('programs')
           .where('enableAutoReminders', isEqualTo: true)
           .where('status', isEqualTo: 'active')
+          .limit(100)
           .get();
       
       int remindersSent = 0;

@@ -10,6 +10,8 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 
 class EditVirtualUserScreen extends StatefulWidget {
   final UserModel virtualUser;
@@ -128,8 +130,8 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),
@@ -165,23 +167,23 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     // ✅ FIXED: Replace .withValues(alpha: ) with Color.fromRGBO()
-                    color: Color.fromRGBO(128, 0, 128, 0.1), // Colors.purple.withValues(alpha: 0.1)
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color.fromRGBO(128, 0, 128, 0.3)), // Colors.purple.withValues(alpha: 0.3)
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                    border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.person_outline, color: Colors.purple, size: 22),
+                          Icon(Icons.person_outline, color: AppColors.primary(context), size: 22),
                           const SizedBox(width: 10),
                           Text(
                             'Virtual User Information',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.purple,
+                              color: AppColors.primary(context),
                             ),
                           ),
                         ],
@@ -211,7 +213,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: AppColors.card(context),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.05),
@@ -278,7 +280,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                         decoration: BoxDecoration(
                           // ✅ FIXED: Replace .withValues(alpha: ) with Color.fromRGBO()
                           color: AppColors.primary(context).withValues(alpha: 0.05), // Keep this one as it's already a Color property
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +318,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                       ),
                       elevation: 2,
                     ),
@@ -352,7 +354,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.purple),
+          Icon(icon, size: 16, color: AppColors.primary(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -362,7 +364,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color.fromRGBO(128, 0, 128, 0.7), // ✅ FIXED: Colors.purple.withValues(alpha: 0.7)
+                    color: AppColors.primary(context).withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -371,7 +373,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                   value,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.purple,
+                    color: AppColors.primary(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -406,7 +408,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
         Container(
           decoration: BoxDecoration(
             color: AppColors.background(context),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             border: Border.all(
               color: AppColors.border(context),
               width: 1,

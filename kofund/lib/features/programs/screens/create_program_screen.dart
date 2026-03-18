@@ -1,10 +1,12 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
@@ -324,15 +326,15 @@ void _onParticipantsChanged() {
               vertical: maxLines == 1 ? 18 : 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -385,7 +387,7 @@ void _onParticipantsChanged() {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             border: Border.all(
               color: _programTypeError != null 
                   ? Colors.red.withValues(alpha: 0.8) 
@@ -429,7 +431,7 @@ void _onParticipantsChanged() {
                         height: 40,
                         decoration: BoxDecoration(
                           color: AppColors.primary(context).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                         ),
                         child: Center(
                           child: Icon(
@@ -526,7 +528,7 @@ void _onParticipantsChanged() {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             color: AppColors.surface(context),
             border: Border.all(
               color: currentDateError != null 
@@ -795,8 +797,8 @@ void _onParticipantsChanged() {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),

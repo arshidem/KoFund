@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SimpleBannerAd extends StatefulWidget {
   const SimpleBannerAd({super.key});
@@ -13,8 +14,8 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
 
-  // 🔴 REPLACE THIS WITH YOUR REAL ADMOB BANNER AD UNIT ID
-  final String adUnitId = 'ca-app-pub-5527433846571653/3489282899'; // Your real ad unit ID
+  // 🟢 RETRIEVED FROM .ENV FILE
+  final String adUnitId = dotenv.get('ADMOB_BANNER_AD_UNIT_ID', fallback: 'ca-app-pub-3940256099942544/6300978111'); // Default to test ID if missing
 
   @override
   void initState() {

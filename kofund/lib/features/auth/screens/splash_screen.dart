@@ -427,7 +427,7 @@ Future<void> _normalNavigationLogic(UserModel? user) async {
             children: [
               // Animated Logo only (transparent background)
               const AnimatedLogo(
-                size: 200,
+                size: 140, // Reduced from 200
                 showBackground: false,
                 loopAnimation: true,
               ),
@@ -435,13 +435,9 @@ Future<void> _normalNavigationLogic(UserModel? user) async {
               const SizedBox(height: 20),
               
               // Status text only when loading
-              if (_isInitializing)
+              if (_isInitializing && _status.isNotEmpty)
                 Column(
                   children: [
-                    CircularProgressIndicator(
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 20),
                     Text(
                       _status,
                       style: TextStyle(

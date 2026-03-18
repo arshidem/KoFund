@@ -31,6 +31,7 @@ dependencies:
   firebase_messaging: ^15.2.10
   shared_preferences: ^2.3.2
   firebase_app_check: ^0.3.2+10
+  flutter_secure_storage: ^9.2.2
 
   # 🔐 Google Sign-In
   google_sign_in: ^6.1.5
@@ -63,6 +64,7 @@ dependencies:
   package_info_plus: ^4.0.2
   connectivity_plus: ^5.0.2
   font_awesome_flutter: ^10.6.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -78,3 +80,4 @@ flutter:
     - assets/logos/KoFund.png
     - assets/fonts/NotoSans-Regular.ttf
     - assets/icons/checked.png
+    - .env
