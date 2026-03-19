@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -142,7 +142,7 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     }).toList();
   }
 
-  Widget _buildModernSearchBar() {
+  Widget _buildGlassSearchBar() {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -164,28 +164,10 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
         borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-            cursorColor: Colors.white,
-            cursorWidth: 2,
-            cursorHeight: 20,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.fromLTRB(10, 18, 6, 2),
-              hintText: 'Search members...',
-              hintStyle: const TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              filled: false,
-              prefixIcon: Container(
+          child: Row(
+            children: [
+              // Search Icon Container
+              Container(
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
@@ -194,10 +176,6 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                     topLeft: Radius.circular(18),
                     bottomLeft: Radius.circular(18),
                   ),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    width: 0,
-                  ),
                 ),
                 child: const Icon(
                   Icons.search,
@@ -205,32 +183,59 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                   size: 22,
                 ),
               ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 0),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                            FocusScope.of(context).unfocus();
-                          },
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
+              
+              // Text Field
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                  cursorColor: Colors.white,
+                  cursorWidth: 2,
+                  cursorHeight: 20,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                    hintText: 'Search members...',
+                    hintStyle: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    border: InputBorder.none,
+                    filled: false,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.only(right: 0),
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                  FocusScope.of(context).unfocus();
+                                },
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() => _searchQuery = value);
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -340,10 +345,10 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
           ),
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
+          preferredSize: const Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: _buildModernSearchBar(),
+            child: _buildGlassSearchBar(),
           ),
         ),
       ),
@@ -671,6 +676,36 @@ class _MemberCard extends StatelessWidget {
     return '?';
   }
 
+  Widget _buildDismissibleBackground({
+    required Alignment alignment,
+    required Color color,
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      alignment: alignment,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (alignment == Alignment.centerLeft) ...[
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ] else ...[
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Icon(icon, color: color, size: 24),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String contactInfo =
@@ -692,145 +727,233 @@ class _MemberCard extends StatelessWidget {
             ),
           );
         },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          child: Row(
-            children: [
-              // Square avatar container
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: isApproved 
-                      ? AppColors.primary(context).withValues(alpha: 0.12)
-                      : Colors.orange.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Stack(
-                    children: [
-                      Text(
-                        _getInitials(user.displayName ?? user.email ?? '?'),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isApproved 
-                              ? AppColors.primary(context)
-                              : Colors.orange,
-                        ),
-                      ),
-                    ],
+        child: Dismissible(
+          key: Key(user.uid),
+          direction: isCurrentUser ? DismissDirection.none : DismissDirection.horizontal,
+          confirmDismiss: (direction) async {
+            if (direction == DismissDirection.startToEnd) {
+              if (!isApproved) {
+                onApprove?.call();
+                return false; // Don't actually dismiss, just trigger action
+              }
+              return false;
+            } else {
+              if (isApproved) {
+                onRemove?.call();
+              } else {
+                onReject?.call();
+              }
+              return false;
+            }
+          },
+          background: _buildDismissibleBackground(
+            alignment: Alignment.centerLeft,
+            color: const Color(0xFF10B981), // Emerald
+            icon: Icons.check_circle_rounded,
+            label: "Approve",
+          ),
+          secondaryBackground: _buildDismissibleBackground(
+            alignment: Alignment.centerRight,
+            color: const Color(0xFFF43F5E), // Rose
+            icon: isApproved ? Icons.person_remove_rounded : Icons.remove_circle_rounded,
+            label: isApproved ? "Remove" : "Reject",
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              children: [
+                // Square avatar container
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isApproved 
+                        ? AppColors.primary(context).withValues(alpha: 0.12)
+                        : Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // Name + contact
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  child: Center(
+                    child: Stack(
                       children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Text(
-                                user.displayName ?? 'Unnamed Member',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary(context),
-                                ),
-                              ),
-                              if (isCurrentUser)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(
-                                        color: Colors.blue.withValues(alpha: 0.3),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'You',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                        Text(
+                          _getInitials(user.displayName ?? user.email ?? '?'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isApproved 
+                                ? AppColors.primary(context)
+                                : Colors.orange,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      contactInfo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 8),
-
-        
-
-              // Action Buttons - DISABLED for current user
-              if (!isCurrentUser)
-                Wrap(
-                  spacing: 4,
-                  children: [
-                    if (!isApproved) ...[
-                      // Approve Button (green check)
-                      IconButton(
-                        icon: const Icon(Icons.check, size: 20),
-                        color: Colors.green,
-                        tooltip: 'Approve',
-                        onPressed: onApprove,
-                      ),
-                      // Reject Button (red X)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        color: Colors.red,
-                        tooltip: 'Reject',
-                        onPressed: onReject,
-                      ),
-                    ] else ...[
-                      // Remove Button for approved members (red X instead of delete)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        color: Colors.red,
-                        tooltip: 'Remove',
-                        onPressed: onRemove,
-                      ),
-                    ],
-                  ],
-                )
-              else
-                // Show disabled state for current user
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.border(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
+  
+                const SizedBox(width: 12),
+  
+                // Name + contact
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text(
+                                  user.displayName ?? 'Unnamed Member',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary(context),
+                                  ),
+                                ),
+                                if (isCurrentUser)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: Colors.blue.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'You',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        contactInfo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+  
+                const SizedBox(width: 8),
+  
+          
+  
+                // Action Buttons - DISABLED for current user
+                if (!isCurrentUser)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (!isApproved) ...[
+                        _PillButton(
+                          label: 'Approve',
+                          icon: Icons.check_circle_outline_rounded,
+                          color: const Color(0xFF10B981), // Emerald
+                          onTap: onApprove,
+                        ),
+                        _PillButton(
+                          label: 'Reject',
+                          icon: Icons.remove_circle_outline_rounded,
+                          color: const Color(0xFFF43F5E), // Rose
+                          onTap: onReject,
+                        ),
+                      ] else
+                        _PillButton(
+                          label: 'Remove',
+                          icon: Icons.close_rounded,
+                          color: AppColors.textSecondary(context),
+                          onTap: onRemove,
+                        ),
+                    ],
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'You',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _PillButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: color.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
             ],
           ),
         ),

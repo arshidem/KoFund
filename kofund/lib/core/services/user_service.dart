@@ -46,21 +46,26 @@ class UserService {
   Future<List<UserModel>> getUsersByCommunity(
     String communityId, {
     String filterType = 'all', // 'all', 'real', 'virtual'
+    bool includeUnapproved = false,
   }) async {
     try {
-      debugPrint('🔍 DEBUG: Fetching all $filterType users for community $communityId');
+      debugPrint('🔍 DEBUG: Fetching $filterType users for community $communityId (includeUnapproved: $includeUnapproved)');
       
       if (filterType == 'real') {
-        debugPrint('🎯 REAL USERS STRATEGY: Getting all users and filtering in code');
+        debugPrint('🎯 REAL USERS STRATEGY: Getting users and filtering in code');
         
         Query query = usersCollection
-            .where('communityId', isEqualTo: communityId)
-            .where('isApproved', isEqualTo: true)
-            .orderBy('displayName')
-            .limit(200);
+            .where('communityId', isEqualTo: communityId);
+        
+        // Only filter by isApproved if not including unapproved
+        if (!includeUnapproved) {
+          query = query.where('isApproved', isEqualTo: true);
+        }
+        
+        query = query.orderBy('displayName').limit(200);
         
         final snapshot = await query.get();
-        debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} total users from Firestore');
+        debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} users from Firestore');
         
         final users = snapshot.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -68,20 +73,27 @@ class UserService {
           data['isApproved'] = data['isApproved'] ?? true;
           
           return UserModel.fromMap(data);
-        }).where((user) => !user.isVirtualUser && user.isApproved)
-          .toList();
+        }).where((user) {
+          final isReal = !user.isVirtualUser;
+          final isApprovedMatch = includeUnapproved || user.isApproved;
+          return isReal && isApprovedMatch;
+        }).toList();
         
-        debugPrint('✅ DEBUG: After filtering - got ${users.length} real users');
+        debugPrint('✅ DEBUG: After filtering - got ${users.length} users');
         return users;
         
       } else {
         debugPrint('🎯 ${filterType.toUpperCase()} USERS: Querying directly');
         
         Query query = usersCollection
-            .where('communityId', isEqualTo: communityId)
-            .where('isApproved', isEqualTo: true)
-            .orderBy('displayName')
-            .limit(200);
+            .where('communityId', isEqualTo: communityId);
+            
+        // Only filter by isApproved if not including unapproved
+        if (!includeUnapproved) {
+          query = query.where('isApproved', isEqualTo: true);
+        }
+        
+        query = query.orderBy('displayName').limit(200);
         
         if (filterType == 'virtual') {
           query = query.where('isVirtualUser', isEqualTo: true);

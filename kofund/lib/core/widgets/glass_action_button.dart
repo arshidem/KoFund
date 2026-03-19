@@ -26,18 +26,18 @@ class GlassActionButton extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: GestureDetector(
           onTap: onTap,
           child: Container(
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25),
-                width: 1.0,
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 1.2,
               ),
             ),
             child: Stack(

@@ -1,10 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
-import 'package:kofund/core/providers/theme_provider.dart';
 
 class PendingRequestsWidget extends StatefulWidget {
   const PendingRequestsWidget({super.key});
@@ -15,29 +16,24 @@ class PendingRequestsWidget extends StatefulWidget {
 
 class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
   bool _isLoading = true;
-  int _pendingCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadPendingCount();
+    _loadData();
   }
 
-  Future<void> _loadPendingCount() async {
+  Future<void> _loadData() async {
     final authProvider = context.read<AppAuthProvider>();
     final userProvider = context.read<UserProvider>();
     final communityId = authProvider.user?.communityId;
 
     if (communityId != null) {
       await userProvider.loadCommunityMembers(communityId);
-      setState(() {
-        _pendingCount = userProvider.pendingMembers.length;
-        _isLoading = false;
-      });
-    } else {
+    }
+    if (mounted) {
       setState(() {
         _isLoading = false;
-        _pendingCount = 0;
       });
     }
   }
@@ -57,166 +53,155 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
       builder: (context, userProvider, child) {
         final pendingCount = userProvider.pendingMembers.length;
         
+        if (pendingCount == 0 && !_isLoading) {
+          return const SizedBox.shrink();
+        }
+
         if (_isLoading && pendingCount == 0) {
           return _buildSkeleton(context);
         }
 
-        if (pendingCount == 0) {
-          return const SizedBox.shrink();
-        }
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-        return GestureDetector(
-          onTap: _navigateToApprovalScreen,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              // ✅ Theme-aware background color
-              color: _getContainerBackgroundColor(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _getContainerBorderColor(context),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Icon with TOP-RIGHT badge
-                    Container(
-                      width: 56,
-                      height: 56,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Main icon container
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: AppColors.card(context),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.person_add_alt_1,
-                              color: _getIconColor(context),
-                              size: 28,
-                            ),
-                          ),
-                          
-                          // ✅ TOP-RIGHT CORNER BADGE
-                          Positioned(
-                            top: -8,
-                            right: -8,
-                            child: Container(
-                              width: 26,
-                              height: 26,
-                              decoration: BoxDecoration(
-                                color: AppColors.error(context), // Using error color for badge
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.card(context),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
-                                    blurRadius: 4,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  pendingCount > 9 ? '9+' : pendingCount.toString(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Texts
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Pending Join Requests",
-                            style: TextStyle(
-                              color: _getTitleColor(context),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            pendingCount == 1
-                                ? "1 request waiting for approval"
-                                : "$pendingCount requests waiting for approval",
-                            style: TextStyle(
-                              color: AppColors.textSecondary(context),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: isDarkMode 
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : AppColors.primary(context).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 20),
-
-                // Review Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _navigateToApprovalScreen,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getButtonColor(context),
-                      foregroundColor: _getButtonTextColor(context),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                child: IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      // Status Indicator (Vertical Gradient Bar)
+                      Container(
+                        width: 6,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppColors.primary(context),
+                              AppColors.primary(context).withValues(alpha: 0.5),
+                            ],
+                          ),
+                        ),
                       ),
-                      elevation: 2,
-                      shadowColor: _getButtonColor(context).withValues(alpha: 0.3),
-                    ),
-                    child: Text(
-                      "Review Requests",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                          child: Row(
+                            children: [
+                              // Icon with subtle glow
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary(context).withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.person_add_rounded,
+                                  color: AppColors.primary(context),
+                                  size: 26,
+                                ),
+                              ),
+                              
+                              const SizedBox(width: 16),
+                              
+                              // Text Content
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Pending Approvals",
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary(context),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      pendingCount == 1
+                                          ? "1 user is waiting to join"
+                                          : "$pendingCount users are waiting to join",
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary(context),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              // Action Button
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _navigateToApprovalScreen,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary(context),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary(context).withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          "Review",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(Icons.chevron_right_rounded, color: Colors.white, size: 18),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -224,112 +209,17 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
     );
   }
 
-  // ✅ Helper methods for theme-aware colors
-  Color _getContainerBackgroundColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? const Color(0xFF2A1F00).withValues(alpha: 0.8) // Dark yellow-brown
-        : const Color(0xFFFFF3D9); // Light cream-yellow
-  }
-
-  Color _getContainerBorderColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? const Color(0xFF4A3C00).withValues(alpha: 0.6)
-        : const Color(0xFFFFE0B2);
-  }
-
-  Color _getIconColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? const Color(0xFFFFB74D) // Dark theme orange
-        : const Color(0xFFFF9800); // Light theme orange
-  }
-
-  Color _getTitleColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? const Color(0xFFFFB74D) // Dark theme orange
-        : const Color(0xFFFF9800); // Light theme orange
-  }
-
-  Color _getButtonColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? const Color(0xFFFF9800) // Orange for both themes
-        : const Color(0xFFFF9800);
-  }
-
-  Color _getButtonTextColor(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return isDarkMode 
-        ? Colors.black // Dark text on orange in dark mode
-        : Colors.white; // White text on orange in light mode
-  }
-
   Widget _buildSkeleton(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode 
-            ? AppColors.darkCard.withValues(alpha: 0.5)
-            : AppColors.lightCard.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode 
-              ? AppColors.darkBorder.withValues(alpha: 0.3)
-              : AppColors.lightBorder,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Container(
+        height: 100,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.card(context).withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
         ),
-      ),
-      child: Row(
-        children: [
-          // Skeleton icon
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: isDarkMode 
-                  ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
-                  : AppColors.lightTextSecondary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // Skeleton text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 150,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: isDarkMode 
-                        ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
-                        : AppColors.lightTextSecondary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 200,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: isDarkMode 
-                        ? AppColors.darkTextSecondary.withValues(alpha: 0.2)
-                        : AppColors.lightTextSecondary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

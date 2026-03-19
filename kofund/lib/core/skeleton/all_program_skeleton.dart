@@ -9,210 +9,171 @@ class ProgramListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: 6, // Show 6 skeleton items
-      itemBuilder: (context, index) {
-        return _buildProgramCardSkeleton();
-      },
+    return CustomScrollView(
+      slivers: [
+        _buildSliverAppBarSkeleton(context),
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildProgramCardSkeleton(context),
+            childCount: 3,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildProgramCardSkeleton() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 6,
-            spreadRadius: 1,
-            color: Colors.black.withValues(alpha: 0.05),
+  Widget _buildSliverAppBarSkeleton(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 280,
+      pinned: true,
+      backgroundColor: AppColors.background(context),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.primary(context).withValues(alpha: isDarkMode ? 0.2 : 0.4),
+                AppColors.background(context),
+              ],
+            ),
           ),
-        ],
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: 160,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(height: 30),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with icon, title, and status
-            Row(
-              children: [
-                // Program icon skeleton
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Title skeleton
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: 120,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Status skeleton
-                Container(
-                  width: 80,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ],
-            ),
+    );
+  }
 
-            const SizedBox(height: 16),
+  Widget _buildProgramCardSkeleton(BuildContext context) {
+    final shimmerColor = isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05);
 
-            // Description skeleton
-            Container(
-              width: double.infinity,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                borderRadius: BorderRadius.circular(4),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.primary(context).withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: shimmerColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: 200,
-              height: 16,
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Program details skeleton
-            Column(
-              children: [
-                _buildDetailSkeleton(),
-                const SizedBox(height: 8),
-                _buildDetailSkeleton(),
-                const SizedBox(height: 8),
-                _buildDetailSkeleton(),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Financial progress skeleton
-            Column(
-              children: [
-                // Progress bar skeleton
-                Container(
-                  width: double.infinity,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Progress text skeleton
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 100,
-                      height: 14,
+                      width: 140,
+                      height: 18,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                        color: shimmerColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
+                    const SizedBox(height: 8),
                     Container(
-                      width: 40,
+                      width: 80,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                        color: shimmerColor,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(3, (index) => Container(
+              width: 80,
+              height: 40,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            )),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            height: 8,
+            decoration: BoxDecoration(
+              color: shimmerColor,
+              borderRadius: BorderRadius.circular(4),
             ),
-
-            const SizedBox(height: 16),
-
-            // Action buttons skeleton
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 44,
-                  height: 44,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
+                    color: shimmerColor,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 100,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: shimmerColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildDetailSkeleton() {
-    return Row(
-      children: [
-        Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 200,
-          height: 14,
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-      ],
     );
   }
 }

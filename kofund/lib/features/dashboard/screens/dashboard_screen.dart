@@ -13,6 +13,7 @@ import '../widgets/members_widget.dart';
 import '../widgets/pending_requests_widget.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
+import 'package:kofund/core/widgets/admin_assistant_toast.dart';
 import '../../../features/programs/providers/program_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -74,6 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _inviteCode = '';
   String _inviteLink = '';
   bool _inviteLoading = false;
+  bool _hasShownAdminToast = false;
 
 void _onRefresh() async {
   debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
@@ -275,6 +277,9 @@ void _initializeWidgetProviders(String userId, String communityId) {
   // 🆕 Load invite information
   Future<void> _loadInviteInfo(String communityId) async {
     try {
+      final authProvider = context.read<AppAuthProvider>();
+      final user = authProvider.user;
+      final userProvider = context.read<UserProvider>();
       final communityProvider = context.read<CommunityProvider>();
       
       // Load current community to get invite info
@@ -296,6 +301,23 @@ void _initializeWidgetProviders(String userId, String communityId) {
         _canInvite = communityProvider.canInvite;
         
         setState(() {});
+      }
+      // ✅ Trigger Admin Assistant Toast if needed
+      if (!_hasShownAdminToast && (user?.isAdmin ?? false)) {
+        final pendingCount = userProvider.pendingMembers.length;
+        if (pendingCount > 0) {
+          _hasShownAdminToast = true;
+          // Small delay to ensure UI is ready
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (mounted) {
+              AdminAssistantToast.show(
+                context, 
+                pendingCount,
+                onAction: _navigateToApprovalScreen,
+              );
+            }
+          });
+        }
       }
     } catch (e) {
       debugPrint('❌ Error loading invite info: $e');
@@ -411,6 +433,54 @@ void _initializeWidgetProviders(String userId, String communityId) {
     Navigator.pushNamed(context, RouteNames.editCommunity);
   }
 
+  // 🆕 BUILD THE APPROVALS FAB
+  Widget _buildApprovalsFab(BuildContext context, int count) {
+    return FloatingActionButton.small(
+      heroTag: 'approvals_fab',
+      onPressed: _navigateToApprovalScreen,
+      backgroundColor: AppColors.error(context),
+      elevation: 6,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(Icons.person_add_rounded, color: Colors.white, size: 20),
+          Positioned(
+            right: -8,
+            top: -8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
+                ],
+              ),
+              child: Text(
+                count > 9 ? '9+' : count.toString(),
+                style: TextStyle(
+                  color: AppColors.error(context),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🆕 NAVIGATE TO APPROVAL SCREEN
+  void _navigateToApprovalScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ApprovalRequestsScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -520,11 +590,9 @@ void _initializeWidgetProviders(String userId, String communityId) {
                             //   isAdmin: user?.isAdmin ?? false,
                             // ),
                             // const SizedBox(height: 24),
-                      //    if (user?.isAdmin ?? false) ...[
-                      //   PendingRequestsWidget(),
-                      // ],
-                      
-                      // const SizedBox(height: 24),
+                            if (user?.isAdmin ?? false) ...[
+                              // Removed static widget, now using FAB
+                            ],
                             MembersWidget(key: ValueKey('members-$userId-$cid')),
                             const SizedBox(height: 16),
                             const SizedBox(height: 20),
@@ -535,6 +603,21 @@ void _initializeWidgetProviders(String userId, String communityId) {
                   ],
                 ),
                 
+                // 🆕 ADD ADMIN APPROVALS FAB
+                if (!_inviteLoading && (user?.isAdmin ?? false))
+                  Consumer<UserProvider>(
+                    builder: (context, userProvider, child) {
+                      final pendingCount = userProvider.pendingMembers.length;
+                      if (pendingCount == 0) return const SizedBox.shrink();
+                      
+                      return Positioned(
+                        bottom: 90, // Positioned above the share button
+                        right: 20,
+                        child: _buildApprovalsFab(context, pendingCount),
+                      );
+                    },
+                  ),
+
                 // 🆕 ADD INVITE FLOATING ACTION BUTTON
                 if (!_inviteLoading)
                   Positioned(

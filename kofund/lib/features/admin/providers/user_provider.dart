@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import '../../../../core/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,8 +39,11 @@ class UserProvider with ChangeNotifier {
 Future<void> loadCommunityMembers(String communityId) async {
   _setLoading(true);
   try {
-    // Fetch all users belonging to this community
-    final allUsers = await _userService.getUsersByCommunity(communityId);
+    // Fetch all users belonging to this community (now including unapproved ones for admin)
+    final allUsers = await _userService.getUsersByCommunity(
+      communityId, 
+      includeUnapproved: true,
+    );
 
     debugPrint('DEBUG: Total users fetched: ${allUsers.length}');
     
