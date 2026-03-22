@@ -272,26 +272,22 @@ if (_isLoadingProfile) {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildSliverAppBar(user),
+          SliverToBoxAdapter(
+            child: _buildNewHeader(context, user),
+          ),
           CupertinoSliverRefreshControl(
             onRefresh: _onRefresh,
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20), // Top padding for stats
-                  _buildNeonStatsRow(
-                    totalParticipations,
-                    totalContributions,
-                    totalContributed,
-                  ),
-                  const SizedBox(height: 32),
-                  _buildControlCenterSection(context, user),
-                  const SizedBox(height: 100), // Bottom padding
-                ],
-              ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 20),
+                _buildNewStatsRow(context, totalParticipations, totalContributions),
+                const SizedBox(height: 24),
+                _buildNewControlCenter(context, user),
+                const SizedBox(height: 100),
+              ]),
             ),
           ),
         ],
@@ -299,230 +295,188 @@ if (_isLoadingProfile) {
     );
   }
 
-  Widget _buildSliverAppBar(UserModel user) {
-    return SliverAppBar(
-      expandedHeight: 340,
-      floating: false,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: AppColors.background(context),
-      automaticallyImplyLeading: false,
-      leading: widget.forceBackButton == true || (ModalRoute.of(context)?.canPop ?? false)
-          ? IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded, 
-                color: AppColors.textPrimary(context), size: 20),
-              onPressed: () => Navigator.pop(context),
-            )
-          : null,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Center(
-            child: GlassActionButton(
-              icon: Icons.settings_outlined,
-              size: 44,
-              iconSize: 20,
-              onTap: _navigateToSettings,
-            ),
-          ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Aesthetic Radial Glow
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 1.5,
-                    colors: [
-                      AppColors.primary(context).withValues(alpha: 0.15),
-                      AppColors.background(context),
-                    ],
-                    stops: const [0.0, 0.85],
-                  ),
-                ),
-              ),
-            ),
-            
-            // Avatar & Info (Centered in the expanded area)
-            Column(
+  Widget _buildNewHeader(BuildContext context, UserModel user) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 20,
+        bottom: 10,
+      ),
+      child: Column(
+        children: [
+          // Settings button at the top right
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _buildFloatingAvatar(user),
-                const SizedBox(height: 16),
-                _buildPremiumProfileInfo(user),
-                const SizedBox(height: 30), // Margin before stats row
+                _buildCircularIconButton(
+                  context,
+                  icon: Icons.settings_outlined,
+                  onTap: _navigateToSettings,
+                ),
               ],
             ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Overlapping Avatar and Profile Card
+          Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
+                child: _buildNewProfileCard(context, user),
+              ),
+              _buildLargeAvatar(context, user),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircularIconButton(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+          ),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
           ],
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
         ),
       ),
     );
   }
 
-  Widget _buildFloatingAvatar(UserModel user) {
+  Widget _buildLargeAvatar(BuildContext context, UserModel user) {
     final String initial = (user.displayName != null && user.displayName!.trim().isNotEmpty)
         ? user.displayName!.trim()[0].toUpperCase()
         : 'U';
-
-    final Color primaryColor = AppColors.primary(context);
-    final Color cardColor = AppColors.card(context);
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-
+    
     return Container(
-      width: 100,
-      height: 100,
+      width: 110,
+      height: 110,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: cardColor,
-        border: Border.all(color: primaryColor, width: 3),
+        color: const Color(0xFF00BFA5), // Teal from image
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? AppColors.darkBackground 
+              : AppColors.lightBackground,
+          width: 4,
+        ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: isDark ? 0.4 : 0.2),
+            color: const Color(0xFF00BFA5).withValues(alpha: 0.3),
             blurRadius: 20,
-            spreadRadius: 2,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Center(
         child: Text(
           initial,
-          style: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w900,
-            color: isDark ? Colors.white : AppColors.textPrimary(context),
-            letterSpacing: 1,
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPremiumProfileInfo(UserModel user) {
-    return Column(
-      children: [
-        Text(
-          user.displayName ?? 'Unnamed Member',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary(context),
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          user.email,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context).withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: (user.isAdmin ? const Color(0xFFFFB800) : const Color(0xFF00D2B4)).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: (user.isAdmin ? const Color(0xFFFFB800) : const Color(0xFF00D2B4)).withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                user.isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
-                size: 14,
-                color: user.isAdmin ? const Color(0xFFFFB800) : const Color(0xFF00D2B4),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                user.isAdmin ? 'COMMUNITY ADMIN' : 'MEMBER',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: user.isAdmin ? const Color(0xFFFFB800) : const Color(0xFF00D2B4),
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNeonStatsRow(int participations, int contributions, double total) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildModernStatCard(
-            label: 'ACTIVITIES',
-            value: participations.toString(),
-            icon: Icons.flash_on_rounded,
-            color: const Color(0xFF00D2B4),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildModernStatCard(
-            label: 'CONTRIBUTIONS',
-            value: contributions.toString(),
-            icon: Icons.account_balance_wallet_rounded,
-            color: const Color(0xFFFFB800), // Gold
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModernStatCard({
-    required String label,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    final Color primaryColor = AppColors.primary(context);
+  Widget _buildNewProfileCard(BuildContext context, UserModel user) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 70, 24, 28),
       decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: primaryColor.withValues(alpha: 0.1)),
+        color: isDark ? const Color(0xFF1A2E2E).withValues(alpha: 0.8) : Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(height: 16),
           Text(
-            value,
+            user.displayName ?? 'Unnamed Member',
             style: TextStyle(
               fontSize: 28,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary(context),
+              letterSpacing: -0.5,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
-            label,
+            user.email,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context).withValues(alpha: 0.4),
-              letterSpacing: 0.5,
+              fontSize: 14,
+              color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF00BFA5).withValues(alpha: 0.2),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.chat_bubble_rounded,
+                  size: 14,
+                  color: Color(0xFF00BFA5),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'COMMUNITY ADMIN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF00BFA5),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -530,56 +484,146 @@ if (_isLoadingProfile) {
     );
   }
 
-  Widget _buildControlCenterSection(BuildContext context, UserModel user) {
+  Widget _buildNewStatsRow(BuildContext context, int participations, int contributions) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildNewStatCard(
+            context,
+            label: 'ACTIVITIES',
+            value: participations.toString(),
+            icon: Icons.flash_on_rounded,
+            iconColor: const Color(0xFF00D2B4),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildNewStatCard(
+            context,
+            label: 'CONTRIBUTIONS',
+            value: contributions.toString(),
+            icon: Icons.account_balance_wallet_rounded,
+            iconColor: const Color(0xFF00D2B4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewStatCard(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+  }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewControlCenter(BuildContext context, UserModel user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 16),
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'CONTROL CENTER',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: AppColors.primary(context),
+              color: AppColors.textPrimary(context).withValues(alpha: 0.4),
               letterSpacing: 1.5,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card(context),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.1)),
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) 
+                : Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              if (Theme.of(context).brightness != Brightness.dark)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+            ],
           ),
           child: Column(
             children: [
-              _buildControlRow(
+              _buildNewControlRow(
+                context,
                 icon: Icons.edit_note_rounded,
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
                 onTap: () => _navigateToEditProfile(user),
               ),
-              _buildDivider(),
-              _buildControlRow(
+              _buildNewControlRow(
+                context,
                 icon: Icons.history_rounded,
                 title: 'Participation History',
                 subtitle: 'Check your community involvement',
                 onTap: _navigateToParticipationHistory,
               ),
-              _buildDivider(),
-              _buildControlRow(
+              _buildNewControlRow(
+                context,
                 icon: Icons.receipt_long_rounded,
                 title: 'Contribution History',
                 subtitle: 'View your financial record',
                 onTap: _navigateToContributionHistory,
-              ),
-              _buildDivider(),
-              _buildControlRow(
-                icon: Icons.security_rounded,
-                title: 'Security Settings',
-                subtitle: 'Manage your account safety',
-                onTap: _navigateToSettings,
                 isLast: true,
               ),
             ],
@@ -589,33 +633,40 @@ if (_isLoadingProfile) {
     );
   }
 
-  Widget _buildControlRow({
+  Widget _buildNewControlRow(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
     bool isLast = false,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: isLast 
-          ? const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24))
-          : title == 'Edit Profile' 
-            ? const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24))
+          ? const BorderRadius.vertical(bottom: Radius.circular(32))
+          : title == 'Edit Profile'
+            ? const BorderRadius.vertical(top: Radius.circular(32))
             : null,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, size: 22, color: AppColors.primary(context)),
+                child:  Icon(
+                  icon,
+                  size: 22,
+                  color: Color(0xFF00BFA5),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -625,8 +676,8 @@ if (_isLoadingProfile) {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary(context),
                       ),
                     ),
@@ -653,15 +704,8 @@ if (_isLoadingProfile) {
     );
   }
 
-  Widget _buildDivider() {
-    return Divider(
-      height: 1,
-      thickness: 1,
-      indent: 70,
-      endIndent: 20,
-      color: AppColors.textPrimary(context).withValues(alpha: 0.05),
-    );
-  }
+
+
 
   String _formatRelativeDate(DateTime date) {
     final now = DateTime.now();

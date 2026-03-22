@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -12,7 +13,6 @@ import 'create_program_screen.dart';
 import 'program_details_screen.dart';
 import 'edit_program_screen.dart';
 import 'program_reminder_screen.dart';
-import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/skeleton/all_program_skeleton.dart';
 import '../../participants/models/participant_model.dart';
@@ -199,104 +199,125 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
       }).toList();
     }
     
-    filteredPrograms = _applyFilters(filteredPrograms);
-
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: AppColors.background(context),
-appBar: AppBar(
-  title: Text(
-    'Programs',
-    style: TextStyle(color: Colors.white), // Explicit text style
-  ),
-  centerTitle: true,
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white, // Change this to white70
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-  bottom: PreferredSize(
-    preferredSize: const Size.fromHeight(50),
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-      child: _buildModernSearchBar(),
-    ),
-  ),
-),
-
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing programs...',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
+      backgroundColor: isDark ? AppColors.darkPrimaryGradientStart : AppColors.lightPrimaryGradientStart,
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        slivers: [
+          _buildSliverAppBar(context),
+          CupertinoSliverRefreshControl(
+            onRefresh: () async {
+              await _loadPrograms();
+            },
+          ),
+          // 📌 STICKY ROUNDED HEADER - Pins below the main app bar
+          SliverAppBar(
+            toolbarHeight: 0,
+            expandedHeight: 20,
+            pinned: true,
+            elevation: 0,
+            primary: false,
+            backgroundColor: Colors.transparent, // Show gradient behind corners
+            automaticallyImplyLeading: false,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background(context),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                ),
+              ),
             ),
           ),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
-        ),
-      child: SafeArea(
-  child: Column(
-    children: [
-      // PROGRAM FILTER TABS — STRUCTURAL, NOT FLOATING
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: _buildFilterTabs(),
+          // Body content with background color
+          _buildBodyContent(programProvider, filteredPrograms),
+          // Fill remaining space with background color to hide teal at the bottom
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Container(color: AppColors.background(context)),
+          ),
+        ],
       ),
-
-      // SEARCH HEADER
-      if (_searchQuery.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: _buildSearchHeader(filteredPrograms.length),
-        ),
-
-      // MAIN CONTENT
-      Expanded(
-        child: _buildBodyContent(programProvider, filteredPrograms),
-      ),
-    ],
-  ),
-),
-
-      ),
-
       floatingActionButton: isAdmin
           ? FloatingActionButton(
               onPressed: () => _navigateToCreateProgram(context),
-              backgroundColor: AppColors.primary(context),
+              backgroundColor: const Color(0xFF00BFA5),
+              elevation: 4,
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
     );
   }
+
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 220,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: Colors.transparent, // Let flexibleSpace handle color
+      automaticallyImplyLeading: false,
+      // Dynamic Title using flexibleSpace for scaling effect
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double top = constraints.biggest.height;
+          // Calculate scale factor (0.0 to 1.0)
+          // Expanded is 220, Collapsed is toolbarHeight (56) + bottomHeight (84) = 140
+          final double minHeight = MediaQuery.of(context).padding.top + kToolbarHeight;
+          final double maxHeight = 220.0;
+          final double currentHeight = top;
+          
+          // Normalized progress: 0.0 at collapsed (140), 1.0 at expanded (220)
+          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
+          
+          // Font size: 32 at expanded, 20 at collapsed
+          final double fontSize = 20 + (6 * progress); // 20 to 26 scaling
+          // Vertical offset for title - center it vertically above the search bar
+          
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // 🔋 PERSISTENT GRADIENT BACKGROUND
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                ),
+              ),
+              
+              FlexibleSpaceBar(
+                centerTitle: true,
+                titlePadding: EdgeInsets.only(
+                  bottom: 84 + (24 * progress), 
+                ),
+                title: Text(
+                  'Programs',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5 - (0.5 * progress),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(84),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: _buildModernSearchBar(),
+        ),
+      ),
+    );
+  }
+
 Widget _buildModernSearchBar() {
     return Row(
       children: [
@@ -307,7 +328,7 @@ Widget _buildModernSearchBar() {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.5),
-                width: 1.5, // Increased border width
+                width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
@@ -316,98 +337,87 @@ Widget _buildModernSearchBar() {
                   offset: const Offset(0, 4),
                 ),
               ],
-              color: Colors.transparent, // Transparent background
+              color: Colors.transparent,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Row(
-                  children: [
-                    // 🔍 SEARCH ICON - Transparent with white border
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent, // Transparent background
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(18),
-                          bottomLeft: Radius.circular(18),
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          width: 0, // Same border width
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.search,
-                        color: Colors.white, // White icon
-                        size: 22,
-                      ),
+            child: Row(
+              children: [
+                // 🔍 SEARCH ICON
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      bottomLeft: Radius.circular(18),
                     ),
-                    
-                    // 📝 SEARCH FIELD
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white, // Always white text
-                          letterSpacing: 0.5,
-                        ),
-                        cursorColor: Colors.white, // White cursor
-                        cursorWidth: 2,
-                        cursorHeight: 20,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                          hintText: 'Search programs...',
-                          hintStyle: const TextStyle(
-                            color: Colors.white70, // White hint with 70% opacity
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          filled: false,
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(right: 0),
-                                  child: Container(
-                                    width: 32,
-                                    height: 32,
-                                
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      icon: const Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        onChanged: (value) {
-                          setState(() => _searchQuery = value);
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: const Icon(
+                    Icons.search,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
-              ),
+                
+                // 📝 SEARCH FIELD
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                    cursorColor: Colors.white,
+                    cursorWidth: 2,
+                    cursorHeight: 20,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      hintText: 'Search programs...',
+                      hintStyle: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                      filled: false,
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(right: 0),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
         
         const SizedBox(width: 8),
         
-        // ⚙️ FILTER ICON - Transparent with white border
+        // ⚙️ FILTER ICON
         Container(
           width: 56,
           height: 56,
@@ -415,7 +425,7 @@ Widget _buildModernSearchBar() {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.5),
-              width: 1.5, // Same border width
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
@@ -424,25 +434,19 @@ Widget _buildModernSearchBar() {
                 offset: const Offset(0, 4),
               ),
             ],
-            color: Colors.transparent, // Transparent background
+            color: Colors.transparent,
           ),
-          child: ClipRRect(
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(18),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(18),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () => _openFilterSheet(context),
-                  child: const Center(
-                    child: Icon(
-                      Icons.tune,
-                      color: Colors.white, // White icon
-                      size: 22,
-                    ),
-                  ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => _openFilterSheet(context),
+              child: const Center(
+                child: Icon(
+                  Icons.tune,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
             ),
@@ -492,174 +496,149 @@ Widget _buildModernSearchBar() {
   }
 
 Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> displayedPrograms) {
+  final bgColor = AppColors.background(context);
+  
   if (programProvider.isLoading && displayedPrograms.isEmpty) {
-    return ProgramListSkeleton(
-      isDarkMode: Theme.of(context).brightness == Brightness.dark,
-    );
-  }
-
-  if (programProvider.error != null && displayedPrograms.isEmpty) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            programProvider.error!,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadPrograms,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Retry'),
-          ),
-        ],
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Container(
+        color: bgColor,
+        child: ProgramListSkeleton(
+          isDarkMode: Theme.of(context).brightness == Brightness.dark,
+        ),
       ),
     );
   }
 
-  return displayedPrograms.isEmpty
-      ? _buildEmptyState()
-      : ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: displayedPrograms.length,
-          itemBuilder: (context, index) {
-            final program = displayedPrograms[index];
-            return _buildProgramCard(program, programProvider, context.read<AppAuthProvider>());
-          },
+  if (programProvider.error != null && displayedPrograms.isEmpty) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Container(
+        color: bgColor,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                programProvider.error!,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadPrograms,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00BFA5),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  if (displayedPrograms.isEmpty) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Container(
+        color: bgColor,
+        child: _buildEmptyState(),
+      ),
+    );
+  }
+
+  return SliverList(
+    delegate: SliverChildBuilderDelegate(
+      (context, index) {
+        final program = displayedPrograms[index];
+        return Container(
+          color: bgColor,
+          child: _buildProgramCard(program, programProvider, context.read<AppAuthProvider>()),
         );
+      },
+      childCount: displayedPrograms.length,
+    ),
+  );
 }
 
   Widget _buildEmptyState() {
     final isAdmin = widget.isAdmin;
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        const SizedBox(height: 120),
-        if (_searchQuery.isNotEmpty)
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: 1.0,
-            child: Icon(
+    return Padding(
+      padding: const EdgeInsets.only(top: 100),
+      child: Column(
+        children: [
+          if (_searchQuery.isNotEmpty)
+            Icon(
               Icons.search_off, 
               size: 64, 
-              color: AppColors.primary(context).withValues(alpha: 0.5)
+              color: const Color(0xFF00BFA5).withValues(alpha: 0.5)
+            )
+          else
+            Icon(
+              Icons.event_note_rounded,
+              size: 64,
+              color: const Color(0xFF00BFA5).withValues(alpha: 0.5),
             ),
-          )
-        else
-          Icon(
-            Icons.event,
-            size: 64,
-            color: AppColors.primary(context).withValues(alpha: 0.5),
-          ),
-        const SizedBox(height: 16),
-        Center(
-          child: Text(
+          const SizedBox(height: 24),
+          Text(
             _searchQuery.isNotEmpty ? 'No results found' : 'No Programs Available',
             style: TextStyle(
-              fontSize: 18,
-              color: AppColors.primary(context).withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
+              fontSize: 20,
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: Text(
-            _searchQuery.isNotEmpty 
-                ? 'Try adjusting your search or filters'
-                : isAdmin
-                    ? 'Create the first program for your community.'
-                    : 'No programs available yet. Check back later.',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              _searchQuery.isNotEmpty 
+                  ? 'Try adjusting your search or filters'
+                  : isAdmin
+                      ? 'Create the first program for your community.'
+                      : 'No programs available yet. Check back later.',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-        if (_searchQuery.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Center(
-            child: ElevatedButton(
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            ElevatedButton(
               onPressed: () {
                 _searchController.clear();
                 setState(() => _searchQuery = '');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
+                backgroundColor: const Color(0xFF00BFA5),
                 foregroundColor: Colors.white,
-                elevation: 2,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text('Clear Search'),
             ),
-          ),
+          ],
         ],
-      ],
-    );
-  }
-
-Widget _buildFilterTabs() {
-  return Container(
-    padding: const EdgeInsets.all(6),
-    decoration: BoxDecoration(
-      color: AppColors.card(context),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _tab("All", _filters.statusFilter == ProgramStatusFilter.all,
-            () => _setFilter(ProgramStatusFilter.all)),
-        _tab("Ongoing", _filters.statusFilter == ProgramStatusFilter.ongoing,
-            () => _setFilter(ProgramStatusFilter.ongoing)),
-        _tab("Completed", _filters.statusFilter == ProgramStatusFilter.completed,
-            () => _setFilter(ProgramStatusFilter.completed)),
-        // REMOVED: Cancelled tab
-      ],
-    ),
-  );
-}
-
-  Widget _tab(String text, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primary(context) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: active ? Colors.white : AppColors.textPrimary(context),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ),
     );
   }
 
-  void _setFilter(ProgramStatusFilter filter) {
-    setState(() {
-      _filters = _filters.copyWith(statusFilter: filter);
-    });
-  }
+
+// Premium Program Card Section
 
 // Replace the _buildProgramCard method with this corrected version
 
@@ -668,566 +647,257 @@ Widget _buildProgramCard(
   ProgramProvider programProvider,
   AppAuthProvider authProvider,
 ) {
-  final hasJoined =
-      programProvider.hasUserJoined(program.programId, authProvider.user!.uid);
-  final canJoin = program.canJoin && !hasJoined;
+  final bool isDark = Theme.of(context).brightness == Brightness.dark;
+  final hasJoined = programProvider.hasUserJoined(program.programId, authProvider.user!.uid);
+  final programColor = _getProgramColor(program.programType);
 
   return Consumer<ParticipantProvider>(
     builder: (context, participantProvider, _) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Material(
-          color: AppColors.card(context),
-          elevation: 3,
-          shadowColor: Colors.black.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () => _viewProgramDetails(program),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: StreamBuilder<double>(
-                stream: programProvider
-                    .streamProgramTotalContributions(program.programId),
-                builder: (context, contribSnap) {
-                  final collectedAmount = contribSnap.data ?? 0.0;
-                  final suggestedAmount = program.suggestedContribution ?? 0.0;
-                  
-                  return StreamBuilder<List<ParticipantModel>>(
-                    stream: participantProvider.streamProgramParticipants(program.programId),
-                    builder: (context, participantSnapshot) {
-                final participants = participantSnapshot.data ?? [];
-final totalParticipants = participants.length;
-final maxParticipants = program.maxParticipants ?? 0;
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+          ),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+          ],
+        ),
+        child: InkWell(
+          onTap: () => _viewProgramDetails(program),
+          borderRadius: BorderRadius.circular(28),
+          child: StreamBuilder<double>(
+                  stream: programProvider.streamProgramTotalContributions(program.programId),
+                  builder: (context, contribSnap) {
+                    final collectedAmount = contribSnap.data ?? 0.0;
+                    return StreamBuilder<List<ParticipantModel>>(
+                      stream: participantProvider.streamProgramParticipants(program.programId),
+                      builder: (context, participantSnapshot) {
+                        final participants = participantSnapshot.data ?? [];
+                        final totalParticipants = participants.length;
+                        final maxParticipants = program.maxParticipants ?? 0;
+                        
+                        double programAmount = 0.0;
+                        if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
+                          programAmount = program.totalProgramAmount!;
+                        } else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
+                          final pCount = program.isFixedParticipants ? maxParticipants : totalParticipants;
+                          programAmount = program.suggestedContribution! * (pCount > 0 ? pCount : 1);
+                        }
 
-// ✅ Calculate program amount with proper fallback
-double programAmount = 0.0;
+                        final progress = programAmount > 0 ? (collectedAmount / programAmount).clamp(0.0, 1.0) : 0.0;
+                        final now = DateTime.now();
+                        final daysLeft = (program.isMonthlyPaymentProgram || program.programDate == null)
+                            ? null 
+                            : program.programDate!.difference(now).inDays;
+                        final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
+                        final hasEnded = daysLeft != null && daysLeft < 0;
 
-if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
-  // Use totalProgramAmount if available
-  programAmount = program.totalProgramAmount!;
-} else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
-  // Calculate based on participant count
-  final participantCount = program.isFixedParticipants
-      ? maxParticipants
-      : totalParticipants;
-  programAmount = program.suggestedContribution! * totalParticipants;
-}
+                        final canJoin = !hasJoined &&
+                            (!program.isFixedParticipants ||
+                                (program.maxParticipants == null ||
+                                    program.maxParticipants! > totalParticipants));
 
-final progress = programAmount > 0 ? collectedAmount / programAmount : 0.0;
-                      // Only calculate days for NON-monthly programs
-                    final now = DateTime.now();
-final daysLeft = program.isMonthlyPaymentProgram || program.programDate == null
-    ? null 
-    : program.programDate!.difference(now).inDays;
-final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
-final hasEnded = daysLeft != null && daysLeft < 0;
-
-                      final programColor =
-                          _getProgramColor(program.programType);
-
-                      final hasDescription = program.description.isNotEmpty;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ───────── HEADER ─────────
-                          Stack(
-                            children: [
-                              // Content Row (Icon + Title + Description)
-                              Row(
-                                crossAxisAlignment: hasDescription 
-                                    ? CrossAxisAlignment.start 
-                                    : CrossAxisAlignment.center,
-                                children: [
-                                  // Program Icon
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: programColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      ProgramTypes.getIconData(program.programType),
-                                      color: programColor,
-                                      size: 26,
-                                    ),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header: Icon + Title + Status/Admin
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: programColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-
-                                  const SizedBox(width: 14),
-
-                                  // Title and Description Column
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: hasDescription 
-                                          ? MainAxisAlignment.start 
-                                          : MainAxisAlignment.center,
+                                  child: Icon(
+                                    ProgramTypes.getIconData(program.programType),
+                                    color: programColor,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        program.title,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary(context),
+                                          letterSpacing: -0.5,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        program.programType.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: programColor,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (widget.isAdmin)
+                                  _buildAdminMenu(program, programProvider)
+                                else
+                                  _buildStatusBadge(program, progress, daysLeft ?? 0),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (program.description.isNotEmpty) ...[
+                              Text(
+                                program.description,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary(context),
+                                  height: 1.5,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Progress',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary(context),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${(progress * 100).toInt()}%',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: programColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return Stack(
                                       children: [
-                                        // Title
-                                        Text(
-                                          program.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary(context),
+                                        Container(
+                                          height: 8,
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: programColor.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
                                         ),
-
-                                        // Description (if exists)
-                                        if (hasDescription) ...[
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            program.description,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              height: 1.4,
-                                              color: AppColors.textSecondary(context),
+                                        AnimatedContainer(
+                                          duration: const Duration(milliseconds: 500),
+                                          height: 8,
+                                          width: constraints.maxWidth * progress,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [programColor, programColor.withValues(alpha: 0.7)],
                                             ),
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
-                                        ],
-                                        
-                                        // Monthly Badge (if monthly program)
-                                        if (program.isMonthlyPaymentProgram) ...[
-                                          const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.calendar_today,
-                                                  size: 12,
-                                                  color: Colors.blue,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'Monthly',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.blue,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    _buildCompactStat(
+                                      Icons.people_outline_rounded,
+                                      '$totalParticipants${maxParticipants > 0 ? "/$maxParticipants" : ""}',
+                                    ),
+                                    const SizedBox(width: 16),
+                                    _buildCompactStat(
+                                      Icons.account_balance_wallet_outlined,
+                                      '₦${collectedAmount.toInt()}',
+                                    ),
+                                  ],
+                                ),
+                                InkWell(
+                                  onTap: hasJoined 
+                                    ? () => _viewProgramDetails(program)
+                                    : (canJoin ? () => _joinProgram(program, programProvider, authProvider) : null),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: hasJoined || canJoin ? programColor : Colors.grey[400],
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        if (hasJoined || canJoin)
+                                          BoxShadow(
+                                            color: programColor.withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
                                           ),
-                                        ],
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          hasJoined ? 'DETAILS' : (canJoin ? 'JOIN NOW' : 'FULL'),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white),
                                       ],
                                     ),
                                   ),
-                                  
-                                  // Empty SizedBox to balance the admin menu in Stack
-                                  if (widget.isAdmin)
-                                    const SizedBox(width: 40),
-                                ],
-                              ),
-                              
-                              // Admin Menu (fixed top-right)
-                              if (widget.isAdmin)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: _buildAdminMenu(program, programProvider),
                                 ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // ───────── PROGRESS ─────────
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Progress',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary(context),
-                                ),
-                              ),
-                              Text(
-                                '${(progress * 100).toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: programColor,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          // PROGRESS BAR
-                          Container(
-                            height: 7,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(4),
+                              ],
                             ),
-                            child: FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: progress.clamp(0.0, 1.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: programColor,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // ───────── STATS ─────────
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildStatItem(
-                                icon: Icons.currency_rupee,
-                                value: '₹${collectedAmount.toStringAsFixed(0)}',
-                                label: 'Collected',
-                                color: programColor,
-                              ),
-                              _buildStatItem(
-                                icon: Icons.track_changes,
-                                value: '₹${programAmount.toStringAsFixed(0)}',
-                                label: 'Target',
-                                color: programColor,
-                              ),
-                              _buildStatItem(
-                                icon: Icons.people,
-                                value: '$totalParticipants',
-                                label: 'Members',
-                                color: programColor,
-                              ),
-                              
-                              // Conditionally show days OR monthly indicator
-                             if (program.isMonthlyPaymentProgram)
-  _buildStatItem(
-    icon: Icons.calendar_month,
-    value: 'Monthly',
-    label: 'Recurring',
-    color: Colors.blue,
-  )
-else
-  _buildStatItem(
-    icon: Icons.schedule,
-    value: daysLeft == null 
-        ? 'N/A' 
-        : (hasEnded ? 'Ended' : (isEnding ? '$daysLeft' : '$daysLeft')),
-    label: 'Days',
-    color: daysLeft == null 
-        ? Colors.grey 
-        : (hasEnded ? Colors.grey : (isEnding ? Colors.red : programColor)),
-  ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // ───────── ACTIONS ─────────
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => _viewProgramDetails(program),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.textPrimary(context),
-                                    side: BorderSide(
-                                      color: AppColors.border(context),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'View Details',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 10),
-
-                              if (hasJoined)
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: Colors.red.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(
-                                      Icons.exit_to_app,
-                                      size: 20,
-                                    ),
-                                    color: Colors.red,
-                                    onPressed: () => _leaveProgram(
-                                        program,
-                                        programProvider,
-                                        authProvider),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                )
-                              else
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: canJoin
-                                        ? () => _joinProgram(
-                                            program,
-                                            programProvider,
-                                            authProvider)
-                                        : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: canJoin
-                                          ? programColor
-                                          : Colors.grey[400],
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      !canJoin &&
-                                              program.isFixedParticipants &&
-                                              totalParticipants >= maxParticipants
-                                          ? 'Full'
-                                          : 'Join Now',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
+                          ],
+                        );
+                      },
+                    );
+                  },
+              ),  // StreamBuilder<double>
+          ),  // InkWell child
+        );  // Container return
+      },  // Consumer builder
+    );  // Consumer
+  }  // _buildProgramCard
 // Your existing _buildStatItem method (unchanged)
-Widget _buildStatItem({
-  required IconData icon,
-  required String value,
-  required String label,
-  required Color color,
-}) {
-  return Column(
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 2),
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: Colors.grey,
-        ),
-      ),
-    ],
-  );
-}
-
-
-Widget _buildProgramStatus(ProgramModel program) {
-  Color color;
-  String text;
-
-  if (!program.canJoin) {
-    color = Colors.red;
-    text = 'Closed';
-  } else if (program.isFixedParticipants &&
-      program.currentParticipants >= program.maxParticipants) {
-    color = Colors.orange;
-    text = 'Full';
-  } else {
-    color = Colors.green;
-    text = 'Open';
-  }
-
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        color: color,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  );
-}
-
-
-// Add these methods to your file (outside the widget class)
-IconData _getProgramIcon(String programType) {
-  // Use the centralized ProgramTypes class
-  return ProgramTypes.getIconData(programType);
-}
-
-  Color _getProgramColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'savings':
-        return Colors.green;
-      case 'investment':
-        return Colors.blue;
-      case 'loan':
-        return Colors.purple;
-      case 'emergency':
-        return Colors.red;
-      default:
-        return AppColors.primary(context);
-    }
-  }
+// Replaced by compact stat helpers
 
 
 
-  Widget _buildActionButton({
-    required String text,
-    required IconData icon,
-    required bool isPrimary,
-    required VoidCallback onPressed,
-    required Color programColor,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary ? programColor : AppColors.surface(context),
-        foregroundColor: isPrimary ? Colors.white : AppColors.textPrimary(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: isPrimary 
-              ? BorderSide.none 
-              : BorderSide(color: AppColors.border(context)),
-        ),
-        elevation: isPrimary ? 2 : 0,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
-  String statusText;
-  Color statusColor;
-  
-  // Use computedStatus instead of status
-  if (program.isCompleted) {
-    statusText = 'Completed';
-    statusColor = Colors.green;
-  } else if (daysLeft < 0) {
-    statusText = 'Expired';
-    statusColor = Colors.grey;
-  } else if (daysLeft <= 3) {
-    statusText = 'Urgent';
-    statusColor = Colors.red;
-  } else if (progress >= 0.8) {
-    statusText = 'Almost There';
-    statusColor = Colors.orange;
-  } else {
-    statusText = 'Active';
-    statusColor = Colors.blue;
-  }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: statusColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
   return PopupMenuButton<String>(
@@ -1387,6 +1057,73 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
       }
     }
   }
+
+  Widget _buildStatusBadge(ProgramModel program, double progress, int daysLeft) {
+    String statusText;
+    Color statusColor;
+    
+    if (program.isCompleted) {
+      statusText = 'Completed';
+      statusColor = Colors.green;
+    } else if (daysLeft < 0) {
+      statusText = 'Expired';
+      statusColor = Colors.grey;
+    } else if (daysLeft <= 3) {
+      statusText = 'Urgent';
+      statusColor = Colors.red;
+    } else if (progress >= 0.8) {
+      statusText = 'Almost There';
+      statusColor = Colors.orange;
+    } else {
+      statusText = 'Active';
+      statusColor = Colors.blue;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        statusText,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: statusColor,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactStat(IconData icon, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary(context).withValues(alpha: 0.7)),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getProgramColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'savings': return Colors.green;
+      case 'investment': return Colors.blue;
+      case 'loan': return Colors.purple;
+      case 'emergency': return Colors.red;
+      default: return const Color(0xFF00BFA5);
+    }
+  }
 }
 
 class FilterSheet extends StatefulWidget {
@@ -1442,6 +1179,13 @@ class _FilterSheetState extends State<FilterSheet> {
                   color: AppColors.textPrimary(context),
                 ),
               ),
+              const SizedBox(height: 20),
+
+               _buildSection(
+                'Program Status',
+                _buildStatusFilter(),
+              ),
+
               const SizedBox(height: 20),
 
               _buildSection(
@@ -1531,7 +1275,7 @@ class _FilterSheetState extends State<FilterSheet> {
           title,
           style: TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary(context),
           ),
         ),
@@ -1540,6 +1284,49 @@ class _FilterSheetState extends State<FilterSheet> {
       ],
     );
   }
+
+  Widget _buildStatusFilter() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _statusChip('All', ProgramStatusFilter.all),
+        _statusChip('Ongoing', ProgramStatusFilter.ongoing),
+        _statusChip('Completed', ProgramStatusFilter.completed),
+      ],
+    );
+  }
+
+  Widget _statusChip(String label, ProgramStatusFilter status) {
+    final isSelected = _currentFilters.statusFilter == status;
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isSelected ? Colors.white : AppColors.textPrimary(context),
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _currentFilters = _currentFilters.copyWith(statusFilter: status);
+        });
+      },
+      backgroundColor: AppColors.card(context),
+      selectedColor: const Color(0xFF00BFA5),
+      checkmarkColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : AppColors.border(context).withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildProgramTypeFilter() {
     final programTypes = ['all', ...ProgramTypes.allTypes];
@@ -1594,7 +1381,7 @@ class _FilterSheetState extends State<FilterSheet> {
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.primary(context),
+          activeThumbColor: AppColors.primary(context),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
         onTap: () => onChanged(!value),
