@@ -19,85 +19,71 @@ class MemberListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+
+  static Widget buildSliver(BuildContext context, bool isDarkMode) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _buildShimmerItem(context, isDarkMode),
+        childCount: 8,
+      ),
+    );
+  }
+
+  static Widget _buildShimmerItem(BuildContext context, bool isDarkMode) {
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+    final itemColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
+
     return Shimmer.fromColors(
-      baseColor: _baseColor(),
-      highlightColor: _highlightColor(),
-      child: ListView.builder(
-        itemCount: 10,
-        itemBuilder: (context, index) {
-          return Column(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: _buildMemberItemSkeleton(context, itemColor),
+    );
+  }
+
+  static Widget _buildMemberItemSkeleton(BuildContext context, Color itemColor) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Row(
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: itemColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Avatar
                     Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _itemColor(),
-                      ),
+                      width: 140,
+                      height: 16,
+                      decoration: BoxDecoration(color: itemColor, borderRadius: BorderRadius.circular(4)),
                     ),
-                    const SizedBox(width: 12),
-
-                    // Name + phone
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Name
-                          Container(
-                            width: 140,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: _itemColor(),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Phone number
-                          Container(
-                            width: 110,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: _itemColor(),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Chevron
+                    const SizedBox(height: 8),
                     Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _itemColor(),
-                      ),
+                      width: 110,
+                      height: 14,
+                      decoration: BoxDecoration(color: itemColor, borderRadius: BorderRadius.circular(4)),
                     ),
                   ],
                 ),
               ),
-
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 16,
-                endIndent: 16,
-                color: AppColors.border(context),
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: itemColor),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+        Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: itemColor.withValues(alpha: 0.1)),
+      ],
     );
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
@@ -11,15 +12,35 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'member_details_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/skeleton/member_list_skeleton.dart';
-import 'package:kofund/features/virtual_users/screens/create_virtual_users_screen.dart';
-import 'package:kofund/core/services/user_service.dart';
-import 'package:kofund/core/services/participant_service.dart';
-import 'package:kofund/core/services/contribution_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import 'package:kofund/core/widgets/glass_action_button.dart';
 import 'dart:ui';
+import 'package:badges/badges.dart' as badges;
+import 'package:kofund/features/virtual_users/screens/create_virtual_users_screen.dart';
+import 'package:kofund/core/services/user_service.dart';
+import 'package:kofund/core/services/participant_service.dart';
+import 'package:kofund/core/services/contribution_service.dart';
+
+
+enum MemberTypeFilter { all, real, virtual }
+
+class MemberFilters {
+  MemberTypeFilter typeFilter;
+
+  MemberFilters({this.typeFilter = MemberTypeFilter.all});
+
+  MemberFilters copyWith({
+    MemberTypeFilter? typeFilter,
+  }) {
+    return MemberFilters(
+      typeFilter: typeFilter ?? this.typeFilter,
+    );
+  }
+
+  int get activeCount => typeFilter != MemberTypeFilter.all ? 1 : 0;
+}
 
 // =================== MAIN SCREEN ===================
 class AllMembersScreen extends StatelessWidget {
@@ -84,7 +105,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   String? _currentUserId;
 
   // Filter state
-  String _selectedFilter = 'all'; // 'all', 'real', 'virtual'
+  MemberFilters _filters = MemberFilters();
 
   // Pagination controller - kept for general scrolling
   final ScrollController _scrollController = ScrollController();
@@ -140,7 +161,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       _isInitialLoad = true;
       _isLoading = false;
       _errorMessage = null;
-      _selectedFilter = 'all';
+      _filters = MemberFilters();
     });
   }
 
@@ -181,7 +202,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     
     try {
       final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadMembers(filterType: _selectedFilter);
+      await memberProvider.loadMembers(filterType: _filters.typeFilter.name);
       
       if (mounted) {
         setState(() {
@@ -200,12 +221,10 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
   }
 
-  void _onRefresh() async {
+  Future<void> _onRefresh() async {
     try {
       final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadMembers(filterType: _selectedFilter);
-      
-      _refreshController.refreshCompleted();
+      await memberProvider.loadMembers(filterType: _filters.typeFilter.name);
       
       if (mounted) {
         setState(() {
@@ -213,7 +232,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
         });
       }
     } catch (e) {
-      _refreshController.refreshFailed();
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -269,11 +287,12 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
                    user.email?.toLowerCase().contains(_searchQuery.toLowerCase()) == true;
           }).toList();
     
-    switch (_selectedFilter) {
-      case 'real':
+    switch (_filters.typeFilter) {
+      case MemberTypeFilter.real:
         return filteredBySearch.where((user) => !user.isVirtualUser).toList();
-      case 'virtual':
+      case MemberTypeFilter.virtual:
         return filteredBySearch.where((user) => user.isVirtualUser).toList();
+      case MemberTypeFilter.all:
       default:
         return filteredBySearch;
     }
@@ -662,160 +681,38 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   }
 
   @override
-Widget build(BuildContext context) {
-  final bool showBackButton = widget.forceBackButton ?? 
-      (ModalRoute.of(context)?.canPop ?? false);
+  Widget build(BuildContext context) {
+    final bool showBackButton = widget.forceBackButton ?? 
+        (ModalRoute.of(context)?.canPop ?? false);
 
-  final memberProvider = context.watch<MemberProvider>();
-  final currentUser = context.watch<AppAuthProvider>().user;
-  final isAdmin = currentUser?.isAdmin == true;
+    final memberProvider = context.watch<MemberProvider>();
+    final currentUser = context.watch<AppAuthProvider>().user;
+    final isAdmin = currentUser?.isAdmin == true;
 
-  final allMembers = memberProvider.members;
-  final filteredMembers = _getFilteredMembers(allMembers);
-  final memberCounts = _getMemberCounts(allMembers);
+    final allMembers = memberProvider.members;
+    final filteredMembers = _getFilteredMembers(allMembers);
+    final memberCounts = _getMemberCounts(allMembers);
 
-  return Scaffold(
-    backgroundColor: AppColors.background(context),
-    appBar: AppBar(
-      title: const Text(
-        'Members',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        edgeOffset: 120,
+        color: AppColors.primary(context),
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            _buildFlatSliverAppBar(showBackButton, isAdmin, currentUser),
+            if (_filters.typeFilter != MemberTypeFilter.all) _buildActiveFilterChips(),
+            if (_searchQuery.isNotEmpty) _buildSearchHeader(filteredMembers.length),
+            _buildBodyContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
+          ],
         ),
       ),
-      centerTitle: true,
-      leading: showBackButton 
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
-            )
-          : null,
-      automaticallyImplyLeading: showBackButton,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: AppColors.background(context),
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-            bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-          ),
-        ),
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(50),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-          child: _isSelectionMode
-              ? _buildSelectionControls(filteredMembers, isAdmin, currentUser)
-              : _buildSearchBar(),
-        ),
-      ),
-      actions: [
-        if (isAdmin)
-          Consumer<UserProvider>(
-            builder: (context, userProvider, child) {
-              final pendingCount = userProvider.pendingMembers.length;
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Center(
-                  child: GlassActionButton(
-                    icon: Icons.person_add_alt_1,
-                    badgeCount: pendingCount,
-                    size: 48,
-                    iconSize: 22,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ApprovalRequestsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-      ],
-    ),
-
-    body: SafeArea(
-      child: Column(
-        children: [
-          // Fixed filter tabs below AppBar
-          Container(
-            margin: const EdgeInsets.only(right: 16, left: 16, top: 8),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppColors.card(context),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _buildMemberTab("All", 'all'),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _buildMemberTab("Real", 'real'),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _buildMemberTab("Virtual", 'virtual'),
-                ),
-              ],
-            ),
-          ),
-          
-          // Scrollable content
-          Expanded(
-            child: SmartRefresher(
-              controller: _refreshController,
-              onRefresh: _onRefresh,
-              enablePullDown: true,
-              enablePullUp: false,
-              physics: const BouncingScrollPhysics(),
-              header: ClassicHeader(
-                idleText: 'Pull down to refresh',
-                releaseText: 'Release to refresh',
-                refreshingText: 'Refreshing members...',
-                completeText: 'Refresh complete',
-                failedText: 'Refresh failed',
-                idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-                releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-                refreshingIcon: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-                  ),
-                ),
-                completeIcon: const Icon(Icons.check, color: Colors.green),
-                failedIcon: const Icon(Icons.error, color: Colors.red),
-              ),
-              child: _buildContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
-            ),
-          ),
-        ],
-      ),
-    ),
-    
-    floatingActionButton: isAdmin ? _buildVirtualUserFAB() : null,
-  );
-}
+      floatingActionButton: isAdmin ? _buildVirtualUserFAB() : null,
+    );
+  }
 
   Widget _buildVirtualUserFAB() {
     return FloatingActionButton.extended(
@@ -831,7 +728,7 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildContent(
+  Widget _buildBodyContent(
     MemberProvider memberProvider,
     UserModel? currentUser,
     List<UserModel> displayedMembers,
@@ -839,321 +736,399 @@ Widget build(BuildContext context) {
     Map<String, int> memberCounts
   ) {
     if (_isInitialLoad || (_isLoading && displayedMembers.isEmpty)) {
-      return MemberListSkeleton(
-        isDarkMode: Theme.of(context).brightness == Brightness.dark,
+      return MemberListSkeleton.buildSliver(
+        context, 
+        Theme.of(context).brightness == Brightness.dark,
       );
     }
 
-    if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(fontSize: 16, color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _checkAuthAndLoadMembers,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView(
-      controller: _scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      shrinkWrap: true,
-      children: [
-        // Search Header
-        if (_searchQuery.isNotEmpty) _buildSearchHeader(displayedMembers.length),
-
-        // Provider Error
-        if (memberProvider.error != null) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Card(
-              color: Colors.red[50],
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        memberProvider.error!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () => memberProvider.clearError(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-
-        // Members List
-        if (displayedMembers.isEmpty && !_refreshController.isRefresh)
-          _buildEmptyState()
-        else ...[
-          ...displayedMembers.map((member) => _buildMemberCard(member, currentUser)).toList(),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildMemberTab(String label, String value) {
-    final isSelected = _selectedFilter == value;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = value;
-        });
-        _loadMembers();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary(context) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textPrimary(context),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            _buildTabCount(value, isSelected),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabCount(String value, bool isSelected) {
-    final memberCounts = _getMemberCounts(_members);
-    int count = 0;
-    
-    switch (value) {
-      case 'all':
-        count = memberCounts['all'] ?? 0;
-        break;
-      case 'real':
-        count = memberCounts['real'] ?? 0;
-        break;
-      case 'virtual':
-        count = memberCounts['virtual'] ?? 0;
-        break;
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.white.withValues(alpha: 0.2) : AppColors.card(context),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        count.toString(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: isSelected ? Colors.white : AppColors.textSecondary(context),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.5),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        color: Colors.transparent,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Row(
+    if (_errorMessage != null || memberProvider.error != null) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Search Icon Container
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    bottomLeft: Radius.circular(18),
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    width: 0,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.search,
-                  color: Colors.white,
-                  size: 22,
-                ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage ?? memberProvider.error!,
+                style: const TextStyle(fontSize: 16, color: Colors.red),
+                textAlign: TextAlign.center,
               ),
-              
-              // Text Field
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                  cursorColor: Colors.white,
-                  cursorWidth: 2,
-                  cursorHeight: 20,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    hintText: 'Search members...',
-                    hintStyle: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    border: InputBorder.none,
-                    filled: false,
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.only(right: 0),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
-                                  Icons.close,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                  FocusScope.of(context).unfocus();
-                                },
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) {
-                    setState(() => _searchQuery = value);
-                  },
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _checkAuthAndLoadMembers,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
                 ),
+                child: const Text('Retry'),
               ),
             ],
           ),
         ),
+      );
+    }
+
+    if (displayedMembers.isEmpty && !_refreshController.isRefresh) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEmptyState(),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final member = displayedMembers[index];
+          return TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 400 + (index * 100).clamp(0, 400)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: child,
+                ),
+              );
+            },
+            child: _buildMemberCard(member, currentUser),
+          );
+        },
+        childCount: displayedMembers.length,
       ),
     );
   }
 
-  Widget _buildSearchHeader(int resultCount) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary(context).withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, size: 16, color: AppColors.primary(context)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Search results for "$_searchQuery"',
-              style: TextStyle(
-                color: AppColors.primary(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$resultCount ${resultCount == 1 ? 'member' : 'members'}',
-              style: TextStyle(
-                color: AppColors.primary(context),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+  void _openFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => FilterSheet(
+        filters: _filters,
+        onFiltersChanged: (newFilters) {
+          setState(() {
+            _filters = newFilters;
+          });
+          _loadMembers();
+        },
       ),
     );
   }
 
-  Widget _buildSelectionControls(List<UserModel> displayedMembers, bool isAdmin, UserModel? currentUser) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.card(context).withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.4),
-          width: 1.2,
+  Widget _buildFlatSliverAppBar(bool showBackButton, bool isAdmin, UserModel? currentUser) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = AppColors.background(context);
+    
+    return SliverAppBar(
+      expandedHeight: 220,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: bgColor,
+      surfaceTintColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      // Back button
+      leading: showBackButton
+          ? Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                      border: Border.all(
+                        color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+                      ),
+                      boxShadow: [
+                        if (!isDark)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_ios_rounded,
+                      size: 16,
+                      color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null,
+      // Approval requests button
+      actions: [
+        if (isAdmin)
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: Consumer<UserProvider>(
+                builder: (context, userProvider, child) {
+                  final pendingCount = userProvider.pendingMembers.length;
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ApprovalRequestsScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                        border: Border.all(
+                          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+                        ),
+                        boxShadow: [
+                          if (!isDark)
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: Center(
+                        child: badges.Badge(
+                          showBadge: pendingCount > 0,
+                          badgeContent: Text(
+                            pendingCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                          badgeStyle: badges.BadgeStyle(
+                            badgeColor: AppColors.error(context),
+                            padding: const EdgeInsets.all(4),
+                            elevation: 0,
+                          ),
+                          position: badges.BadgePosition.topEnd(top: -6, end: -6),
+                          child: Icon(
+                            Icons.person_add_alt_1,
+                            size: 18,
+                            color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+      ],
+      // Title with dynamic scaling
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double maxHeight = 220.0;
+          final double currentHeight = constraints.biggest.height;
+          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
+          final double fontSize = 20 + (2 * progress); // 20 collapsed → 22 expanded
+          
+          return FlexibleSpaceBar(
+            stretchModes: const [StretchMode.zoomBackground],
+            centerTitle: true,
+            titlePadding: const EdgeInsets.only(bottom: 112 + 10),
+            title: Text(
+              'Members',
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary(context),
+                letterSpacing: -0.5 - (0.5 * progress),
+              ),
+            ),
+          );
+        },
+      ),
+      // Pinned search bar at bottom
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(84 + 28),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: _isSelectionMode
+                  ? _buildFlatSelectionControls(currentUser)
+                  : _buildFlatSearchBar(),
+            ),
+            Container(
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.background(context),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFlatSearchBar() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+                width: 1,
+              ),
+              boxShadow: [
+                if (!isDark)
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary(context),
+                      letterSpacing: 0.3,
+                    ),
+                    cursorColor: AppColors.primary(context),
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      hintText: 'Search members...',
+                      hintStyle: TextStyle(
+                        color: AppColors.textSecondary(context).withValues(alpha: 0.6),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      border: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary(context)),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                                FocusScope.of(context).unfocus();
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+              width: 1,
+            ),
+            boxShadow: [
+              if (!isDark)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _openFilterSheet(context),
+              child: Center(
+                child: badges.Badge(
+                  showBadge: _filters.activeCount > 0,
+                  badgeContent: Text(
+                    _filters.activeCount.toString(),
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  badgeStyle: badges.BadgeStyle(
+                    badgeColor: AppColors.error(context),
+                    padding: const EdgeInsets.all(4),
+                    elevation: 0,
+                  ),
+                  position: badges.BadgePosition.topEnd(top: -6, end: -6),
+                  child: Icon(Icons.tune, color: AppColors.textSecondary(context), size: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFlatSelectionControls(UserModel? currentUser) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final memberProvider = context.read<MemberProvider>();
+    final allMembers = List<UserModel>.from(memberProvider.members);
+    final filteredMembers = _getFilteredMembers(allMembers);
+    final isAdmin = currentUser?.isAdmin == true;
+    
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
       child: Row(
         children: [
-          // Cancel Button
           IconButton(
             icon: Icon(Icons.close, color: AppColors.primary(context), size: 22),
             onPressed: _toggleSelectionMode,
           ),
-          
-          // Selection Count
           Expanded(
             child: Text(
               '${_selectedMemberIds.length} selected',
@@ -1165,32 +1140,24 @@ Widget build(BuildContext context) {
               textAlign: TextAlign.center,
             ),
           ),
-          
-          // Select All / Deselect All
           IconButton(
             icon: Icon(
-              _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
+              _selectedMemberIds.length == filteredMembers.length - (currentUser != null ? 1 : 0)
                   ? Icons.check_box
                   : Icons.check_box_outline_blank,
               color: AppColors.primary(context),
               size: 22,
             ),
-            onPressed: _selectedMemberIds.length == displayedMembers.length - (currentUser != null ? 1 : 0)
+            onPressed: _selectedMemberIds.length == filteredMembers.length - (currentUser != null ? 1 : 0)
                 ? _clearSelection
-                : () => _selectAllMembers(displayedMembers, currentUser),
+                : () => _selectAllMembers(filteredMembers, currentUser),
           ),
-          
-          // Bulk Actions Menu
           if (isAdmin)
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: AppColors.primary(context), size: 22),
               onSelected: _handleBulkAction,
               itemBuilder: (context) {
-                final memberProvider = context.read<MemberProvider>();
-                final allMembers = List<UserModel>.from(memberProvider.members);
                 final selectedMembers = allMembers.where((m) => _selectedMemberIds.contains(m.uid)).toList();
-                
-                // Filter out current user
                 final filteredSelectedMembers = selectedMembers.where((m) => m.uid != currentUser?.uid).toList();
                 
                 if (filteredSelectedMembers.isEmpty) {
@@ -1198,10 +1165,7 @@ Widget build(BuildContext context) {
                     const PopupMenuItem<String>(
                       value: 'no_selection',
                       enabled: false,
-                      child: Text(
-                        'No valid members selected',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      child: Text('No valid members selected', style: TextStyle(color: Colors.grey)),
                     ),
                   ];
                 }
@@ -1214,77 +1178,35 @@ Widget build(BuildContext context) {
                 final hasOnlyRealUsers = hasRealUsers && !hasVirtualUsers;
                 final hasMixedUsers = hasVirtualUsers && hasRealUsers;
                 
-                // Build menu items
                 final menuItems = <PopupMenuItem<String>>[];
                 
-                // Make Admin (only for real non-admin users)
                 if (hasNonAdmins) {
-                  menuItems.add(
-                    PopupMenuItem<String>(
-                      value: 'make_admin',
-                      child: ListTile(
-                        dense: true,
-                        leading: Icon(Icons.admin_panel_settings, color: Colors.orange),
-                        title: const Text('Make Admin'),
-                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
-                      ),
-                    ),
-                  );
+                  menuItems.add(PopupMenuItem<String>(
+                    value: 'make_admin',
+                    child: ListTile(dense: true, leading: Icon(Icons.admin_panel_settings, color: Colors.orange), title: const Text('Make Admin'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
+                  ));
                 }
-                
-                // Remove Admin (only for real admin users)
                 if (hasAdmins) {
-                  menuItems.add(
-                    PopupMenuItem<String>(
-                      value: 'remove_admin',
-                      child: ListTile(
-                        dense: true,
-                        leading: Icon(Icons.person_remove, color: Colors.orange[800]),
-                        title: const Text('Remove Admin'),
-                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
-                      ),
-                    ),
-                  );
+                  menuItems.add(PopupMenuItem<String>(
+                    value: 'remove_admin',
+                    child: ListTile(dense: true, leading: Icon(Icons.person_remove, color: Colors.orange[800]), title: const Text('Remove Admin'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
+                  ));
                 }
-                
-                // Unapprove (only for real users)
                 if (hasRealUsers) {
-                  menuItems.add(
-                    PopupMenuItem<String>(
-                      value: 'unapprove',
-                      child: ListTile(
-                        dense: true,
-                        leading: Icon(Icons.block, color: Colors.red),
-                        title: const Text('Unapprove Users'),
-                        subtitle: hasMixedUsers ? const Text('For real users only') : null,
-                      ),
-                    ),
-                  );
+                  menuItems.add(PopupMenuItem<String>(
+                    value: 'unapprove',
+                    child: ListTile(dense: true, leading: Icon(Icons.block, color: Colors.red), title: const Text('Unapprove Users'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
+                  ));
                 }
-                
-                // Remove/Delete action
-                menuItems.add(
-                  PopupMenuItem<String>(
-                    value: 'remove',
-                    child: ListTile(
-                      dense: true,
-                      leading: Icon(
-                        hasOnlyVirtualUsers ? Icons.delete : Icons.exit_to_app,
-                        color: Colors.red,
-                      ),
-                      title: Text(
-                        hasOnlyVirtualUsers 
-                            ? 'Delete Virtual Users'
-                            : hasOnlyRealUsers
-                                ? 'Remove from Community'
-                                : 'Remove/Delete Users',
-                      ),
-                      subtitle: hasMixedUsers 
-                          ? const Text('Virtual users: Delete, Real users: Remove')
-                          : null,
-                    ),
+                menuItems.add(PopupMenuItem<String>(
+                  value: 'remove',
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(hasOnlyVirtualUsers ? Icons.delete : Icons.exit_to_app, color: Colors.red),
+                    title: Text(hasOnlyVirtualUsers ? 'Delete Virtual Users' : hasOnlyRealUsers ? 'Remove from Community' : 'Remove/Delete Users'),
+                    subtitle: hasMixedUsers ? const Text('Virtual users: Delete, Real users: Remove') : null,
                   ),
-                );
+                ));
                 
                 return menuItems;
               },
@@ -1294,53 +1216,190 @@ Widget build(BuildContext context) {
     );
   }
 
+  Widget _buildActiveFilterChips() {
+    final hasTypeFilter = _filters.typeFilter != MemberTypeFilter.all;
+    
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        color: AppColors.background(context),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              if (hasTypeFilter)
+                _buildActiveChip(
+                  _filters.typeFilter.name.toUpperCase(),
+                  () {
+                    setState(() {
+                      _filters = _filters.copyWith(typeFilter: MemberTypeFilter.all);
+                    });
+                    _loadMembers();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveChip(String label, VoidCallback onDeleted) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary(context),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: onDeleted,
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.textSecondary(context)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchHeader(int resultCount) {
+    return SliverToBoxAdapter(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.primary(context).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.primary(context).withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, size: 18, color: AppColors.primary(context)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Search results for "$_searchQuery"',
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$resultCount ${resultCount == 1 ? 'member' : 'members'}',
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Selection controls are now integrated into _buildFlatSelectionControls
+
   Widget _buildEmptyState() {
     final isAdmin = context.read<AppAuthProvider>().user?.isAdmin == true;
     
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 120),
-        Icon(
-          _searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
-          size: 64,
-          color: AppColors.primary(context).withValues(alpha: 0.5),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          _searchQuery.isNotEmpty ? 'No results found' : 'No members available',
-          style: TextStyle(
-            fontSize: 18,
-            color: AppColors.primary(context).withValues(alpha: 0.7),
-            fontWeight: FontWeight.w500,
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.primary(context).withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _searchQuery.isNotEmpty ? Icons.person_search_outlined : Icons.people_outline,
+            size: 64,
+            color: AppColors.primary(context),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
         Text(
-          _searchQuery.isNotEmpty 
-              ? 'No matches for "$_searchQuery"'
-              : 'When members join and get approved,\nthey will appear here.',
+          _searchQuery.isNotEmpty ? 'No matches found' : 'No members yet',
           style: TextStyle(
-            color: AppColors.textSecondary(context),
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary(context),
+            letterSpacing: -0.5,
           ),
-          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Text(
+            _searchQuery.isNotEmpty 
+                ? 'We couldn\'t find any members matching "$_searchQuery". Try adjusting your filters or search terms.'
+                : 'When members join and get approved, or when you add virtual members, they will appear here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
         ),
         if (_searchQuery.isEmpty && isAdmin) ...[
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           _buildAddVirtualUserButton(),
         ],
         if (_searchQuery.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
             onPressed: () {
               _searchController.clear();
               setState(() => _searchQuery = '');
+              FocusScope.of(context).unfocus();
             },
+            icon: const Icon(Icons.clear_all, size: 20),
+            label: const Text(
+              'Clear Search',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary(context),
               foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
-            child: const Text('Clear Search'),
           ),
         ],
       ],
@@ -1403,7 +1462,7 @@ Widget build(BuildContext context) {
               });
             } : null,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
               child: Row(
                 children: [
                   Container(
@@ -1570,6 +1629,8 @@ Widget build(BuildContext context) {
     );
   }
 
+  // _buildModernSearchBar is replaced by _buildFlatSearchBar above
+
   Future<void> _makePhoneCall(String phoneNumber) async {
     try {
       final cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
@@ -1606,5 +1667,216 @@ Widget build(BuildContext context) {
         ),
       );
     }
+  }
+}
+
+class FilterSheet extends StatefulWidget {
+  final MemberFilters filters;
+  final Function(MemberFilters) onFiltersChanged;
+
+  const FilterSheet({
+    Key? key,
+    required this.filters,
+    required this.onFiltersChanged,
+  }) : super(key: key);
+
+  @override
+  State<FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<FilterSheet> with SingleTickerProviderStateMixin {
+  late MemberFilters _currentFilters;
+  AnimationController? _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentFilters = MemberFilters(
+      typeFilter: widget.filters.typeFilter,
+    );
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = _animationController != null
+        ? CurvedAnimation(parent: _animationController!, curve: Curves.easeOutQuart)
+        : null;
+
+    final content = Container(
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 32,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.border(context),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Filter Members',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final freshFilters = MemberFilters();
+                      setState(() {
+                        _currentFilters = freshFilters;
+                      });
+                      widget.onFiltersChanged(freshFilters);
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.error(context),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Member Type',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _typeChip('All', MemberTypeFilter.all),
+                  _typeChip('Real', MemberTypeFilter.real),
+                  _typeChip('Virtual', MemberTypeFilter.virtual),
+                ],
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onFiltersChanged(_currentFilters);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary(context),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: const Text(
+                    'Apply Filters',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (animation == null) return content;
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: content,
+    );
+  }
+
+  Widget _typeChip(String label, MemberTypeFilter type) {
+    final isSelected = _currentFilters.typeFilter == type;
+    final primaryColor = AppColors.primary(context);
+    
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          if (isSelected) {
+            _currentFilters = _currentFilters.copyWith(typeFilter: MemberTypeFilter.all);
+          } else {
+            _currentFilters = _currentFilters.copyWith(typeFilter: type);
+          }
+        });
+      },
+      labelStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        color: isSelected ? Colors.white : AppColors.textSecondary(context),
+      ),
+      backgroundColor: AppColors.card(context),
+      selectedColor: primaryColor,
+      elevation: isSelected ? 4 : 0,
+      shadowColor: primaryColor.withValues(alpha: 0.3),
+      pressElevation: 8,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : AppColors.border(context).withValues(alpha: 0.5),
+        ),
+      ),
+      showCheckmark: false,
+    );
   }
 }

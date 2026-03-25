@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
+
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -14,6 +15,8 @@ import 'program_details_screen.dart';
 import 'edit_program_screen.dart';
 import 'program_reminder_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:kofund/core/skeleton/all_program_skeleton.dart';
 import '../../participants/models/participant_model.dart';
 import '../../participants/providers/participant_provider.dart';
@@ -42,10 +45,11 @@ class ProgramFilters {
     String? programType,
     bool? monthlyOnly,
     bool? availableOnly,
+    bool clearProgramType = false,
   }) {
     return ProgramFilters(
       statusFilter: statusFilter ?? this.statusFilter,
-      programType: programType ?? this.programType,
+      programType: clearProgramType ? null : (programType ?? this.programType),
       monthlyOnly: monthlyOnly ?? this.monthlyOnly,
       availableOnly: availableOnly ?? this.availableOnly,
     );
@@ -69,6 +73,13 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   final RefreshController _refreshController = RefreshController();
   String _searchQuery = '';
   ProgramFilters _filters = ProgramFilters();
+
+  int _getActiveFilterCount() {
+    int count = 0;
+    if (_filters.statusFilter != ProgramStatusFilter.all) count++;
+    if (_filters.programType != null) count++;
+    return count;
+  }
 
   @override
   void initState() {
@@ -118,15 +129,13 @@ Future<void> _loadPrograms() async {
   }
 }
 
-  void _onRefresh() async {
+  Future<void> _onRefresh() async {
     debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
     
     try {
       await _loadPrograms();
-      _refreshController.refreshCompleted();
       debugPrint('✅ DEBUG: Programs refresh completed successfully');
     } catch (e) {
-      _refreshController.refreshFailed();
       debugPrint('❌ DEBUG: Programs refresh failed: $e');
     }
   }
@@ -168,17 +177,22 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
   void _openFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        return FilterSheet(
-          filters: _filters,
-          onFiltersChanged: (newFilters) {
-            setState(() {
-              _filters = newFilters;
-            });
-          },
+        return FractionallySizedBox(
+          heightFactor: 0.65,
+          child: FilterSheet(
+            filters: _filters,
+            onFiltersChanged: (newFilters) {
+              setState(() {
+                _filters = newFilters;
+              });
+            },
+          ),
         );
       },
     );
@@ -188,7 +202,6 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
   Widget build(BuildContext context) {
     final programProvider = context.watch<ProgramProvider>();
     final isAdmin = widget.isAdmin;
-
     List<ProgramModel> filteredPrograms = programProvider.programs;
     
     if (_searchQuery.isNotEmpty) {
@@ -199,48 +212,31 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
       }).toList();
     }
     
+    // ✅ APPLY SELECTED FILTERS
+    filteredPrograms = _applyFilters(filteredPrograms);
+    
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkPrimaryGradientStart : AppColors.lightPrimaryGradientStart,
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        slivers: [
-          _buildSliverAppBar(context),
-          CupertinoSliverRefreshControl(
-            onRefresh: () async {
-              await _loadPrograms();
-            },
-          ),
-          // 📌 STICKY ROUNDED HEADER - Pins below the main app bar
-          SliverAppBar(
-            toolbarHeight: 0,
-            expandedHeight: 20,
-            pinned: true,
-            elevation: 0,
-            primary: false,
-            backgroundColor: Colors.transparent, // Show gradient behind corners
-            automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.background(context),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
-                ),
-              ),
+      backgroundColor: AppColors.background(context),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        edgeOffset: 120,
+        color: AppColors.primary(context),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            _buildSliverAppBar(context),
+            _buildActiveFilterChips(),
+            // Body content with background color
+            _buildBodyContent(programProvider, filteredPrograms),
+            // Fill remaining space with background color to hide teal at the bottom
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Container(color: AppColors.background(context)),
             ),
-          ),
-          // Body content with background color
-          _buildBodyContent(programProvider, filteredPrograms),
-          // Fill remaining space with background color to hide teal at the bottom
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Container(color: AppColors.background(context)),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
@@ -258,6 +254,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
       expandedHeight: 220,
       floating: false,
       pinned: true,
+      stretch: true,
       elevation: 0,
       centerTitle: true,
       backgroundColor: Colors.transparent, // Let flexibleSpace handle color
@@ -276,7 +273,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
           
           // Font size: 32 at expanded, 20 at collapsed
-          final double fontSize = 20 + (6 * progress); // 20 to 26 scaling
+          final double fontSize = 20 + (2 * progress); // 20 to 26 scaling
           // Vertical offset for title - center it vertically above the search bar
           
           return Stack(
@@ -290,9 +287,10 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
               ),
               
               FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
                 centerTitle: true,
-                titlePadding: EdgeInsets.only(
-                  bottom: 84 + (24 * progress), 
+                titlePadding: const EdgeInsets.only(
+                  bottom: 112 + 10, // Adjusted for search (84) + rounded (28) height
                 ),
                 title: Text(
                   'Programs',
@@ -309,99 +307,78 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
         },
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(84),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: _buildModernSearchBar(),
+        preferredSize: const Size.fromHeight(84 + 28),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: _buildModernSearchBar(),
+            ),
+            Container(
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.background(context),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-Widget _buildModernSearchBar() {
+  Widget _buildModernSearchBar() {
     return Row(
       children: [
         Expanded(
           child: Container(
-            height: 56,
+            height: 52,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 1.5,
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              color: Colors.transparent,
             ),
             child: Row(
               children: [
-                // 🔍 SEARCH ICON
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(18),
-                      bottomLeft: Radius.circular(18),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.search,
-                    color: Colors.white,
-                    size: 22,
-                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Icon(Icons.search, color: Colors.white70, size: 20),
                 ),
-                
-                // 📝 SEARCH FIELD
                 Expanded(
                   child: TextField(
                     controller: _searchController,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                       color: Colors.white,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.3,
                     ),
                     cursorColor: Colors.white,
-                    cursorWidth: 2,
-                    cursorHeight: 20,
                     decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       hintText: 'Search programs...',
-                      hintStyle: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
                       ),
                       border: InputBorder.none,
                       filled: false,
+                      isDense: true,
                       suffixIcon: _searchController.text.isNotEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.only(right: 0),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(
-                                    Icons.close,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                ),
-                              ),
+                          ? IconButton(
+                              icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                                FocusScope.of(context).unfocus();
+                              },
                             )
                           : null,
                     ),
@@ -414,39 +391,41 @@ Widget _buildModernSearchBar() {
             ),
           ),
         ),
-        
-        const SizedBox(width: 8),
-        
-        // ⚙️ FILTER ICON
+        const SizedBox(width: 12),
         Container(
-          width: 56,
-          height: 56,
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.5),
-              width: 1.5,
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            color: Colors.transparent,
           ),
           child: Material(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(18),
+            color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               onTap: () => _openFilterSheet(context),
-              child: const Center(
-                child: Icon(
-                  Icons.tune,
-                  color: Colors.white,
-                  size: 22,
+              child: Center(
+                child: badges.Badge(
+                  showBadge: _getActiveFilterCount() > 0,
+                  badgeContent: Text(
+                    _getActiveFilterCount().toString(),
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  badgeStyle: badges.BadgeStyle(
+                    badgeColor: AppColors.error(context),
+                    padding: const EdgeInsets.all(4),
+                    elevation: 0,
+                  ),
+                  position: badges.BadgePosition.topEnd(top: -6, end: -6),
+                  child: const Icon(
+                    Icons.tune,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
@@ -499,14 +478,9 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
   final bgColor = AppColors.background(context);
   
   if (programProvider.isLoading && displayedPrograms.isEmpty) {
-    return SliverFillRemaining(
-      hasScrollBody: false,
-      child: Container(
-        color: bgColor,
-        child: ProgramListSkeleton(
-          isDarkMode: Theme.of(context).brightness == Brightness.dark,
-        ),
-      ),
+    return ProgramListSkeleton.buildSliver(
+      context, 
+      Theme.of(context).brightness == Brightness.dark,
     );
   }
 
@@ -561,7 +535,20 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
         final program = displayedPrograms[index];
         return Container(
           color: bgColor,
-          child: _buildProgramCard(program, programProvider, context.read<AppAuthProvider>()),
+          child: TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 400 + (index * 100)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: child,
+                ),
+              );
+            },
+            child: _buildProgramCard(program, programProvider, context.read<AppAuthProvider>()),
+          ),
         );
       },
       childCount: displayedPrograms.length,
@@ -654,7 +641,7 @@ Widget _buildProgramCard(
   return Consumer<ParticipantProvider>(
     builder: (context, participantProvider, _) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
@@ -810,16 +797,22 @@ Widget _buildProgramCard(
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                         ),
-                                        AnimatedContainer(
-                                          duration: const Duration(milliseconds: 500),
-                                          height: 8,
-                                          width: constraints.maxWidth * progress,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [programColor, programColor.withValues(alpha: 0.7)],
-                                            ),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
+                                        TweenAnimationBuilder<double>(
+                                          duration: const Duration(milliseconds: 1200),
+                                          curve: Curves.easeOutQuart,
+                                          tween: Tween<double>(begin: 0, end: progress),
+                                          builder: (context, animValue, child) {
+                                            return Container(
+                                              height: 8,
+                                              width: constraints.maxWidth * animValue,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [programColor, programColor.withValues(alpha: 0.7)],
+                                                ),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ],
                                     );
@@ -840,7 +833,7 @@ Widget _buildProgramCard(
                                     const SizedBox(width: 16),
                                     _buildCompactStat(
                                       Icons.account_balance_wallet_outlined,
-                                      '₦${collectedAmount.toInt()}',
+                                      '₹${collectedAmount.toInt()}',
                                     ),
                                   ],
                                 ),
@@ -1124,6 +1117,96 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
       default: return const Color(0xFF00BFA5);
     }
   }
+
+  Widget _buildActiveFilterChips() {
+    final hasStatusFilter = _filters.statusFilter != ProgramStatusFilter.all;
+    final hasTypeFilter = _filters.programType != null;
+    
+    if (!hasStatusFilter && !hasTypeFilter) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        color: AppColors.background(context),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              if (hasStatusFilter)
+                _buildActiveChip(
+                  _filters.statusFilter.name.toUpperCase(),
+                  () => setState(() => _filters = _filters.copyWith(statusFilter: ProgramStatusFilter.all)),
+                ),
+              if (hasStatusFilter && hasTypeFilter) const SizedBox(width: 8),
+              if (hasTypeFilter)
+                _buildActiveChip(
+                  ProgramTypes.getDisplayName(_filters.programType!),
+                  () => setState(() => _filters = _filters.copyWith(clearProgramType: true)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveChip(String label, VoidCallback onDeleted) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary(context),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: onDeleted,
+            child: Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerCard() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.card(context),
+        highlightColor: AppColors.background(context),
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class FilterSheet extends StatefulWidget {
@@ -1151,119 +1234,127 @@ class _FilterSheetState extends State<FilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.8,
+    // Access the modal's internal animation for custom cross-fades/slides
+    final animation = ModalRoute.of(context)?.animation;
+    
+    Widget content = Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 48,
+                height: 5,
                 decoration: BoxDecoration(
-                  color: AppColors.border(context),
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.border(context).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              
-              Text(
-                'Quick Filters',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-               _buildSection(
-                'Program Status',
-                _buildStatusFilter(),
-              ),
-
-              const SizedBox(height: 20),
-
-              _buildSection(
-                'Program Type',
-                _buildProgramTypeFilter(),
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildSection(
-                'Filters',
-                Column(
-                  children: [
-                    _buildCompactToggle(
-                      'Monthly Programs Only',
-                      _currentFilters.monthlyOnly ?? false,
-                      (value) => setState(() {
-                        _currentFilters = _currentFilters.copyWith(monthlyOnly: value);
-                      }),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildCompactToggle(
-                      'Available to Join Only',
-                      _currentFilters.availableOnly ?? false,
-                      (value) => setState(() {
-                        _currentFilters = _currentFilters.copyWith(availableOnly: value);
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        widget.onFiltersChanged(ProgramFilters());
-                        Navigator.pop(context);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary(context),
-                        side: BorderSide(color: AppColors.primary(context)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text("Clear All"),
-                    ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Header with Title and Reset Action
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Filter Programs',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary(context),
+                    letterSpacing: -0.5,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        widget.onFiltersChanged(_currentFilters);
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary(context),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text("Apply Filters"),
-                    ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final freshFilters = ProgramFilters();
+                    setState(() {
+                      _currentFilters = freshFilters;
+                    });
+                    widget.onFiltersChanged(freshFilters);
+                    Navigator.pop(context);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.error(context),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                ],
+                  child: const Text(
+                    'Reset',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Filters Content Area
+            _buildSection('Status', _buildStatusFilter()),
+            const SizedBox(height: 24),
+            _buildSection('Program Categories', _buildProgramTypeFilter()),
+            const SizedBox(height: 32),
+            
+            // Primary Action Button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  widget.onFiltersChanged(_currentFilters);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                child: const Text(
+                  'Apply Filters',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-              const SizedBox(height: 10),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+
+    if (animation == null) return content;
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutQuart,
+            )),
+            child: child,
+          ),
+        );
+      },
+      child: content,
     );
   }
 
@@ -1299,31 +1390,38 @@ class _FilterSheetState extends State<FilterSheet> {
 
   Widget _statusChip(String label, ProgramStatusFilter status) {
     final isSelected = _currentFilters.statusFilter == status;
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: isSelected ? Colors.white : AppColors.textPrimary(context),
-        ),
-      ),
+    final primaryColor = AppColors.primary(context);
+    
+    return ChoiceChip(
+      label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          _currentFilters = _currentFilters.copyWith(statusFilter: status);
+          if (isSelected) {
+            _currentFilters = _currentFilters.copyWith(statusFilter: ProgramStatusFilter.all);
+          } else {
+            _currentFilters = _currentFilters.copyWith(statusFilter: status);
+          }
         });
       },
+      labelStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+        color: isSelected ? Colors.white : AppColors.textSecondary(context),
+      ),
       backgroundColor: AppColors.card(context),
-      selectedColor: const Color(0xFF00BFA5),
-      checkmarkColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      selectedColor: primaryColor,
+      elevation: isSelected ? 4 : 0,
+      shadowColor: primaryColor.withValues(alpha: 0.3),
+      pressElevation: 8,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           color: isSelected ? Colors.transparent : AppColors.border(context).withValues(alpha: 0.5),
         ),
       ),
+      showCheckmark: false,
     );
   }
 
@@ -1332,31 +1430,47 @@ class _FilterSheetState extends State<FilterSheet> {
     final programTypes = ['all', ...ProgramTypes.allTypes];
     
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 10,
+      runSpacing: 10,
       children: programTypes.map((type) {
         final isSelected = _currentFilters.programType == type || 
                           (type == 'all' && _currentFilters.programType == null);
-        return FilterChip(
-          label: Text(
-            type == 'all' ? 'All Types' : ProgramTypes.getDisplayName(type),
-            style: TextStyle(
-              fontSize: 12,
-              color: isSelected ? Colors.white : AppColors.textPrimary(context),
-            ),
-          ),
+        final primaryColor = AppColors.primary(context);
+        
+        return ChoiceChip(
+          label: Text(type == 'all' ? 'All' : ProgramTypes.getDisplayName(type)),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
-              _currentFilters = _currentFilters.copyWith(
-                programType: selected ? (type == 'all' ? null : type) : null,
-              );
+              if (type == 'all') {
+                _currentFilters = _currentFilters.copyWith(clearProgramType: true);
+              } else {
+                // If clicking an already selected chip, toggle it off to 'all'
+                if (isSelected) {
+                  _currentFilters = _currentFilters.copyWith(clearProgramType: true);
+                } else {
+                  _currentFilters = _currentFilters.copyWith(programType: type);
+                }
+              }
             });
           },
+          labelStyle: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textSecondary(context),
+          ),
           backgroundColor: AppColors.card(context),
-          selectedColor: AppColors.primary(context),
-          checkmarkColor: Colors.white,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          selectedColor: primaryColor,
+          elevation: isSelected ? 4 : 0,
+          shadowColor: primaryColor.withValues(alpha: 0.3),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: isSelected ? Colors.transparent : AppColors.border(context).withValues(alpha: 0.5),
+            ),
+          ),
+          showCheckmark: false,
         );
       }).toList(),
     );
@@ -1366,25 +1480,32 @@ class _FilterSheetState extends State<FilterSheet> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        dense: true,
+      child: SwitchListTile(
         title: Text(
           title,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
             color: AppColors.textPrimary(context),
           ),
         ),
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.primary(context),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        subtitle: Text(
+          value ? 'Active' : 'Disabled',
+          style: TextStyle(
+            fontSize: 12,
+            color: value ? AppColors.primary(context) : AppColors.textTertiary(context),
+          ),
         ),
-        onTap: () => onChanged(!value),
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: AppColors.primary(context),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

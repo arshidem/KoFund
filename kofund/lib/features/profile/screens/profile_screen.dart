@@ -271,26 +271,26 @@ if (_isLoadingProfile) {
       backgroundColor: AppColors.background(context),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
+          slivers: [
+            SliverToBoxAdapter(
             child: _buildNewHeader(context, user),
-          ),
+                    ),
           CupertinoSliverRefreshControl(
             onRefresh: _onRefresh,
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 20),
-                _buildNewStatsRow(context, totalParticipations, totalContributions),
-                const SizedBox(height: 24),
-                _buildNewControlCenter(context, user),
-                const SizedBox(height: 100),
-              ]),
             ),
-          ),
-        ],
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 20),
+                  _buildNewStatsRow(context, totalParticipations, totalContributions),
+                  const SizedBox(height: 24),
+                  _buildNewControlCenter(context, user),
+                  const SizedBox(height: 100),
+                ]),
+              ),
+            ),
+          ],
       ),
     );
   }
@@ -307,7 +307,7 @@ if (_isLoadingProfile) {
       child: Column(
         children: [
           // Settings button at the top right
-          Padding(
+        Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -316,7 +316,7 @@ if (_isLoadingProfile) {
                   context,
                   icon: Icons.settings_outlined,
                   onTap: _navigateToSettings,
-                ),
+          ),
               ],
             ),
           ),
@@ -343,10 +343,10 @@ if (_isLoadingProfile) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+        child: Container(
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
+          decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
           border: Border.all(
