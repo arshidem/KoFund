@@ -2181,14 +2181,14 @@ Future<String?> _showDeleteReasonDialog(BuildContext context) async {
             decoration: InputDecoration(
               hintText: 'Enter reason for deletion...',
               hintStyle: TextStyle(
-                color: AppColors.textSecondary(context).withOpacity(0.6),
+                color: AppColors.textSecondary(context).withValues(alpha: 0.6),
                 fontSize: 13,
               ),
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
-                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.3),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -2201,7 +2201,7 @@ Future<String?> _showDeleteReasonDialog(BuildContext context) async {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
-                  color: AppColors.textSecondary(context).withOpacity(0.3),
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.3),
                 ),
               ),
             ),

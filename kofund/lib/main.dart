@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'core/constants/app_colors.dart';
+import 'core/constants/app_dimensions.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_links/app_links.dart';    
@@ -803,23 +804,59 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
             borderSide: const BorderSide(color: AppColors.lightBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: const BorderSide(color: AppColors.lightBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: const BorderSide(color: AppColors.lightPrimary, width: 2),
           ),
           filled: true,
           fillColor: AppColors.lightSurface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.lightPrimary,
             foregroundColor: Colors.white,
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
         ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.lightPrimary,
+            side: const BorderSide(color: AppColors.lightPrimary),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+          ),
+          color: AppColors.lightCard,
+        ),
+        chipTheme: ChipThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(100),
+          ),
+          backgroundColor: AppColors.lightSurface,
+          selectedColor: AppColors.lightPrimary.withValues(alpha: 0.1),
+        ),
         dividerTheme: const DividerThemeData(
           color: AppColors.lightBorder,
+          thickness: 1,
         ),
       ),
 
@@ -860,23 +897,59 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
             borderSide: const BorderSide(color: AppColors.darkBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: const BorderSide(color: AppColors.darkBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: const BorderSide(color: AppColors.darkPrimary, width: 2),
           ),
           filled: true,
           fillColor: AppColors.darkSurface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.darkPrimary,
             foregroundColor: Colors.black,
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(28),
             ),
           ),
         ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.darkPrimary,
+            side: const BorderSide(color: AppColors.darkPrimary),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+          ),
+          color: AppColors.darkCard,
+        ),
+        chipTheme: ChipThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(100),
+          ),
+          backgroundColor: AppColors.darkSurface,
+          selectedColor: AppColors.darkPrimary.withValues(alpha: 0.1),
+        ),
         dividerTheme: const DividerThemeData(
           color: AppColors.darkBorder,
+          thickness: 1,
         ),
       ),
     );

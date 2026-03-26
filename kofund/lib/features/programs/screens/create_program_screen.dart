@@ -326,15 +326,15 @@ void _onParticipantsChanged() {
               vertical: maxLines == 1 ? 18 : 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -528,7 +528,7 @@ void _onParticipantsChanged() {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
             color: AppColors.surface(context),
             border: Border.all(
               color: currentDateError != null 
@@ -889,7 +889,7 @@ void _onParticipantsChanged() {
                       // 3. Monthly Program Toggle
                       Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                           color: AppColors.surface(context),
                           border: Border.all(
                             color: AppColors.border(context),
@@ -1014,7 +1014,7 @@ onChanged: (value) {
                       // 7. Participant Type Selection
                       Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                           color: AppColors.surface(context),
                           border: Border.all(
                             color: AppColors.border(context),

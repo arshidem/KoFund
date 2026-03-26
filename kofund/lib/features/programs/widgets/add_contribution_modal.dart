@@ -1,4 +1,4 @@
-﻿// lib/features/history/widgets/add_contribution_modal.dart
+// lib/features/history/widgets/add_contribution_modal.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -855,7 +855,7 @@ Widget _buildContributionDetailsStep() {
               Expanded(
                 flex: 1,
                 child: DropdownButtonFormField<String>(
-                  value: _paymentMethod,
+                  initialValue: _paymentMethod,
                   decoration: InputDecoration(
                     labelText: 'Payment',
                     border: OutlineInputBorder(

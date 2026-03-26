@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/community_types.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
@@ -242,15 +243,15 @@ Widget _buildInputField({
         vertical: maxLines == 1 ? 18 : 16,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         borderSide: BorderSide(
           color: AppColors.primary(context),
           width: 2,
@@ -272,7 +273,7 @@ Widget _buildCommunityTypeDropdown() {
       // ⭐ NO LABEL - Just the dropdown with hint
       Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
           border: Border.all(
             color: _typeError != null 
                 ? Colors.red.withValues(alpha: 0.8) 
@@ -660,7 +661,7 @@ FutureBuilder<bool>(
                       AppColors.primary(context).withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                 ),
                 child: _isLoading
@@ -765,7 +766,7 @@ FutureBuilder<bool>(
         vertical: 14,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(28),
       ),
     ),
   ),

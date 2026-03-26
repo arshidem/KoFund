@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -75,7 +75,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
   List<String> _generateMonthOptions() {
     final Set<String> uniqueMonths = {};
     final now = DateTime.now();
-    final startDate = widget.program.firstPaymentDueDate ?? widget.program.programDate;
+    final startDate = widget.program.firstPaymentDueDate ?? widget.program.programDate ?? DateTime.now();
     
     final start = DateTime(startDate.year, startDate.month, 1);
     final endDate = now.add(const Duration(days: 180));

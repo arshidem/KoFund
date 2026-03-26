@@ -92,6 +92,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
   // Selection mode
   bool _isSelectionMode = false;
   final Set<String> _selectedMemberIds = <String>{};
+  int _selectedTab = 0; // 0: All Members, 1: Pending Approvals
   
   // Refresh controller
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
@@ -150,6 +151,12 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     }
   }
 
+  void _filterMembers(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+  }
+
   void _resetScreenForNewUser() {
     if (!mounted) return;
     
@@ -162,6 +169,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       _isLoading = false;
       _errorMessage = null;
       _filters = MemberFilters();
+      _selectedTab = 0; // Reset tab on user change
     });
   }
 
@@ -223,8 +231,13 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
 
   Future<void> _onRefresh() async {
     try {
-      final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadMembers(filterType: _filters.typeFilter.name);
+      if (_selectedTab == 0) {
+        final memberProvider = context.read<MemberProvider>();
+        await memberProvider.loadMembers(filterType: _filters.typeFilter.name);
+      } else {
+        // For pending approvals, refresh the user provider
+        await context.read<UserProvider>().loadCommunityMembers(context.read<AppAuthProvider>().user!.communityId!);
+      }
       
       if (mounted) {
         setState(() {
@@ -619,21 +632,21 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     // Check selection type
     final hasVirtualUsers = filteredSelectedMembers.any((m) => m.isVirtualUser);
     final hasRealUsers = filteredSelectedMembers.any((m) => !m.isVirtualUser);
-    final hasNonAdmins = filteredSelectedMembers.any((m) => !m.isAdmin && !m.isVirtualUser);
-    final hasAdmins = filteredSelectedMembers.any((m) => m.isAdmin && !m.isVirtualUser);
+    final hasNonAdmins = filteredSelectedMembers.any((m) => !m.isAdmin);
+    final hasAdmins = filteredSelectedMembers.any((m) => m.isAdmin);
 
     switch (action) {
       case 'make_admin':
         if (!hasNonAdmins) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No non-admin real users selected'),
+              content: Text('No non-admin users selected'),
               backgroundColor: Colors.orange,
             ),
           );
           return;
         }
-        _showBulkMakeAdminConfirmation(filteredSelectedMembers.where((m) => !m.isAdmin && !m.isVirtualUser).toList());
+        _showBulkMakeAdminConfirmation(filteredSelectedMembers.where((m) => !m.isAdmin).toList());
         break;
         
       case 'remove_admin':
@@ -646,22 +659,11 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
           );
           return;
         }
-        _showBulkRemoveAdminConfirmation(filteredSelectedMembers.where((m) => m.isAdmin && !m.isVirtualUser).toList());
+        _showBulkRemoveAdminConfirmation(filteredSelectedMembers.where((m) => m.isAdmin).toList());
         break;
         
       case 'unapprove':
-        // Filter out virtual users (can't unapprove virtual users)
-        final realUsersToUnapprove = filteredSelectedMembers.where((m) => !m.isVirtualUser).toList();
-        if (realUsersToUnapprove.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Virtual users cannot be unapproved'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-        _showBulkUnapproveConfirmation(realUsersToUnapprove);
+        _showBulkUnapproveConfirmation(filteredSelectedMembers);
         break;
         
       case 'remove':
@@ -703,10 +705,10 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           slivers: [
-            _buildFlatSliverAppBar(showBackButton, isAdmin, currentUser),
+            _buildHybridSliverAppBar(showBackButton, isAdmin, currentUser),
             if (_filters.typeFilter != MemberTypeFilter.all) _buildActiveFilterChips(),
             if (_searchQuery.isNotEmpty) _buildSearchHeader(filteredMembers.length),
-            _buildBodyContent(memberProvider, currentUser, filteredMembers, isAdmin, memberCounts),
+            _buildMembersView(isAdmin),
           ],
         ),
       ),
@@ -819,155 +821,105 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     );
   }
 
-  Widget _buildFlatSliverAppBar(bool showBackButton, bool isAdmin, UserModel? currentUser) {
+  Widget _buildHybridSliverAppBar(bool showBackButton, bool isAdmin, UserModel? currentUser) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = AppColors.background(context);
+    final double bottomHeight = isAdmin ? 164 : 84 + 28;
+    final double expandedHeight = isAdmin ? 280 : 220;
+    final double collapsedHeight = 56 + bottomHeight;
     
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: expandedHeight,
       floating: false,
       pinned: true,
       stretch: true,
       elevation: 0,
       centerTitle: true,
-      backgroundColor: bgColor,
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false,
       // Back button
       leading: showBackButton
           ? Padding(
-              padding: const EdgeInsets.only(left: 12),
+              padding: EdgeInsets.only(left: AppDimensions.screenPaddingHorizontal),
               child: Center(
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(28),
                       border: Border.all(
-                        color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+                        color: Colors.white.withValues(alpha: 0.2),
                       ),
-                      boxShadow: [
-                        if (!isDark)
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.arrow_back_ios_rounded,
-                      size: 16,
-                      color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
+                      size: 18,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ),
             )
           : null,
-      // Approval requests button
-      actions: [
-        if (isAdmin)
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: Consumer<UserProvider>(
-                builder: (context, userProvider, child) {
-                  final pendingCount = userProvider.pendingMembers.length;
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ApprovalRequestsScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-                        border: Border.all(
-                          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
-                        ),
-                        boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                        ],
-                      ),
-                      child: Center(
-                        child: badges.Badge(
-                          showBadge: pendingCount > 0,
-                          badgeContent: Text(
-                            pendingCount.toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                          badgeStyle: badges.BadgeStyle(
-                            badgeColor: AppColors.error(context),
-                            padding: const EdgeInsets.all(4),
-                            elevation: 0,
-                          ),
-                          position: badges.BadgePosition.topEnd(top: -6, end: -6),
-                          child: Icon(
-                            Icons.person_add_alt_1,
-                            size: 18,
-                            color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-      ],
-      // Title with dynamic scaling
+      actions: const [],
+      // Title with dynamic scaling and Gradient background
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final double maxHeight = 220.0;
-          final double currentHeight = constraints.biggest.height;
-          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
-          final double fontSize = 20 + (2 * progress); // 20 collapsed → 22 expanded
+          final double top = constraints.biggest.height;
+          // Progress calculation based on dynamic heights
+          final double progress = ((top - collapsedHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+          // Font size: 20 at expanded, 18 at collapsed
+          final double fontSize = 18 + (2 * progress); // 18 to 20 scaling
           
-          return FlexibleSpaceBar(
-            stretchModes: const [StretchMode.zoomBackground],
-            centerTitle: true,
-            titlePadding: const EdgeInsets.only(bottom: 112 + 10),
-            title: Text(
-              'Members',
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-                letterSpacing: -0.5 - (0.5 * progress),
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // Gradient Background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                ),
               ),
-            ),
+              
+              FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
+                centerTitle: true,
+                titlePadding: EdgeInsets.only(bottom: bottomHeight + 10),
+                title: Text(
+                  'Members',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5 - (0.5 * progress),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
       // Pinned search bar at bottom
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(84 + 28),
+        preferredSize: Size.fromHeight(bottomHeight),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: EdgeInsets.fromLTRB(AppDimensions.screenPaddingHorizontal, 0, AppDimensions.screenPaddingHorizontal, 12),
               child: _isSelectionMode
                   ? _buildFlatSelectionControls(currentUser)
-                  : _buildFlatSearchBar(),
+                  : _buildHybridSearchBar(),
             ),
+            if (isAdmin && !_isSelectionMode)
+              Padding(
+                padding: EdgeInsets.fromLTRB(AppDimensions.screenPaddingHorizontal, 0, AppDimensions.screenPaddingHorizontal, 16),
+                child: _buildSegmentedToggle(),
+              ),
             Container(
-              height: 28,
+              height: 18,
               decoration: BoxDecoration(
                 color: AppColors.background(context),
                 borderRadius: const BorderRadius.only(
@@ -982,72 +934,65 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
     );
   }
 
-  Widget _buildFlatSearchBar() {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildHybridSearchBar() {
     return Row(
       children: [
         Expanded(
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
-                width: 1,
-              ),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
-                if (!isDark)
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                hintText: 'Search members...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
                 ),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary(context),
-                      letterSpacing: 0.3,
-                    ),
-                    cursorColor: AppColors.primary(context),
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                      hintText: 'Search members...',
-                      hintStyle: TextStyle(
-                        color: AppColors.textSecondary(context).withValues(alpha: 0.6),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      border: InputBorder.none,
-                      filled: false,
-                      isDense: true,
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary(context)),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                                FocusScope.of(context).unfocus();
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                  ),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterMembers('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                 ),
-              ],
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+              ),
+              onChanged: _filterMembers,
             ),
           ),
         ),
@@ -1056,25 +1001,17 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
+              color: Colors.white.withValues(alpha: 0.2),
               width: 1,
             ),
-            boxShadow: [
-              if (!isDark)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-            ],
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(28),
               onTap: () => _openFilterSheet(context),
               child: Center(
                 child: badges.Badge(
@@ -1089,7 +1026,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
                     elevation: 0,
                   ),
                   position: badges.BadgePosition.topEnd(top: -6, end: -6),
-                  child: Icon(Icons.tune, color: AppColors.textSecondary(context), size: 20),
+                  child: const Icon(Icons.tune, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -1110,7 +1047,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
       height: 52,
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
         ),
@@ -1180,31 +1117,24 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
                 
                 final menuItems = <PopupMenuItem<String>>[];
                 
-                if (hasNonAdmins) {
-                  menuItems.add(PopupMenuItem<String>(
-                    value: 'make_admin',
-                    child: ListTile(dense: true, leading: Icon(Icons.admin_panel_settings, color: Colors.orange), title: const Text('Make Admin'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
-                  ));
-                }
-                if (hasAdmins) {
-                  menuItems.add(PopupMenuItem<String>(
-                    value: 'remove_admin',
-                    child: ListTile(dense: true, leading: Icon(Icons.person_remove, color: Colors.orange[800]), title: const Text('Remove Admin'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
-                  ));
-                }
-                if (hasRealUsers) {
-                  menuItems.add(PopupMenuItem<String>(
-                    value: 'unapprove',
-                    child: ListTile(dense: true, leading: Icon(Icons.block, color: Colors.red), title: const Text('Unapprove Users'), subtitle: hasMixedUsers ? const Text('For real users only') : null),
-                  ));
-                }
+                menuItems.add(PopupMenuItem<String>(
+                  value: 'make_admin',
+                  child: ListTile(dense: true, leading: const Icon(Icons.admin_panel_settings, color: Colors.orange), title: const Text('Make Admin')),
+                ));
+                menuItems.add(PopupMenuItem<String>(
+                  value: 'remove_admin',
+                  child: ListTile(dense: true, leading: Icon(Icons.person_remove, color: Colors.orange[800]), title: const Text('Remove Admin')),
+                ));
+                menuItems.add(PopupMenuItem<String>(
+                  value: 'unapprove',
+                  child: ListTile(dense: true, leading: const Icon(Icons.block, color: Colors.red), title: const Text('Unapprove Users')),
+                ));
                 menuItems.add(PopupMenuItem<String>(
                   value: 'remove',
                   child: ListTile(
                     dense: true,
-                    leading: Icon(hasOnlyVirtualUsers ? Icons.delete : Icons.exit_to_app, color: Colors.red),
-                    title: Text(hasOnlyVirtualUsers ? 'Delete Virtual Users' : hasOnlyRealUsers ? 'Remove from Community' : 'Remove/Delete Users'),
-                    subtitle: hasMixedUsers ? const Text('Virtual users: Delete, Real users: Remove') : null,
+                    leading: const Icon(Icons.exit_to_app, color: Colors.red),
+                    title: const Text('Remove from Community'),
                   ),
                 ));
                 
@@ -1462,7 +1392,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
               });
             } : null,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+              padding: EdgeInsets.symmetric(horizontal: AppDimensions.screenPaddingHorizontal, vertical: 10),
               child: Row(
                 children: [
                   Container(
@@ -1574,23 +1504,65 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
                     ),
                   ),
                   
-                  SizedBox(
-                    width: 48,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: (!_isSelectionMode && hasPhoneNumber)
-                          ? InkResponse(
-                              radius: 20,
-                              onTap: () => _makePhoneCall(member.phoneNumber!),
-                              child: Icon(
-                                Icons.phone,
-                                size: 20,
-                                color: AppColors.primary(context),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
+                  if (!_isSelectionMode)
+                    SizedBox(
+                      width: _selectedTab == 1 ? 92 : 48,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _selectedTab == 1
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Reject Button
+                                  InkResponse(
+                                    radius: 20,
+                                    onTap: () => _rejectMember(member),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Approve Button
+                                  InkResponse(
+                                    radius: 20,
+                                    onTap: () => _approveMember(member),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check_rounded,
+                                        size: 18,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : (hasPhoneNumber
+                                ? InkResponse(
+                                    radius: 20,
+                                    onTap: () => _makePhoneCall(member.phoneNumber!),
+                                    child: Icon(
+                                      Icons.phone,
+                                      size: 20,
+                                      color: AppColors.primary(context),
+                                    ),
+                                  )
+                                : const SizedBox.shrink()),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1667,6 +1639,227 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody> {
         ),
       );
     }
+  }
+
+  Future<void> _approveMember(UserModel member) async {
+    final authProvider = context.read<AppAuthProvider>();
+    final userProvider = context.read<UserProvider>();
+    final communityId = authProvider.user?.communityId;
+
+    if (communityId != null) {
+      await userProvider.approveUser(member.uid, communityId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Approved ${member.displayName ?? member.email}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadMembers();
+      }
+    }
+  }
+
+  Future<void> _rejectMember(UserModel member) async {
+    final userProvider = context.read<UserProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject User?'),
+        content: Text(
+          'Are you sure you want to reject ${member.displayName ?? "this user"}? This action cannot be undone.',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Reject',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await userProvider.rejectUser(member.uid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rejected ${member.displayName ?? member.email}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        _loadMembers();
+      }
+    }
+  }
+
+  Widget _buildSegmentedToggle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark 
+            ? Colors.white.withValues(alpha: 0.05) 
+            : AppColors.primary(context).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(23),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTab = 0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: _selectedTab == 0
+                      ? AppColors.primary(context)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: _selectedTab == 0 ? [
+                    BoxShadow(
+                      color: AppColors.primary(context).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ] : [],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'ALL MEMBERS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: _selectedTab == 0 ? Colors.white : AppColors.textSecondary(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTab = 1),
+              child: Consumer<UserProvider>(
+                builder: (context, userProvider, _) {
+                  final pendingCount = userProvider.pendingMembers.length;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: _selectedTab == 1
+                          ? AppColors.primary(context)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: _selectedTab == 1 ? [
+                        BoxShadow(
+                          color: AppColors.primary(context).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ] : [],
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'PENDING',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            color: _selectedTab == 1 ? Colors.white : AppColors.textSecondary(context),
+                          ),
+                        ),
+                        if (pendingCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 1 ? Colors.white : AppColors.primary(context),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              pendingCount.toString(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: _selectedTab == 1 ? AppColors.primary(context) : Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMembersView(bool isAdmin) {
+    return Consumer2<MemberProvider, UserProvider>(
+      builder: (context, memberProvider, userProvider, child) {
+        if (memberProvider.isLoading && memberProvider.members.isEmpty) {
+          return SliverFillRemaining(
+            child: MemberListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
+          );
+        }
+
+        List<UserModel> displayList;
+        if (_selectedTab == 1) {
+          displayList = userProvider.pendingMembers;
+          // Apply search if any
+          if (_searchQuery.isNotEmpty) {
+            final query = _searchQuery.toLowerCase();
+            displayList = displayList.where((m) => 
+               (m.displayName ?? '').toLowerCase().contains(query) || 
+               (m.email ?? '').toLowerCase().contains(query)
+            ).toList();
+          }
+        } else {
+          displayList = memberProvider.searchMembers(_searchQuery);
+        }
+
+        if (displayList.isEmpty) {
+          return SliverFillRemaining(
+            child: _buildEmptyLayout(isAdmin),
+          );
+        }
+
+        return SliverPadding(
+          padding: const EdgeInsets.only(top: 12, bottom: 80),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final member = displayList[index];
+                return _buildMemberCard(member, context.read<AppAuthProvider>().user);
+              },
+              childCount: displayList.length,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyLayout(bool isAdmin) {
+    return _buildEmptyState();
   }
 }
 

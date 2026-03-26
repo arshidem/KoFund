@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import '../providers/program_provider.dart';
@@ -104,11 +105,6 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     );
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text;
-    });
-  }
 
 Future<void> _loadPrograms() async {
   final authProvider = context.read<AppAuthProvider>();
@@ -272,8 +268,8 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           // Normalized progress: 0.0 at collapsed (140), 1.0 at expanded (220)
           final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
           
-          // Font size: 32 at expanded, 20 at collapsed
-          final double fontSize = 20 + (2 * progress); // 20 to 26 scaling
+          // Font size: 20 at expanded, 18 at collapsed
+          final double fontSize = 18 + (2 * progress); // 18 to 20 scaling
           // Vertical offset for title - center it vertically above the search bar
           
           return Stack(
@@ -311,7 +307,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: EdgeInsets.fromLTRB(AppDimensions.screenPaddingHorizontal, 0, AppDimensions.screenPaddingHorizontal, 12),
               child: _buildModernSearchBar(),
             ),
             Container(
@@ -330,6 +326,12 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
     );
   }
 
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+  }
+
   Widget _buildModernSearchBar() {
     return Row(
       children: [
@@ -337,57 +339,58 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(Icons.search, color: Colors.white70, size: 20),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                      letterSpacing: 0.3,
-                    ),
-                    cursorColor: Colors.white,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                      hintText: 'Search programs...',
-                      hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      border: InputBorder.none,
-                      filled: false,
-                      isDense: true,
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close, size: 18, color: Colors.white70),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                                FocusScope.of(context).unfocus();
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) {
-                      setState(() => _searchQuery = value);
-                    },
-                  ),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                hintText: 'Search programs...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+              ),
+              onChanged: (_) => _onSearchChanged(),
             ),
           ),
         ),
@@ -397,7 +400,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           height: 52,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.2),
               width: 1,
@@ -406,7 +409,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(28),
               onTap: () => _openFilterSheet(context),
               child: Center(
                 child: badges.Badge(
@@ -641,7 +644,7 @@ Widget _buildProgramCard(
   return Consumer<ParticipantProvider>(
     builder: (context, participantProvider, _) {
       return Container(
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        margin: EdgeInsets.fromLTRB(AppDimensions.screenPaddingHorizontal, 0, AppDimensions.screenPaddingHorizontal, 20),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
