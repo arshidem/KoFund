@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:clipboard/clipboard.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:share_plus/share_plus.dart'; // Add this import for sharing
 
@@ -225,7 +226,7 @@ class _HeroInviteCode extends StatelessWidget {
               backgroundColor: primary,
               minimumSize: const Size(double.infinity, 54),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
             icon: Icon(copied ? Icons.check_circle : Icons.copy_rounded),
@@ -322,7 +323,7 @@ class _InviteLinkCard extends StatelessWidget {
                     side: BorderSide(color: secondary.withValues(alpha: 0.4)),
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                   ),
                 ),
@@ -337,7 +338,7 @@ class _InviteLinkCard extends StatelessWidget {
                     backgroundColor: secondary,
                     minimumSize: const Size(0, 48),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                   ),
                 ),

@@ -218,6 +218,10 @@ class ContributionModel {
   bool get isFailed => false;
   bool get isRefunded => false;
 
+  // ✅ ADD: Migration helpers
+  String get memberName => contributorName;
+  String get programName => 'Program $programId';
+
   // ✅ ADD: Get formatted added by info
   String get addedByInfo {
     if (addedByUserName != null && addedByUserName!.isNotEmpty) {

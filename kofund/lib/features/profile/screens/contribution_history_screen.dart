@@ -10,8 +10,8 @@ import 'package:kofund/core/constants/app_colors.dart';
 
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'dart:ui';
-import 'package:flutter/services.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:intl/intl.dart';
@@ -216,41 +216,8 @@ void _debugFirestoreContribution(String contributionId) async {
     final contributionHistory = profileProvider.contributionHistory;
     final currentUser = authProvider.user;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'My Contributions',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+    return GradientSheetScaffold(
+      title: 'My Contributions',
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _refreshData,

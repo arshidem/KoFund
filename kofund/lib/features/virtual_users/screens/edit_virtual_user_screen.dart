@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class EditVirtualUserScreen extends StatefulWidget {
   final UserModel virtualUser;
@@ -110,50 +111,25 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'Edit Virtual User',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+    return GradientSheetScaffold(
+      title: 'Edit Virtual User',
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back,
+          size: 24,
+          color: Colors.white,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            size: 24,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context, false),
-        ),
-        actions: [
-          if (_hasChanges && !_isLoading)
-            IconButton(
-              icon: const Icon(Icons.check, color: Colors.white),
-              onPressed: _updateVirtualUser,
-              tooltip: 'Save Changes',
-            ),
-        ],
+        onPressed: () => Navigator.pop(context, false),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+      actions: [
+        if (_hasChanges && !_isLoading)
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.white),
+            onPressed: _updateVirtualUser,
+            tooltip: 'Save Changes',
+          ),
+      ],
+      body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
@@ -318,7 +294,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       ),
                       elevation: 2,
                     ),
@@ -344,7 +320,6 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -407,8 +382,8 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.background(context),
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             border: Border.all(
               color: AppColors.border(context),
               width: 1,

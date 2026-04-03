@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
@@ -54,11 +55,27 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _filterMethod = 'all';
-final Map<String, String> _localUserNameCache = {};
+  final Map<String, String> _localUserNameCache = {};
+  final RefreshController _refreshController = RefreshController(initialRefresh: false);
+
+  void _onRefresh() async {
+    try {
+      // Data is streamed, so small delay is enough to simulate refresh feel
+      // or we can force refresh if provider supports it
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) {
+        setState(() {});
+      }
+      _refreshController.refreshCompleted();
+    } catch (e) {
+      _refreshController.refreshFailed();
+    }
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _refreshController.dispose();
     super.dispose();
   }
 
@@ -167,79 +184,92 @@ Widget build(BuildContext context) {
           final allContributions = snapshot.data ?? <ContributionModel>[];
           final filtered = _filterContributions(allContributions);
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // ======= SCROLLABLE STATS CARD (moved to normal sliver) =======
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: _buildContributionSummary(context),
-                ),
-              ),
-
-              // ======= Search & Filter (scrolling) =======
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildSearchFilterBar(context),
-                ),
-              ),
-
-              // ======= Content: skeleton / error / empty / list =======
-              if (connectionWaiting) ...[
-                // Show skeleton as a sliver
+          return SmartRefresher(
+            controller: _refreshController,
+            onRefresh: _onRefresh,
+            enablePullDown: true,
+            header: ClassicHeader(
+              idleText: 'Pull down to refresh',
+              releaseText: 'Release to refresh',
+              refreshingText: 'Refreshing contributions...',
+              completeText: 'Refresh complete',
+              idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+              releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+            ),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // ======= SCROLLABLE STATS CARD (moved to normal sliver) =======
                 SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: _buildContributionSummary(context),
                   ),
                 ),
+
+                // ======= Search & Filter (scrolling) =======
                 SliverToBoxAdapter(
-                  child: SizedBox(
-                    // show your existing skeleton (HistoryListSkeleton) inside a sliver
-                    height: 400,
-                    child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _buildSearchFilterBar(context),
                   ),
                 ),
-              ] else if (hasError) ...[
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.error, color: AppColors.error(context), size: 48),
-                        const SizedBox(height: 8),
-                        Text('Error loading contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('${snapshot.error}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                      ],
+
+                // ======= Content: skeleton / error / empty / list =======
+                if (connectionWaiting) ...[
+                  // Show skeleton as a sliver
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 8,
                     ),
                   ),
-                )
-              ] else if (filtered.isEmpty) ...[
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _buildEmptyState(allContributions.isEmpty, context),
-                ),
-              ] else ...[
-                // Sliver list for contributions (keeps items performant)
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final contribution = filtered[index];
-                      final showMenu = isAdmin || _isContributor(contribution, context);
-                      return _buildContributionCard(contribution, context, showMenu);
-                    },
-                    childCount: filtered.length,
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      // show your existing skeleton (HistoryListSkeleton) inside a sliver
+                      height: 400,
+                      child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
+                    ),
                   ),
-                ),
-                // Add bottom padding so last item isn't hidden by FAB or bottom sheet
-                SliverToBoxAdapter(
-                  child: const SizedBox(height: 88),
-                ),
+                ] else if (hasError) ...[
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error, color: AppColors.error(context), size: 48),
+                          const SizedBox(height: 8),
+                          Text('Error loading contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
+                          const SizedBox(height: 8),
+                          Text('${snapshot.error}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                        ],
+                      ),
+                    ),
+                  )
+                ] else if (filtered.isEmpty) ...[
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEmptyState(allContributions.isEmpty, context),
+                  ),
+                ] else ...[
+                  // Sliver list for contributions (keeps items performant)
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final contribution = filtered[index];
+                        final showMenu = isAdmin || _isContributor(contribution, context);
+                        return _buildContributionCard(contribution, context, showMenu);
+                      },
+                      childCount: filtered.length,
+                    ),
+                  ),
+                  // Add bottom padding so last item isn't hidden by FAB or bottom sheet
+                  SliverToBoxAdapter(
+                    child: const SizedBox(height: 88),
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),

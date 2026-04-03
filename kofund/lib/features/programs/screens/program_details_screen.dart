@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
 import 'package:shimmer/shimmer.dart';
@@ -17,6 +16,7 @@ import 'tabs/program_expenses_tab.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_styles.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 // Import skeleton files
 import '../../../../core/skeleton/program_overview_skeleton.dart';
@@ -183,156 +183,109 @@ Widget build(BuildContext context) {
   final currentUserId = authProvider.user?.uid;
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-  return Scaffold(
-    appBar: AppBar(
-      toolbarHeight: 60,
-      title: const Text(
-        'Program Details',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: AppColors.background(context),
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-            bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-          ),
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-              color: Colors.black.withValues(alpha: 0.3),
-            ),
-          ],
-        ),
-      ),
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back,
-          color: Colors.white,
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      automaticallyImplyLeading: true,
-      actions: currentUserId == null || _isProgramLoading
-          ? null
-          : [
-              StreamBuilder<List<ParticipantModel>>(
-                stream: Provider.of<ParticipantProvider>(context, listen: false)
-                    .streamProgramParticipants(widget.programId),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const SizedBox.shrink();
-                  }
+  return GradientSheetScaffold(
+    title: 'Program Details',
+    headerHeight: 60,
+    actions: currentUserId == null || _isProgramLoading
+        ? null
+        : [
+            StreamBuilder<List<ParticipantModel>>(
+              stream: Provider.of<ParticipantProvider>(context, listen: false)
+                  .streamProgramParticipants(widget.programId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
 
-                  final participants = snapshot.data!;
-                  final hasUserJoined = participants.any(
-                    (p) => p.userId == currentUserId && p.status == 'joined',
-                  );
+                final participants = snapshot.data!;
+                final hasUserJoined = participants.any(
+                  (p) => p.userId == currentUserId && p.status == 'joined',
+                );
 
-                  return hasUserJoined
-                      ? Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: IconButton(
-                            onPressed: () => _leaveProgram(context),
-                            icon: const Icon(
-                              Icons.exit_to_app_rounded,
+                return hasUserJoined
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: IconButton(
+                          onPressed: () => _leaveProgram(context),
+                          icon: const Icon(
+                            Icons.exit_to_app_rounded,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'Leave Program',
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ElevatedButton(
+                          onPressed: () => _joinProgram(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(alpha: 0.15),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                            ),
+                            elevation: 2,
+                            shadowColor: Colors.black.withValues(alpha: 0.5),
+                          ),
+                          child: const Text(
+                            'Join',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
-                            tooltip: 'Leave Program',
                           ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ElevatedButton(
-                            onPressed: () => _joinProgram(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                              ),
-                              elevation: 2,
-                              shadowColor: Colors.black.withValues(alpha: 0.5),
-                            ),
-                            child: const Text(
-                              'Join',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        );
-                },
-              ),
-            ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: Container(
-          color: Colors.transparent,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            dividerColor: Colors.transparent,
-            dividerHeight: 0,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            indicatorPadding: EdgeInsets.zero,
-            padding: AppStyles.screenPaddingHorizontal / 2,
-            labelPadding: AppStyles.screenPaddingHorizontal / 2,
-            labelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-            ),
-            tabs: _tabTitles
-                .map(
-                  (title) => Tab(
-                    child: Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 70,
-                      ),
-                      child: Center(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                      );
+              },
+            ),
+          ],
+    belowHeader: Container(
+      color: Colors.transparent,
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        dividerColor: Colors.transparent,
+        dividerHeight: 0,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+        indicatorColor: Colors.white,
+        indicatorWeight: 3,
+        indicatorPadding: EdgeInsets.zero,
+        padding: AppStyles.screenPaddingHorizontal / 2,
+        labelPadding: AppStyles.screenPaddingHorizontal / 2,
+        labelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.2,
+        ),
+        tabs: _tabTitles
+            .map(
+              (title) => Tab(
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 70,
+                  ),
+                  child: Center(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                )
-                .toList(),
-          ),
-        ),
+                ),
+              ),
+            )
+            .toList(),
       ),
     ),
     body: Column(
@@ -342,54 +295,25 @@ Widget build(BuildContext context) {
           child: _isProgramLoading
               ? _buildTabSkeleton(_tabController.index)
               : _cachedProgram != null
-                  ? SmartRefresher(
-                      controller: _refreshController,
-                      onRefresh: _onRefresh,
-                      enablePullDown: true,
-                      enablePullUp: false,
+                  ? TabBarView(
+                      controller: _tabController,
                       physics: const BouncingScrollPhysics(),
-                      header: ClassicHeader(
-                        idleText: 'Pull down to refresh',
-                        releaseText: 'Release to refresh',
-                        refreshingText: 'Refreshing program data...',
-                        completeText: 'Refresh complete',
-                        failedText: 'Refresh failed',
-                        idleIcon: Icon(
-                          Icons.arrow_downward,
-                          color: AppColors.textSecondary(context),
+                      children: [
+                        ProgramOverviewTab(
+                          program: _cachedProgram!,
                         ),
-                        releaseIcon: Icon(
-                          Icons.arrow_upward,
-                          color: AppColors.primary(context),
+                        ProgramParticipantsTab(
+                          program: _cachedProgram!,
                         ),
-                        refreshingIcon: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation(AppColors.primary(context)),
-                          ),
+                        ProgramContributionsTab(
+                          program: _cachedProgram!,
                         ),
-                        completeIcon: const Icon(Icons.check, color: Colors.green),
-                        failedIcon: const Icon(Icons.error, color: Colors.red),
-                      ),
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          ProgramOverviewTab(program: _cachedProgram!),
-                          ProgramParticipantsTab(program: _cachedProgram!),
-                          ProgramContributionsTab(program: _cachedProgram!),
-                          ProgramExpensesTab(program: _cachedProgram!),
-                        ],
-                      ),
+                        ProgramExpensesTab(
+                          program: _cachedProgram!,
+                        ),
+                      ],
                     )
-                  : SmartRefresher(
-                      controller: _refreshController,
-                      onRefresh: _onRefresh,
-                      enablePullDown: true,
-                      enablePullUp: false,
-                      child: Center(
+                  : Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -419,15 +343,17 @@ Widget build(BuildContext context) {
                             ElevatedButton(
                               onPressed: _onRefresh,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary(context),
-                                foregroundColor: Colors.white,
-                              ),
+                                  backgroundColor: AppColors.primary(context),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                                  ),
+                                ),
                               child: const Text('Retry'),
                             ),
                           ],
                         ),
                       ),
-                    ),
         ),
         
         // Banner ad (shows in all states: loading, content, error)
@@ -582,7 +508,7 @@ Widget build(BuildContext context) {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
             child: const Text('Leave Program'),

@@ -1,26 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'dart:ui' as dart_ui;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
-import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/skeleton/profile_screen_skeleton.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
-import 'package:kofund/core/widgets/glass_action_button.dart';
-import 'package:kofund/features/admin/providers/user_provider.dart';
-import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import './edit_profile_screen.dart';
 import './participation_history_screen.dart';
 import './contribution_history_screen.dart';
 import './settings/settings_screen.dart';
-import 'dart:ui';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 class ProfileScreen extends StatefulWidget {
   final bool? forceBackButton;
@@ -120,12 +112,12 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
           profileProvider.clearAllUserData();
         }
         
-        // Load all profile data
-        await Future.wait([
-          profileProvider.loadUserStatistics(userId: targetUserId),
-          profileProvider.getUserParticipationHistory(userId: targetUserId),
-          profileProvider.getUserContributionHistory(userId: targetUserId),
-        ]);
+        // ✅ NEW: Load all profile data in parallel with one call
+        await profileProvider.loadFullProfileData(
+          userId: targetUserId,
+          communityId: currentUser.communityId ?? '',
+          forceRefresh: forceRefresh,
+        );
         
         // Update last loaded user
         _lastLoadedUserId = targetUserId;
@@ -270,317 +262,362 @@ if (_isLoadingProfile) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-            child: _buildNewHeader(context, user),
-                    ),
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        slivers: [
           CupertinoSliverRefreshControl(
             onRefresh: _onRefresh,
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 20),
-                  _buildNewStatsRow(context, totalParticipations, totalContributions),
-                  const SizedBox(height: 24),
-                  _buildNewControlCenter(context, user),
-                  const SizedBox(height: 100),
-                ]),
-              ),
-            ),
-          ],
-      ),
-    );
-  }
-
-  Widget _buildNewHeader(BuildContext context, UserModel user) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 20,
-        bottom: 10,
-      ),
-      child: Column(
-        children: [
-          // Settings button at the top right
-        Padding(
+          ),
+          _buildSliverAppBar(context, user),
+          SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildCircularIconButton(
-                  context,
-                  icon: Icons.settings_outlined,
-                  onTap: _navigateToSettings,
-          ),
-              ],
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 24),
+                _buildMetricBoard(context, totalParticipations, totalContributions),
+                const SizedBox(height: 32),
+                _buildNewControlCenter(context, user),
+                const SizedBox(height: 100),
+              ]),
             ),
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // Overlapping Avatar and Profile Card
-          Stack(
-            alignment: Alignment.topCenter,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
-                child: _buildNewProfileCard(context, user),
-              ),
-              _buildLargeAvatar(context, user),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCircularIconButton(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: onTap,
-        child: Container(
-        width: 44,
-        height: 44,
-          decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-          border: Border.all(
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.lightBorder,
-          ),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.lightTextSecondary,
-        ),
-      ),
-    );
-  }
 
-  Widget _buildLargeAvatar(BuildContext context, UserModel user) {
+  Widget _buildSliverAppBar(BuildContext context, UserModel user) {
     final String initial = (user.displayName != null && user.displayName!.trim().isNotEmpty)
         ? user.displayName!.trim()[0].toUpperCase()
         : 'U';
-    
-    return Container(
-      width: 110,
-      height: 110,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFF00BFA5), // Teal from image
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark 
-              ? AppColors.darkBackground 
-              : AppColors.lightBackground,
-          width: 4,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00BFA5).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+        
+    return SliverAppBar(
+      expandedHeight: 340,
+      toolbarHeight: 90,
+      pinned: true,
+      stretch: true,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: _buildCircularIconButton(
+            context,
+            icon: Icons.settings_outlined,
+            onTap: _navigateToSettings,
           ),
-        ],
+        ),
+      ],
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double topPadding = MediaQuery.of(context).padding.top;
+          final double collapsedHeight = 90 + topPadding + 28;
+          final double expandedHeight = 340.0;
+          
+          final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
+              (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+
+          final double expandedOpacity = (expandRatio * 2 - 1).clamp(0.0, 1.0);
+          
+          // Math for smooth Avatar sliding and scaling
+          final double currentAvatarSize = dart_ui.lerpDouble(52.0, 106.0, expandRatio)!;
+          final double currentAvatarX = dart_ui.lerpDouble(20.0, (constraints.maxWidth - currentAvatarSize) / 2, expandRatio)!;
+          final double currentAvatarY = dart_ui.lerpDouble(topPadding + 20.0, topPadding + 40.0, expandRatio)!;
+          final double currentFontSize = dart_ui.lerpDouble(24.0, 42.0, expandRatio)!;
+
+          // Math for smooth Swarm translating and scaling
+          final double arcOffset = (1 - (2 * expandRatio - 1).abs()); // Creates a 0->1->0 parabolic curve
+          final double dodgeAmount = 40.0 * arcOffset; // Pushes text down by 40px at intersection peak
+          
+          final double currentNameTop = dart_ui.lerpDouble(22.0 + topPadding, 150.0 + topPadding, expandRatio)! + dodgeAmount;
+          final double currentEmailTop = dart_ui.lerpDouble(50.0 + topPadding, 185.0 + topPadding, expandRatio)! + dodgeAmount;
+          final double currentBadgeTop = dart_ui.lerpDouble(80.0 + topPadding, 215.0 + topPadding, expandRatio)! + dodgeAmount;
+          
+          final double currentLeftPadding = dart_ui.lerpDouble(84.0, 0.0, expandRatio)!;
+          final double currentRightPadding = dart_ui.lerpDouble(70.0, 0.0, expandRatio)!;
+          final double currentAlignmentX = dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!;
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient(context),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Sliding & Scaling Avatar (Always Visible)
+                Positioned(
+                  left: currentAvatarX,
+                  top: currentAvatarY,
+                  child: Container(
+                    width: currentAvatarSize,
+                    height: currentAvatarSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.2),
+                      border: Border.all(
+                        color: Colors.white,
+                        width: dart_ui.lerpDouble(2.0, 3.0, expandRatio)!,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1 * expandRatio),
+                          blurRadius: 20 * expandRatio,
+                          offset: Offset(0, 10 * expandRatio),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: TextStyle(
+                          fontSize: currentFontSize,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 2. SWARMING NAME
+                Positioned(
+                  top: currentNameTop,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
+                    child: Align(
+                      alignment: Alignment(currentAlignmentX, 0),
+                      child: Text(
+                        user.displayName ?? 'Unnamed Member',
+                        style: TextStyle(
+                          fontSize: dart_ui.lerpDouble(18.0, 26.0, expandRatio)!,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 3. SWARMING EMAIL
+                Positioned(
+                  top: currentEmailTop,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
+                    child: Align(
+                      alignment: Alignment(currentAlignmentX, 0),
+                      child: Text(
+                        user.email,
+                        style: TextStyle(
+                          fontSize: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
+                          color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 4. SWARMING BADGE
+                if (expandedOpacity > 0)
+                  Positioned(
+                    top: currentBadgeTop,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
+                      child: Align(
+                        alignment: Alignment(currentAlignmentX, 0),
+                        child: Opacity(
+                          opacity: expandedOpacity,
+                          child: Transform.scale(
+                            scale: dart_ui.lerpDouble(0.8, 1.0, expandRatio)!,
+                            alignment: Alignment(dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!, 0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.verified_user_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'COMMUNITY MEMBER',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(28),
+        child: Container(
+          height: 28,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.background(context),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNewProfileCard(BuildContext context, UserModel user) {
+  Widget _buildMetricBoard(BuildContext context, int participations, int contributions) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 70, 24, 28),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A2E2E).withValues(alpha: 0.8) : Colors.white,
-        borderRadius: BorderRadius.circular(32),
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
         ),
         boxShadow: [
           if (!isDark)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
         ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Text(
-            user.displayName ?? 'Unnamed Member',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context),
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            user.email,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textPrimary(context).withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFF00BFA5).withValues(alpha: 0.2),
-              ),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.chat_bubble_rounded,
-                  size: 14,
-                  color: Color(0xFF00BFA5),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'COMMUNITY ADMIN',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF00BFA5),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNewStatsRow(BuildContext context, int participations, int contributions) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildNewStatCard(
+          _buildMetricItem(
             context,
             label: 'ACTIVITIES',
             value: participations.toString(),
             icon: Icons.flash_on_rounded,
             iconColor: const Color(0xFF00D2B4),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildNewStatCard(
+          Container(
+            height: 60,
+            width: 1,
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.2),
+          ),
+          _buildMetricItem(
             context,
             label: 'CONTRIBUTIONS',
             value: contributions.toString(),
             icon: Icons.account_balance_wallet_rounded,
             iconColor: const Color(0xFF00D2B4),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildNewStatCard(
+  Widget _buildMetricItem(
     BuildContext context, {
     required String label,
     required String value,
     required IconData icon,
     required Color iconColor,
   }) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    return Column(
+      children: [
+        Icon(icon, size: 30, color: iconColor),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary(context),
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCircularIconButton(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+          color: Colors.white.withValues(alpha: 0.2),
+          width: 1,
         ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(28),
+          onTap: onTap,
+          child: Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context).withValues(alpha: 0.4),
-              letterSpacing: 1,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildNewControlCenter(BuildContext context, UserModel user) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 4, bottom: 16),
           child: Text(
-            'CONTROL CENTER',
+            'SETTINGS & HISTORY',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary(context).withValues(alpha: 0.4),
               letterSpacing: 1.5,
@@ -589,14 +626,15 @@ if (_isLoadingProfile) {
         ),
         Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) 
-                : Colors.white,
-            borderRadius: BorderRadius.circular(32),
+            color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+            ),
             boxShadow: [
-              if (Theme.of(context).brightness != Brightness.dark)
+              if (!isDark)
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -604,27 +642,36 @@ if (_isLoadingProfile) {
           ),
           child: Column(
             children: [
-              _buildNewControlRow(
+              _buildControlItem(
                 context,
                 icon: Icons.edit_note_rounded,
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
                 onTap: () => _navigateToEditProfile(user),
               ),
-              _buildNewControlRow(
+              _buildDivider(isDark),
+              _buildControlItem(
                 context,
                 icon: Icons.history_rounded,
                 title: 'Participation History',
                 subtitle: 'Check your community involvement',
                 onTap: _navigateToParticipationHistory,
               ),
-              _buildNewControlRow(
+              _buildDivider(isDark),
+              _buildControlItem(
                 context,
                 icon: Icons.receipt_long_rounded,
                 title: 'Contribution History',
-                subtitle: 'View your financial record',
+                subtitle: 'View your financial records',
                 onTap: _navigateToContributionHistory,
-                isLast: true,
+              ),
+              _buildDivider(isDark),
+              _buildControlItem(
+                context,
+                icon: Icons.settings_outlined,
+                title: 'Settings',
+                subtitle: 'App preferences and account security',
+                onTap: _navigateToSettings,
               ),
             ],
           ),
@@ -633,39 +680,42 @@ if (_isLoadingProfile) {
     );
   }
 
-  Widget _buildNewControlRow(
+  Widget _buildDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+    );
+  }
+
+  Widget _buildControlItem(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-    bool isLast = false,
   }) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: isLast 
-          ? const BorderRadius.vertical(bottom: Radius.circular(32))
-          : title == 'Edit Profile'
-            ? const BorderRadius.vertical(top: Radius.circular(32))
-            : null,
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00BFA5).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  shape: BoxShape.circle,
                 ),
-                child:  Icon(
+                child: Icon(
                   icon,
-                  size: 22,
-                  color: Color(0xFF00BFA5),
+                  size: 20,
+                  color: const Color(0xFF00BFA5),
                 ),
               ),
               const SizedBox(width: 16),
@@ -676,7 +726,7 @@ if (_isLoadingProfile) {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary(context),
                       ),
@@ -686,7 +736,7 @@ if (_isLoadingProfile) {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+                        color: AppColors.textPrimary(context).withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -694,7 +744,7 @@ if (_isLoadingProfile) {
               ),
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                size: 14,
+                size: 12,
                 color: AppColors.textPrimary(context).withValues(alpha: 0.2),
               ),
             ],
@@ -703,9 +753,6 @@ if (_isLoadingProfile) {
       ),
     );
   }
-
-
-
 
   String _formatRelativeDate(DateTime date) {
     final now = DateTime.now();

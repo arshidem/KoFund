@@ -1,0 +1,777 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.59 (1.3.68 available)
+  animations 2.1.1 (2.1.2 available)
+  app_links 6.4.1 (7.0.0 available)
+  archive 4.0.7 (4.0.9 available)
+  async 2.13.0 (2.13.1 available)
+  characters 1.4.0 (1.4.1 available)
+  cloud_firestore 5.6.12 (6.2.0 available)
+  cloud_firestore_platform_interface 6.6.12 (7.1.0 available)
+  cloud_firestore_web 4.4.12 (5.2.0 available)
+  cloud_functions 5.6.2 (6.1.0 available)
+  cloud_functions_platform_interface 5.8.2 (5.8.11 available)
+  cloud_functions_web 4.11.5 (5.1.4 available)
+  connectivity_plus 5.0.2 (7.1.0 available)
+  connectivity_plus_platform_interface 1.2.4 (2.1.0 available)
+  cross_file 0.3.5+1 (0.3.5+2 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  dbus 0.7.11 (0.7.12 available)
+  ffi 2.1.5 (2.2.0 available)
+  firebase_app_check 0.3.2+10 (0.4.2 available)
+  firebase_app_check_platform_interface 0.1.1+10 (0.2.2 available)
+  firebase_app_check_web 0.2.0+14 (0.2.3 available)
+  firebase_auth 5.7.0 (6.3.0 available)
+  firebase_auth_platform_interface 7.7.3 (8.1.8 available)
+  firebase_auth_web 5.15.3 (6.1.4 available)
+  firebase_core 3.15.2 (4.6.0 available)
+  firebase_core_platform_interface 6.0.2 (6.0.3 available)
+  firebase_core_web 2.24.1 (3.5.1 available)
+  firebase_messaging 15.2.10 (16.1.3 available)
+  firebase_messaging_platform_interface 4.6.10 (4.7.8 available)
+  firebase_messaging_web 3.10.10 (4.1.4 available)
+  firebase_storage 12.4.10 (13.2.0 available)
+  firebase_storage_platform_interface 5.2.10 (5.2.19 available)
+  firebase_storage_web 3.10.17 (3.11.4 available)
+  fl_chart 1.1.1 (1.2.0 available)
+  flutter_launcher_icons 0.13.1 (0.14.4 available)
+  flutter_lints 5.0.0 (6.0.0 available)
+  flutter_local_notifications 17.2.4 (21.0.0 available)
+  flutter_local_notifications_linux 4.0.1 (8.0.0 available)
+  flutter_local_notifications_platform_interface 7.2.0 (11.0.0 available)
+  flutter_secure_storage 9.2.4 (10.0.0 available)
+  flutter_secure_storage_linux 1.2.3 (3.0.0 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.0 available)
+  flutter_secure_storage_windows 3.1.2 (4.1.0 available)
+  flutter_svg 1.1.6 (2.2.4 available)
+  font_awesome_flutter 10.12.0 (11.0.0 available)
+  go_router 9.1.1 (17.1.0 available)
+  google_mobile_ads 6.0.0 (7.0.0 available)
+  google_sign_in 6.3.0 (7.2.0 available)
+  google_sign_in_android 6.2.1 (7.2.10 available)
+  google_sign_in_ios 5.9.0 (6.3.0 available)
+  google_sign_in_platform_interface 2.5.0 (3.1.0 available)
+  google_sign_in_web 0.12.4+4 (1.1.3 available)
+  image 4.5.4 (4.8.0 available)
+  intl 0.19.0 (0.20.2 available)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.10.0 (4.11.0 available)
+  lints 5.1.1 (6.1.0 available)
+  matcher 0.12.17 (0.12.19 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.16.0 (1.18.2 available)
+  mime 1.0.6 (2.0.0 available)
+  package_info_plus 4.2.0 (9.0.1 available)
+  package_info_plus_platform_interface 2.0.1 (3.2.1 available)
+  path_provider_android 2.2.22 (2.2.23 available)
+  path_provider_foundation 2.5.1 (2.6.0 available)
+  pdf 3.11.3 (3.12.0 available)
+  petitparser 7.0.1 (7.0.2 available)
+  posix 6.0.3 (6.5.0 available)
+  printing 5.14.2 (5.14.3 available)
+  share_plus 7.2.2 (12.0.2 available)
+  share_plus_platform_interface 3.4.0 (6.1.0 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.20 (2.4.23 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  source_span 1.10.1 (1.10.2 available)
+  test_api 0.7.6 (0.7.11 available)
+  timezone 0.9.4 (0.11.0 available)
+  url_launcher_android 6.3.28 (6.3.29 available)
+  url_launcher_ios 6.3.6 (6.4.1 available)
+  url_launcher_web 2.4.1 (2.4.2 available)
+  uuid 4.5.2 (4.5.3 available)
+  vector_math 2.2.0 (2.3.0 available)
+  webview_flutter_android 4.10.11 (4.10.15 available)
+  webview_flutter_platform_interface 2.14.0 (2.15.1 available)
+  webview_flutter_wkwebview 3.23.5 (3.24.2 available)
+  win32 5.15.0 (6.0.0 available)
+Got dependencies!
+88 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing kofund...                                             
+
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\ads\simple_banner_ad.dart:2:8 - unnecessary_import
+   info - The value of the field '_appScheme' isn't used - lib\core\services\community_firestore_service.dart:10:23 - unused_field
+   info - The value of the field '_appJoinPath' isn't used - lib\core\services\community_firestore_service.dart:11:23 - unused_field
+warning - Unnecessary cast - lib\core\services\community_firestore_service.dart:253:29 - unnecessary_cast
+   info - The value of the field '_auth' isn't used - lib\core\services\deleted_contribution_service.dart:10:22 - unused_field
+warning - Unnecessary cast - lib\core\services\deleted_contribution_service.dart:76:19 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\deleted_contribution_service.dart:94:19 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\deleted_contribution_service.dart:245:17 - unnecessary_cast
+warning - Unused import: 'dart:developer' - lib\core\services\expense_service.dart:4:8 - unused_import
+warning - Unnecessary cast - lib\core\services\expense_service.dart:30:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\expense_service.dart:47:46 - unnecessary_cast
+   info - Unnecessary type check; the result is always 'false' - lib\core\services\expense_service.dart:77:32 - unnecessary_type_check
+   info - Unnecessary type check; the result is always 'false' - lib\core\services\expense_service.dart:213:25 - unnecessary_type_check
+warning - Unnecessary cast - lib\core\services\expense_service.dart:313:48 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\expense_service.dart:325:48 - unnecessary_cast
+warning - The value of the local variable 'user' isn't used - lib\core\services\fcm_token_service.dart:443:13 - unused_local_variable
+warning - Unused import: 'dart:developer' - lib\core\services\firebase_auth_service.dart:9:8 - unused_import
+warning - The value of the local variable 'prefs' isn't used - lib\core\services\firebase_auth_service.dart:48:13 - unused_local_variable
+   info - Unnecessary braces in a string interpolation - lib\core\services\firebase_auth_service.dart:100:62 - unnecessary_brace_in_string_interps
+   info - Use 'rethrow' to rethrow a caught exception - lib\core\services\firebase_auth_service.dart:183:7 - use_rethrow_when_possible
+warning - The value of the local variable 'userId' isn't used - lib\core\services\firebase_auth_service.dart:322:11 - unused_local_variable
+   info - The declaration '_cleanFCMTokensOnLogout' isn't referenced - lib\core\services\firebase_auth_service.dart:362:14 - unused_element
+   info - Use 'rethrow' to rethrow a caught exception - lib\core\services\firebase_auth_service.dart:424:5 - use_rethrow_when_possible
+warning - Unnecessary cast - lib\core\services\issue_service.dart:159:48 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\issue_service.dart:172:42 - unnecessary_cast
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\core\services\logout_service.dart:8:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\core\services\logout_service.dart:24:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\core\services\logout_service.dart:34:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\core\services\network_aware_service.dart:18:25 - use_build_context_synchronously
+warning - Unused import: 'package:flutter/material.dart' - lib\core\services\network_service.dart:3:8 - unused_import
+   info - The imported package 'http' isn't a dependency of the importing package - lib\core\services\notification_service.dart:10:8 - depend_on_referenced_packages
+warning - Unused import: 'package:http/http.dart' - lib\core\services\notification_service.dart:10:8 - unused_import
+warning - Unused import: 'package:kofund/core/utils/notification_navigator.dart' - lib\core\services\notification_service.dart:16:8 - unused_import
+   info - The value of the field '_notificationPrefsKey' isn't used - lib\core\services\notification_service.dart:36:23 - unused_field
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\core\services\notification_service.dart:203:15 - unused_catch_stack
+   info - Unnecessary braces in a string interpolation - lib\core\services\notification_service.dart:404:49 - unnecessary_brace_in_string_interps
+warning - The value of the local variable 'mutedCommunities' isn't used - lib\core\services\notification_service.dart:462:9 - unused_local_variable
+warning - Unnecessary cast - lib\core\services\notification_storage_service.dart:194:32 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\notification_storage_service.dart:369:32 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\notification_storage_service.dart:522:22 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\participant_service.dart:144:39 - unnecessary_cast
+warning - The value of the local variable 'createdProgram' isn't used - lib\core\services\program_service.dart:32:11 - unused_local_variable
+warning - Unnecessary cast - lib\core\services\program_service.dart:83:44 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:172:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:190:44 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:221:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:361:50 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:556:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:698:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:814:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\program_service.dart:833:46 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\reminder_service.dart:20:35 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\reminder_service.dart:34:28 - unnecessary_cast
+warning - Unnecessary cast - lib\core\services\reminder_service.dart:96:43 - unnecessary_cast
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\services\virtual_user_service.dart:455:36 - invalid_null_aware_operator
+warning - Unused import: 'package:flutter/services.dart' - lib\core\skeleton\add_participants_skeleton.dart:4:8 - unused_import
+warning - Unused import: '../../../../core/constants/app_colors.dart' - lib\core\skeleton\add_participants_skeleton.dart:6:8 - unused_import
+warning - Unused import: 'package:kofund/core/constants/app_colors.dart' - lib\core\skeleton\contribution_history_skeleton.dart:3:8 - unused_import
+warning - Unused import: 'package:flutter/services.dart' - lib\core\skeleton\edit_contribution_skeleton.dart:4:8 - unused_import
+warning - Unused import: '../../../core/constants/app_colors.dart' - lib\core\skeleton\edit_contribution_skeleton.dart:6:8 - unused_import
+warning - Unused import: '../../../core/constants/app_colors.dart' - lib\core\skeleton\edit_expense_skeleton.dart:6:8 - unused_import
+   info - The declaration 'line' isn't referenced - lib\core\skeleton\member_details_skeleton.dart:26:12 - unused_element
+warning - Unused import: 'package:kofund/core/constants/app_colors.dart' - lib\core\skeleton\member_list_skeleton.dart:3:8 - unused_import
+   info - The declaration '_baseColor' isn't referenced - lib\core\skeleton\member_list_skeleton.dart:11:9 - unused_element
+   info - The declaration '_highlightColor' isn't referenced - lib\core\skeleton\member_list_skeleton.dart:14:9 - unused_element
+   info - The declaration '_itemColor' isn't referenced - lib\core\skeleton\member_list_skeleton.dart:17:9 - unused_element
+warning - Unused import: 'package:kofund/core/constants/app_colors.dart' - lib\core\skeleton\participation_history_skeleton.dart:3:8 - unused_import
+   info - The declaration '_lightItemColor' isn't referenced - lib\core\skeleton\participation_history_skeleton.dart:20:9 - unused_element
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\core\skeleton\profile_screen_skeleton.dart:3:8 - unnecessary_import
+warning - Unused import: 'package:kofund/core/constants/app_colors.dart' - lib\core\skeleton\profile_screen_skeleton.dart:5:8 - unused_import
+   info - The declaration '_buildStatCardSkeleton' isn't referenced - lib\core\skeleton\profile_screen_skeleton.dart:171:10 - unused_element
+   info - The declaration '_buildEmptyStateSkeleton' isn't referenced - lib\core\skeleton\program_contributions_skeleton.dart:243:10 - unused_element
+   info - The declaration '_buildEmptyStateSkeleton' isn't referenced - lib\core\skeleton\program_expenses_skeleton.dart:347:10 - unused_element
+warning - This default clause is covered by the previous cases - lib\core\utils\notification_channels.dart:86:7 - unreachable_switch_default
+   info - Parameter 'key' could be a super parameter - lib\core\widgets\animated_logo.dart:9:9 - use_super_parameters
+   info - The declaration '_updateUserInList' isn't referenced - lib\features\admin\providers\user_provider.dart:282:8 - unused_element
+warning - Unused import: 'package:firebase_auth/firebase_auth.dart' - lib\features\admin\screens\admin_dashboard.dart:12:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\admin\screens\admin_dashboard.dart:13:8 - unnecessary_import
+warning - Unnecessary cast - lib\features\admin\screens\admin_dashboard.dart:419:24 - unnecessary_cast
+   info - Don't use 'BuildContext's across async gaps - lib\features\admin\screens\admin_dashboard.dart:472:33 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\features\admin\screens\admin_dashboard.dart:692:9 - use_super_parameters
+   info - The declaration '_buildGlassSearchBar' isn't referenced - lib\features\admin\screens\approval_requests_screen.dart:145:10 - unused_element
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\admin\screens\approval_requests_screen.dart:505:56 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\admin\screens\approval_requests_screen.dart:514:55 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\admin\screens\approval_requests_screen.dart:638:55 - use_build_context_synchronously
+   info - The declaration '_buildDismissibleBackground' isn't referenced - lib\features\admin\screens\approval_requests_screen.dart:698:10 - unused_element
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\admin\screens\approval_requests_screen.dart:733:25 - invalid_null_aware_operator
+warning - The '!' will have no effect because the receiver can't be null - lib\features\admin\screens\approval_requests_screen.dart:734:29 - unnecessary_non_null_assertion
+   info - Dead code - lib\features\admin\screens\approval_requests_screen.dart:767:71 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\admin\screens\approval_requests_screen.dart:767:74 - dead_null_aware_expression
+  error - Undefined name 'AppDimensions' - lib\features\admin\screens\approval_requests_screen.dart:864:67 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\admin\screens\approval_requests_screen.dart:930:45 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\admin\screens\approval_requests_screen.dart:935:49 - undefined_identifier
+   info - The local variable '_parseTimestamp' starts with an underscore - lib\features\auth\models\user_model.dart:66:16 - no_leading_underscores_for_local_identifiers
+warning - Unused import: 'dart:developer' - lib\features\auth\providers\app_auth_provider.dart:13:8 - unused_import
+warning - Unused import: 'package:kofund/features/profile/providers/profile_provider.dart' - lib\features\auth\providers\app_auth_provider.dart:14:8 - unused_import
+warning - Unused import: 'package:kofund/features/members/providers/member_provider.dart' - lib\features\auth\providers\app_auth_provider.dart:16:8 - unused_import
+warning - Unused import: '../../../core/services/notification_service.dart' - lib\features\auth\providers\app_auth_provider.dart:17:8 - unused_import
+warning - Unused import: 'package:kofund/core/constants/notification_types.dart' - lib\features\auth\providers\app_auth_provider.dart:20:8 - unused_import
+   info - Dead code - lib\features\auth\providers\app_auth_provider.dart:46:31 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\auth\providers\app_auth_provider.dart:46:34 - dead_null_aware_expression
+warning - The '!' will have no effect because the receiver can't be null - lib\features\auth\providers\app_auth_provider.dart:93:26 - unnecessary_non_null_assertion
+   info - Parameter 'key' could be a super parameter - lib\features\auth\screens\forgot_password_screen.dart:10:9 - use_super_parameters
+   info - The value of the field '_showInviteNotification' isn't used - lib\features\auth\screens\login_screen.dart:36:8 - unused_field
+   info - The value of the field '_errorMessage' isn't used - lib\features\auth\screens\login_screen.dart:44:11 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\login_screen.dart:177:57 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\login_screen.dart:264:57 - use_build_context_synchronously
+   info - The declaration '_clearError' isn't referenced - lib\features\auth\screens\login_screen.dart:498:8 - unused_element
+warning - The value of the local variable 'isOnlineFromFuture' isn't used - lib\features\auth\screens\login_screen.dart:974:30 - unused_local_variable
+   info - The value of the field '_showInviteNotification' isn't used - lib\features\auth\screens\register_screen.dart:35:8 - unused_field
+   info - The value of the field '_errorMessage' isn't used - lib\features\auth\screens\register_screen.dart:38:11 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\register_screen.dart:214:55 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\register_screen.dart:249:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\register_screen.dart:311:55 - use_build_context_synchronously
+   info - The declaration '_clearError' isn't referenced - lib\features\auth\screens\register_screen.dart:530:8 - unused_element
+warning - The value of the local variable 'isOnlineFromFuture' isn't used - lib\features\auth\screens\register_screen.dart:945:30 - unused_local_variable
+warning - Unused import: 'package:kofund/routing/route_names.dart' - lib\features\auth\screens\set_phone_screen.dart:7:8 - unused_import
+   info - The value of the field '_errorMessage' isn't used - lib\features\auth\screens\set_phone_screen.dart:27:11 - unused_field
+warning - Unused import: 'dart:convert' - lib\features\auth\screens\splash_screen.dart:6:8 - unused_import
+   info - The declaration '_clearPendingInviteCode' isn't referenced - lib\features\auth\screens\splash_screen.dart:71:16 - unused_element
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\features\auth\screens\splash_screen.dart:170:17 - unused_catch_stack
+   info - Dead code - lib\features\auth\screens\splash_screen.dart:248:53 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\auth\screens\splash_screen.dart:248:56 - dead_null_aware_expression
+warning - The value of the local variable 'authProvider' isn't used - lib\features\auth\screens\splash_screen.dart:456:11 - unused_local_variable
+warning - Unused import: 'login_screen.dart' - lib\features\auth\screens\verification_pending_screen.dart:12:8 - unused_import
+warning - Unused import: 'splash_screen.dart' - lib\features\auth\screens\verification_pending_screen.dart:14:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\auth\screens\verification_pending_screen.dart:15:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\verification_pending_screen.dart:129:15 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\screens\verification_pending_screen.dart:135:44 - use_build_context_synchronously
+warning - The value of the local variable 'isDarkMode' isn't used - lib\features\auth\screens\verification_pending_screen.dart:306:11 - unused_local_variable
+warning - The value of the local variable 'programData' isn't used - lib\features\community\providers\community_provider.dart:476:15 - unused_local_variable
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:494:74 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:505:73 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:564:67 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:578:57 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:609:69 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\community\providers\community_provider.dart:620:63 - avoid_types_as_parameter_names
+   info - The declaration '_scrollToCommunityType' isn't referenced - lib\features\community\screens\create_community_screen.dart:30:6 - unused_element
+   info - Type could be non-nullable - lib\features\community\screens\create_community_screen.dart:31:23 - unnecessary_nullable_for_final_variable_declarations
+   info - Dead code - lib\features\community\screens\create_community_screen.dart:129:44 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\community\screens\create_community_screen.dart:129:47 - dead_null_aware_expression
+warning - A value for optional parameter 'showObscureToggle' isn't ever given - lib\features\community\screens\create_community_screen.dart:195:8 - unused_element_parameter
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\community\screens\join_community_screen.dart:205:17 - invalid_null_aware_operator
+   info - Dead code - lib\features\community\screens\join_community_screen.dart:211:27 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\community\screens\join_community_screen.dart:211:30 - dead_null_aware_expression
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\community\screens\pending_approval_screen.dart:84:39 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\community\screens\pending_approval_screen.dart:86:58 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\community\screens\pending_approval_screen.dart:140:43 - deprecated_member_use
+warning - Unused import: 'package:kofund/features/programs/providers/program_provider.dart' - lib\features\community\screens\tabs\programs_tab.dart:4:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\contributions\providers\contribution_provider.dart:9:8 - unnecessary_import
+   info - The local variable '_getProgramTitle' starts with an underscore - lib\features\contributions\providers\contribution_provider.dart:101:23 - no_leading_underscores_for_local_identifiers
+   info - Unnecessary type check; the result is always 'false' - lib\features\contributions\providers\contribution_provider.dart:592:25 - unnecessary_type_check
+   info - The parameter name 'sum' matches a visible type name - lib\features\contributions\providers\contribution_provider.dart:634:39 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\contributions\providers\contribution_provider.dart:794:36 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\contributions\providers\contribution_provider.dart:845:19 - avoid_types_as_parameter_names
+warning - Unused import: '../../programs/providers/program_provider.dart' - lib\features\contributions\screens\edit_contribution_screen.dart:15:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\contributions\screens\edit_contribution_screen.dart:18:8 - unnecessary_import
+   info - Parameter 'key' could be a super parameter - lib\features\contributions\screens\edit_contribution_screen.dart:24:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\features\contributions\screens\edit_contribution_screen.dart:31:3 - library_private_types_in_public_api
+   info - The declaration '_scrollToFirstError' isn't referenced - lib\features\contributions\screens\edit_contribution_screen.dart:72:8 - unused_element
+   info - Unnecessary type check; the result is always 'false' - lib\features\contributions\screens\edit_contribution_screen.dart:115:27 - unnecessary_type_check
+warning - Unnecessary cast - lib\features\contributions\screens\edit_contribution_screen.dart:164:22 - unnecessary_cast
+warning - Unnecessary cast - lib\features\contributions\screens\edit_contribution_screen.dart:181:39 - unnecessary_cast
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\screens\edit_contribution_screen.dart:385:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\screens\edit_contribution_screen.dart:404:36 - use_build_context_synchronously
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\contributions\screens\edit_contribution_screen.dart:784:39 - deprecated_member_use
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\contributions\screens\edit_contribution_screen.dart:939:39 - deprecated_member_use
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\contributions\screens\edit_contribution_screen.dart:1029:41 - deprecated_member_use
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\contributions\screens\program_deleted_contributions_screen.dart:6:8 - unnecessary_import
+   info - The private field _groupedByDate could be 'final' - lib\features\contributions\screens\program_deleted_contributions_screen.dart:34:47 - prefer_final_fields
+   info - The value of the field '_groupedByDate' isn't used - lib\features\contributions\screens\program_deleted_contributions_screen.dart:34:47 - unused_field
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\contributions\screens\program_deleted_contributions_screen.dart:759:42 - sized_box_for_whitespace
+   info - The declaration '_buildDateGroupHeader' isn't referenced - lib\features\contributions\screens\program_deleted_contributions_screen.dart:886:10 - unused_element
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\features\contributions\widgets\contribution_tile.dart:4:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:243:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:250:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:279:58 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:281:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:282:98 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\contributions\widgets\contribution_tile.dart:285:28 - use_build_context_synchronously
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\features\dashboard\providers\dashboard_provider.dart:2:8 - unused_import
+warning - Unused import: 'package:kofund/features/contributions/models/contribution_model.dart' - lib\features\dashboard\providers\dashboard_provider.dart:6:8 - unused_import
+   info - Unnecessary braces in a string interpolation - lib\features\dashboard\providers\dashboard_provider.dart:170:108 - unnecessary_brace_in_string_interps
+warning - Unused import: 'package:kofund/core/skeleton/dashboard_skeleton.dart' - lib\features\dashboard\screens\dashboard_screen.dart:2:8 - unused_import
+warning - Unused import: 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart' - lib\features\dashboard\screens\dashboard_screen.dart:8:8 - unused_import
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\features\dashboard\screens\dashboard_screen.dart:10:8 - unused_import
+warning - Unused import: '../widgets/pending_requests_widget.dart' - lib\features\dashboard\screens\dashboard_screen.dart:15:8 - unused_import
+warning - Unused import: 'package:kofund/core/constants/app_styles.dart' - lib\features\dashboard\screens\dashboard_screen.dart:23:8 - unused_import
+warning - Unused import: 'package:kofund/features/programs/models/program_model.dart' - lib\features\dashboard\screens\dashboard_screen.dart:24:8 - unused_import
+warning - Unused import: 'package:kofund/features/polls/widgets/poll_dashboard_widget.dart' - lib\features\dashboard\screens\dashboard_screen.dart:28:8 - unused_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\dashboard\screens\dashboard_screen.dart:29:8 - unnecessary_import
+warning - Unused import: 'package:kofund/core/widgets/glass_action_button.dart' - lib\features\dashboard\screens\dashboard_screen.dart:30:8 - unused_import
+warning - Unused import: 'package:kofund/core/services/expense_service.dart' - lib\features\dashboard\screens\dashboard_screen.dart:33:8 - unused_import
+warning - Unused import: 'package:kofund/core/services/program_service.dart' - lib\features\dashboard\screens\dashboard_screen.dart:35:8 - unused_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:46:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:47:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:48:8 - duplicate_import
+warning - Unused import: 'package:kofund/core/services/expense_service.dart' - lib\features\dashboard\screens\dashboard_screen.dart:48:8 - unused_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:49:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:50:8 - duplicate_import
+warning - Unused import: 'package:kofund/core/services/program_service.dart' - lib\features\dashboard\screens\dashboard_screen.dart:50:8 - unused_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:51:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:52:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:53:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:56:8 - duplicate_import
+warning - Duplicate import - lib\features\dashboard\screens\dashboard_screen.dart:57:8 - duplicate_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\dashboard\screens\dashboard_screen.dart:58:8 - unnecessary_import
+   info - The value of the field '_canInvite' isn't used - lib\features\dashboard\screens\dashboard_screen.dart:81:8 - unused_field
+   info - The declaration '_resetWidgetProviders' isn't referenced - lib\features\dashboard\screens\dashboard_screen.dart:128:6 - unused_element
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\screens\dashboard_screen.dart:219:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\screens\dashboard_screen.dart:226:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\screens\dashboard_screen.dart:229:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\screens\dashboard_screen.dart:232:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\screens\dashboard_screen.dart:235:9 - use_build_context_synchronously
+warning - The value of the local variable 'communityProvider' isn't used - lib\features\dashboard\screens\dashboard_screen.dart:275:13 - unused_local_variable
+   info - The declaration '_refreshInviteInfo' isn't referenced - lib\features\dashboard\screens\dashboard_screen.dart:343:16 - unused_element
+warning - The value of the local variable 'communityProvider' isn't used - lib\features\dashboard\screens\dashboard_screen.dart:376:13 - unused_local_variable
+   info - The declaration '_copyInviteCode' isn't referenced - lib\features\dashboard\screens\dashboard_screen.dart:418:8 - unused_element
+   info - The declaration '_copyInviteLink' isn't referenced - lib\features\dashboard\screens\dashboard_screen.dart:434:8 - unused_element
+   info - The 'child' argument should be last in widget constructor invocations - lib\features\dashboard\screens\dashboard_screen.dart:616:15 - sort_child_properties_last
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\screens\edit_community_screen.dart:185:51 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\screens\edit_community_screen.dart:189:51 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\screens\edit_community_screen.dart:193:51 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\screens\edit_community_screen.dart:252:53 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\screens\edit_community_screen.dart:424:61 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\widgets\invite_members_dialog.dart:228:53 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\widgets\invite_members_dialog.dart:325:59 - undefined_identifier
+  error - Undefined name 'AppDimensions' - lib\features\dashboard\widgets\invite_members_dialog.dart:340:59 - undefined_identifier
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\dashboard\widgets\members_widget.dart:10:8 - unnecessary_import
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\dashboard\widgets\members_widget.dart:344:27 - invalid_null_aware_operator
+warning - The '!' will have no effect because the receiver can't be null - lib\features\dashboard\widgets\members_widget.dart:345:31 - unnecessary_non_null_assertion
+   info - Dead code - lib\features\dashboard\widgets\members_widget.dart:375:58 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\dashboard\widgets\members_widget.dart:375:61 - dead_null_aware_expression
+warning - Unused import: 'package:kofund/core/constants/app_dimensions.dart' - lib\features\dashboard\widgets\pending_requests_widget.dart:5:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\dashboard\widgets\program_carousel_widget.dart:15:8 - unnecessary_import
+   info - Unnecessary instance of 'Container' - lib\features\dashboard\widgets\program_carousel_widget.dart:202:14 - avoid_unnecessary_containers
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\dashboard\widgets\program_carousel_widget.dart:228:58 - unnecessary_null_comparison
+   info - Unnecessary instance of 'Container' - lib\features\dashboard\widgets\program_carousel_widget.dart:323:12 - avoid_unnecessary_containers
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\dashboard\widgets\program_carousel_widget.dart:600:49 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\dashboard\widgets\program_carousel_widget.dart:600:83 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\dashboard\widgets\program_carousel_widget.dart:610:50 - unnecessary_non_null_assertion
+   info - Dead code - lib\features\dashboard\widgets\program_carousel_widget.dart:993:40 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\dashboard\widgets\program_carousel_widget.dart:993:43 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\features\dashboard\widgets\program_carousel_widget.dart:994:23 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\widgets\program_carousel_widget.dart:998:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\widgets\program_carousel_widget.dart:1007:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\dashboard\widgets\program_carousel_widget.dart:1055:30 - use_build_context_synchronously
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\add_developer_screen.dart:6:8 - unnecessary_import
+   info - The private field _isAdding could be 'final' - lib\features\developer\screens\add_developer_screen.dart:17:8 - prefer_final_fields
+   info - The value of the field '_isAdding' isn't used - lib\features\developer\screens\add_developer_screen.dart:17:8 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\features\developer\screens\add_developer_screen.dart:58:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\developer\screens\add_developer_screen.dart:69:28 - use_build_context_synchronously
+warning - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\developer\screens\add_developer_screen.dart:185:31 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\features\developer\screens\add_developer_screen.dart:189:26 - unnecessary_to_list_in_spreads
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\developer_dashboard_screen.dart:2:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\developer_dashboard_screen.dart:8:8 - unnecessary_import
+   info - The declaration '_navigateToIssues' isn't referenced - lib\features\developer\screens\developer_dashboard_screen.dart:338:8 - unused_element
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\issue_reports_screen.dart:3:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\issue_reports_screen.dart:10:8 - unnecessary_import
+   info - The private field _statusColors could be 'final' - lib\features\developer\screens\issue_reports_screen.dart:26:20 - prefer_final_fields
+   info - The private field _typeIcons could be 'final' - lib\features\developer\screens\issue_reports_screen.dart:33:25 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\features\developer\screens\issue_reports_screen.dart:49:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\developer\screens\issue_reports_screen.dart:69:28 - use_build_context_synchronously
+   info - Unnecessary use of 'toList' in a spread - lib\features\developer\screens\issue_reports_screen.dart:548:50 - unnecessary_to_list_in_spreads
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\developer\screens\issue_reports_screen.dart:573:19 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\developer\screens\issue_reports_screen.dart:574:19 - deprecated_member_use
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\developer\screens\issue_reports_screen.dart:585:19 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\developer\screens\issue_reports_screen.dart:586:19 - deprecated_member_use
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\developer\screens\manage_developers_screen.dart:7:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\developer\screens\manage_developers_screen.dart:54:26 - use_build_context_synchronously
+   info - Unnecessary use of 'toList' in a spread - lib\features\developer\screens\manage_developers_screen.dart:467:61 - unnecessary_to_list_in_spreads
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\expenses\providers\expense_provider.dart:2:8 - unnecessary_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\expenses\screens\edit_expense_screen.dart:3:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\expenses\screens\edit_expense_screen.dart:7:8 - unnecessary_import
+warning - Unused import: '../../../core/services/network_service.dart' - lib\features\expenses\screens\edit_expense_screen.dart:9:8 - unused_import
+warning - Unused import: '../../expenses/providers/expense_provider.dart' - lib\features\expenses\screens\edit_expense_screen.dart:12:8 - unused_import
+warning - Unused import: '../../programs/providers/program_provider.dart' - lib\features\expenses\screens\edit_expense_screen.dart:15:8 - unused_import
+warning - Unused import: 'package:flutter/foundation.dart' - lib\features\expenses\screens\edit_expense_screen.dart:18:8 - unused_import
+   info - Invalid use of a private type in a public API - lib\features\expenses\screens\edit_expense_screen.dart:31:3 - library_private_types_in_public_api
+   info - The declaration '_getProgramNameById' isn't referenced - lib\features\expenses\screens\edit_expense_screen.dart:180:10 - unused_element
+   info - The declaration '_formatCategory' isn't referenced - lib\features\expenses\screens\edit_expense_screen.dart:188:10 - unused_element
+   info - The declaration '_formatPaymentMethod' isn't referenced - lib\features\expenses\screens\edit_expense_screen.dart:189:10 - unused_element
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\expenses\screens\edit_expense_screen.dart:373:39 - deprecated_member_use
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\expenses\screens\edit_expense_screen.dart:412:39 - deprecated_member_use
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\expenses\screens\edit_expense_screen.dart:433:39 - deprecated_member_use
+   info - The local variable '_parseTimestamp' starts with an underscore - lib\features\issues\models\issue_model.dart:116:16 - no_leading_underscores_for_local_identifiers
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\issues\screens\my_issues_screen.dart:3:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\issues\screens\my_issues_screen.dart:10:8 - unnecessary_import
+   info - Use interpolation to compose strings and values - lib\features\issues\screens\my_issues_screen.dart:347:41 - prefer_interpolation_to_compose_strings
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\features\members\providers\member_provider.dart:3:8 - unused_import
+   info - The value of the field '_currentFilter' isn't used - lib\features\members\providers\member_provider.dart:34:10 - unused_field
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\members\providers\member_provider.dart:505:33 - invalid_null_aware_operator
+   info - The parameter name 'sum' matches a visible type name - lib\features\members\providers\member_provider.dart:520:8 - avoid_types_as_parameter_names
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\members\screens\all_members_screen.dart:12:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\members\screens\all_members_screen.dart:13:8 - unnecessary_import
+warning - Unused import: 'package:kofund/core/widgets/gradient_sheet_scaffold.dart' - lib\features\members\screens\all_members_screen.dart:23:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\features\members\screens\all_members_screen.dart:62:9 - use_super_parameters
+   info - The value of the field '_errorMessage' isn't used - lib\features\members\screens\all_members_screen.dart:85:11 - unused_field
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:96:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:122:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:129:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:142:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:151:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:174:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:179:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:189:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:198:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:205:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:220:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:231:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:238:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:259:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\members\screens\all_members_screen.dart:262:7 - avoid_print
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:422:35 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:456:43 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:536:40 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:956:29 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:958:48 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:979:49 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1027:34 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1145:53 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1297:49 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1422:49 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1429:47 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1439:49 - deprecated_member_use
+   info - Dead code - lib\features\members\screens\all_members_screen.dart:1605:36 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\members\screens\all_members_screen.dart:1605:39 - dead_null_aware_expression
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1754:40 - deprecated_member_use
+warning - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\members\screens\all_members_screen.dart:1850:52 - deprecated_member_use
+   info - The declaration '_formatDate' isn't referenced - lib\features\members\screens\all_members_screen.dart:1865:10 - unused_element
+warning - Unused import: 'package:kofund/core/constants/app_styles.dart' - lib\features\members\screens\member_details_screen.dart:11:8 - unused_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\members\screens\member_details_screen.dart:13:8 - unnecessary_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\members\screens\member_details_screen.dart:26:8 - unnecessary_import
+warning - A value for optional parameter 'key' isn't ever given - lib\features\members\screens\member_details_screen.dart:56:40 - unused_element_parameter
+   info - Don't use 'BuildContext's across async gaps - lib\features\members\screens\member_details_screen.dart:147:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\members\screens\member_details_screen.dart:188:29 - use_build_context_synchronously
+   info - Dead code - lib\features\members\screens\member_details_screen.dart:483:42 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\members\screens\member_details_screen.dart:483:45 - dead_null_aware_expression
+   info - Dead code - lib\features\members\screens\member_details_screen.dart:852:26 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\members\screens\member_details_screen.dart:852:29 - dead_null_aware_expression
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\members\screens\member_details_screen.dart:864:31 - invalid_null_aware_operator
+   info - The declaration '_buildPhoneInfoItem' isn't referenced - lib\features\members\screens\member_details_screen.dart:883:10 - unused_element
+   info - The parameter name 'sum' matches a visible type name - lib\features\members\screens\member_details_screen.dart:1371:8 - avoid_types_as_parameter_names
+   info - Don't use 'BuildContext's across async gaps - lib\features\members\screens\member_details_screen.dart:1965:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\members\screens\member_details_screen.dart:1973:28 - use_build_context_synchronously
+   info - The import of 'package:flutter/material.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' - lib\features\notifications\providers\notification_provider.dart:2:8 - unnecessary_import
+warning - Unused import: 'package:shared_preferences/shared_preferences.dart' - lib\features\notifications\providers\notification_provider.dart:10:8 - unused_import
+   info - The value of the field '_tokenService' isn't used - lib\features\notifications\providers\notification_provider.dart:36:24 - unused_field
+warning - Unused import: 'package:kofund/core/constants/app_colors.dart' - lib\features\notifications\screens\notification_detail_screen.dart:5:8 - unused_import
+   info - Unnecessary use of 'toList' in a spread - lib\features\notifications\screens\notification_settings_screen.dart:204:12 - unnecessary_to_list_in_spreads
+   info - Use interpolation to compose strings and values - lib\features\notifications\screens\notifications_screen.dart:333:41 - prefer_interpolation_to_compose_strings
+   info - Unnecessary use of 'toList' in a spread - lib\features\notifications\screens\notifications_screen.dart:343:28 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of 'toList' in a spread - lib\features\notifications\screens\notifications_screen.dart:378:26 - unnecessary_to_list_in_spreads
+   info - Use interpolation to compose strings and values - lib\features\notifications\screens\notifications_screen.dart:521:19 - prefer_interpolation_to_compose_strings
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\participants\providers\participant_provider.dart:2:8 - unnecessary_import
+   info - Unnecessary braces in a string interpolation - lib\features\polls\models\poll_model.dart:318:20 - unnecessary_brace_in_string_interps
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\polls\screens\create_poll_screen.dart:13:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:174:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:181:30 - use_build_context_synchronously
+warning - This default clause is covered by the previous cases - lib\features\polls\screens\create_poll_screen.dart:202:7 - unreachable_switch_default
+warning - This default clause is covered by the previous cases - lib\features\polls\screens\create_poll_screen.dart:232:7 - unreachable_switch_default
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:332:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:335:25 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:337:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\create_poll_screen.dart:343:28 - use_build_context_synchronously
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\polls\screens\create_poll_screen.dart:651:13 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\polls\screens\create_poll_screen.dart:652:13 - deprecated_member_use
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\polls\screens\create_poll_screen.dart:662:13 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\polls\screens\create_poll_screen.dart:663:13 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\features\polls\screens\create_poll_screen.dart:751:12 - unnecessary_to_list_in_spreads
+warning - The '!' will have no effect because the receiver can't be null - lib\features\polls\screens\create_poll_screen.dart:793:74 - unnecessary_non_null_assertion
+warning - This default clause is covered by the previous cases - lib\features\polls\screens\create_poll_screen.dart:952:7 - unreachable_switch_default
+warning - Unused import: 'package:intl/intl.dart' - lib\features\polls\screens\poll_details_screen.dart:10:8 - unused_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\polls\screens\poll_details_screen.dart:12:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\poll_details_screen.dart:188:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\poll_details_screen.dart:194:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\poll_details_screen.dart:229:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\poll_details_screen.dart:302:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\screens\poll_details_screen.dart:347:28 - use_build_context_synchronously
+warning - The value of the local variable 'currentUserId' isn't used - lib\features\polls\screens\poll_details_screen.dart:544:11 - unused_local_variable
+   info - Unnecessary use of 'toList' in a spread - lib\features\polls\screens\poll_details_screen.dart:802:14 - unnecessary_to_list_in_spreads
+warning - This default clause is covered by the previous cases - lib\features\polls\screens\poll_details_screen.dart:1101:7 - unreachable_switch_default
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\widgets\poll_dashboard_widget.dart:409:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\widgets\poll_dashboard_widget.dart:419:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\polls\widgets\poll_dashboard_widget.dart:428:28 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\features\polls\widgets\poll_dashboard_widget.dart:451:9 - use_super_parameters
+warning - This default clause is covered by the previous cases - lib\features\polls\widgets\poll_dashboard_widget.dart:971:7 - unreachable_switch_default
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\providers\profile_provider.dart:1:8 - unnecessary_import
+warning - Unused import: 'package:kofund/features/auth/models/user_model.dart' - lib\features\profile\providers\profile_provider.dart:9:8 - unused_import
+   info - The value of the field '_authProvider' isn't used - lib\features\profile\providers\profile_provider.dart:17:25 - unused_field
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\providers\profile_provider.dart:516:21 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\providers\profile_provider.dart:519:21 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\providers\profile_provider.dart:535:50 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\providers\profile_provider.dart:588:56 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\providers\profile_provider.dart:589:61 - avoid_types_as_parameter_names
+   info - Use 'isNotEmpty' instead of 'length' to test whether the collection is empty - lib\features\profile\providers\profile_provider.dart:599:22 - prefer_is_empty
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\contribution_history_screen.dart:2:8 - unnecessary_import
+warning - Unused import: 'package:kofund/core/utils/snackbar_helper.dart' - lib\features\profile\screens\contribution_history_screen.dart:7:8 - unused_import
+warning - Unused import: 'package:kofund/features/programs/constants/program_types.dart' - lib\features\profile\screens\contribution_history_screen.dart:8:8 - unused_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\contribution_history_screen.dart:12:8 - unnecessary_import
+   info - The declaration '_debugFirestoreContribution' isn't referenced - lib\features\profile\screens\contribution_history_screen.dart:101:6 - unused_element
+warning - The value of the local variable 'contributionHistory' isn't used - lib\features\profile\screens\contribution_history_screen.dart:216:11 - unused_local_variable
+   info - The parameter name 'sum' matches a visible type name - lib\features\profile\screens\contribution_history_screen.dart:441:50 - avoid_types_as_parameter_names
+warning - The value of the local variable 'averageAmount' isn't used - lib\features\profile\screens\contribution_history_screen.dart:443:11 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\contribution_history_screen.dart:1546:41 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\contribution_history_screen.dart:1547:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\contribution_history_screen.dart:1553:28 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\edit_profile_screen.dart:3:8 - unnecessary_import
+   info - Dead code - lib\features\profile\screens\edit_profile_screen.dart:97:63 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\profile\screens\edit_profile_screen.dart:97:66 - dead_null_aware_expression
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\profile\screens\edit_profile_screen.dart:260:46 - invalid_null_aware_operator
+warning - Unused import: 'package:kofund/core/widgets/loading_indicator.dart' - lib\features\profile\screens\participation_history_screen.dart:7:8 - unused_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\participation_history_screen.dart:11:8 - unnecessary_import
+warning - The value of the local variable 'totalContributed' isn't used - lib\features\profile\screens\profile_screen.dart:256:11 - unused_local_variable
+   info - The declaration '_formatRelativeDate' isn't referenced - lib\features\profile\screens\profile_screen.dart:757:10 - unused_element
+   info - The declaration '_formatPaymentMethod' isn't referenced - lib\features\profile\screens\profile_screen.dart:772:10 - unused_element
+   info - The declaration '_formatDate' isn't referenced - lib\features\profile\screens\profile_screen.dart:783:10 - unused_element
+   info - Parameter 'key' could be a super parameter - lib\features\profile\screens\settings\change_password_screen.dart:11:9 - use_super_parameters
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\community_guidelines_screen.dart:8:8 - unnecessary_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\contact_support_screen.dart:8:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\profile\screens\settings\contact_support_screen.dart:34:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\profile\screens\settings\contact_support_screen.dart:39:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\profile\screens\settings\contact_support_screen.dart:128:55 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\help_faq_screen.dart:7:8 - unnecessary_import
+   info - Unnecessary use of 'toList' in a spread - lib\features\profile\screens\settings\help_faq_screen.dart:138:69 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of string interpolation - lib\features\profile\screens\settings\help_faq_screen.dart:193:56 - unnecessary_string_interpolations
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\privacy_policy_screen.dart:8:8 - unnecessary_import
+warning - Unused import: 'package:kofund/features/auth/models/user_model.dart' - lib\features\profile\screens\settings\privacy_settings_screen.dart:6:8 - unused_import
+   info - Dead code - lib\features\profile\screens\settings\privacy_settings_screen.dart:35:57 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\profile\screens\settings\privacy_settings_screen.dart:35:60 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps - lib\features\profile\screens\settings\report_issue_screen.dart:89:30 - use_build_context_synchronously
+warning - Unused import: 'package:kofund/features/developer/screens/add_developer_screen.dart' - lib\features\profile\screens\settings\settings_screen.dart:12:8 - unused_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\settings_screen.dart:17:8 - unnecessary_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\settings_screen.dart:19:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:518:17 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:525:27 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:527:60 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:547:17 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:713:17 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:720:27 - use_build_context_synchronously
+   info - The declaration '_buildDeletionItem' isn't referenced - lib\features\profile\screens\settings\settings_screen.dart:813:8 - unused_element
+   info - The declaration '_showReauthenticationRequiredDialog' isn't referenced - lib\features\profile\screens\settings\settings_screen.dart:890:6 - unused_element
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:941:15 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:975:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:977:17 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:983:27 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:991:40 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:995:40 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\profile\screens\settings\settings_screen.dart:1000:17 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\profile\screens\settings\terms_of_service_screen.dart:8:8 - unnecessary_import
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\providers\program_provider.dart:2:8 - unnecessary_import
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\providers\program_provider.dart:83:50 - avoid_types_as_parameter_names
+warning - Unnecessary cast - lib\features\programs\providers\program_provider.dart:597:46 - unnecessary_cast
+   info - The private field _programJoinSubscriptions could be 'final' - lib\features\programs\providers\program_provider.dart:813:35 - prefer_final_fields
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\features\programs\screens\add_participant_screen.dart:5:8 - unused_import
+   info - The private field _addingParticipants could be 'final' - lib\features\programs\screens\add_participant_screen.dart:32:16 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\add_participant_screen.dart:62:35 - use_build_context_synchronously
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\programs\screens\add_participant_screen.dart:107:31 - invalid_null_aware_operator
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\add_participant_screen.dart:167:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\add_participant_screen.dart:170:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\add_participant_screen.dart:217:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\add_participant_screen.dart:220:46 - use_build_context_synchronously
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\programs\screens\add_participant_screen.dart:315:42 - sized_box_for_whitespace
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\programs\screens\add_participant_screen.dart:392:19 - sized_box_for_whitespace
+   info - The declaration '_buildParticipantChip' isn't referenced - lib\features\programs\screens\add_participant_screen.dart:418:10 - unused_element
+   info - Dead code - lib\features\programs\screens\add_participant_screen.dart:495:32 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\add_participant_screen.dart:495:35 - dead_null_aware_expression
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\programs\screens\add_participant_screen.dart:608:15 - sized_box_for_whitespace
+   info - The declaration '_buildLoadingIndicator' isn't referenced - lib\features\programs\screens\add_participant_screen.dart:787:10 - unused_element
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\all_programs_screen.dart:3:8 - unnecessary_import
+warning - Unused import: 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart' - lib\features\programs\screens\all_programs_screen.dart:4:8 - unused_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\all_programs_screen.dart:19:8 - unnecessary_import
+warning - Unused import: 'package:kofund/core/widgets/gradient_sheet_scaffold.dart' - lib\features\programs\screens\all_programs_screen.dart:23:8 - unused_import
+warning - The value of the local variable 'isDark' isn't used - lib\features\programs\screens\all_programs_screen.dart:216:16 - unused_local_variable
+   info - The declaration '_buildSearchHeader' isn't referenced - lib\features\programs\screens\all_programs_screen.dart:448:10 - unused_element
+   info - Dead code - lib\features\programs\screens\all_programs_screen.dart:689:73 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\all_programs_screen.dart:689:76 - dead_null_aware_expression
+warning - The value of the local variable 'isEnding' isn't used - lib\features\programs\screens\all_programs_screen.dart:704:31 - unused_local_variable
+warning - The value of the local variable 'hasEnded' isn't used - lib\features\programs\screens\all_programs_screen.dart:705:31 - unused_local_variable
+warning - The operand can't be 'null', so the condition is always 'false' - lib\features\programs\screens\all_programs_screen.dart:709:58 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\all_programs_screen.dart:710:60 - unnecessary_non_null_assertion
+   info - The declaration '_formatDate' isn't referenced - lib\features\programs\screens\all_programs_screen.dart:1007:10 - unused_element
+   info - Dead code - lib\features\programs\screens\all_programs_screen.dart:1034:34 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\all_programs_screen.dart:1034:37 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\all_programs_screen.dart:1037:34 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\all_programs_screen.dart:1039:32 - use_build_context_synchronously
+   info - The declaration '_leaveProgram' isn't referenced - lib\features\programs\screens\all_programs_screen.dart:1043:16 - unused_element
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\all_programs_screen.dart:1065:34 - use_build_context_synchronously
+   info - The declaration '_buildShimmerCard' isn't referenced - lib\features\programs\screens\all_programs_screen.dart:1210:10 - unused_element
+   info - Parameter 'key' could be a super parameter - lib\features\programs\screens\all_programs_screen.dart:1232:9 - use_super_parameters
+   info - The declaration '_buildCompactToggle' isn't referenced - lib\features\programs\screens\all_programs_screen.dart:1495:10 - unused_element
+warning - Unused import: 'package:kofund/core/constants/app_styles.dart' - lib\features\programs\screens\create_program_screen.dart:9:8 - unused_import
+   info - The value of the field '_dateError' isn't used - lib\features\programs\screens\create_program_screen.dart:38:11 - unused_field
+   info - The local variable '_validateDate' starts with an underscore - lib\features\programs\screens\create_program_screen.dart:513:13 - no_leading_underscores_for_local_identifiers
+warning - The value of the local variable 'totalProgramAmount' isn't used - lib\features\programs\screens\create_program_screen.dart:699:15 - unused_local_variable
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\create_program_screen.dart:1020:37 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\create_program_screen.dart:1022:37 - deprecated_member_use
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\create_program_screen.dart:1043:37 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\create_program_screen.dart:1045:37 - deprecated_member_use
+warning - Unused import: 'package:kofund/features/auth/providers/app_auth_provider.dart' - lib\features\programs\screens\edit_program_screen.dart:9:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\features\programs\screens\edit_program_screen.dart:20:9 - use_super_parameters
+warning - A value for optional parameter 'showObscureToggle' isn't ever given - lib\features\programs\screens\edit_program_screen.dart:239:10 - unused_element_parameter
+   info - The declaration '_validateSuggestedContribution' isn't referenced - lib\features\programs\screens\edit_program_screen.dart:351:11 - unused_element
+   info - The local variable '_validateDate' starts with an underscore - lib\features\programs\screens\edit_program_screen.dart:667:11 - no_leading_underscores_for_local_identifiers
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\edit_program_screen.dart:1135:37 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\edit_program_screen.dart:1137:37 - deprecated_member_use
+warning - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\edit_program_screen.dart:1158:37 - deprecated_member_use
+warning - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\programs\screens\edit_program_screen.dart:1160:37 - deprecated_member_use
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\program_details_screen.dart:2:8 - unnecessary_import
+warning - Unused import: 'package:shimmer/shimmer.dart' - lib\features\programs\screens\program_details_screen.dart:5:8 - unused_import
+warning - Unused import: 'package:kofund/ads/simple_banner_ad.dart' - lib\features\programs\screens\program_details_screen.dart:6:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:143:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:146:42 - use_build_context_synchronously
+warning - The value of the local variable 'isDarkMode' isn't used - lib\features\programs\screens\program_details_screen.dart:184:9 - unused_local_variable
+  error - Expected an identifier - lib\features\programs\screens\program_details_screen.dart:358:9 - missing_identifier
+  error - Expected to find ']' - lib\features\programs\screens\program_details_screen.dart:358:9 - expected_token
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:404:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:407:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:418:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_details_screen.dart:421:48 - use_build_context_synchronously
+   info - Dead code - lib\features\programs\screens\program_details_screen.dart:432:38 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\program_details_screen.dart:432:41 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:443:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:446:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:453:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:456:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:526:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:529:48 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:536:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\program_details_screen.dart:539:46 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\program_reminder_screen.dart:2:8 - unnecessary_import
+   info - Parameter 'key' could be a super parameter - lib\features\programs\screens\program_reminder_screen.dart:16:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:77:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:105:34 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:154:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:187:36 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:196:34 - use_build_context_synchronously
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\programs\screens\program_reminder_screen.dart:259:15 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:583:34 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:584:21 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\program_reminder_screen.dart:586:32 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\tabs\program_contributions_tab.dart:2:8 - unnecessary_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\tabs\program_contributions_tab.dart:3:8 - unnecessary_import
+   info - The declaration '_PinnedStatsHeaderDelegate' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:29:7 - unused_element
+   info - The member 'minExtent' overrides an inherited member but isn't annotated with '@override' - lib\features\programs\screens\tabs\program_contributions_tab.dart:30:16 - annotate_overrides
+   info - The member 'maxExtent' overrides an inherited member but isn't annotated with '@override' - lib\features\programs\screens\tabs\program_contributions_tab.dart:31:16 - annotate_overrides
+   info - The value of the field '_localUserNameCache' isn't used - lib\features\programs\screens\tabs\program_contributions_tab.dart:58:29 - unused_field
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\programs\screens\tabs\program_contributions_tab.dart:125:38 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\tabs\program_contributions_tab.dart:125:59 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\tabs\program_contributions_tab.dart:126:26 - unnecessary_non_null_assertion
+   info - Unnecessary braces in a string interpolation - lib\features\programs\screens\tabs\program_contributions_tab.dart:456:87 - unnecessary_brace_in_string_interps
+   info - The declaration '_buildSkeletonLoader' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:657:8 - unused_element
+   info - The declaration '_buildInfoRowPremium' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:1812:8 - unused_element
+   info - The declaration '_buildEditHistoryItem' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:1855:8 - unused_element
+   info - The declaration '_buildInfoRow' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:1895:8 - unused_element
+   info - The declaration '_buildDetailItem' isn't referenced - lib\features\programs\screens\tabs\program_contributions_tab.dart:1971:10 - unused_element
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_contributions_tab.dart:2163:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_contributions_tab.dart:2166:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_contributions_tab.dart:2170:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_contributions_tab.dart:2173:42 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\tabs\program_expenses_tab.dart:2:8 - unnecessary_import
+warning - Unused import: '../../../auth/models/user_model.dart' - lib\features\programs\screens\tabs\program_expenses_tab.dart:12:8 - unused_import
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_expenses_tab.dart:564:49 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_expenses_tab.dart:565:89 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_expenses_tab.dart:566:87 - avoid_types_as_parameter_names
+   info - Unnecessary use of 'toList' in a spread - lib\features\programs\screens\tabs\program_expenses_tab.dart:818:23 - unnecessary_to_list_in_spreads
+   info - The declaration '_buildAddExpenseButton' isn't referenced - lib\features\programs\screens\tabs\program_expenses_tab.dart:834:8 - unused_element
+   info - Dead code - lib\features\programs\screens\tabs\program_expenses_tab.dart:1545:72 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\tabs\program_expenses_tab.dart:1545:75 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\tabs\program_expenses_tab.dart:1568:81 - dead_null_aware_expression
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_expenses_tab.dart:1576:19 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_expenses_tab.dart:1578:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_expenses_tab.dart:1586:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_expenses_tab.dart:1589:42 - use_build_context_synchronously
+   info - The declaration '_buildDetailRow' isn't referenced - lib\features\programs\screens\tabs\program_expenses_tab.dart:1898:10 - unused_element
+   info - The declaration '_updateExpenseStatus' isn't referenced - lib\features\programs\screens\tabs\program_expenses_tab.dart:1919:8 - unused_element
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:1924:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:1927:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:1931:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:1934:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:1997:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2000:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2004:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2007:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_expenses_tab.dart:2115:29 - use_build_context_synchronously
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\programs\screens\tabs\program_expenses_tab.dart:2138:12 - sized_box_for_whitespace
+warning - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\programs\screens\tabs\program_expenses_tab.dart:2298:19 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\programs\screens\tabs\program_expenses_tab.dart:2561:29 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\tabs\program_expenses_tab.dart:2561:57 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\tabs\program_expenses_tab.dart:2562:45 - unnecessary_non_null_assertion
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2591:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2598:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2604:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2612:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_expenses_tab.dart:2615:44 - use_build_context_synchronously
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\tabs\program_monthly_contributions_tab.dart:2:8 - unnecessary_import
+   info - The private field _monthlyTotals could be 'final' - lib\features\programs\screens\tabs\program_monthly_contributions_tab.dart:31:23 - prefer_final_fields
+   info - The 'if' statement could be replaced by a null-aware assignment - lib\features\programs\screens\tabs\program_monthly_contributions_tab.dart:66:7 - prefer_conditional_assignment
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_monthly_contributions_tab.dart:111:36 - use_build_context_synchronously
+warning - Unused import: 'package:flutter/foundation.dart' - lib\features\programs\screens\tabs\program_overview_tab.dart:2:8 - unused_import
+warning - Unused import: '../../../contributions/models/contribution_model.dart' - lib\features\programs\screens\tabs\program_overview_tab.dart:8:8 - unused_import
+warning - Unused import: '../../../expenses/models/expense_model.dart' - lib\features\programs\screens\tabs\program_overview_tab.dart:10:8 - unused_import
+warning - Unused import: '../../../auth/providers/app_auth_provider.dart' - lib\features\programs\screens\tabs\program_overview_tab.dart:13:8 - unused_import
+warning - Unused import: '../../../programs/providers/program_provider.dart' - lib\features\programs\screens\tabs\program_overview_tab.dart:15:8 - unused_import
+   info - Dead code - lib\features\programs\screens\tabs\program_overview_tab.dart:401:65 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\screens\tabs\program_overview_tab.dart:401:68 - dead_null_aware_expression
+warning - The value of the local variable 'progressPercentage' isn't used - lib\features\programs\screens\tabs\program_overview_tab.dart:485:23 - unused_local_variable
+   info - The import of 'package:flutter/cupertino.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\screens\tabs\program_participants_tab.dart:8:8 - unnecessary_import
+warning - Unused import: 'package:flutter/foundation.dart' - lib\features\programs\screens\tabs\program_participants_tab.dart:21:8 - unused_import
+   info - The value of the field '_availableMonths' isn't used - lib\features\programs\screens\tabs\program_participants_tab.dart:63:16 - unused_field
+  error - Expected an identifier - lib\features\programs\screens\tabs\program_participants_tab.dart:397:33 - missing_identifier
+  error - Expected to find ':' - lib\features\programs\screens\tabs\program_participants_tab.dart:397:34 - expected_token
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:397:51 - unterminated_string_literal
+  error - Expected to find ')' - lib\features\programs\screens\tabs\program_participants_tab.dart:398:31 - expected_token
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:398:58 - unterminated_string_literal
+  error - Expected an identifier - lib\features\programs\screens\tabs\program_participants_tab.dart:431:23 - missing_identifier
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:431:24 - expected_token
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:431:64 - unterminated_string_literal
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:432:23 - expected_token
+  error - Expected an identifier - lib\features\programs\screens\tabs\program_participants_tab.dart:443:27 - missing_identifier
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:443:28 - expected_token
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:443:79 - unterminated_string_literal
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:444:27 - expected_token
+  error - Expected an identifier - lib\features\programs\screens\tabs\program_participants_tab.dart:460:30 - missing_identifier
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:460:31 - expected_token
+  error - Too many positional arguments: 1 expected, but 2 found - lib\features\programs\screens\tabs\program_participants_tab.dart:460:31 - extra_positional_arguments
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:460:38 - unterminated_string_literal
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:461:23 - expected_token
+  error - Expected an identifier - lib\features\programs\screens\tabs\program_participants_tab.dart:470:30 - missing_identifier
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:470:31 - expected_token
+  error - Too many positional arguments: 1 expected, but 2 found - lib\features\programs\screens\tabs\program_participants_tab.dart:470:31 - extra_positional_arguments
+  error - Unterminated string literal - lib\features\programs\screens\tabs\program_participants_tab.dart:470:41 - unterminated_string_literal
+  error - Expected to find ',' - lib\features\programs\screens\tabs\program_participants_tab.dart:471:23 - expected_token
+   info - The declaration '_statChip' isn't referenced - lib\features\programs\screens\tabs\program_participants_tab.dart:931:10 - unused_element
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1393:22 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1410:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1417:11 - use_build_context_synchronously
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\features\programs\screens\tabs\program_participants_tab.dart:1430:21 - unused_catch_stack
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1431:35 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1432:22 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\programs\screens\tabs\program_participants_tab.dart:1436:30 - use_build_context_synchronously
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1507:10 - avoid_types_as_parameter_names
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1514:11 - use_build_context_synchronously
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1542:66 - avoid_types_as_parameter_names
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1548:9 - use_build_context_synchronously
+warning - The '!' will have no effect because the receiver can't be null - lib\features\programs\screens\tabs\program_participants_tab.dart:1682:80 - unnecessary_non_null_assertion
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1758:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1761:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1765:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\programs\screens\tabs\program_participants_tab.dart:1768:44 - use_build_context_synchronously
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1795:67 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1802:70 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1834:61 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\programs\screens\tabs\program_participants_tab.dart:1846:64 - avoid_types_as_parameter_names
+warning - The value of the local variable 'watermarkColor' isn't used - lib\features\programs\utils\contribution_receipt_pdf.dart:129:9 - unused_local_variable
+   info - The declaration '_buildInfoRow' isn't referenced - lib\features\programs\utils\contribution_receipt_pdf.dart:276:20 - unused_element
+   info - The declaration '_buildDetailRow' isn't referenced - lib\features\programs\utils\contribution_receipt_pdf.dart:333:20 - unused_element
+   info - Parameter 'key' could be a super parameter - lib\features\programs\utils\contribution_receipt_pdf.dart:603:9 - use_super_parameters
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\programs\widgets\add_contribution_modal.dart:17:8 - unnecessary_import
+   info - Parameter 'key' could be a super parameter - lib\features\programs\widgets\add_contribution_modal.dart:23:9 - use_super_parameters
+   info - The value of the field '_contributionService' isn't used - lib\features\programs\widgets\add_contribution_modal.dart:35:9 - unused_field
+   info - The private field _showMonthSelector could be 'final' - lib\features\programs\widgets\add_contribution_modal.dart:66:6 - prefer_final_fields
+   info - The value of the field '_showMonthSelector' isn't used - lib\features\programs\widgets\add_contribution_modal.dart:66:6 - unused_field
+   info - Unnecessary braces in a string interpolation - lib\features\programs\widgets\add_contribution_modal.dart:263:22 - unnecessary_brace_in_string_interps
+   info - Dead code - lib\features\programs\widgets\add_contribution_modal.dart:717:39 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\programs\widgets\add_contribution_modal.dart:717:42 - dead_null_aware_expression
+   info - The declaration '_getMonthAbbreviation' isn't referenced - lib\features\programs\widgets\add_contribution_modal.dart:1300:10 - unused_element
+   info - The declaration '_getYear' isn't referenced - lib\features\programs\widgets\add_contribution_modal.dart:1306:10 - unused_element
+   info - The declaration '_getMonthDisplayName' isn't referenced - lib\features\programs\widgets\add_contribution_modal.dart:1325:10 - unused_element
+   info - The private field _errorMessages could be 'final' - lib\features\virtual_users\providers\virtual_user_provider.dart:10:16 - prefer_final_fields
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\virtual_users\screens\create_virtual_users_screen.dart:2:8 - unnecessary_import
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\features\virtual_users\screens\create_virtual_users_screen.dart:136:40 - invalid_null_aware_operator
+   info - Unnecessary use of 'toList' in a spread - lib\features\virtual_users\screens\create_virtual_users_screen.dart:195:20 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of 'toList' in a spread - lib\features\virtual_users\screens\create_virtual_users_screen.dart:238:22 - unnecessary_to_list_in_spreads
+warning - Unused import: 'package:kofund/core/constants/app_styles.dart' - lib\features\virtual_users\screens\edit_virtual_user_screen.dart:14:8 - unused_import
+warning - The value of the local variable 'app' isn't used - lib\main.dart:331:13 - unused_local_variable
+   info - Unnecessary type check; the result is always 'true' - lib\main.dart:406:11 - unnecessary_type_check
+   info - The declaration 'getWebInviteCode' isn't referenced - lib\main.dart:449:26 - unused_element
+   info - The declaration 'clearWebInviteCode' isn't referenced - lib\main.dart:460:23 - unused_element
+   info - This case is covered by the previous cases - lib\routing\app_router.dart:68:7 - unreachable_switch_case
+warning - The value of the local variable 'notification' isn't used - lib\routing\app_router.dart:255:9 - unused_local_variable
+

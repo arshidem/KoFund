@@ -12,72 +12,28 @@ class AddParticipantSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            width: 150,
-            height: 20,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
+    return Column(
+      children: [
+        // Skeleton Search Bar
+        _buildSkeletonSearchBar(context),
+        
+        // Skeleton Current Participants Section
+        _buildSkeletonCurrentParticipants(context),
+        
+        // Skeleton Available Members Section
+        _buildSkeletonAvailableMembers(context),
+        
+        // Skeleton Member Cards
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            itemCount: 6, // Show 6 skeleton cards
+            itemBuilder: (context, index) {
+              return _buildSkeletonMemberCard(context);
+            },
           ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDarkMode ? Colors.white70 : Colors.white,
-          ),
-          onPressed: () {},
-        ),
-        automaticallyImplyLeading: true,
-      ),
-      body: Column(
-        children: [
-          // Skeleton Search Bar
-          _buildSkeletonSearchBar(context),
-          
-          // Skeleton Current Participants Section
-          _buildSkeletonCurrentParticipants(context),
-          
-          // Skeleton Available Members Section
-          _buildSkeletonAvailableMembers(context),
-          
-          // Skeleton Member Cards
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: 6, // Show 6 skeleton cards
-              itemBuilder: (context, index) {
-                return _buildSkeletonMemberCard(context);
-              },
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 

@@ -1,4 +1,4 @@
-﻿// edit_contribution_screen.dart
+// edit_contribution_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +14,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
 import '../../programs/providers/program_provider.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
 class EditContributionScreen extends StatefulWidget {
@@ -664,86 +665,54 @@ Widget _buildChangeItem({
 }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'Edit Contribution',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+    return GradientSheetScaffold(
+      title: 'Edit Contribution',
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back,
+          color: Colors.white,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        automaticallyImplyLeading: true,
-        actions: [
-          StatefulBuilder(
-            builder: (context, setState) {
-              return _saving
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: StreamBuilder<bool>(
-                        stream: NetworkService().onConnectionChanged,
-                        initialData: true,
-                        builder: (context, snapshot) {
-                          final bool isOnline = snapshot.data ?? true;
-                          
-                          return IconButton(
-                            icon: isOnline
-                                ? const Icon(Icons.check, color: Colors.white, size: 26)
-                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
-                            tooltip: isOnline 
-                                ? 'Save Changes'
-                                : 'Offline - No Connection',
-                            onPressed: isOnline ? _saveChanges : null,
-                          );
-                        },
-                      ),
-                    );
-            },
-          ),
-        ],
+        onPressed: () => Navigator.pop(context),
       ),
-      body: SafeArea(
-        child: Padding(
+      actions: [
+        StatefulBuilder(
+          builder: (context, setState) {
+            return _saving
+                ? const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: true,
+                      builder: (context, snapshot) {
+                        final bool isOnline = snapshot.data ?? true;
+                        
+                        return IconButton(
+                          icon: isOnline
+                              ? const Icon(Icons.check, color: Colors.white, size: 26)
+                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                          tooltip: isOnline 
+                              ? 'Save Changes'
+                              : 'Offline - No Connection',
+                          onPressed: isOnline ? _saveChanges : null,
+                        );
+                      },
+                    ),
+                  );
+          },
+        ),
+      ],
+      body: Padding(
           padding: const EdgeInsets.all(12),
           child: _isLoading
                ? EditContributionSkeleton(
@@ -1308,8 +1277,7 @@ Widget _buildChangeItem({
                         ],
                       ),
                     ),
-        ),
-      ),
+                  ),
     );
   }
 

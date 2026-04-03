@@ -1,4 +1,4 @@
-﻿// lib/features/profile/screens/participation_history_screen.dart
+// lib/features/profile/screens/participation_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,8 +6,8 @@ import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
@@ -68,46 +68,8 @@ class _ParticipationHistoryScreenState
     final profileProvider = context.watch<ProfileProvider>();
     final participationHistory = profileProvider.participationHistory;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'My Programs', // Updated with TextStyle
-    style: TextStyle(
-      color: Colors.white, // Changed to white
-      fontSize: 18, // Added from Members app bar
-      fontWeight: FontWeight.w600, // Added from Members app bar
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(
-      Icons.arrow_back,
-      color: Colors.white, // Changed to white
-    ),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-),
+    return GradientSheetScaffold(
+      title: 'My Programs',
       body: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,

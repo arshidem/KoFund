@@ -12,137 +12,73 @@ class EditContributionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            width: 150,
-            height: 20,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDarkMode ? Colors.white70 : Colors.white,
-          ),
-          onPressed: () {},
-        ),
-        automaticallyImplyLeading: true,
-        actions: [
-          Shimmer.fromColors(
-            baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-            highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-            child: Container(
-              margin: const EdgeInsets.only(right: 16),
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-          
-              
-              // Skeleton Form Fields
-              Column(
-                children: [
-                  // Skeleton Program Dropdown
-                  _buildSkeletonDropdown(label: 'Program'),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Skeleton Amount Field
-                  _buildSkeletonInputField(label: 'Amount', icon: Icons.currency_rupee),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Skeleton Payment Method Dropdown
-                  _buildSkeletonDropdown(label: 'Payment Method'),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Skeleton Month Dropdown (if applicable)
-                  Shimmer.fromColors(
-                    baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                    highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-                    child: Container(
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Skeleton Edit Reason Field
-                  _buildSkeletonInputField(
-                    label: 'Reason for Edit', 
-                    icon: Icons.edit_note,
-                    isMultiLine: true,
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Skeleton Changes Summary Card
-              _buildSkeletonChangesSummary(),
-              
-              const SizedBox(height: 24),
-              
-              // Skeleton Save Button
-              Shimmer.fromColors(
-                baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-                child: Container(
-                  height: 52,
+    final baseColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[600]! : Colors.grey[100]!;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Shimmer.fromColors(
+        baseColor: baseColor,
+        highlightColor: highlightColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Skeleton Form Fields
+            Column(
+              children: [
+                // Skeleton Program Dropdown
+                _buildSkeletonDropdown(label: 'Program'),
+                
+                const SizedBox(height: 16),
+                
+                // Skeleton Amount Field
+                _buildSkeletonInputField(label: 'Amount', icon: Icons.currency_rupee),
+                
+                const SizedBox(height: 16),
+                
+                // Skeleton Payment Method Dropdown
+                _buildSkeletonDropdown(label: 'Payment Method'),
+                
+                const SizedBox(height: 16),
+                
+                // Skeleton Month Dropdown (if applicable)
+                Container(
+                  height: 54,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                
+                const SizedBox(height: 16),
+                
+                // Skeleton Edit Reason Field
+                _buildSkeletonInputField(
+                  label: 'Reason for Edit', 
+                  icon: Icons.edit_note,
+                  isMultiLine: true,
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Skeleton Changes Summary Card
+            _buildSkeletonChangesSummary(),
+            
+            const SizedBox(height: 24),
+            
+            // Skeleton Save Button
+            Container(
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
               ),
-              
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

@@ -6,7 +6,8 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/constants/community_types.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/community/providers/community_provider.dart';
-import 'package:kofund/features/community/models/community_model.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class EditCommunityScreen extends StatefulWidget {
   const EditCommunityScreen({super.key});
@@ -112,7 +113,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
             : null,
         settings: _settings,
       );
-
+      if (!mounted) return;
       if (success) {
         SnackbarHelper.showSuccess(context, 'Community updated successfully!');
         Navigator.pop(context);
@@ -120,7 +121,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
         SnackbarHelper.showError(context, communityProvider.error ?? 'Failed to update community');
       }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Error: $e');
+      if (mounted) SnackbarHelper.showError(context, 'Error: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -182,15 +183,15 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
               size: 20,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -249,7 +250,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
               backgroundColor: AppColors.surface(context),
               selectedColor: AppColors.primary(context),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 side: BorderSide(
                   color: isSelected 
                       ? AppColors.primary(context) 
@@ -300,46 +301,29 @@ Widget build(BuildContext context) {
   final communityProvider = context.watch<CommunityProvider>();
   final community = communityProvider.currentCommunity;
 
-  return Scaffold(
-    extendBodyBehindAppBar: false,
-appBar: AppBar(
-      toolbarHeight: 80, // Set your desired height here (default is 56)
-
-  title: const Text(
-    'Edit Community',
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      color: Colors.white,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20), // Changed to 20 to match reference
-        bottomRight: Radius.circular(20), // Changed to 20 to match reference
-      ),
-    ),
-  ),
-),
-    body: SafeArea(
-      child: Stack(
+  return GradientSheetScaffold(
+    title: 'Edit Community',
+    actions: [
+      if (_isLoading)
+        const Padding(
+          padding: EdgeInsets.only(right: 16),
+          child: SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          ),
+        )
+      else
+        IconButton(
+          onPressed: _updateCommunity,
+          icon: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+          tooltip: 'Save Changes',
+        ),
+    ],
+    body: Stack(
         children: [
           // SCROLLABLE CONTENT
           SingleChildScrollView(
@@ -438,7 +422,7 @@ appBar: AppBar(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surface(context),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         border: Border.all(color: AppColors.border(context)),
                       ),
                       child: Column(
@@ -465,75 +449,14 @@ appBar: AppBar(
                       ),
                     ),
                     
-                    // Extra padding to avoid button overlap
-                    const SizedBox(height: 100), // Increased padding for floating button
+                    const SizedBox(height: 48), 
                   ],
                 ],
               ),
             ),
           ),
-          
-          // FLOATING BOTTOM BUTTON
-          Positioned(
-            bottom: 20,
-            left: 16,
-            right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-              
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56, // Slightly taller for better appearance
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _updateCommunity,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 15, // No elevation since we're using custom shadow
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.save, size: 22),
-                            SizedBox(width: 10),
-                            Text(
-                              'Save Changes',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
-    ),
-  );
-}}
+    );
+  }
+}

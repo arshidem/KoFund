@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class ManageDevelopersScreen extends StatefulWidget {
   const ManageDevelopersScreen({super.key});
@@ -332,48 +333,19 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-     appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Manage Developers', // Added TextStyle here
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+    return GradientSheetScaffold(
+      title: 'Manage Developers',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
-    ),
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.refresh),
-      onPressed: _loadDevelopers,
-      tooltip: 'Refresh',
-    ),
-  ],
-),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.white),
+          onPressed: _loadDevelopers,
+          tooltip: 'Refresh',
+        ),
+      ],
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

@@ -1,15 +1,17 @@
-﻿// lib/features/programs/screens/edit_program_screen.dart
+// lib/features/programs/screens/edit_program_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
 import 'package:kofund/core/services/network_service.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class EditProgramScreen extends StatefulWidget {
   final ProgramModel program;
@@ -289,19 +291,19 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
             filled: true,
             fillColor: AppColors.surface(context),
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 6,
+              horizontal: 20,
               vertical: maxLines == 1 ? 18 : 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -541,7 +543,7 @@ if (!_isMonthlyPaymentProgram) {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             border: Border.all(
               color: _programTypeError != null 
                   ? Colors.red.withValues(alpha: 0.8) 
@@ -686,7 +688,7 @@ Widget _buildDatePickerField() {
     children: [
       Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           color: AppColors.surface(context),
           border: Border.all(
             color: currentDateError != null 
@@ -776,7 +778,9 @@ Future<void> _selectDate(BuildContext context) async {
             onPrimary: Colors.white,
             onSurface: AppColors.textPrimary(context),
           ),
-          dialogBackgroundColor: AppColors.card(context),
+          dialogTheme: DialogThemeData(
+            backgroundColor: AppColors.card(context),
+          ),
         ),
         child: child!,
       );
@@ -944,86 +948,48 @@ final updatedProgram = widget.program.copyWith(
     final bool isProgramCompleted = widget.program.isCompleted;
     final bool isProgramCancelled = widget.program.isCancelled;
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'Edit Program',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        automaticallyImplyLeading: true,
-        actions: [
-          StatefulBuilder(
-            builder: (context, setState) {
-              return _isLoading
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
+    return GradientSheetScaffold(
+      title: 'Edit Program',
+      actions: [
+        StatefulBuilder(
+          builder: (context, setState) {
+            return _isLoading
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: StreamBuilder<bool>(
-                        stream: NetworkService().onConnectionChanged,
-                        initialData: true,
-                        builder: (context, snapshot) {
-                          final bool isOnline = snapshot.data ?? true;
-                          
-                          return IconButton(
-                            icon: isOnline
-                                ? const Icon(Icons.check, color: Colors.white, size: 26)
-                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
-                            tooltip: isOnline 
-                                ? (widget.program.isCompleted || widget.program.isCancelled)
-                                    ? 'Reactivate Program'
-                                    : 'Save Changes'
-                                : 'Offline - No Connection',
-                            onPressed: isOnline ? _updateProgram : null,
-                          );
-                        },
-                      ),
-                    );
-            },
-          ),
-        ],
-      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: true,
+                      builder: (context, snapshot) {
+                        final bool isOnline = snapshot.data ?? true;
+
+                        return IconButton(
+                          icon: isOnline
+                              ? const Icon(Icons.check, color: Colors.white, size: 26)
+                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                          tooltip: isOnline
+                              ? (widget.program.isCompleted || widget.program.isCancelled)
+                                  ? 'Reactivate Program'
+                                  : 'Save Changes'
+                              : 'Offline - No Connection',
+                          onPressed: isOnline ? _updateProgram : null,
+                        );
+                      },
+                    ),
+                  );
+          },
+        ),
+      ],
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),

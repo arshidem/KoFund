@@ -1,4 +1,4 @@
-﻿// lib/features/developer/screens/issue_reports_screen.dart
+// lib/features/developer/screens/issue_reports_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +8,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/issues/models/issue_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class IssueReportsScreen extends StatefulWidget {
   const IssueReportsScreen({super.key});
@@ -380,48 +381,19 @@ color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: Bo
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-     appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Issue Reports', // Added TextStyle here
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+    return GradientSheetScaffold(
+      title: 'Issue Reports',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
-    ),
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.filter_list),
-      onPressed: () => _showFilterDialog(context),
-      tooltip: 'Filter & Sort',
-    ),
-  ],
-),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.filter_list, color: Colors.white),
+          onPressed: () => _showFilterDialog(context),
+          tooltip: 'Filter & Sort',
+        ),
+      ],
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('issues')

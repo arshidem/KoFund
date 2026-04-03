@@ -1,6 +1,9 @@
 // lib/features/auth/screens/forgot_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import '../providers/app_auth_provider.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -13,6 +16,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  String? _emailError;
   bool _emailSent = false;
 
   @override
@@ -22,28 +26,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _submitResetRequest() async {
+    setState(() {
+      _emailError = null;
+    });
+    
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AppAuthProvider>();
+    authProvider.clearError();
+    
     final success = await authProvider.sendPasswordResetEmail(_emailController.text.trim());
 
     if (success && mounted) {
       setState(() {
         _emailSent = true;
       });
+    } else if (mounted && authProvider.error != null) {
+      final error = authProvider.error!;
+      if (error.toLowerCase().contains('email') || error.toLowerCase().contains('user')) {
+        setState(() {
+          _emailError = error;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Password'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+    return GradientSheetScaffold(
+      title: 'Reset Password',
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -84,10 +95,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Email Address',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.email_outlined),
+              filled: true,
+              fillColor: AppColors.surface(context),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 2,
+                ),
+              ),
+              errorText: _emailError,
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -112,6 +144,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onPressed: authProvider.isLoading ? null : _submitResetRequest,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                    ),
                   ),
                   child: authProvider.isLoading
                       ? const SizedBox(
@@ -131,25 +166,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             },
           ),
           
-          // Error Message
-          Consumer<AppAuthProvider>(
-            builder: (context, authProvider, child) {
-              if (authProvider.error != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Text(
-                    authProvider.error!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+          // Note: Top-level error display removed as errors are now routed to the email field
           
           // Back to Login
           const Spacer(),
@@ -242,6 +259,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: _submitResetRequest,
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                ),
                 child: const Text('Resend Reset Link'),
               ),
             ),

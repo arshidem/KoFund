@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/notification_navigator.dart';
 
 class NotificationDetailScreen extends StatelessWidget {
@@ -20,13 +21,12 @@ class NotificationDetailScreen extends StatelessWidget {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notification Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
+    return GradientSheetScaffold(
+      title: 'Notification Details',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.white),
+          onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -51,7 +51,6 @@ class NotificationDetailScreen extends StatelessWidget {
             },
           ),
         ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

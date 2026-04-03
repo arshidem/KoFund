@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -365,50 +365,44 @@ Future<bool> leaveCommunity() async {
   }
 }
 
-  Future<void> loadUserStatistics({String? userId}) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
+  Future<void> loadUserStatistics({String? userId, String? communityId}) async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
       debugPrint('❌ No Firebase user');
       return;
     }
 
-    // Get user data from Firestore to get communityId
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
+    String? targetCommunityId = communityId;
     
-    if (!userDoc.exists || userDoc.data() == null) {
-      debugPrint('❌ No user data in Firestore');
-      return;
+    // Only fetch user doc if communityId is NOT provided
+    if (targetCommunityId == null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+      
+      if (!userDoc.exists || userDoc.data() == null) {
+        debugPrint('❌ No user data in Firestore');
+        return;
+      }
+      targetCommunityId = userDoc.data()!['communityId'];
     }
     
-    final userData = userDoc.data()!;
-    final communityId = userData['communityId'];
-    
-    if (communityId == null) {
+    if (targetCommunityId == null) {
       debugPrint('❌ User has no community');
       return;
     }
 
-    // Use the userId parameter if provided, otherwise use current user
-    final targetUserId = userId ?? currentUser.uid;
-    
-    debugPrint('👤 Loading statistics for target user: $targetUserId');
-    debugPrint('👤 Current Firebase user: ${currentUser.uid}');
-    debugPrint('👤 Are they the same? ${targetUserId == currentUser.uid}');
+    final targetUserId = userId ?? firebaseUser.uid;
     
     _setLoading(true);
     try {
       await Future.wait([
-        _programProvider.loadMyParticipations(targetUserId, communityId),
-        _contributionProvider.loadUserContributions(targetUserId, communityId),
+        _programProvider.loadMyParticipations(targetUserId, targetCommunityId),
+        _contributionProvider.loadUserContributions(targetUserId, targetCommunityId),
       ]);
       
       _loadedUserId = targetUserId;
-      debugPrint('✅ Statistics loaded for user: $targetUserId');
-      debugPrint('✅ _loadedUserId set to: $_loadedUserId');
-      
     } catch (e) {
       _setError('Failed to load user statistics: $e');
     } finally {
@@ -444,49 +438,45 @@ Future<bool> leaveCommunity() async {
   }
 
   // Get user contribution history
-  Future<void> getUserContributionHistory({String? userId}) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
+  Future<void> getUserContributionHistory({String? userId, String? communityId}) async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
       debugPrint('❌ No Firebase user');
       return;
     }
 
-    // Get user data from Firestore to get communityId
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-    
-    if (!userDoc.exists || userDoc.data() == null) {
-      debugPrint('❌ No user data in Firestore');
-      return;
+    String? targetCommunityId = communityId;
+
+    // Only fetch user doc if communityId is NOT provided
+    if (targetCommunityId == null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+      
+      if (!userDoc.exists || userDoc.data() == null) {
+        debugPrint('❌ No user data in Firestore');
+        return;
+      }
+      targetCommunityId = userDoc.data()!['communityId'];
     }
     
-    final userData = userDoc.data()!;
-    final communityId = userData['communityId'];
-    
-    if (communityId == null) {
+    if (targetCommunityId == null) {
       debugPrint('❌ User has no community');
       return;
     }
 
-    // Use the userId parameter if provided, otherwise use current user
-    final targetUserId = userId ?? currentUser.uid;
+    final targetUserId = userId ?? firebaseUser.uid;
     
-    debugPrint('💰 Getting contribution history for: $targetUserId');
-    debugPrint('💰 Current Firebase user: ${currentUser.uid}');
-
     _setLoading(true);
     try {
       final result = await _contributionProvider.getUserPaymentHistoryWithDetails(
         targetUserId,
-        communityId,
+        targetCommunityId,
       );
       
       _contributionHistory = result;
       _loadedUserId = targetUserId;
-      debugPrint('✅ Loaded ${_contributionHistory.length} contributions');
-      debugPrint('✅ _loadedUserId set to: $_loadedUserId');
     } catch (e) {
       _setError('Failed to load contribution history: $e');
     } finally {
@@ -617,6 +607,39 @@ Future<bool> leaveCommunity() async {
     }
 
     return totalDays / (sortedContributions.length - 1);
+  }
+
+  // ✅ CONSOLIDATED LOADING METHOD FOR BETTER PERFORMANCE
+  Future<void> loadFullProfileData({
+    required String userId,
+    required String communityId,
+    bool forceRefresh = false,
+  }) async {
+    if (_isLoading && !forceRefresh) return;
+    
+    _setLoading(true);
+    _error = null;
+    
+    try {
+      // Run ALL requests in parallel with shared context
+      await Future.wait([
+        // Statistics (loads data into other providers)
+        _programProvider.loadMyParticipations(userId, communityId),
+        _contributionProvider.loadUserContributions(userId, communityId),
+        
+        // Histories (loads data into this provider's local cache)
+        _participantService.getUserParticipationHistoryWithContributions(userId).then((res) => _participationHistory = res),
+        _contributionProvider.getUserPaymentHistoryWithDetails(userId, communityId).then((res) => _contributionHistory = res),
+      ]);
+      
+      _loadedUserId = userId;
+      debugPrint('🚀 ProfileProvider: Full parallel load complete');
+    } catch (e) {
+      debugPrint('❌ ProfileProvider: Error during full load: $e');
+      _error = 'Failed to load profile data: $e';
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // ✅ REFRESH ALL USER DATA

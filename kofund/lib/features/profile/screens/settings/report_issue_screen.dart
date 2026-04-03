@@ -1,9 +1,9 @@
-﻿// lib/features/issues/screens/report_issue_screen.dart
+// lib/features/issues/screens/report_issue_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/issues/providers/issue_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/issues/screens/my_issues_screen.dart'; // Add this import
 // Add this import at the top
@@ -166,47 +166,8 @@ Future<void> _submitIssue() async {
   Widget build(BuildContext context) {
     final issueProvider = Provider.of<IssueProvider>(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-          toolbarHeight: 80, // Set your desired height here (default is 56)
-
-        title: const Text(
-          'Report Issue',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness:
-              Theme.of(context).brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+    return GradientSheetScaffold(
+      title: 'Report Issue',
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12),

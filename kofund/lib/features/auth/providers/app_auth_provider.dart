@@ -38,13 +38,15 @@ class AppAuthProvider with ChangeNotifier {
   final FirebaseAuthService _authService;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   UserModel? _user;
-bool get isDeveloper {
-  if (_user == null) return false;
-  // Make sure isDeveloper field exists and is not null
-  return _user!.isDeveloper ?? false;
-}bool _isLoading = false;
+  bool get isDeveloper {
+    if (_user == null) return false;
+    // Make sure isDeveloper field exists and is not null
+    return _user!.isDeveloper ?? false;
+  }
+
+  bool _isLoading = false;
   String? _error;
   StreamSubscription<User?>? _userSubscription;
   bool _isOfflineMode = false;
@@ -52,19 +54,20 @@ bool get isDeveloper {
   AppAuthProvider(this._authService) {
     _initializeWithOfflineSupport();
   }
- // ⭐ ADD THIS: Public method to wait for initialization
+  // ⭐ ADD THIS: Public method to wait for initialization
   bool get isInitialized => _user != null || _isOfflineMode;
-  
+
   // ⭐ ADD THIS: Wait for initialization to complete
   Future<void> waitForInitialization() async {
     if (isInitialized) return;
-    
+
     // Wait up to 3 seconds for initialization
     final startTime = DateTime.now();
-    while (!isInitialized && DateTime.now().difference(startTime).inSeconds < 3) {
+    while (!isInitialized &&
+        DateTime.now().difference(startTime).inSeconds < 3) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
-    
+
     if (!isInitialized) {
       debugPrint("⚠️ Auth provider initialization timed out");
       // Try offline data one more time
@@ -76,6 +79,7 @@ bool get isDeveloper {
   Future<void> checkOfflineData() async {
     await _tryUseOfflineData();
   }
+
   // Public getters
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
@@ -101,40 +105,64 @@ bool get isDeveloper {
     notifyListeners();
   }
 
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  bool get hasPasswordProvider {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return false;
+    return currentUser.providerData.any(
+      (userInfo) => userInfo.providerId == 'password',
+    );
+  }
+
+  bool get isGoogleOnlyUser {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return false;
+    final hasGoogle = currentUser.providerData.any(
+      (userInfo) => userInfo.providerId == 'google.com',
+    );
+    return hasGoogle && !hasPasswordProvider;
+  }
+
   // Initialize with offline support
   Future<void> _initializeWithOfflineSupport() async {
     _setLoading(true);
-    
+
     try {
       // 1. Try online auth first
-      final User? onlineUser = await _authService.getCurrentUserWithOfflineSupport();
-      
+      final User? onlineUser = await _authService
+          .getCurrentUserWithOfflineSupport();
+
       if (onlineUser != null) {
         debugPrint("✅ Online authentication successful");
         await _setupUserListener(onlineUser.uid);
         return;
       }
-      
+
       // 2. If no online user, check offline saved data
       debugPrint("📡 No online user, checking offline saved data...");
       final offlineUserData = await _getOfflineUserData();
-      
+
       if (offlineUserData != null) {
         _isOfflineMode = true;
         _user = UserModel.fromMap(offlineUserData);
-        debugPrint("📱 Offline mode: Using saved user data for ${_user?.displayName}");
+        debugPrint(
+          "📱 Offline mode: Using saved user data for ${_user?.displayName}",
+        );
         _setLoading(false);
         notifyListeners();
         return;
       }
-      
+
       // 3. No user at all (first time or signed out)
       debugPrint("📭 No saved user data found");
       _user = null;
-      
     } catch (e) {
       debugPrint("⚠️ Auth initialization error: $e");
-      
+
       // Last resort: try offline data
       try {
         final offlineUserData = await _getOfflineUserData();
@@ -149,7 +177,7 @@ bool get isDeveloper {
     } finally {
       _setLoading(false);
     }
-    
+
     // 4. Setup auth state listener for future changes
     _setupAuthStateListener();
   }
@@ -159,29 +187,30 @@ bool get isDeveloper {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userDataJson = prefs.getString('kofund_user_data');
-      
+
       if (userDataJson == null) {
         return null;
       }
-      
+
       final userData = json.decode(userDataJson) as Map<String, dynamic>;
       final lastSaved = userData['lastSaved'] as int?;
-      
+
       // Check if data is too old (more than 7 days)
       if (lastSaved != null) {
         final savedDate = DateTime.fromMillisecondsSinceEpoch(lastSaved);
         final daysSinceSaved = DateTime.now().difference(savedDate).inDays;
-        
+
         if (daysSinceSaved > 7) {
-          debugPrint("🗑️ Offline data too old ($daysSinceSaved days), clearing");
+          debugPrint(
+            "🗑️ Offline data too old ($daysSinceSaved days), clearing",
+          );
           await prefs.remove('kofund_user_data');
           return null;
         }
       }
-      
+
       debugPrint("📱 Found offline user data");
       return userData;
-      
     } catch (e) {
       debugPrint("❌ Error reading offline user data: $e");
       return null;
@@ -206,32 +235,37 @@ bool get isDeveloper {
   // Setup auth state listener
   void _setupAuthStateListener() {
     _userSubscription?.cancel();
-    
-    _userSubscription = _auth.authStateChanges().listen((User? firebaseUser) async {
-      if (firebaseUser != null) {
-        debugPrint("🔄 Auth state changed: User online - ${firebaseUser.email}");
-        _isOfflineMode = false; // We're online now
-        
-        await _setupUserListener(firebaseUser.uid);
-        
-        // Save user data locally when we get it
-        final userData = await _authService.getUserData(firebaseUser.uid);
-        if (userData != null) {
-          await _saveUserDataLocally(userData);
+
+    _userSubscription = _auth.authStateChanges().listen(
+      (User? firebaseUser) async {
+        if (firebaseUser != null) {
+          debugPrint(
+            "🔄 Auth state changed: User online - ${firebaseUser.email}",
+          );
+          _isOfflineMode = false; // We're online now
+
+          await _setupUserListener(firebaseUser.uid);
+
+          // Save user data locally when we get it
+          final userData = await _authService.getUserData(firebaseUser.uid);
+          if (userData != null) {
+            await _saveUserDataLocally(userData);
+          }
+        } else {
+          debugPrint("🔄 Auth state changed: User signed out online");
+          // Don't clear local data immediately - keep for offline
+          _isOfflineMode = true; // Switch to offline mode
+          notifyListeners();
         }
-      } else {
-        debugPrint("🔄 Auth state changed: User signed out online");
-        // Don't clear local data immediately - keep for offline
-        _isOfflineMode = true; // Switch to offline mode
-        notifyListeners();
-      }
-    }, onError: (error) {
-      debugPrint("⚠️ Auth state listener error: $error");
-      // On error, try to use offline data
-      if (_user == null) {
-        _tryUseOfflineData();
-      }
-    });
+      },
+      onError: (error) {
+        debugPrint("⚠️ Auth state listener error: $error");
+        // On error, try to use offline data
+        if (_user == null) {
+          _tryUseOfflineData();
+        }
+      },
+    );
   }
 
   // Try to use offline data
@@ -252,24 +286,31 @@ bool get isDeveloper {
   // Setup user listener
   Future<void> _setupUserListener(String uid) async {
     try {
-      _firestore.collection('users').doc(uid).snapshots().listen((doc) async {
-        if (doc.exists) {
-          final userData = doc.data()!;
-          _user = UserModel.fromMap(userData);
-          _isOfflineMode = false; // We have fresh data
-          
-          // Save locally for offline use
-          await _saveUserDataLocally(userData);
-          
-          notifyListeners();
-        }
-      }, onError: (error) {
-        debugPrint("⚠️ User listener error: $error");
-        // On error, check if we have offline data
-        if (_user == null) {
-          _tryUseOfflineData();
-        }
-      });
+      _firestore
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .listen(
+            (doc) async {
+              if (doc.exists) {
+                final userData = doc.data()!;
+                _user = UserModel.fromMap(userData);
+                _isOfflineMode = false; // We have fresh data
+
+                // Save locally for offline use
+                await _saveUserDataLocally(userData);
+
+                notifyListeners();
+              }
+            },
+            onError: (error) {
+              debugPrint("⚠️ User listener error: $error");
+              // On error, check if we have offline data
+              if (_user == null) {
+                _tryUseOfflineData();
+              }
+            },
+          );
     } catch (e) {
       debugPrint('❌ Error setting up user listener: $e');
       _tryUseOfflineData();
@@ -281,16 +322,44 @@ bool get isDeveloper {
     return _user != null || _isOfflineMode;
   }
 
+  // ⭐ ADD THIS: Update user's phone number
+  Future<bool> updateUserPhoneNumber(String phoneNumber) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return false;
+
+    try {
+      _setLoading(true);
+      await _firestore.collection('users').doc(currentUser.uid).update({
+        'phoneNumber': phoneNumber,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update local user object
+      if (_user != null) {
+        _user = _user!.copyWith(phoneNumber: phoneNumber);
+        await _saveUserDataLocally(_user!.toMap());
+        notifyListeners();
+      }
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError('Failed to update phone number: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<void> saveFcmTokenForCurrentUser() async {
     try {
       final current = FirebaseAuth.instance.currentUser;
       if (current == null) return;
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;
-      await FirebaseFirestore.instance.collection('users').doc(current.uid).set({
-        'fcmToken': token,
-        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('users').doc(current.uid).set(
+        {'fcmToken': token, 'fcmTokenUpdatedAt': FieldValue.serverTimestamp()},
+        SetOptions(merge: true),
+      );
       debugPrint('✅ FCM token saved for ${current.uid}');
     } catch (e) {
       debugPrint('⚠️ Failed saving FCM token: $e');
@@ -337,15 +406,15 @@ bool get isDeveloper {
 
         // Send email verification
         await user.sendEmailVerification();
-        
+
         debugPrint('✅ Verification email sent to: $email');
-        
+
         // ✅ REGISTER FCM TOKEN AFTER SIGNUP
         await _registerFCMTokenAfterLogin(user.uid);
-        
+
         // Keep user signed in so they can access verification screen
         // The user will remain signed in but won't be able to access main app until verified
-        
+
         // Get the updated user data
         final userData = await _authService.getUserData(user.uid);
         if (userData != null) {
@@ -356,7 +425,7 @@ bool get isDeveloper {
         notifyListeners();
         return true;
       }
-      
+
       _setLoading(false);
       return false;
     } catch (e) {
@@ -370,7 +439,8 @@ bool get isDeveloper {
   void handleUnverifiedUser() {
     // This will be called when an unverified user tries to login
     // Keep them signed in but show verification screen
-    _error = 'Please verify your email before logging in. Check your inbox for the verification link.';
+    _error =
+        'Please verify your email before logging in. Check your inbox for the verification link.';
     notifyListeners();
   }
 
@@ -392,10 +462,11 @@ bool get isDeveloper {
         'role': 'member',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        
+
         // ✅ ADD THESE FOR NOTIFICATIONS:
         'fcmTokens': [], // Will be populated when token is registered
-        'notificationCommunities': [], // Will be updated when user joins a community
+        'notificationCommunities':
+            [], // Will be updated when user joins a community
         'notificationSettings': {
           'enabled': true,
           'announcements': true,
@@ -414,34 +485,28 @@ bool get isDeveloper {
   }
 
   // ✅ UPDATED: Improved login method with FCM token registration
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> signIn({required String email, required String password}) async {
     try {
       _setLoading(true);
       _error = null;
 
-      final user = await _authService.signIn(
-        email: email,
-        password: password,
-      );
+      final user = await _authService.signIn(email: email, password: password);
 
       if (user != null) {
         // Check verification
         await user.reload();
         final currentUser = _auth.currentUser;
-        
+
         if (currentUser != null && !currentUser.emailVerified) {
           _setError('Please verify your email before accessing the app.');
-          
+
           // Still save user data for verification screen
           final userData = await _authService.getUserData(user.uid);
           if (userData != null) {
             _user = UserModel.fromMap(userData);
             await _saveUserDataLocally(userData);
           }
-          
+
           _setLoading(false);
           notifyListeners();
           return false;
@@ -456,7 +521,7 @@ bool get isDeveloper {
 
         // ✅ REGISTER FCM TOKEN FOR NOTIFICATIONS
         await _registerFCMTokenAfterLogin(user.uid);
-        
+
         _isOfflineMode = false; // We're online now
         _setLoading(false);
         notifyListeners();
@@ -471,112 +536,116 @@ bool get isDeveloper {
       return false;
     }
   }
-  
-  
-Future<String?> getFCMTokenWithRetry() async {
-  const maxAttempts = 3;
-  
-  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      debugPrint("🔄 [FCM] Attempt $attempt to get token...");
-      
-      // ⭐ ADD DELAY BEFORE FIRST ATTEMPT
-      if (attempt == 1) {
-        await Future.delayed(const Duration(seconds: 1));
-      }
-      
-      final token = await FirebaseMessaging.instance.getToken();
-      
-      if (token != null && token.isNotEmpty) {
-        debugPrint("✅ [FCM] Got token: ${token.substring(0, 20)}...");
-        return token;
-      }
-      
-      if (attempt < maxAttempts) {
-        await Future.delayed(Duration(seconds: attempt * 2)); // ⭐ Increase delay
-      }
-    } catch (e) {
-      debugPrint("❌ [FCM] Attempt $attempt failed: $e");
-      
-      // ⭐ ADD SPECIFIC ERROR HANDLING
-      if (e.toString().contains('SERVICE_NOT_AVAILABLE')) {
-        debugPrint("⚠️ FCM service unavailable - increasing delay...");
-        await Future.delayed(Duration(seconds: attempt * 3));
-      } else if (attempt < maxAttempts) {
-        await Future.delayed(Duration(seconds: attempt * 2));
+
+  Future<String?> getFCMTokenWithRetry() async {
+    const maxAttempts = 3;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        debugPrint("🔄 [FCM] Attempt $attempt to get token...");
+
+        // ⭐ ADD DELAY BEFORE FIRST ATTEMPT
+        if (attempt == 1) {
+          await Future.delayed(const Duration(seconds: 1));
+        }
+
+        final token = await FirebaseMessaging.instance.getToken();
+
+        if (token != null && token.isNotEmpty) {
+          debugPrint("✅ [FCM] Got token: ${token.substring(0, 20)}...");
+          return token;
+        }
+
+        if (attempt < maxAttempts) {
+          await Future.delayed(
+            Duration(seconds: attempt * 2),
+          ); // ⭐ Increase delay
+        }
+      } catch (e) {
+        debugPrint("❌ [FCM] Attempt $attempt failed: $e");
+
+        // ⭐ ADD SPECIFIC ERROR HANDLING
+        if (e.toString().contains('SERVICE_NOT_AVAILABLE')) {
+          debugPrint("⚠️ FCM service unavailable - increasing delay...");
+          await Future.delayed(Duration(seconds: attempt * 3));
+        } else if (attempt < maxAttempts) {
+          await Future.delayed(Duration(seconds: attempt * 2));
+        }
       }
     }
-  }
-  
-  debugPrint("⚠️ [FCM DEBUG] Could not get FCM token after retries");
-  return null;
-}
-Future<void> _registerFCMTokenAfterLogin(String userId) async {
-  try {
-    debugPrint('📱 [FCM DEBUG] Starting FCM token registration for user: $userId');
-    
-    // ⭐ MAKE THIS ASYNC - DON'T WAIT FOR COMPLETION
-    Future.microtask(() async {
-      try {
-        final token = await getFCMTokenWithRetry();
-        
-        if (token == null) {
-          debugPrint('⚠️ [FCM DEBUG] Could not get FCM token - will retry later');
-          // ⭐ SCHEDULE RETRY LATER
-          Future.delayed(const Duration(seconds: 10), () async {
-            try {
-              final retryToken = await FirebaseMessaging.instance.getToken();
-              if (retryToken != null) {
-                await _saveFCMTokenToFirestore(userId, retryToken);
-              }
-            } catch (e) {
-              debugPrint('⚠️ [FCM] Scheduled retry failed: $e');
-            }
-          });
-          return;
-        }
-        
-        await _saveFCMTokenToFirestore(userId, token);
-        
-      } catch (e) {
-        debugPrint('❌ [FCM DEBUG] Async token registration error: $e');
-      }
-    });
-    
-    debugPrint('✅ [FCM DEBUG] FCM token registration attempt started (async)');
-    
-  } catch (e) {
-    debugPrint('❌ [FCM DEBUG] Error in FCM token registration setup: $e');
-  }
-}
 
-// ⭐ EXTRACT TOKEN SAVING LOGIC
-Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
-  try {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .update({
-          'fcmTokens': FieldValue.arrayUnion([token]),
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-    
-    debugPrint('✅ [FCM DEBUG] FCM token saved to Firestore for user $userId');
-  } catch (e) {
-    debugPrint('⚠️ [FCM DEBUG] Error saving token to Firestore: $e');
+    debugPrint("⚠️ [FCM DEBUG] Could not get FCM token after retries");
+    return null;
   }
-}
+
+  Future<void> _registerFCMTokenAfterLogin(String userId) async {
+    try {
+      debugPrint(
+        '📱 [FCM DEBUG] Starting FCM token registration for user: $userId',
+      );
+
+      // ⭐ MAKE THIS ASYNC - DON'T WAIT FOR COMPLETION
+      Future.microtask(() async {
+        try {
+          final token = await getFCMTokenWithRetry();
+
+          if (token == null) {
+            debugPrint(
+              '⚠️ [FCM DEBUG] Could not get FCM token - will retry later',
+            );
+            // ⭐ SCHEDULE RETRY LATER
+            Future.delayed(const Duration(seconds: 10), () async {
+              try {
+                final retryToken = await FirebaseMessaging.instance.getToken();
+                if (retryToken != null) {
+                  await _saveFCMTokenToFirestore(userId, retryToken);
+                }
+              } catch (e) {
+                debugPrint('⚠️ [FCM] Scheduled retry failed: $e');
+              }
+            });
+            return;
+          }
+
+          await _saveFCMTokenToFirestore(userId, token);
+        } catch (e) {
+          debugPrint('❌ [FCM DEBUG] Async token registration error: $e');
+        }
+      });
+
+      debugPrint(
+        '✅ [FCM DEBUG] FCM token registration attempt started (async)',
+      );
+    } catch (e) {
+      debugPrint('❌ [FCM DEBUG] Error in FCM token registration setup: $e');
+    }
+  }
+
+  // ⭐ EXTRACT TOKEN SAVING LOGIC
+  Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'fcmTokens': FieldValue.arrayUnion([token]),
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('✅ [FCM DEBUG] FCM token saved to Firestore for user $userId');
+    } catch (e) {
+      debugPrint('⚠️ [FCM DEBUG] Error saving token to Firestore: $e');
+    }
+  }
+
   // ✅ Check if current user needs verification
   bool get needsEmailVerification {
-    return _user != null && 
-           _auth.currentUser != null && 
-           !_auth.currentUser!.emailVerified;
+    return _user != null &&
+        _auth.currentUser != null &&
+        !_auth.currentUser!.emailVerified;
   }
 
   bool get shouldNavigateToVerification {
-    return _auth.currentUser != null && 
-           !_auth.currentUser!.emailVerified &&
-           _user != null;
+    return _auth.currentUser != null &&
+        !_auth.currentUser!.emailVerified &&
+        _user != null;
   }
 
   // ✅ Get current user email for verification screen
@@ -609,91 +678,91 @@ Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
     await _auth.currentUser?.reload();
   }
 
-Future<bool> signInWithGoogle() async {
-  _setLoading(true);
-  _error = null;
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _error = null;
 
-  try {
-    final user = await _authService.signInWithGoogle();
+    try {
+      final user = await _authService.signInWithGoogle();
 
-    if (user != null) {
-      // For Google accounts, they are typically verified, but let's check if user exists in Firestore
-      final userData = await _authService.getUserData(user.uid);
-      
-      if (userData != null) {
-        _user = UserModel.fromMap(userData);
+      if (user != null) {
+        // For Google accounts, they are typically verified, but let's check if user exists in Firestore
+        final userData = await _authService.getUserData(user.uid);
+
+        if (userData != null) {
+          _user = UserModel.fromMap(userData);
+        } else {
+          // Create user profile for Google sign-in user
+          debugPrint('Creating user profile for Google sign-in user...');
+          final userModel = UserModel(
+            uid: user.uid,
+            email: user.email ?? '',
+            displayName: user.displayName ?? 'Google User',
+            phoneNumber: user.phoneNumber ?? '',
+            role: 'member',
+            isApproved: false,
+            createdAt: Timestamp.now(),
+          );
+
+          await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .set(userModel.toMap());
+
+          _user = userModel;
+        }
+
+        // ✅ CRITICAL: Save user data locally for offline support
+        final updatedUserData = await _authService.getUserData(user.uid);
+        if (updatedUserData != null) {
+          await _saveUserDataLocally(updatedUserData);
+        }
+
+        // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS
+        await _registerFCMTokenAfterLogin(user.uid);
+
+        _isOfflineMode = false; // We're online now
+        _setLoading(false);
+        notifyListeners();
+        return true;
       } else {
-        // Create user profile for Google sign-in user
-        debugPrint('Creating user profile for Google sign-in user...');
-        final userModel = UserModel(
-          uid: user.uid,
-          email: user.email ?? '',
-          displayName: user.displayName ?? 'Google User',
-          phoneNumber: user.phoneNumber ?? '',
-          role: 'member',
-          isApproved: false,
-          createdAt: Timestamp.now(),
-        );
-        
-        await _firestore.collection('users')
-            .doc(user.uid)
-            .set(userModel.toMap());
-        
-        _user = userModel;
+        // ⭐ CHANGED: Don't set error for cancellation - just return false
+        _setLoading(false);
+        return false;
       }
-      
-      // ✅ CRITICAL: Save user data locally for offline support
-      final updatedUserData = await _authService.getUserData(user.uid);
-      if (updatedUserData != null) {
-        await _saveUserDataLocally(updatedUserData);
+    } catch (e) {
+      debugPrint('❌ GOOGLE SIGN-IN ERROR: $e');
+
+      // ⭐ CHANGED: Only set error if it's NOT a cancellation
+      if (!_isGoogleCancellationError(e)) {
+        _setError(_getAuthErrorMessage(e));
+      } else {
+        debugPrint('🔄 Google sign-in was cancelled by user');
       }
-      
-      // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS
-      await _registerFCMTokenAfterLogin(user.uid);
-      
-      _isOfflineMode = false; // We're online now
-      _setLoading(false);
-      notifyListeners();
-      return true;
-    } else {
-      // ⭐ CHANGED: Don't set error for cancellation - just return false
+
       _setLoading(false);
       return false;
     }
-  } catch (e) {
-    debugPrint('❌ GOOGLE SIGN-IN ERROR: $e');
-    
-    // ⭐ CHANGED: Only set error if it's NOT a cancellation
-    if (!_isGoogleCancellationError(e)) {
-      _setError(_getAuthErrorMessage(e));
-    } else {
-      debugPrint('🔄 Google sign-in was cancelled by user');
+  }
+
+  // ⭐ ADD THIS HELPER METHOD to detect Google cancellation errors
+  bool _isGoogleCancellationError(dynamic error) {
+    if (error is FirebaseAuthException) {
+      return error.code == 'popup-closed-by-user' ||
+          error.code == 'cancelled-popup-request' ||
+          error.code == 'access_denied' ||
+          (error.message?.toLowerCase().contains('cancelled') == true) ||
+          (error.message?.toLowerCase().contains('canceled') == true);
     }
-    
-    _setLoading(false);
-    return false;
-  }
-}
 
-// ⭐ ADD THIS HELPER METHOD to detect Google cancellation errors
-bool _isGoogleCancellationError(dynamic error) {
-  if (error is FirebaseAuthException) {
-    return error.code == 'popup-closed-by-user' ||
-           error.code == 'cancelled-popup-request' ||
-           error.code == 'access_denied' ||
-           (error.message?.toLowerCase().contains('cancelled') == true) ||
-           (error.message?.toLowerCase().contains('canceled') == true);
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('cancelled') ||
+        errorString.contains('canceled') ||
+        errorString.contains('popup closed') ||
+        errorString.contains('popup-closed') ||
+        errorString.contains('signin was cancelled') ||
+        errorString.contains('sign-in was cancelled');
   }
-  
-  final errorString = error.toString().toLowerCase();
-  return errorString.contains('cancelled') ||
-         errorString.contains('canceled') ||
-         errorString.contains('popup closed') ||
-         errorString.contains('popup-closed') ||
-         errorString.contains('signin was cancelled') ||
-         errorString.contains('sign-in was cancelled');
-}
-
 
   // Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
@@ -702,7 +771,7 @@ bool _isGoogleCancellationError(dynamic error) {
       _error = null;
 
       await _authService.sendPasswordResetEmail(email);
-      
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -763,63 +832,63 @@ bool _isGoogleCancellationError(dynamic error) {
     }
   }
 
-String _getAuthErrorMessage(dynamic error) {
-  if (error is FirebaseAuthException) {
-    // ⭐ CHECK FOR CANCELLATION FIRST
-    if (error.code == 'popup-closed-by-user' ||
-        error.code == 'cancelled-popup-request' ||
-        error.message?.toLowerCase().contains('cancelled') == true ||
-        error.message?.toLowerCase().contains('canceled') == true) {
-      return ''; // Return empty string for cancellation
+  String _getAuthErrorMessage(dynamic error) {
+    if (error is FirebaseAuthException) {
+      // ⭐ CHECK FOR CANCELLATION FIRST
+      if (error.code == 'popup-closed-by-user' ||
+          error.code == 'cancelled-popup-request' ||
+          error.message?.toLowerCase().contains('cancelled') == true ||
+          error.message?.toLowerCase().contains('canceled') == true) {
+        return ''; // Return empty string for cancellation
+      }
+
+      switch (error.code) {
+        case 'email-already-in-use':
+          return 'This email is already registered. Please sign in instead.';
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'weak-password':
+          return 'Password is too weak. Use at least 6 characters.';
+        case 'user-not-found':
+          return 'No account found with this email.';
+        case 'wrong-password':
+          return 'Incorrect password. Please try again.';
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with the same email but different sign-in method.';
+        case 'invalid-credential':
+          return 'The authentication credential is invalid.';
+        case 'operation-not-allowed':
+          return 'This sign-in method is not enabled. Please contact support.';
+        case 'user-disabled':
+          return 'This account has been disabled. Please contact support.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+        case 'network-request-failed':
+          return 'Network error. Please check your internet connection.';
+        case 'popup-closed-by-user':
+          return ''; // Empty for cancellation
+        case 'popup-blocked':
+          return 'Popup was blocked. Please allow popups for this site.';
+        default:
+          return 'Authentication failed: ${error.message}';
+      }
     }
-    
-    switch (error.code) {
-      case 'email-already-in-use':
-        return 'This email is already registered. Please sign in instead.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'account-exists-with-different-credential':
-        return 'An account already exists with the same email but different sign-in method.';
-      case 'invalid-credential':
-        return 'The authentication credential is invalid.';
-      case 'operation-not-allowed':
-        return 'This sign-in method is not enabled. Please contact support.';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your internet connection.';
-      case 'popup-closed-by-user':
-        return ''; // Empty for cancellation
-      case 'popup-blocked':
-        return 'Popup was blocked. Please allow popups for this site.';
-      default:
-        return 'Authentication failed: ${error.message}';
+
+    if (error.toString().contains('signInWithPopup') ||
+        error.toString().contains('signInWithRedirect')) {
+      if (kIsWeb) {
+        return 'Google sign-in popup was blocked. Please allow popups for this site.';
+      } else {
+        return 'Google sign-in is not available on this platform.';
+      }
     }
-  }
-  
-  if (error.toString().contains('signInWithPopup') || 
-      error.toString().contains('signInWithRedirect')) {
-    if (kIsWeb) {
-      return 'Google sign-in popup was blocked. Please allow popups for this site.';
-    } else {
-      return 'Google sign-in is not available on this platform.';
+
+    if (error.toString().contains('platform')) {
+      return 'This feature is not supported on your device.';
     }
+
+    return 'An error occurred: $error';
   }
-  
-  if (error.toString().contains('platform')) {
-    return 'This feature is not supported on your device.';
-  }
-  
-  return 'An error occurred: $error';
-}
 
   Future<void> signOut(BuildContext context) async {
     try {
@@ -840,17 +909,22 @@ String _getAuthErrorMessage(dynamic error) {
       // 2. Clear Notification & Token Services (MOST IMPORTANT)
       // ------------------------------------------------------------------
       try {
-        final tokenService = Provider.of<FCMTokenService>(context, listen: false);
-        final storageService = Provider.of<NotificationStorageService>(context, listen: false);
-        
+        final tokenService = Provider.of<FCMTokenService>(
+          context,
+          listen: false,
+        );
+        final storageService = Provider.of<NotificationStorageService>(
+          context,
+          listen: false,
+        );
+
         // ⭐ CRITICAL: Clean up FCM token for current user
         await tokenService.handleUserLogout();
         debugPrint("🔕 FCM token detached from user");
-        
+
         // Cleanup notification storage
         await storageService.cleanupForUserLogout();
         debugPrint("🗑️ Notification storage cleaned up");
-        
       } catch (e) {
         debugPrint("⚠️ Notification service cleanup error: $e");
       }
@@ -868,7 +942,7 @@ String _getAuthErrorMessage(dynamic error) {
       // ------------------------------------------------------------------
       // 4. Firebase Auth Sign Out
       // ------------------------------------------------------------------
-      await _authService.signOut();  
+      await _authService.signOut();
       debugPrint("🟦 FirebaseAuth: Signed out");
 
       // ------------------------------------------------------------------
@@ -884,15 +958,15 @@ String _getAuthErrorMessage(dynamic error) {
       // ------------------------------------------------------------------
       try {
         final prefs = await SharedPreferences.getInstance();
-        
+
         // Clear auth data
         await prefs.remove('kofund_user_data');
         await prefs.remove('cached_community');
         await prefs.remove('last_profile_sync');
-        
+
         // ⭐ CRITICAL: Clear notification user ID to prevent cross-user notifications
         await prefs.remove('current_notification_user_id');
-        
+
         // Clear notification settings
         await prefs.remove('notification_muted_communities');
         await prefs.remove('user_communities');
@@ -902,7 +976,7 @@ String _getAuthErrorMessage(dynamic error) {
         await prefs.remove('notification_contribution');
         await prefs.remove('notification_expense');
         await prefs.remove('notifications_enabled');
-        
+
         debugPrint("🗑 SharedPreferences cleared");
       } catch (e) {
         debugPrint("⚠️ Error clearing SharedPreferences: $e");
@@ -913,7 +987,6 @@ String _getAuthErrorMessage(dynamic error) {
       // ------------------------------------------------------------------
       debugPrint('✅ AppAuthProvider: Sign-out completed successfully');
       notifyListeners();
-
     } catch (e, stack) {
       debugPrint('❌ Sign-out error: $e');
       debugPrint(stack.toString());
@@ -1044,19 +1117,16 @@ String _getAuthErrorMessage(dynamic error) {
     }
   }
 
-    Future<void> makeDeveloper(String userId, bool isDeveloper) async {
+  Future<void> makeDeveloper(String userId, bool isDeveloper) async {
     if (!this.isDeveloper) {
       throw Exception('Only developers can modify developer status');
     }
-    
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .update({
-          'isDeveloper': isDeveloper,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-    
+
+    await FirebaseFirestore.instance.collection('users').doc(userId).update({
+      'isDeveloper': isDeveloper,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     // Refresh current user if modifying self
     if (userId == _user?.uid) {
       await refreshUserData();

@@ -1,11 +1,11 @@
 // 📁 lib/features/programs/screens/add_participant_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
 import 'dart:ui';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/participants/models/participant_model.dart';
@@ -13,6 +13,7 @@ import '../../../features/participants/providers/participant_provider.dart';
 import '../../programs/models/program_model.dart';
 import '../../../features/members/providers/member_provider.dart';
 import 'package:kofund/core/skeleton/add_participants_skeleton.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class AddParticipantScreen extends StatefulWidget {
   final ProgramModel program;
@@ -397,7 +398,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
               foregroundColor: AppColors.error(context),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             ),
@@ -583,7 +584,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                     foregroundColor: AppColors.success(context),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
@@ -617,7 +618,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                     foregroundColor: AppColors.success(context),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
@@ -820,40 +821,11 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'Add Participants',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(70),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: _buildModernSearchBar(),
-          ),
-        ),
+    return GradientSheetScaffold(
+      title: 'Add Participants',
+      belowHeader: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: _buildModernSearchBar(),
       ),
       body: _isLoading
           ? _buildLoadingState()

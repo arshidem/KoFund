@@ -1,6 +1,7 @@
-﻿// lib/features/profile/screens/settings/contact_support_screen.dart
+// lib/features/profile/screens/settings/contact_support_screen.dart
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -297,50 +298,8 @@ color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.
 }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-          toolbarHeight: 80, // Set your desired height here (default is 56)
-
-        title: Text(
-          'Contact Support',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness:
-              Theme.of(context).brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+    return GradientSheetScaffold(
+      title: 'Contact Support',
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12),

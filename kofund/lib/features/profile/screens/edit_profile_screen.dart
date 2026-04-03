@@ -1,9 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
@@ -103,54 +105,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-     appBar: AppBar(
-        toolbarHeight: 80, // Set your desired height here (default is 56)
-
-  title: Text(
-    'Edit Profile',
-    style: TextStyle(color: Colors.white), // White text
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: Icon(
-      Icons.arrow_back,
-      color: Colors.white, // White back icon
-    ),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white, // This sets all icons to white
-  elevation: 0,
-  systemOverlayStyle: const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-  actions: [
-    if (profileProvider.isLoading)
-      Container(
-        margin: const EdgeInsets.only(right: 16),
-        child: const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white, // White loading indicator
+    return GradientSheetScaffold(
+      title: 'Edit Profile',
+      actions: [
+        if (profileProvider.isLoading)
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
           ),
-        ),
-      ),
-  ],
-),
+      ],
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -212,22 +182,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             hintText: 'Enter your display name',
             prefixIcon: const Icon(Icons.person),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: const BorderSide(color: Colors.red),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
             filled: true,
@@ -275,14 +245,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             labelText: 'Email Address',
             prefixIcon: const Icon(Icons.email),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             filled: true,
@@ -305,22 +275,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             hintText: 'Enter your phone number',
             prefixIcon: const Icon(Icons.phone),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: const BorderSide(color: Colors.red),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
             filled: true,

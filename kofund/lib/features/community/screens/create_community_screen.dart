@@ -5,6 +5,7 @@ import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/community_types.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/widgets/gradient_sheet_scaffold.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
@@ -273,7 +274,7 @@ Widget _buildCommunityTypeDropdown() {
       // ⭐ NO LABEL - Just the dropdown with hint
       Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           border: Border.all(
             color: _typeError != null 
                 ? Colors.red.withValues(alpha: 0.8) 
@@ -398,45 +399,8 @@ Widget _buildCommunityTypeDropdown() {
 }
 @override
 Widget build(BuildContext context) {
-  return Scaffold(
-   appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Create Community',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness:
-        Theme.of(context).brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-),
+  return GradientSheetScaffold(
+    title: 'Create Community',
     body: SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -562,7 +526,7 @@ _buildInputField(
                       // Info Card
 Container(
   decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(24),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
 
     // ✅ Same soft gradient pattern
     gradient: LinearGradient(
@@ -661,7 +625,7 @@ FutureBuilder<bool>(
                       AppColors.primary(context).withValues(alpha: 0.5),
                   disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                 ),
                 child: _isLoading
@@ -766,7 +730,7 @@ FutureBuilder<bool>(
         vertical: 14,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
       ),
     ),
   ),

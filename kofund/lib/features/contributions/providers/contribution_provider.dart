@@ -1,4 +1,4 @@
-﻿// lib/features/contributions/providers/contribution_provider.dart
+// lib/features/contributions/providers/contribution_provider.dart
 import 'package:flutter/material.dart';
 import '../../../core/services/contribution_service.dart';
 import '../../../core/services/deleted_contribution_service.dart';
@@ -37,6 +37,12 @@ class ContributionProvider with ChangeNotifier {
   double get totalContributions => _totalContributions;
   Map<String, dynamic> get paymentStats => _paymentStats;
   List<Map<String, dynamic>> get topContributors => _topContributors;
+
+  // ✅ ADDED: Refresh method for compatibility
+  Future<void> refresh() async {
+    debugPrint('🔄 ContributionProvider: Refreshing...');
+    notifyListeners();
+  }
 
   // -------------------------------
   // 🔹 CRUD Operations
@@ -854,4 +860,3 @@ Future<List<ContributionModel>> getMonthlyContributionsForProgram(
 }
 
 }
-

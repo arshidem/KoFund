@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/polls/models/poll_model.dart';
@@ -6,8 +6,11 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'dart:async';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:flutter/services.dart';
 
 class CreatePollScreen extends StatefulWidget {
   final String communityId;
@@ -367,29 +370,31 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     final isDarkMode = themeProvider.isDarkMode;
     final shouldShowAllowVoteChange = _shouldShowAllowVoteChangeForType(_selectedType);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit Poll' : 'Create New Poll'),
-        actions: [
-          if (!_isLoading)
-            IconButton(
-              onPressed: _submitPoll,
-              icon: const Icon(Icons.check),
-            ),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+    return GradientSheetScaffold(
+      title: widget.isEditing ? 'Edit Poll' : 'Create New Poll',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        if (!_isLoading)
+          IconButton(
+            onPressed: _submitPoll,
+            icon: const Icon(Icons.check, color: Colors.white),
+          ),
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -558,10 +563,19 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           decoration: InputDecoration(
             labelText: 'Poll Title *',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             filled: true,
             fillColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             counterText: '${_titleController.text.length}/100',
           ),
           maxLength: 100,
@@ -581,10 +595,19 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           decoration: InputDecoration(
             labelText: 'Description (Optional)',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
             filled: true,
             fillColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             counterText: '${_descriptionController.text.length}/500',
           ),
           maxLength: 500,
@@ -645,26 +668,27 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         if (!_isCommunityWide) ...[
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               border: Border.all(
                 color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
               ),
             ),
-            child: DropdownButton<String>(
-              value: _selectedProgramId,
-              hint: const Text('Select a program'),
-              isExpanded: true,
-              underline: const SizedBox(),
-              items: _programs.map((program) {
-                return DropdownMenuItem<String>(
-                  value: program.programId,
-                  child: Text(program.title),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _selectedProgramId = value),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedProgramId,
+                hint: const Text('Select a program'),
+                isExpanded: true,
+                items: _programs.map((program) {
+                  return DropdownMenuItem<String>(
+                    value: program.programId,
+                    child: Text(program.title),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedProgramId = value),
+              ),
             ),
           ),
         ],
@@ -688,10 +712,19 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                     decoration: InputDecoration(
                       labelText: 'Option ${index + 1} *',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.primary(context), width: 2),
                       ),
                       filled: true,
                       fillColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       suffixIcon: _optionControllers.length > 2
                           ? IconButton(
                               icon: const Icon(Icons.remove_circle, color: Colors.red),

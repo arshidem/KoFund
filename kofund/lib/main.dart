@@ -12,6 +12,7 @@ import 'core/constants/app_dimensions.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_links/app_links.dart';    
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🧩 Services
 import 'core/services/firebase_auth_service.dart';
@@ -80,6 +81,9 @@ String? extractWebInviteCode() {
 // 🚀 MAIN() - FIXED VERSION
 // =============================
 void main() async {
+  // ⭐ Enable clean (path-based) URLs on the web
+  usePathUrlStrategy();
+  
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
@@ -826,7 +830,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
           ),
         ),
@@ -836,7 +840,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             side: const BorderSide(color: AppColors.lightPrimary),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
           ),
         ),
@@ -919,7 +923,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
           ),
         ),
@@ -929,7 +933,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             side: const BorderSide(color: AppColors.darkPrimary),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
           ),
         ),

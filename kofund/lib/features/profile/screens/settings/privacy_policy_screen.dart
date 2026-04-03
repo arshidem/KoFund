@@ -1,7 +1,8 @@
-﻿// lib/features/profile/screens/settings/privacy_policy_screen.dart
+// lib/features/profile/screens/settings/privacy_policy_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kofund/core/utils/app_info.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -79,39 +80,8 @@ Future<void> _loadAppInfo() async {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: Text(
-          'Privacy Policy',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-      ),
+    return GradientSheetScaffold(
+      title: 'Privacy Policy',
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12),

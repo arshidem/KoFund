@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/gradient_sheet_scaffold.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
+import '../../../core/constants/app_dimensions.dart';
 import 'create_community_screen.dart';
 
 class JoinCommunityScreen extends StatefulWidget {
@@ -242,129 +244,84 @@ Future<void> _joinCommunity() async {
     bool isRequired = false,
     String? Function(String?)? validator,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-            ),
-            children: isRequired
-                ? [
-                    TextSpan(
-                      text: ' *',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ]
-                : [],
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLength: maxLength,
-          inputFormatters: [
-            LengthLimitingTextInputFormatter(maxLength),
-          ],
-          validator: validator,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 16,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
-              ),
-            ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 20,
-              bottom: 20,
-            ),
-            counterText: '',
-          ),
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: [
+        LengthLimitingTextInputFormatter(maxLength),
       ],
+      validator: validator,
+      textCapitalization: TextCapitalization.characters,
+      style: TextStyle(
+        color: AppColors.textPrimary(context),
+        fontSize: 14,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: AppColors.textSecondary(context),
+          fontSize: 14,
+        ),
+        floatingLabelStyle: TextStyle(
+          color: AppColors.primary(context),
+          fontWeight: FontWeight.w600,
+        ),
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: AppColors.textSecondary(context).withValues(alpha: 0.5),
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(
+          icon,
+          color: AppColors.primary(context),
+          size: 20,
+        ),
+        filled: true,
+        fillColor: AppColors.surface(context),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderSide: BorderSide(
+            color: AppColors.primary(context),
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        counterText: '',
+      ),
+      onChanged: (_) => setState(() {}),
     );
   }
 
 @override
 Widget build(BuildContext context) {
-  return Scaffold(
- appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Join Community',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
+  return GradientSheetScaffold(
+    title: 'Join Community',
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.white),
+      onPressed: () {
+        Navigator.pushReplacementNamed(context, RouteNames.login);
+      },
     ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () {
-      Navigator.pushReplacementNamed(context, RouteNames.login);
-    },
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness:
-        Theme.of(context).brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-),
     body: SafeArea(
       // ... rest of the body code remains the same
       child: Padding(
@@ -379,29 +336,23 @@ Widget build(BuildContext context) {
                   children: [
                     // Logo with rounded background
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 90,
+                      height: 90,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary(context).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
-                          child: Image.asset(
-                            'assets/logos/KoFund.png', // Same logo path
-                            height: 70,
-                            width: 70,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
+                      child: Image.asset(
+                        'assets/logos/KoFund.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -576,10 +527,10 @@ Widget build(BuildContext context) {
                             backgroundColor: AppColors.primary(context),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
+                            elevation: 8,
+                            shadowColor: AppColors.primary(context).withValues(alpha: 0.4),
                           ),
                           child: _autoJoining
                               ? const SizedBox(
@@ -593,13 +544,14 @@ Widget build(BuildContext context) {
                               : const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.group_add, size: 20),
-                                    SizedBox(width: 8),
+                                    Icon(Icons.group_add_rounded, size: 20),
+                                    SizedBox(width: 12),
                                     Text(
                                       'Join Community',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
                                       ),
                                     ),
                                   ],
@@ -655,13 +607,14 @@ Widget build(BuildContext context) {
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
                               color: AppColors.primary(context),
+                              width: 1.5,
                             ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
-                              vertical: 14,
+                              vertical: 16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
                           ),
                         ),

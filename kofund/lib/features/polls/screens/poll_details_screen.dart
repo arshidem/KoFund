@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
@@ -8,6 +8,8 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:flutter/services.dart';
 
 class PollDetailsScreen extends StatefulWidget {
   final String pollId;
@@ -400,73 +402,76 @@ void _setupPollSubscription() {
     final authProvider = context.watch<AppAuthProvider>();
     final hasVoted = _poll?.hasUserVoted(authProvider.user?.uid ?? '') ?? false;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Poll Details'),
-        actions: [
-          if (widget.isAdmin && _poll != null && !_isLoading)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _editPoll();
-                } else if (value == 'close' && _poll!.status == PollStatus.active) {
-                  _closePoll();
-                } else if (value == 'reopen' && _poll!.status == PollStatus.closed) {
-                  _reopenPoll();
-                } else if (value == 'delete') {
-                  _deletePoll();
-                }
-              },
-              itemBuilder: (context) => [
-                if (_poll!.status == PollStatus.active)
-                  const PopupMenuItem(
-                    value: 'close',
-                    child: Row(
-                      children: [
-                        Icon(Icons.lock_clock, size: 20),
-                        SizedBox(width: 8),
-                        Text('Close Poll'),
-                      ],
-                    ),
-                  ),
-                if (_poll!.status == PollStatus.closed)
-                  const PopupMenuItem(
-                    value: 'reopen',
-                    child: Row(
-                      children: [
-                        Icon(Icons.lock_open, size: 20),
-                        SizedBox(width: 8),
-                        Text('Reopen Poll'),
-                      ],
-                    ),
-                  ),
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
-                      Text('Edit Poll'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text(
-                        'Delete Poll',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
+    return GradientSheetScaffold(
+      title: 'Poll Details',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
       ),
+      actions: [
+        if (widget.isAdmin && _poll != null && !_isLoading)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editPoll();
+              } else if (value == 'close' && _poll!.status == PollStatus.active) {
+                _closePoll();
+              } else if (value == 'reopen' && _poll!.status == PollStatus.closed) {
+                _reopenPoll();
+              } else if (value == 'delete') {
+                _deletePoll();
+              }
+            },
+            itemBuilder: (context) => [
+              if (_poll!.status == PollStatus.active)
+                const PopupMenuItem(
+                  value: 'close',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_clock, size: 20),
+                      SizedBox(width: 8),
+                      Text('Close Poll'),
+                    ],
+                  ),
+                ),
+              if (_poll!.status == PollStatus.closed)
+                const PopupMenuItem(
+                  value: 'reopen',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_open, size: 20),
+                      SizedBox(width: 8),
+                      Text('Reopen Poll'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 20),
+                    SizedBox(width: 8),
+                    Text('Edit Poll'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete Poll',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+      ],
       body: _isLoading
           ? _buildLoadingState(isDarkMode)
           : _poll == null

@@ -1,6 +1,7 @@
-﻿// lib/features/auth/screens/verification_pending_screen.dart
+// lib/features/auth/screens/verification_pending_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,9 +10,10 @@ import '../../../core/utils/snackbar_helper.dart'; // Consistent with other scre
 import '../../../routing/route_names.dart'; // Use route names
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'splash_screen.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class VerificationPendingScreen extends StatefulWidget {
   final String email;
@@ -303,46 +305,13 @@ Future<void> _checkForPendingInvite() async {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-   appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Verify Your Email',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: _signOut,
-    tooltip: 'Sign Out',
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness:
-        Theme.of(context).brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+    return GradientSheetScaffold(
+      title: 'Verify Your Email',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: _signOut,
+        tooltip: 'Sign Out',
       ),
-    ),
-  ),
-),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -567,7 +536,7 @@ Container(
                             backgroundColor: AppColors.primary(context),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
                             elevation: 0,
                             shadowColor: Colors.transparent,
@@ -608,7 +577,7 @@ Container(
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: AppColors.border(context)),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
                             backgroundColor: AppColors.surface(context),
                           ),

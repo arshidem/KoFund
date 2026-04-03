@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:flutter/services.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -72,101 +72,37 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     final user = authProvider.user;
 
     if (user == null || !_initialized) {
-      return Scaffold(
-        backgroundColor: AppColors.background(context),
-        appBar: AppBar(
-          title: Text(
-            'Privacy Settings',
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.light,
-            statusBarBrightness: Brightness.dark,
-            systemNavigationBarColor: AppColors.background(context),
-            systemNavigationBarIconBrightness:
-                Theme.of(context).brightness == Brightness.dark
-                    ? Brightness.light
-                    : Brightness.dark,
-          ),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-          ),
-        ),
+      return GradientSheetScaffold(
+        title: 'Privacy Settings',
         body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-          toolbarHeight: 80, // Set your desired height here (default is 56)
-
-        title: Text(
-          'Profile Privacy',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+    return GradientSheetScaffold(
+      title: 'Profile Privacy',
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back,
+          color: Colors.white,
         ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: profileProvider.isLoading ? null : () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness:
-              Theme.of(context).brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        actions: [
-          if (profileProvider.isLoading)
-            Container(
-              margin: const EdgeInsets.only(right: 16),
-              child: const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+        onPressed: profileProvider.isLoading ? null : () => Navigator.pop(context),
+      ),
+      actions: [
+        if (profileProvider.isLoading)
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -199,7 +135,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                           ),
                         ),
                         value: _showDetailedProfile,
-                        activeColor: AppColors.primary(context),
+                        activeThumbColor: AppColors.primary(context),
                         onChanged: profileProvider.isLoading ? null : (value) {
                           _updatePrivacySetting(value);
                         },

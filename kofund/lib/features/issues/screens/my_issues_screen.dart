@@ -9,6 +9,8 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 
 class MyIssuesScreen extends StatefulWidget {
   const MyIssuesScreen({super.key});
@@ -420,21 +422,36 @@ String _getTimeAgo(Timestamp timestamp) {
 
   Widget _buildFilterChip(String value) {
     final isSelected = _selectedFilter == value;
-    return FilterChip(
-      label: Text(
-        _filterLabels[value]!,
-        style: TextStyle(
-          color: isSelected ? Colors.white : AppColors.textPrimary(context),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(
+          _filterLabels[value]!,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textPrimary(context),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
+          ),
         ),
+        selected: isSelected,
+        onSelected: (selected) {
+          if (selected) {
+            setState(() => _selectedFilter = value);
+          }
+        },
+        backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        selectedColor: AppColors.primary(context),
+        checkmarkColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isSelected ? Colors.transparent : AppColors.border(context).withValues(alpha: 0.5),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _selectedFilter = value);
-      },
-      backgroundColor: AppColors.card(context),
-      selectedColor: AppColors.primary(context),
-      checkmarkColor: Colors.white,
     );
   }
 
@@ -454,170 +471,243 @@ String _getTimeAgo(Timestamp timestamp) {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'My Reported Issues',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness:
-              Theme.of(context).brightness == Brightness.dark
-                  ? Brightness.light
-                  : Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            _buildSliverAppBar(context, issueProvider),
+          ];
+        },
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            CupertinoSliverRefreshControl(
+              onRefresh: () async => _loadMyIssues(),
             ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadMyIssues(),
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Stats Card
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Card(
-              color: AppColors.card(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+            
+            // Filter Chips Section
+            SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem(
-                      value: issueProvider.myIssues.length.toString(),
-                      label: 'Total',
-                      color: AppColors.primary(context),
-                    ),
-                    _buildStatItem(
-                      value: issueProvider.myIssues.where((i) => i.isPending).length.toString(),
-                      label: 'Pending',
-                      color: Colors.orange,
-                    ),
-                    _buildStatItem(
-                      value: issueProvider.myIssues.where((i) => i.isResolved).length.toString(),
-                      label: 'Resolved',
-                      color: Colors.green,
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 16, 0, 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: ['all', 'pending', 'in-progress', 'resolved', 'closed']
+                        .map((filter) => _buildFilterChip(filter))
+                        .toList(),
+                  ),
                 ),
               ),
             ),
+
+            // Issues List Content
+            _buildIssuesListSliver(issueProvider, filteredIssues),
+            
+            // Bottom Padding
+            const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliverAppBar(BuildContext context, IssueProvider issueProvider) {
+    return SliverAppBar(
+      expandedHeight: 220,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double top = constraints.biggest.height;
+          // Calculate scale factor (0.0 to 1.0)
+          // Expanded is 220, Collapsed is toolbarHeight (around 140 with bottom)
+          final double maxHeight = 220.0;
+          final double currentHeight = top;
+          
+          // Normalized progress: 0.0 at collapsed (~140), 1.0 at expanded (220)
+          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
+          
+          final double fontSize = 18 + (4 * progress); // 18 to 22 scaling
+          
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                ),
+              ),
+              
+              FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
+                centerTitle: true,
+                titlePadding: const EdgeInsets.only(
+                  bottom: 100 + 10, // Adjusted for stats (72) + rounded (28) height
+                ),
+                title: Text(
+                  'My Issues',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.5 - (0.5 * progress),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(72 + 28),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppDimensions.screenPaddingHorizontal),
+              child: _buildStatsRow(issueProvider),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.background(context),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(IssueProvider issueProvider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildCompactStatItem(
+            value: issueProvider.myIssues.length.toString(),
+            label: 'Total',
           ),
-
-          // Filter Chips
-      Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16),
-  child: SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: ['all', 'pending', 'in-progress', 'resolved', 'closed']
-          .map((filter) => Padding(
-                padding: const EdgeInsets.only(right: 8.0), // Add right padding
-                child: _buildFilterChip(filter),
-              ))
-          .toList(),
-    ),
-  ),
-),
-
-          const SizedBox(height: 16),
-
-          // Issues List
-          Expanded(
-            child: issueProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredIssues.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: () => _loadMyIssues(),
-                        child: ListView(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          children: [
-                            ...filteredIssues.map(_buildIssueCard).toList(),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
+          Container(height: 24, width: 1, color: Colors.white24),
+          _buildCompactStatItem(
+            value: issueProvider.myIssues.where((i) => i.isPending).length.toString(),
+            label: 'Pending',
+          ),
+          Container(height: 24, width: 1, color: Colors.white24),
+          _buildCompactStatItem(
+            value: issueProvider.myIssues.where((i) => i.isResolved).length.toString(),
+            label: 'Resolved',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem({
-    required String value,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildCompactStatItem({required String value, required String label}) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 28,
+          style: const TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: color,
+            color: Colors.white,
           ),
         ),
-        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 12,
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.8),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
+  Widget _buildIssuesListSliver(IssueProvider issueProvider, List<IssueModel> filteredIssues) {
+    if (issueProvider.isLoading && issueProvider.myIssues.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: List.generate(5, (index) => _buildSkeletonCard()),
+          ),
+        ),
+      );
+    }
+
+    if (filteredIssues.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEmptyState(),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return _buildIssueCard(filteredIssues[index]);
+          },
+          childCount: filteredIssues.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      height: 100,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+
+
+
   Widget _buildEmptyState() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.only(top: 60),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.inbox,
+            Icons.inbox_outlined,
             size: 80,
             color: Colors.grey[400],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Text(
             'No Issues Found',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: AppColors.textPrimary(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -625,22 +715,13 @@ String _getTimeAgo(Timestamp timestamp) {
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               _selectedFilter == 'all'
-                  ? 'You haven\'t reported any issues yet. Tap the report button below to get started!'
+                  ? 'You haven\'t reported any issues yet.'
                   : 'No ${_filterLabels[_selectedFilter]!.toLowerCase()} issues found.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey[500],
+                color: AppColors.textSecondary(context),
                 fontSize: 14,
               ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Report New Issue'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],

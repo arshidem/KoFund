@@ -11,6 +11,7 @@ import 'package:kofund/features/programs/constants/program_types.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
 import 'package:kofund/core/services/network_service.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class CreateProgramScreen extends StatefulWidget {
   const CreateProgramScreen({super.key});
@@ -244,7 +245,9 @@ void _onParticipantsChanged() {
               onPrimary: Colors.white,
               onSurface: AppColors.textPrimary(context),
             ),
-            dialogBackgroundColor: AppColors.card(context),
+            dialogTheme: DialogThemeData(
+              backgroundColor: AppColors.card(context),
+            ),
           ),
           child: child!,
         );
@@ -322,19 +325,19 @@ void _onParticipantsChanged() {
             filled: true,
             fillColor: AppColors.surface(context),
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 6,
+              horizontal: 20,
               vertical: maxLines == 1 ? 18 : 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -771,83 +774,45 @@ void _onParticipantsChanged() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'Create New Program',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        automaticallyImplyLeading: true,
-        actions: [
-          StatefulBuilder(
-            builder: (context, setState) {
-              return _isLoading
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
+    return GradientSheetScaffold(
+      title: 'Create New Program',
+      actions: [
+        StatefulBuilder(
+          builder: (context, setState) {
+            return _isLoading
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: StreamBuilder<bool>(
-                        stream: NetworkService().onConnectionChanged,
-                        initialData: true,
-                        builder: (context, snapshot) {
-                          final bool isOnline = snapshot.data ?? true;
-                          return IconButton(
-                            icon: isOnline
-                                ? const Icon(Icons.check, color: Colors.white, size: 26)
-                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
-                            tooltip: isOnline 
-                                ? 'Create Program'
-                                : 'Offline - No Connection',
-                            onPressed: isOnline ? _createProgram : null,
-                          );
-                        },
-                      ),
-                    );
-            },
-          ),
-        ],
-      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: true,
+                      builder: (context, snapshot) {
+                        final bool isOnline = snapshot.data ?? true;
+                        return IconButton(
+                          icon: isOnline
+                              ? const Icon(Icons.check, color: Colors.white, size: 26)
+                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                          tooltip: isOnline
+                              ? 'Create Program'
+                              : 'Offline - No Connection',
+                          onPressed: isOnline ? _createProgram : null,
+                        );
+                      },
+                    ),
+                  );
+          },
+        ),
+      ],
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -927,7 +892,7 @@ onChanged: (value) {
     }
   });
 },
-                          activeColor: AppColors.primary(context),
+                          activeThumbColor: AppColors.primary(context),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                       ),

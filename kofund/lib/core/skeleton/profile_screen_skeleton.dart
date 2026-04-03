@@ -112,11 +112,58 @@ class ProfileScreenSkeleton extends StatelessWidget {
   }
 
   Widget _buildStatsSkeleton(bool isDark) {
-    return Row(
+    return Container(
+      height: 120,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Expanded(child: _buildMetricItemSkeleton(isDark)),
+          Container(
+            height: 60,
+            width: 1,
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+          ),
+          Expanded(child: _buildMetricItemSkeleton(isDark)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricItemSkeleton(bool isDark) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(child: _buildStatCardSkeleton(isDark)),
-        const SizedBox(width: 12),
-        Expanded(child: _buildStatCardSkeleton(isDark)),
+        Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: 40,
+          height: 20,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 60,
+          height: 10,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
       ],
     );
   }
@@ -145,7 +192,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
           ),
         ),
         Container(
-          height: 300,
+          height: 280,
           decoration: BoxDecoration(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
             borderRadius: BorderRadius.circular(24),

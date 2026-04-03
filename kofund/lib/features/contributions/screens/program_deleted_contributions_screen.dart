@@ -1,4 +1,4 @@
-﻿// 📁 lib/features/contributions/screens/program_deleted_contributions_screen.dart
+// 📁 lib/features/contributions/screens/program_deleted_contributions_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +7,8 @@ import 'package:flutter/services.dart';
 import '../../../../core/services/deleted_contribution_service.dart';
 import '../models/deleted_contribution_model.dart';
 import '../../../../core/constants/app_colors.dart';
-import 'package:intl/intl.dart'; // Add this import
+import 'package:intl/intl.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class ProgramDeletedContributionsScreen extends StatefulWidget {
   final String programId;
   final String programName;
@@ -900,11 +901,17 @@ String _formatTime(DateTime date) {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: Column(
+    return GradientSheetScaffold(
+      title: 'Deleted Contributions',
+      leading: showBackButton 
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      titleWidget: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               'Deleted Contributions',
@@ -923,42 +930,11 @@ String _formatTime(DateTime date) {
               ),
             ),
           ],
-        ),
-        centerTitle: true,
-        leading: showBackButton 
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
-        automaticallyImplyLeading: showBackButton,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
+      ),
+      belowHeader: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: _buildModernSearchBar(),
           ),
-        ),
-      ),
       body: Stack(
         children: [
           StreamBuilder<List<DeletedContributionModel>>(

@@ -1,5 +1,5 @@
-// App theme setup 
 import 'package:flutter/material.dart';
+import '../core/constants/app_dimensions.dart';
 
 class AppTheme {
   static ThemeData lightTheme() {
@@ -53,7 +53,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
         ),
       ),
@@ -61,7 +61,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
         ),
       ),
@@ -125,7 +125,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
           backgroundColor: Colors.blue.shade800,
         ),
@@ -134,7 +134,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
           side: BorderSide(color: Colors.grey.shade600),
         ),

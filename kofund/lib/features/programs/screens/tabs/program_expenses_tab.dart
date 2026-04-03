@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // Add this import
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../expenses/providers/expense_provider.dart';
 import '../../../expenses/models/expense_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
+import '../../../../core/constants/app_dimensions.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
@@ -46,6 +48,20 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
     'other'
   ];
 
+  final RefreshController _refreshController = RefreshController(initialRefresh: false);
+
+  void _onRefresh() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) {
+        setState(() {});
+      }
+      _refreshController.refreshCompleted();
+    } catch (e) {
+      _refreshController.refreshFailed();
+    }
+  }
+
   // ✅ Check if current user is admin
   bool _isAdmin(BuildContext context) {
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
@@ -74,6 +90,7 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
   @override
   void dispose() {
     _searchController.dispose();
+    _refreshController.dispose();
     super.dispose();
   }
 
@@ -86,60 +103,75 @@ Widget build(BuildContext context) {
   return Stack(
     children: [
       // Change from Column to ListView to make everything scrollable
-      ListView(
-        children: [
-          // Expense Summary (Now scrollable)
-          _buildExpenseSummary(context),
-          
-          const SizedBox(height: 0),
-          
-          // Search and Filter Bar
-          _buildSearchFilterBar(context),
-          
-          const SizedBox(height: 8),
-          
-          // Expenses List - No longer needs Expanded
-          StreamBuilder<List<ExpenseModel>>(
-            stream: Provider.of<ExpenseProvider>(context, listen: false)
-                .streamProgramExpenses(widget.program.programId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary(context),
-                  ),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return _buildErrorState(snapshot.error, context);
-              }
-
-              final expenses = snapshot.data ?? [];
-              final filteredExpenses = _filterExpenses(expenses);
-
-              if (filteredExpenses.isEmpty) {
-                return _buildEmptyState(expenses.isEmpty, isAdmin, context);
-              }
-
-              return Column(
-                children: filteredExpenses.map((expense) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0),
-                    child: _buildExpenseCard(expense, context, isAdmin),
+      SmartRefresher(
+        controller: _refreshController,
+        onRefresh: _onRefresh,
+        enablePullDown: true,
+        header: ClassicHeader(
+          idleText: 'Pull down to refresh',
+          releaseText: 'Release to refresh',
+          refreshingText: 'Refreshing expenses...',
+          completeText: 'Refresh complete',
+          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
+          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
+        ),
+        child: ListView(
+          children: [
+            // Expense Summary (Now scrollable)
+            _buildExpenseSummary(context),
+            
+            const SizedBox(height: 0),
+            
+            // Search and Filter Bar
+            _buildSearchFilterBar(context),
+            
+            const SizedBox(height: 8),
+            
+            // Expenses List - No longer needs Expanded
+            StreamBuilder<List<ExpenseModel>>(
+              stream: Provider.of<ExpenseProvider>(context, listen: false)
+                  .streamProgramExpenses(widget.program.programId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary(context),
+                    ),
                   );
-                }).toList(),
-              );
-            },
-          ),
-          
-          // Not Approved Message (inside ListView)
-          if (currentUser != null && !currentUser.isApproved)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-              child: _buildNotApprovedMessage(context),
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorState(snapshot.error, context);
+                }
+
+                final expenses = snapshot.data ?? [];
+                final filteredExpenses = _filterExpenses(expenses);
+
+                if (filteredExpenses.isEmpty) {
+                  return _buildEmptyState(expenses.isEmpty, isAdmin, context);
+                }
+
+                return Column(
+                  children: filteredExpenses.map((expense) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      child: _buildExpenseCard(expense, context, isAdmin),
+                    );
+                  }).toList(),
+                );
+              },
             ),
-        ],
+            
+            // Not Approved Message (inside ListView)
+            if (currentUser != null && !currentUser.isApproved)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                child: _buildNotApprovedMessage(context),
+              ),
+            
+            const SizedBox(height: 88),
+          ],
+        ),
       ),
 
       // Floating Add Button (stays same)
@@ -2121,19 +2153,19 @@ return AlertDialog(
               ),
               errorText: titleError, // Make sure you add this for inline validation
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 borderSide: BorderSide(
                   color: AppColors.border(context),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 borderSide: BorderSide(
                   color: AppColors.border(context),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 borderSide: BorderSide(
                   color: AppColors.primary(context),
                   width: 2,
@@ -2170,19 +2202,19 @@ return AlertDialog(
                       color: AppColors.textSecondary(context),
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.primary(context),
                         width: 2,
@@ -2224,19 +2256,19 @@ return AlertDialog(
                     ),
                     errorText: amountError,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.primary(context),
                         width: 2,
@@ -2270,19 +2302,19 @@ return AlertDialog(
                       color: AppColors.textSecondary(context),
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.border(context),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       borderSide: BorderSide(
                         color: AppColors.primary(context),
                         width: 2,

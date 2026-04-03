@@ -1,12 +1,14 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/core/services/reminder_service.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class ProgramRemindersScreen extends StatefulWidget {
   final ProgramModel program;
@@ -257,7 +259,20 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               value: _selectedFrequency,
               decoration: InputDecoration(
                 labelText: 'Reminder Frequency',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.surface(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               items: [
                 DropdownMenuItem(value: 'daily', child: Text('Daily')),
@@ -280,7 +295,20 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               decoration: InputDecoration(
                 labelText: 'Days Before Due Date',
                 suffixText: 'days',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.surface(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               onChanged: (value) {
                 // Validate input
@@ -682,47 +710,46 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Reminders - ${_program.title}'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'test') {
-                _sendTestReminder();
-              } else if (value == 'real') {
-                _sendRealReminder();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'test',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications_active, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Send Test Reminder'),
-                  ],
-                ),
+    return GradientSheetScaffold(
+      title: 'Reminders - ${_program.title}',
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'test') {
+              _sendTestReminder();
+            } else if (value == 'real') {
+              _sendRealReminder();
+            }
+          },
+          iconColor: Colors.white,
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'test',
+              child: Row(
+                children: [
+                  Icon(Icons.notifications_active, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('Send Test Reminder'),
+                ],
               ),
-              PopupMenuItem(
-                value: 'real',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('Send Real Reminder'),
-                  ],
-                ),
-              ),
-            ],
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Icon(Icons.more_vert),
             ),
+            PopupMenuItem(
+              value: 'real',
+              child: Row(
+                children: [
+                  Icon(Icons.notifications, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Send Real Reminder'),
+                ],
+              ),
+            ),
+          ],
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.more_vert, color: Colors.white),
           ),
-        ],
-      ),
+        ),
+      ],
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

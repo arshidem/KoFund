@@ -4,6 +4,8 @@ import 'package:kofund/core/skeleton/stats_card_skeleton.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:clipboard/clipboard.dart';
@@ -26,12 +28,17 @@ import 'package:kofund/features/dashboard/widgets/program_carousel_widget.dart';
 import 'package:kofund/features/polls/widgets/poll_dashboard_widget.dart';
 import 'dart:ui';
 import 'package:kofund/core/widgets/glass_action_button.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
-import 'package:kofund/core/services/notification_service.dart';
-import 'package:kofund/features/notifications/providers/notification_provider.dart';
-import 'package:kofund/features/notifications/models/notification_model.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/features/polls/providers/poll_provider.dart';
+import 'package:kofund/core/services/contribution_service.dart';
+import 'package:kofund/core/services/expense_service.dart';
+import 'package:kofund/core/services/user_service.dart';
+import 'package:kofund/core/services/program_service.dart';
+import 'package:kofund/core/services/virtual_user_service.dart';
+import 'package:kofund/core/services/participant_service.dart';
+import 'package:kofund/core/services/community_firestore_service.dart';
+import 'package:kofund/features/community/providers/community_provider.dart';
+import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
+import 'package:kofund/core/skeleton/members_skeleton.dart';
 
 // ADD THESE IMPORTS
 
@@ -63,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? communityId;
   bool _hasLoadedData = false;
   bool _isInitializing = false;
-  final RefreshController _refreshController = RefreshController();
+  bool _isManualRefreshing = false;
   
   // Track previous user/community to detect changes
   String? _previousUserId;
@@ -77,35 +84,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _inviteLoading = false;
   bool _hasShownAdminToast = false;
 
-void _onRefresh() async {
+Future<void> _onRefresh() async {
   debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
+  if (_isManualRefreshing) return;
+
+  setState(() {
+    _isManualRefreshing = true;
+  });
   
   try {
     final user = context.read<AppAuthProvider>().user;
     final cid = user?.communityId;
     
     if (cid != null && cid.isNotEmpty && user != null) {
-      await context.read<DashboardProvider>().refreshDashboard(cid);
+      // Refresh all related providers
+      await Future.wait([
+        context.read<DashboardProvider>().refreshDashboard(cid),
+        context.read<ProgramProvider>().loadCommunityPrograms(cid),
+        context.read<ProgramProvider>().loadMyParticipations(user.uid, cid),
+        context.read<UserProvider>().loadCommunityMembers(cid),
+        _loadInviteInfo(cid),
+      ]);
       if (!mounted) return;
-      await context.read<ProgramProvider>().loadCommunityPrograms(cid);
-      if (!mounted) return;
-      await context.read<ProgramProvider>().loadMyParticipations(user.uid, cid);
       
-      // ✅ RESET PROVIDERS FOR FRESH DATA
-      _resetWidgetProviders(user.uid, cid);
-      
-      // ✅ REFRESH USER PROVIDER FOR PENDING REQUESTS
-      await context.read<UserProvider>().loadCommunityMembers(cid);
-      
-      // 🆕 Refresh invite info
-      await _refreshInviteInfo(cid, user.uid);
+      // Reset MemberProvider separately
+      final memberProvider = context.read<MemberProvider>();
+      memberProvider.clearDataForUserChange();
+      memberProvider.refreshForUser(cid);
     }
-    
-    _refreshController.refreshCompleted();
     debugPrint('✅ DEBUG: Dashboard refresh completed successfully');
   } catch (e) {
-    _refreshController.refreshFailed();
     debugPrint('❌ DEBUG: Dashboard refresh failed: $e');
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isManualRefreshing = false;
+        _hasLoadedData = true;
+      });
+    }
   }
 }
 
@@ -132,7 +148,6 @@ void _resetWidgetProviders(String userId, String communityId) {
 
   @override
   void dispose() {
-    _refreshController.dispose();
     super.dispose();
   }
 
@@ -297,7 +312,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         }
         
         // Check invite permissions
-        await communityProvider.checkInvitePermission(communityId);
+        if (!mounted) return;
         _canInvite = communityProvider.canInvite;
         
         setState(() {});
@@ -339,6 +354,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
   void _showInviteDialog() async {
     final user = context.read<AppAuthProvider>().user;
     final cid = user?.communityId;
+    if (!mounted) return;
     
     if (cid == null || cid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -364,6 +380,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
       if (_inviteCode.isEmpty || _inviteLink.isEmpty) {
         await _loadInviteInfo(cid);
       }
+      
+      if (!mounted) return;
       
       // Get community name from dashboard stats
       final stats = dashboardProvider.getDashboardStats();
@@ -524,271 +542,200 @@ void _initializeWidgetProviders(String userId, String communityId) {
   ],
       child: Consumer<DashboardProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && !_hasLoadedData) {
-            return DashboardSkeleton(isDarkMode: isDarkMode);
-          }
-
-          if (provider.errorMessage.isNotEmpty) {
-            return _buildErrorState(provider, isDarkMode, cid!);
-          }
-
+          final bool isRefreshing = provider.isLoading || _isManualRefreshing;
+          final bool showSkeleton = isRefreshing && !_hasLoadedData;
           final stats = provider.getDashboardStats();
 
           return Scaffold(
-            backgroundColor: AppColors.background(context),
-            body: Stack(
-              children: [
-                Column(
-                  children: [
-                    // 🔒 FIXED APP BAR - SIMPLE STYLE
-                    _buildFixedAppBar(stats, isDarkMode),
+      backgroundColor: AppColors.background(context),
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            _buildDashboardSliverAppBar(stats, isDarkMode),
+          ];
+        },
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            CupertinoSliverRefreshControl(
+              onRefresh: _onRefresh,
+            ),
+            
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: AppDimensions.screenPaddingHorizontal),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: AppDimensions.spaceSmall),
+                  
+                  if (showSkeleton) ...[
+                    StatsCardSkeleton(isDarkMode: isDarkMode),
+                    const SizedBox(height: 24),
+                    ProgramCardSkeleton(isDarkMode: isDarkMode),
+                    const SizedBox(height: 24),
+                    MembersSkeleton(isDarkMode: isDarkMode),
+                  ] else ...[
+                    _buildStatsCard(stats, isDarkMode),
+                    const SizedBox(height: AppDimensions.spaceMedium),
                     
-                    // 🔄 REFRESHABLE AREA STARTS FROM STATS CARD
-                    Expanded(
-                      child: SmartRefresher(
-                        controller: _refreshController,
-                        onRefresh: _onRefresh,
-                        enablePullDown: true,
-                        enablePullUp: false,
-                        physics: const BouncingScrollPhysics(),
-                        header: ClassicHeader(
-                          idleText: 'Pull down to refresh',
-                          releaseText: 'Release to refresh',
-                          refreshingText: 'Refreshing dashboard...',
-                          completeText: 'Refresh complete',
-                          failedText: 'Refresh failed',
-                          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-                          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-                          refreshingIcon: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-                            ),
-                          ),
-                          completeIcon: Icon(Icons.check, color: Colors.green),
-                          failedIcon: Icon(Icons.error, color: Colors.red),
-                        ),
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: AppStyles.screenPadding / 1.5,
-                          children: [
-                            const SizedBox(height: AppDimensions.spaceSmall),
-                            _buildStatsCard(stats, isDarkMode),
-                            const SizedBox(height: AppDimensions.spaceMedium),
-                         
-                            
-                            ProgramCarouselWidget(
-                              // communityId: cid!,
-                              isAdmin: user?.isAdmin ?? false,
-                            ),
-                                                        const SizedBox(height: 16),
-
-                            //    PollDashboardWidget(
-                            //   communityId: cid!,
-                            //   isAdmin: user?.isAdmin ?? false,
-                            // ),
-                            // const SizedBox(height: 24),
-                            if (user?.isAdmin ?? false) ...[
-                              // Removed static widget, now using FAB
-                            ],
-                            MembersWidget(key: ValueKey('members-$userId-$cid')),
-                            const SizedBox(height: 16),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
+                    ProgramCarouselWidget(
+                      isAdmin: user?.isAdmin ?? false,
+                      key: ValueKey('programs-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    MembersWidget(
+                      key: ValueKey('members-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
                     ),
                   ],
-                ),
-                
-                // 🆕 ADD ADMIN APPROVALS FAB
-                if (!_inviteLoading && (user?.isAdmin ?? false))
-                  Consumer<UserProvider>(
-                    builder: (context, userProvider, child) {
-                      final pendingCount = userProvider.pendingMembers.length;
-                      if (pendingCount == 0) return const SizedBox.shrink();
-                      
-                      return Positioned(
-                        bottom: 90, // Positioned above the share button
-                        right: 20,
-                        child: _buildApprovalsFab(context, pendingCount),
-                      );
-                    },
-                  ),
-
-                // 🆕 ADD INVITE FLOATING ACTION BUTTON
-                if (!_inviteLoading)
-                  Positioned(
-                    bottom: 20,
-                    right: 20,
-                    child: FloatingActionButton(
-                      onPressed: _showInviteDialog,
-                      child: const Icon(Icons.share),
-                      tooltip: 'Invite Members',
-                      heroTag: 'invite_members',
-                      backgroundColor: AppColors.primary(context),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                
-                // 🆕 SHOW LOADING INDICATOR WHEN INVITE LOADING
-                if (_inviteLoading)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  ),
-              ],
+                  
+                  const SizedBox(height: 100),
+                ]),
+              ),
+              ),
+            ],
+          ),
+      ),
+      // FABs moved into Stack if needed, but Scaffold has built-in FAB slot
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!_inviteLoading && (user?.isAdmin ?? false))
+             Consumer<UserProvider>(
+               builder: (context, userProvider, child) {
+                 final pendingCount = userProvider.pendingMembers.length;
+                 if (pendingCount == 0) return const SizedBox.shrink();
+                 return Padding(
+                   padding: const EdgeInsets.only(bottom: 16),
+                   child: _buildApprovalsFab(context, pendingCount),
+                 );
+               },
+             ),
+          if (!_inviteLoading)
+            FloatingActionButton(
+              onPressed: _showInviteDialog,
+              child: const Icon(Icons.share),
+              tooltip: 'Invite Members',
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
             ),
-          );
+        ],
+      ),
+    );
         },
       ),
     );
   }
 
-// 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
-// 🔒 FIXED APP BAR – MODERN GRADIENT + GLASS ACTION
-Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
-  final auth = Provider.of<AppAuthProvider>(context, listen: false);
-  final isAdmin = auth.user?.isAdmin ?? false;
-  
-  return Container(
-    height: 150, // ⬅ Reduced to avoid overflow
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-        bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.15),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    child: SafeArea(
-      bottom: false, // ⬅ CRITICAL to fix overflow
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // LEFT CONTENT
-            Expanded(
-              child: Column(
+  Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode) {
+    return SliverAppBar(
+      expandedHeight: 160,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double top = constraints.biggest.height;
+          final double progress = ((top - 84) / (160 - 84)).clamp(0.0, 1.0);
+          final double fontSize = 18 + (6 * progress);
+          
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                ),
+              ),
+              FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
+                centerTitle: true,
+                titlePadding: EdgeInsets.only(bottom: 16 + (40 * progress)),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // CLUB NAME + INLINE EDIT (LIKE HTML SPAN)
                   Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Flexible(
                         child: Text(
                           stats['clubName'] ?? "Your Club Name",
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w900,
                             color: Colors.white,
+                            letterSpacing: -0.5 - (0.5 * progress),
                           ),
                         ),
                       ),
-
-                      if (_isAdmin) ...[
+                      if (_isAdmin && progress > 0.5) ...[
                         const SizedBox(width: 6),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(20),
+                        GestureDetector(
                           onTap: _navigateToEditCommunity,
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppDimensions.spaceExtraSmall),
-                            child: Icon(
-                              Icons.edit_rounded,
-                              size: 18,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 16 * progress,
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],
                     ],
                   ),
-
-                  const SizedBox(height: 0),
-
-                  // MEMBERS COUNT CHIP
-                  Container(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.people_outline,
-                          size: 16,
-                          color: Colors.white70,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          "${stats['membersCount'] ?? 0} Members",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                  if (progress > 0.3)
+                    Opacity(
+                      opacity: (progress - 0.3) / 0.7,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.people_outline,
+                            size: 14,
                             color: Colors.white70,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            "${stats['membersCount'] ?? 0} Members",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ],
+          );
+        },
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(28),
+        child: Container(
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppColors.background(context),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
             ),
-
-            const SizedBox(width: 12),
-
-            // RIGHT ACTION – GLASS NOTIFICATION (COMMENTED OUT)
-            // ClipRRect(
-            //   borderRadius: BorderRadius.circular(30),
-            //   child: BackdropFilter(
-            //     filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            //     child: Container(
-            //       width: 56,
-            //       height: 56,
-            //       decoration: BoxDecoration(
-            //         color: Colors.white.withValues(alpha: 0.18),
-            //         borderRadius: BorderRadius.circular(30),
-            //         border: Border.all(
-            //           color: Colors.white.withValues(alpha: 0.35),
-            //           width: 1.2,
-            //         ),
-            //       ),
-            //       child: const Center(
-            //         child: NotificationBadge(
-            //           iconSize: 22,
-            //           badgeColor: Colors.redAccent,
-            //           textColor: Colors.white,
-            //         ),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-            
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-  // ================================================================
-  // COMMUNITY NOT FOUND
-  // ================================================================
   Widget _buildNoCommunity(bool isDarkMode) {
     return Center(
       child: Text(
@@ -802,45 +749,6 @@ Widget _buildFixedAppBar(Map<String, dynamic> stats, bool isDarkMode) {
       ),
     );
   }
-
-  // ================================================================
-  // ERROR UI
-  // ================================================================
-  Widget _buildErrorState(
-      DashboardProvider provider, bool isDarkMode, String cid) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: isDarkMode ? AppColors.darkError : AppColors.lightError,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            provider.errorMessage,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isDarkMode ? AppColors.darkError : AppColors.lightError,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => provider.refreshDashboard(cid),
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary,
-              foregroundColor: isDarkMode ? Colors.black : Colors.white,
-            ),
-            child: const Text("Retry"),
-          )
-        ],
-      ),
-    );
-  }
-
-  // STATS CARD - GRADIENT STYLE (BELOW APP BAR)
   // ================================================================
   Widget _buildStatsCard(Map<String, dynamic> stats, bool isDarkMode) {
     return Container(

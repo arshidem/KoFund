@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -127,18 +128,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Notification Settings'),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      return const GradientSheetScaffold(
+        title: 'Notification Settings',
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notification Settings'),
-      ),
+    return GradientSheetScaffold(
+      title: 'Notification Settings',
       body: _buildContent(),
     );
   }

@@ -1,6 +1,5 @@
-﻿// lib/features/profile/screens/settings/settings_screen.dart
+// lib/features/profile/screens/settings/settings_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -12,6 +11,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/developer/screens/developer_dashboard_screen.dart';
 import 'package:kofund/features/developer/screens/add_developer_screen.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'dart:ui';
 import 'package:kofund/core/utils/app_info.dart';
@@ -74,281 +75,246 @@ Future<void> _loadAppInfo() async {
     final themeProvider = context.watch<ThemeProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-appBar: AppBar(
-  toolbarHeight: 80, // Set your desired height here (default is 56)
-  title: const Text(
-    'Settings',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  systemOverlayStyle: SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background(context),
-    systemNavigationBarIconBrightness:
-        Theme.of(context).brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Card
- 
-
-            // App Settings Section
-            _buildSectionHeader('App Preferences'),
-            Card(
-              color: AppColors.card(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsSwitch(
-                    context: context,
-                    title: 'Push Notifications',
-                    subtitle: 'Receive program updates and reminders',
-                    value: _notificationsEnabled,
-                    onChanged: (value) => setState(() => _notificationsEnabled = value),
-                    icon: Icons.notifications_active,
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsSwitch(
-                    context: context,
-                    title: 'Dark Mode',
-                    subtitle: 'Switch to dark theme',
-                    value: themeProvider.isDarkMode,
-                    onChanged: (value) => themeProvider.toggleTheme(value),
-                    icon: Icons.dark_mode,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Account Section
-            _buildSectionHeader('Account'),
-            Card(
-              color: AppColors.card(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Change Password',
-                    icon: Icons.lock,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Privacy Settings',
-                    icon: Icons.privacy_tip,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Support Section
-            _buildSectionHeader('Support'),
-            Card(
-              color: AppColors.card(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Help & FAQ',
-                    icon: Icons.help,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Contact Support',
-                    icon: Icons.support_agent,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Report Issue',
-                    icon: Icons.bug_report,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Developer Tools Section
-            Consumer<AppAuthProvider>(
-              builder: (context, auth, child) {
-                if (auth.isDeveloper) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionHeader('Developer Tools'),
-                      Card(
-                        color: AppColors.card(context),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: _buildSettingsItem(
-                          context: context,
-                          title: 'Developer Dashboard',
-                          icon: Icons.developer_mode,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DeveloperDashboardScreen(),
-                            ),
-                          ),
-                          color: Colors.blue,
-                        ),
+    return GradientSheetScaffold(
+      title: 'Settings',
+      body: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-
-            // About Section
-            _buildSectionHeader('About'),
-            Card(
-              color: AppColors.card(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Terms of Service',
-                    icon: Icons.description,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Privacy Policy',
-                    icon: Icons.security,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Community Guidelines',
-                    icon: Icons.groups,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
-                  ),
-                  Divider(height: 1, color: AppColors.border(context)),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'App Version',
-                    icon: Icons.info,
-                    onTap: _showAppInfo,
-                    trailing: Text(
-                      'v$appVersion',
-                      style: TextStyle(color: AppColors.textSecondary(context)),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                  // App Settings Section
+                  _buildSectionHeader('App Preferences'),
+                  Card(
+                    color: AppColors.card(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                      child: Column(
+                        children: [
+                        _buildSettingsSwitch(
+                          context: context,
+                          title: 'Push Notifications',
+                          subtitle: 'Receive program updates and reminders',
+                          value: _notificationsEnabled,
+                          onChanged: (value) => setState(() => _notificationsEnabled = value),
+                          icon: Icons.notifications_active,
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsSwitch(
+                          context: context,
+                          title: 'Dark Mode',
+                          subtitle: 'Switch to dark theme',
+                          value: themeProvider.isDarkMode,
+                          onChanged: (value) => themeProvider.toggleTheme(value),
+                          icon: Icons.dark_mode,
+                        ),
+                      ],
                     ),
                   ),
+
+                  const SizedBox(height: 24),
+
+                  // Account Section
+                  _buildSectionHeader('Account'),
+                  Card(
+                    color: AppColors.card(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Change Password',
+                          icon: Icons.lock,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Privacy Settings',
+                          icon: Icons.privacy_tip,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Support Section
+                  _buildSectionHeader('Support'),
+                  Card(
+                    color: AppColors.card(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Help & FAQ',
+                          icon: Icons.help,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Contact Support',
+                          icon: Icons.support_agent,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Report Issue',
+                          icon: Icons.bug_report,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Developer Tools Section
+                  Consumer<AppAuthProvider>(
+                    builder: (context, auth, child) {
+                      if (auth.isDeveloper) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionHeader('Developer Tools'),
+                            Card(
+                              color: AppColors.card(context),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: _buildSettingsItem(
+                                context: context,
+                                title: 'Developer Dashboard',
+                                icon: Icons.developer_mode,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const DeveloperDashboardScreen(),
+                                  ),
+                                ),
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+
+                  // About Section
+                  _buildSectionHeader('About'),
+                  Card(
+                    color: AppColors.card(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Terms of Service',
+                          icon: Icons.description,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Privacy Policy',
+                          icon: Icons.security,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'Community Guidelines',
+                          icon: Icons.groups,
+                          onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
+                        ),
+                        Divider(height: 1, color: AppColors.border(context)),
+                        _buildSettingsItem(
+                          context: context,
+                          title: 'App Version',
+                          icon: Icons.info,
+                          onTap: _showAppInfo,
+                          trailing: Text(
+                            'v$appVersion',
+                            style: TextStyle(color: AppColors.textSecondary(context)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Danger Zone
+                  _buildSectionHeader('Danger Zone', isDangerZone: true),
+                  Card(
+                    color: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.card(context),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildDangerTile(
+                                context: context,
+                                icon: Icons.exit_to_app,
+                                title: 'Leave Community',
+                                onTap: () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
+                              ),
+                              Divider(height: 1, color: AppColors.border(context)),
+                              _buildDangerTile(
+                                context: context,
+                                icon: Icons.delete_forever,
+                                title: 'Delete Account',
+                                onTap: () => _showDeleteAccountDialog(authProvider),
+                              ),
+                              Divider(height: 1, color: AppColors.border(context)),
+                              _buildDangerTile(
+                                context: context,
+                                icon: Icons.logout,
+                                title: 'Logout',
+                                onTap: () => _showLogoutDialog(authProvider),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
-
-            const SizedBox(height: 24),
-
-            // Danger Zone
-_buildSectionHeader('Danger Zone', isDangerZone: true), // Add isDangerZone parameter
-Card(
-  color: Colors.transparent,
-  elevation: 0,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Column(
-    children: [
-      // Removed the warning banner container
-      
-      // Actions only
-      Container(
-        decoration: BoxDecoration(
-          color: AppColors.card(context),
-          borderRadius: BorderRadius.circular(12), // Changed to all corners
-        ),
-        child: Column(
-          children: [
-            _buildDangerTile(
-              context: context,
-              icon: Icons.exit_to_app,
-              title: 'Leave Community',
-              onTap: () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
-            ),
-            Divider(height: 1, color: AppColors.border(context)),
-            _buildDangerTile(
-              context: context,
-              icon: Icons.delete_forever,
-              title: 'Delete Account',
-              onTap: () => _showDeleteAccountDialog(authProvider),
-            ),
-            Divider(height: 1, color: AppColors.border(context)),
-            _buildDangerTile(
-              context: context,
-              icon: Icons.logout,
-              title: 'Logout',
-              onTap: () => _showLogoutDialog(authProvider),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    ],
-  ),
-),
-
-const SizedBox(height: 32),
-],
-),
-),
-);
+    );
 }
 Widget _buildDangerTile({
   required BuildContext context,
@@ -436,7 +402,7 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
         icon,
         color: AppColors.primary(context),
       ),
-      activeColor: AppColors.primary(context),
+      activeThumbColor: AppColors.primary(context),
     );
   }
 
@@ -787,9 +753,29 @@ void _showPasswordDialog(ProfileProvider profileProvider) {
           TextField(
             controller: passwordController,
             obscureText: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Password',
-              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: AppColors.surface(context),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 2,
+                ),
+              ),
             ),
           ),
         ],
@@ -797,7 +783,10 @@ void _showPasswordDialog(ProfileProvider profileProvider) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

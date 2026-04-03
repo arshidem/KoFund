@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 
@@ -19,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:kofund/core/skeleton/all_program_skeleton.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import '../../participants/models/participant_model.dart';
 import '../../participants/providers/participant_provider.dart';
 enum ProgramStatusFilter {
@@ -215,22 +217,21 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
     
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        edgeOffset: 120,
-        color: AppColors.primary(context),
-        child: CustomScrollView(
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            _buildSliverAppBar(context),
+          ];
+        },
+        body: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           slivers: [
-            _buildSliverAppBar(context),
-            _buildActiveFilterChips(),
-            // Body content with background color
-            _buildBodyContent(programProvider, filteredPrograms),
-            // Fill remaining space with background color to hide teal at the bottom
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Container(color: AppColors.background(context)),
+            CupertinoSliverRefreshControl(
+              onRefresh: () async => _onRefresh(),
             ),
+            _buildActiveFilterChips(),
+            _buildBodyContent(programProvider, filteredPrograms),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
           ],
         ),
       ),
@@ -246,8 +247,18 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
   }
 
   Widget _buildSliverAppBar(BuildContext context) {
+    // Search row: 52, Padding bottom: 12 => 64 base height
+    // Plus bottom rounded container: 24
+    const double totalBottomHeight = 64.0 + 24.0;
+    const double toolbarHeight = 80.0;
+
+    // Dynamic collapsed/expanded calculation
+    final double collapsedHeight = toolbarHeight + totalBottomHeight;
+    final double expandedHeight = collapsedHeight + 52.0;
+
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: expandedHeight,
+      toolbarHeight: toolbarHeight,
       floating: false,
       pinned: true,
       stretch: true,
@@ -259,17 +270,13 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
-          // Calculate scale factor (0.0 to 1.0)
-          // Expanded is 220, Collapsed is toolbarHeight (56) + bottomHeight (84) = 140
-          final double minHeight = MediaQuery.of(context).padding.top + kToolbarHeight;
-          final double maxHeight = 220.0;
           final double currentHeight = top;
           
-          // Normalized progress: 0.0 at collapsed (140), 1.0 at expanded (220)
-          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
+          // Normalized progress: 0.0 at collapsed, 1.0 at expanded
+          final double progress = ((currentHeight - collapsedHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
           
-          // Font size: 20 at expanded, 18 at collapsed
-          final double fontSize = 18 + (2 * progress); // 18 to 20 scaling
+          // Font size: 24 at expanded, 20 at collapsed
+          final double fontSize = 20 + (4 * progress); // 20 to 24 scaling
           // Vertical offset for title - center it vertically above the search bar
           
           return Stack(
@@ -286,7 +293,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
                 stretchModes: const [StretchMode.zoomBackground],
                 centerTitle: true,
                 titlePadding: const EdgeInsets.only(
-                  bottom: 112 + 10, // Adjusted for search (84) + rounded (28) height
+                  bottom: totalBottomHeight + 10,
                 ),
                 title: Text(
                   'Programs',
@@ -303,7 +310,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
         },
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(84 + 28),
+        preferredSize: const Size.fromHeight(totalBottomHeight),
         child: Column(
           children: [
             Padding(
@@ -311,12 +318,12 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
               child: _buildModernSearchBar(),
             ),
             Container(
-              height: 28,
+              height: 24,
               decoration: BoxDecoration(
                 color: AppColors.background(context),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
               ),
             ),
@@ -512,6 +519,9 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00BFA5),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
                 ),
                 child: const Text('Retry'),
               ),
@@ -532,29 +542,32 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
     );
   }
 
-  return SliverList(
-    delegate: SliverChildBuilderDelegate(
-      (context, index) {
-        final program = displayedPrograms[index];
-        return Container(
-          color: bgColor,
-          child: TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 400 + (index * 100)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 30 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: child,
-                ),
-              );
-            },
-            child: _buildProgramCard(program, programProvider, context.read<AppAuthProvider>()),
-          ),
-        );
-      },
-      childCount: displayedPrograms.length,
+  return SliverPadding(
+    padding: const EdgeInsets.only(top: 16),
+    sliver: SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final program = displayedPrograms[index];
+          return Container(
+            color: bgColor,
+            child: TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 400 + (index * 100)),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 30 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: child,
+                  ),
+                );
+              },
+              child: _buildProgramCard(program, programProvider, context.read<AppAuthProvider>()),
+            ),
+          );
+        },
+        childCount: displayedPrograms.length,
+      ),
     ),
   );
 }
@@ -616,7 +629,7 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
               ),
               child: const Text('Clear Search'),
@@ -1320,7 +1333,7 @@ class _FilterSheetState extends State<FilterSheet> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                 ),
                 child: const Text(

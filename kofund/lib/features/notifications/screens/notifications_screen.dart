@@ -1,12 +1,13 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/notification_types.dart';
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -22,288 +23,275 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          // 🆕 NEW: Filter button
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDialog(context),
-          ),
-          // 🆕 NEW: Debug button
-          if (kDebugMode)
-            IconButton(
-              icon: const Icon(Icons.bug_report),
-              onPressed: () {
-                final provider = context.read<NotificationProvider>();
-                provider.debugNotifications();
-                
-                final user = FirebaseAuth.instance.currentUser;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Debug: User ${user?.uid?.substring(0, 8)}... has ${provider.notifications.length} notifications',
-                      style: const TextStyle(fontFamily: 'monospace'),
-                    ),
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              },
+    return Consumer<NotificationProvider>(
+      builder: (context, provider, child) {
+        return GradientSheetScaffold(
+          title: 'Notifications',
+          automaticallyImplyLeading: Navigator.canPop(context),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: AppDimensions.screenPaddingHorizontal),
+              child: _buildNotificationOverflowMenu(context, provider),
             ),
-          Consumer<NotificationProvider>(
-            builder: (context, provider, child) {
-              if (provider.notifications.isEmpty) return const SizedBox();
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'mark_all_read',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.mark_email_read, size: 20),
-                        SizedBox(width: 8),
-                        Text('Mark all as read'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'clear_all',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.delete_sweep, size: 20, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Clear all', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                  // 🆕 NEW: Clear filters option
-                  PopupMenuItem(
-                    value: 'clear_filters',
-                    child: Row(
-                      children: const [
-                        Icon(Icons.filter_alt_off, size: 20),
-                        SizedBox(width: 8),
-                        Text('Clear filters'),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == 'mark_all_read') {
-                    provider.markAllAsRead();
-                  } else if (value == 'clear_all') {
-                    _showClearAllDialog(context, provider);
-                  } else if (value == 'clear_filters') {
-                    _clearFilters(provider);
-                  }
-                },
-              );
-            },
-          ),
-        ],
-      ),
-      body: Consumer<NotificationProvider>(
-        builder: (context, provider, child) {
-          // 🆕 NEW: Show active filters
-          final hasActiveFilters = _selectedCommunity != null || 
-                                 _selectedType != null || 
-                                 _showUnreadOnly;
-          
-          return Column(
-            children: [
-              // 🆕 NEW: Filter indicators
-              if (hasActiveFilters)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-color: Colors.blue.withValues(alpha: 0.1),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.filter_alt, size: 16, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: [
-                            if (_selectedCommunity != null)
-                              FilterChip(
-                                label: Text('Community: $_selectedCommunity'),
-                                onSelected: (_) {
-                                  setState(() {
-                                    _selectedCommunity = null;
-                                  });
-                                  provider.filterByCommunity(null);
-                                },
-                                selected: false,
-                              ),
-                            if (_selectedType != null)
-                              FilterChip(
-                                label: Text('Type: ${_selectedType!.name}'),
-                                onSelected: (_) {
-                                  setState(() {
-                                    _selectedType = null;
-                                  });
-                                  provider.filterByType(null);
-                                },
-                                selected: false,
-                              ),
-                            if (_showUnreadOnly)
-                              FilterChip(
-                                label: const Text('Unread only'),
-                                onSelected: (_) {
-                                  setState(() {
-                                    _showUnreadOnly = false;
-                                  });
-                                  provider.toggleUnreadFilter();
-                                },
-                                selected: false,
-                              ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => _clearFilters(provider),
-                        child: const Text('Clear all'),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // 🆕 NEW: Statistics bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${provider.unreadCount} unread',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: provider.unreadCount > 0 ? Colors.blue : Colors.grey,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (_selectedCommunity != null)
-                          Text(
-                            'Community: $_selectedCommunity',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                      ],
-                    ),
-                    // 🆕 NEW: Community selector
-                    if (provider.userCommunities.length > 1)
-                      DropdownButton<String>(
-                        value: _selectedCommunity,
-                        hint: const Text('All communities'),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('All communities'),
-                          ),
-                          ...provider.userCommunities.map((community) {
-                            return DropdownMenuItem(
-                              value: community,
-                              child: Text(community.substring(0, 8) + '...'),
-                            );
-                          }).toList(),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCommunity = value;
-                          });
-                          provider.filterByCommunity(value);
-                        },
-                      ),
-                  ],
+          ],
+          body: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
+                  child: _buildSearchBarArea(context, provider),
                 ),
               ),
-              
-              // Notification list
-              Expanded(
-                child: _buildNotificationList(provider),
+              CupertinoSliverRefreshControl(
+                onRefresh: () async => provider.refresh(),
+              ),
+              if (_selectedCommunity != null ||
+                  _selectedType != null ||
+                  _showUnreadOnly)
+                _buildActiveFilterChips(provider),
+              _buildNotificationList(provider),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Container(color: AppColors.background(context)),
               ),
             ],
-          );
-        },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotificationOverflowMenu(
+    BuildContext context,
+    NotificationProvider provider,
+  ) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white, size: 22),
+      padding: EdgeInsets.zero,
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'mark_all_read',
+          child: Row(
+            children: [
+              Icon(Icons.mark_email_read, size: 20),
+              SizedBox(width: 8),
+              Text('Mark all as read'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'clear_all',
+          child: Row(
+            children: [
+              Icon(Icons.delete_sweep, size: 20, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Clear all', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'clear_filters',
+          child: Row(
+            children: [
+              Icon(Icons.filter_alt_off, size: 20),
+              SizedBox(width: 8),
+              Text('Clear filters'),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'mark_all_read') {
+          provider.markAllAsRead();
+        } else if (value == 'clear_all') {
+          _showClearAllDialog(context, provider);
+        } else if (value == 'clear_filters') {
+          _clearFilters(provider);
+        }
+      },
+    );
+  }
+
+  Widget _buildSearchBarArea(BuildContext context, NotificationProvider provider) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: AppColors.card(context),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.border(context)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.notifications_none,
+                  color: AppColors.textSecondary(context),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${provider.unreadCount} unread notifications',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Material(
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(28),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: () => _showFilterDialog(context),
+            child: Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppColors.border(context)),
+              ),
+              child: Icon(Icons.tune, color: AppColors.primary(context), size: 20),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveFilterChips(NotificationProvider provider) {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        color: AppColors.background(context),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              if (_selectedCommunity != null)
+                _buildFilterChip('Community: $_selectedCommunity', () {
+                  setState(() => _selectedCommunity = null);
+                  provider.filterByCommunity(null);
+                }),
+              if (_selectedType != null)
+                _buildFilterChip('Type: ${_selectedType!.name}', () {
+                  setState(() => _selectedType = null);
+                  provider.filterByType(null);
+                }),
+              if (_showUnreadOnly)
+                _buildFilterChip('Unread only', () {
+                  setState(() => _showUnreadOnly = false);
+                  provider.toggleUnreadFilter();
+                }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, VoidCallback onDeleted) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary(context),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: onDeleted,
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.textSecondary(context)),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildNotificationList(NotificationProvider provider) {
     if (provider.isLoading && provider.notifications.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (provider.hasError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            const Text(
-              'Failed to load notifications',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => provider.refresh(),
-              child: const Text('Retry'),
-            ),
-          ],
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Failed to load notifications', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => provider.refresh(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (provider.notifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_none, 
-              size: 80, 
-              color: _selectedCommunity != null ? Colors.orange : Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _selectedCommunity != null 
-                ? 'No notifications for this community'
-                : 'No notifications yet',
-              style: const TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedCommunity != null
-                ? 'Try selecting a different community'
-                : 'You\'ll see notifications here',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            if (_selectedCommunity != null)
-              TextButton(
-                onPressed: () => _clearFilters(provider),
-                child: const Text('Clear filters'),
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none,
+                size: 80,
+                color: _selectedCommunity != null ? Colors.orange : Colors.grey.withValues(alpha: 0.5),
               ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                _selectedCommunity != null ? 'No notifications for this community' : 'No notifications yet',
+                style: const TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async => provider.refresh(),
-      child: ListView.builder(
-        itemCount: provider.notifications.length,
-        itemBuilder: (context, index) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
           final notification = provider.notifications[index];
           return NotificationTile(notification: notification);
         },
+        childCount: provider.notifications.length,
       ),
     );
   }

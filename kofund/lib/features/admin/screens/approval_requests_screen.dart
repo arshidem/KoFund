@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/routing/route_names.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
@@ -242,6 +244,55 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     );
   }
 
+  Widget _buildSheetSearchBar() {
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.search, color: AppColors.textSecondary(context), size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary(context),
+              ),
+              cursorColor: AppColors.primary(context),
+              decoration: InputDecoration(
+                hintText: 'Search members...',
+                hintStyle: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.close, size: 20, color: AppColors.textSecondary(context)),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          FocusScope.of(context).unfocus();
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchHeader(int resultCount, String section) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -309,50 +360,17 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
     final filteredPending = _filterMembers(userProvider.pendingMembers, _searchQuery);
     final filteredApproved = _filterMembers(userProvider.approvedMembers, _searchQuery);
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'Community Members',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return GradientSheetScaffold(
+      title: 'Community Members',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 20, 12, 8),
+            child: _buildSheetSearchBar(),
           ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-          systemNavigationBarColor: AppColors.background(context),
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: _buildGlassSearchBar(),
-          ),
-        ),
-      ),
-      body: SmartRefresher(
+          Expanded(
+            child: SmartRefresher(
         controller: _refreshController,
         onRefresh: _onRefresh,
         enablePullDown: true,
@@ -641,6 +659,9 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
           ],
         ),
       ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -727,38 +748,7 @@ class _MemberCard extends StatelessWidget {
             ),
           );
         },
-        child: Dismissible(
-          key: Key(user.uid),
-          direction: isCurrentUser ? DismissDirection.none : DismissDirection.horizontal,
-          confirmDismiss: (direction) async {
-            if (direction == DismissDirection.startToEnd) {
-              if (!isApproved) {
-                onApprove?.call();
-                return false; // Don't actually dismiss, just trigger action
-              }
-              return false;
-            } else {
-              if (isApproved) {
-                onRemove?.call();
-              } else {
-                onReject?.call();
-              }
-              return false;
-            }
-          },
-          background: _buildDismissibleBackground(
-            alignment: Alignment.centerLeft,
-            color: const Color(0xFF10B981), // Emerald
-            icon: Icons.check_circle_rounded,
-            label: "Approve",
-          ),
-          secondaryBackground: _buildDismissibleBackground(
-            alignment: Alignment.centerRight,
-            color: const Color(0xFFF43F5E), // Rose
-            icon: isApproved ? Icons.person_remove_rounded : Icons.remove_circle_rounded,
-            label: isApproved ? "Remove" : "Reject",
-          ),
-          child: Padding(
+        child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
               children: [
@@ -859,22 +849,33 @@ class _MemberCard extends StatelessWidget {
   
                 // Action Buttons - DISABLED for current user
                 if (!isCurrentUser)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!isApproved) ...[
-                        _PillButton(
-                          label: 'Approve',
-                          icon: Icons.check_circle_outline_rounded,
-                          color: const Color(0xFF10B981), // Emerald
-                          onTap: onApprove,
+                        // Approve Button
+                        ElevatedButton(
+                          onPressed: onApprove,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary(context),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                            minimumSize: const Size(0, 32),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                            ),
+                          ),
+                          child: const Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
-                        _PillButton(
-                          label: 'Reject',
-                          icon: Icons.remove_circle_outline_rounded,
-                          color: const Color(0xFFF43F5E), // Rose
-                          onTap: onReject,
+                        const SizedBox(width: 4),
+                        // Reject Icon
+                        IconButton(
+                          onPressed: onReject,
+                          icon: const Icon(Icons.remove_circle_outline, color: Color(0xFFF43F5E), size: 22),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Reject',
                         ),
                       ] else
                         _PillButton(
@@ -902,7 +903,6 @@ class _MemberCard extends StatelessWidget {
                     ),
                   ),
               ],
-            ),
           ),
         ),
       ),
@@ -929,12 +929,12 @@ class _PillButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             border: Border.all(
               color: color.withValues(alpha: 0.2),
               width: 1,

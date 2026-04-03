@@ -6,6 +6,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class CreateVirtualUsersScreen extends StatefulWidget {
   final String communityId;
@@ -277,43 +278,15 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     final virtualUserProvider = Provider.of<VirtualUserProvider>(context);
     final isLoading = virtualUserProvider.isLoading;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: const Text(
-          'Create Virtual Users',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+    return GradientSheetScaffold(
+      title: 'Create Virtual Users',
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back,
+          size: 24,
+          color: Colors.white,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-        ),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-              bottomRight: Radius.circular(AppDimensions.radiusExtraLarge),
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            size: 24,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.pop(context, false),
-        ),
+        onPressed: () => Navigator.pop(context, false),
       ),
       body: Column(
         children: [
@@ -388,7 +361,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                 ),
               ),
@@ -495,6 +468,9 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                 backgroundColor: AppColors.primary(context),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
               ),
             ),
           ),
@@ -520,6 +496,9 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary(context),
                 side: BorderSide(color: AppColors.primary(context)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
               ),
             ),
           );
@@ -562,19 +541,47 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
             const SizedBox(height: 12),
             TextFormField(
               initialValue: user['name'] as String,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Full Name *',
-                prefixIcon: Icon(Icons.person),
+                prefixIcon: Icon(Icons.person, color: AppColors.primary(context)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.surface(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               onChanged: (value) => _updateUserField(index, 'name', value),
             ),
             const SizedBox(height: 12),
             TextFormField(
               initialValue: user['phone'] as String? ?? '',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Phone (Optional)',
-                prefixIcon: Icon(Icons.phone),
+                prefixIcon: Icon(Icons.phone, color: AppColors.primary(context)),
                 hintText: '+919876543210',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.surface(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               keyboardType: TextInputType.phone,
               onChanged: (value) => _updateUserField(index, 'phone', value),
@@ -582,10 +589,24 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
             const SizedBox(height: 12),
             TextFormField(
               initialValue: user['email'] as String? ?? '',
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email (Optional)',
-                prefixIcon: Icon(Icons.email),
+                prefixIcon: Icon(Icons.email, color: AppColors.primary(context)),
                 hintText: 'member@example.com',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.surface(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
               keyboardType: TextInputType.emailAddress,
               onChanged: (value) => _updateUserField(index, 'email', value),
@@ -646,6 +667,9 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                   backgroundColor: AppColors.primary(context),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
                 ),
                 icon: isLoading
                     ? const SizedBox(

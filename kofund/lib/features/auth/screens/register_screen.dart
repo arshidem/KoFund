@@ -1,4 +1,4 @@
-﻿// lib/features/auth/screens/register_screen.dart
+// lib/features/auth/screens/register_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/gestures.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
 import 'verification_pending_screen.dart';
@@ -211,6 +212,9 @@ Future<void> _register() async {
 
   try {
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    // Clear any previous provider errors
+    authProvider.clearError();
+    
     final success = await authProvider.signUp(
       email: email,
       password: password,
@@ -491,33 +495,24 @@ String _getGoogleErrorMessage(dynamic error) {
   return '';
 }
 
-void _showError(String message) {
-  // Don't show empty messages or cancellation errors
-  if (message.isEmpty || _isCancellationError(message)) {
-    return;
+  void _showError(String message) {
+    if (message.isEmpty || _isCancellationError(message)) return;
+    
+    final lowerMessage = message.toLowerCase();
+    setState(() {
+      if (lowerMessage.contains('email') || lowerMessage.contains('user-not-found')) {
+        _emailError = message;
+      } else if (lowerMessage.contains('password')) {
+        _passwordError = message;
+      } else if (lowerMessage.contains('phone')) {
+        _phoneError = message;
+      } else if (lowerMessage.contains('name')) {
+        _nameError = message;
+      } else {
+        _formError = message; // Show non-field errors in formError container
+      }
+    });
   }
-  
-  // Check if it's a Google cancellation specifically
-  if (message.toLowerCase().contains('google sign-in was cancelled') ||
-      message.toLowerCase().contains('signin was cancelled') ||
-      message.toLowerCase().contains('sign-in was cancelled')) {
-    return;
-  }
-  
-  setState(() => _errorMessage = message);
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      duration: const Duration(seconds: 3),
-    ),
-  );
-}
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -589,19 +584,19 @@ Widget _buildInputField({
       filled: true,
       fillColor: AppColors.surface(context),
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 6,
+        horizontal: 20,
         vertical: 18,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         borderSide: BorderSide(color: AppColors.border(context)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         borderSide: BorderSide(
           color: AppColors.primary(context),
           width: 2,
@@ -860,66 +855,10 @@ Widget _buildTermsCheckbox() {
               ),
 
               const SizedBox(height: 18),
-
-              // Error Messages
-              if (authProvider.error != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          authProvider.error!,
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Display general auth errors
-              if (_errorMessage != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Display network/form errors
+              
+              // Note: Top-level error container removed as errors are now routed to specific fields
+              
+              // Display network/form errors (using formError for general messaging)
               if (_formError != null) ...[
                 Container(
                   width: double.infinity,
@@ -1028,7 +967,7 @@ Widget _buildTermsCheckbox() {
                                     AppColors.primary(context).withValues(alpha: 0.5),
                                 disabledForegroundColor: Colors.white70,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                 ),
                               ),
                               child: _isLoading
@@ -1169,7 +1108,7 @@ Widget _buildTermsCheckbox() {
                                   : AppColors.border(context).withValues(alpha: 0.5),
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
                             backgroundColor: AppColors.surface(context),
                           ),

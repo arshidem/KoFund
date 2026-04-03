@@ -55,47 +55,13 @@ class MemberDetailsSkeleton extends StatelessWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-   appBar: AppBar(
-  toolbarHeight: 80,
-  title: const Text(
-    'Member Details',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  centerTitle: true,
-  leading: IconButton(
-    icon: const Icon(
-      Icons.arrow_back,
-      size: 24,
-      color: Colors.white,
-    ),
-    onPressed: () => Navigator.pop(context),
-  ),
-  backgroundColor: Colors.transparent,
-  foregroundColor: Colors.white,
-  elevation: 0,
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: AppColors.primaryGradient(context),
-      borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
-      ),
-    ),
-  ),
-),
-      body: Shimmer.fromColors(
-        baseColor: baseColor,
-        highlightColor: highlightColor,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
               // Pull-to-refresh skeleton indicator (subtle)
               Container(
                 color: Colors.transparent,
@@ -889,7 +855,6 @@ class MemberDetailsSkeleton extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

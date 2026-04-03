@@ -13,6 +13,7 @@ import '../../../features/programs/models/program_model.dart';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/contributions/providers/contribution_provider.dart'; // Add this
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 class AddContributionModal extends StatefulWidget {
   final String? preSelectedProgramId;
@@ -378,7 +379,7 @@ Widget _buildBottomActionSection() {
                         disabledBackgroundColor:
                             Colors.grey.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         ),
                         elevation: 2,
                       ),
@@ -727,7 +728,7 @@ subtitle: Column(
                 hintText: 'Search members...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -827,7 +828,7 @@ Widget _buildContributionDetailsStep() {
                     labelText: 'Amount',
                     prefixText: '₹ ',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                     suffix: _selectedProgram?.suggestedContribution != null
                         ? Padding(
@@ -859,7 +860,7 @@ Widget _buildContributionDetailsStep() {
                   decoration: InputDecoration(
                     labelText: 'Payment',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                   ),
                   items: _paymentMethods.map((method) {
@@ -888,7 +889,7 @@ Widget _buildContributionDetailsStep() {
               labelText: 'Amount',
               prefixText: '₹ ',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
               suffix: _selectedProgram?.suggestedContribution != null
                   ? Padding(
@@ -916,7 +917,7 @@ Widget _buildContributionDetailsStep() {
             decoration: InputDecoration(
               labelText: 'Payment Method',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
             items: _paymentMethods.map((method) {
