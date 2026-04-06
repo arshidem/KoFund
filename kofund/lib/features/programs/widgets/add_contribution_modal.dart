@@ -14,18 +14,17 @@ import '../../../features/auth/models/user_model.dart';
 import '../../../features/contributions/providers/contribution_provider.dart'; // Add this
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 class AddContributionModal extends StatefulWidget {
   final String? preSelectedProgramId;
   final String? preSelectedProgramName;
   final bool isMonthlyProgram;
 
   const AddContributionModal({
-    Key? key,
+    super.key,
     this.preSelectedProgramId,
     this.preSelectedProgramName,
     this.isMonthlyProgram = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AddContributionModal> createState() => _AddContributionModalState();
@@ -63,7 +62,7 @@ int get _displayCurrentStep {
   late TextEditingController _amountController;
 // Add these to your _AddContributionModalState class variables
 int _currentDisplayYear = DateTime.now().year;
-bool _showMonthSelector = true; // Set to true to show by default for monthly programs
+final bool _showMonthSelector = true; // Set to true to show by default for monthly programs
 
 // Helper methods for month handling
 String _formatMonthId(DateTime date) {
@@ -260,7 +259,7 @@ Widget build(BuildContext context) {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${_displayCurrentStep}/$_totalSteps',
+                    '$_displayCurrentStep/$_totalSteps',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -942,7 +941,7 @@ Card(
   elevation: 0,
   color: AppColors.card(context),
   shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
     side: BorderSide(color: AppColors.border(context)),
   ),
   child: Padding(
@@ -1113,7 +1112,7 @@ Widget _buildMonthGridSelector(BuildContext context) {
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
               border: Border.all(
                 color: Theme.of(context).dividerColor,
               ),

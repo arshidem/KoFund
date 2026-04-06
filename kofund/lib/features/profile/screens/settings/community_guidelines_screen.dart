@@ -5,7 +5,6 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 import 'package:kofund/core/utils/app_info.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 
 class CommunityGuidelinesScreen extends StatefulWidget {

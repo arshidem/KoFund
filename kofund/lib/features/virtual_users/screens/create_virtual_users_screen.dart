@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -133,7 +132,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     }
 
     final adminName = currentUser.displayName ?? 
-                      currentUser.email?.split('@').first ?? 
+                      currentUser.email.split('@').first ?? 
                       'Admin';
 
     final validUsers = _users.where((user) {
@@ -192,7 +191,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                 ...errors.map((error) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text('• $error'),
-                )).toList(),
+                )),
               ],
             ),
           ),
@@ -235,7 +234,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                   ...virtualUserProvider.errorMessages.map((error) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text('• $error'),
-                  )).toList(),
+                  )),
                 ],
               ],
             ),

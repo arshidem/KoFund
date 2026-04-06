@@ -1,6 +1,5 @@
 // lib/features/members/providers/member_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
 
 import '../../../core/services/user_service.dart';
@@ -304,26 +303,29 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
+    // 1. Optimistic Update
+    final index = _members.indexWhere((member) => member.uid == uid);
+    UserModel? originalMember;
+    if (index != -1) {
+      originalMember = _members[index];
+      _members[index] = _members[index].copyWith(
+        isAdmin: makeAdmin,
+        role: makeAdmin ? 'admin' : 'member',
+      );
+      _safeNotifyListeners();
+    }
+
     try {
       await _userService.updateUserRole(uid, makeAdmin);
-      
-      // Update local state
-      final index = _members.indexWhere((member) => member.uid == uid);
-      if (index != -1) {
-        _members[index] = _members[index].copyWith(
-          isAdmin: makeAdmin,
-          role: makeAdmin ? 'admin' : 'member',
-        );
-        _safeNotifyListeners();
-      }
-      
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      if (index != -1 && originalMember != null) {
+        _members[index] = originalMember;
+        _safeNotifyListeners();
+      }
       _setError('Failed to update user role: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -334,20 +336,25 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
+    // 1. Optimistic Update
+    final index = _members.indexWhere((member) => member.uid == uid);
+    UserModel? removedMember;
+    if (index != -1) {
+      removedMember = _members.removeAt(index);
+      _safeNotifyListeners();
+    }
+
     try {
       await _userService.unapproveUser(uid);
-      
-      // Remove from local list
-      _members.removeWhere((member) => member.uid == uid);
-      _safeNotifyListeners();
-      
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      if (removedMember != null) {
+        _members.insert(index, removedMember);
+        _safeNotifyListeners();
+      }
       _setError('Failed to unapprove user: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -358,26 +365,31 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
-    try {
-      final communityId = currentUser.communityId;
-      if (communityId == null || communityId.isEmpty) {
-        _setError('No community found');
-        return false;
-      }
+    final communityId = currentUser.communityId;
+    if (communityId == null || communityId.isEmpty) {
+      _setError('No community found');
+      return false;
+    }
 
-      await _userService.removeFromCommunity(uid, communityId);
-      
-      // Remove from local list
-      _members.removeWhere((member) => member.uid == uid);
+    // 1. Optimistic Update
+    final index = _members.indexWhere((member) => member.uid == uid);
+    UserModel? removedMember;
+    if (index != -1) {
+      removedMember = _members.removeAt(index);
       _safeNotifyListeners();
-      
+    }
+
+    try {
+      await _userService.removeFromCommunity(uid, communityId);
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      if (removedMember != null) {
+        _members.insert(index, removedMember);
+        _safeNotifyListeners();
+      }
       _setError('Failed to remove user from community: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -388,30 +400,33 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
+    // 1. Optimistic Update
+    final Map<int, UserModel> originalMembers = {};
+    for (final uid in uids) {
+      final index = _members.indexWhere((m) => m.uid == uid);
+      if (index != -1) {
+        originalMembers[index] = _members[index];
+        _members[index] = _members[index].copyWith(
+          isAdmin: makeAdmin,
+          role: makeAdmin ? 'admin' : 'member',
+        );
+      }
+    }
+    _safeNotifyListeners();
+
     try {
       for (final uid in uids) {
         await _userService.updateUserRole(uid, makeAdmin);
       }
-      
-      // Update local state
-      for (final uid in uids) {
-        final index = _members.indexWhere((member) => member.uid == uid);
-        if (index != -1) {
-          _members[index] = _members[index].copyWith(
-            isAdmin: makeAdmin,
-            role: makeAdmin ? 'admin' : 'member',
-          );
-        }
-      }
-      
-      _safeNotifyListeners();
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      originalMembers.forEach((index, member) {
+        _members[index] = member;
+      });
+      _safeNotifyListeners();
       _setError('Failed to update user roles: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -422,21 +437,36 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
+    // 1. Optimistic Update
+    final List<UserModel> removedMembers = [];
+    final List<int> originalIndices = [];
+    
+    // We sort uids in reverse order of their appearance in _members to make deletion/insertion easier?
+    // Actually, just capturing them is enough if we use a safe way to revert.
+    for (final uid in uids) {
+      final index = _members.indexWhere((m) => m.uid == uid);
+      if (index != -1) {
+        originalIndices.add(index);
+        removedMembers.add(_members[index]);
+      }
+    }
+    
+    _members.removeWhere((member) => uids.contains(member.uid));
+    _safeNotifyListeners();
+
     try {
       for (final uid in uids) {
         await _userService.unapproveUser(uid);
       }
-      
-      _members.removeWhere((member) => uids.contains(member.uid));
-      _safeNotifyListeners();
-      
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      for (int i = 0; i < removedMembers.length; i++) {
+        _members.insert(originalIndices[i], removedMembers[i]);
+      }
+      _safeNotifyListeners();
       _setError('Failed to unapprove users: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -447,27 +477,40 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
       return false;
     }
 
-    _setLoading(true);
-    try {
-      final communityId = currentUser.communityId;
-      if (communityId == null || communityId.isEmpty) {
-        _setError('No community found');
-        return false;
-      }
+    final communityId = currentUser.communityId;
+    if (communityId == null || communityId.isEmpty) {
+      _setError('No community found');
+      return false;
+    }
 
+    // 1. Optimistic Update
+    final List<UserModel> removedMembers = [];
+    final List<int> originalIndices = [];
+    
+    for (final uid in uids) {
+      final index = _members.indexWhere((m) => m.uid == uid);
+      if (index != -1) {
+        originalIndices.add(index);
+        removedMembers.add(_members[index]);
+      }
+    }
+    
+    _members.removeWhere((member) => uids.contains(member.uid));
+    _safeNotifyListeners();
+
+    try {
       for (final uid in uids) {
         await _userService.removeFromCommunity(uid, communityId);
       }
-      
-      _members.removeWhere((member) => uids.contains(member.uid));
-      _safeNotifyListeners();
-      
       return true;
     } catch (e) {
+      // 2. Revert on failure
+      for (int i = 0; i < removedMembers.length; i++) {
+        _members.insert(originalIndices[i], removedMembers[i]);
+      }
+      _safeNotifyListeners();
       _setError('Failed to remove users from community: $e');
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
  Future<bool> bulkDeleteVirtualUsers(List<String> userIds) async {
@@ -502,7 +545,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
     final searchTerm = query.toLowerCase();
     return _members.where((member) {
       final name = member.displayName?.toLowerCase() ?? '';
-      final email = member.email?.toLowerCase() ?? '';
+      final email = member.email.toLowerCase() ?? '';
       final phone = member.phoneNumber?.toLowerCase() ?? '';
       
       return name.contains(searchTerm) || 

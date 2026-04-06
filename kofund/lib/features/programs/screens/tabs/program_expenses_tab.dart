@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart'; // Add this import
 import 'package:intl/intl.dart';
@@ -9,7 +8,6 @@ import '../../models/program_model.dart';
 import '../../../expenses/providers/expense_provider.dart';
 import '../../../expenses/models/expense_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
-import '../../../auth/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/constants/app_dimensions.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
@@ -815,7 +813,7 @@ Widget _buildExpenseSummary(BuildContext context) {
                         value: category,
                         child: Text(category.substring(0, 3)),
                       )
-                    ).toList(),
+                    ),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -2135,7 +2133,7 @@ return AlertDialog(
       fontSize: 16,
     ),
   ),
-  content: Container(
+  content: SizedBox(
     width: MediaQuery.of(context).size.width * 0.8, // 70% width - good choice!
     child: SingleChildScrollView(
       child: Column(
@@ -2295,7 +2293,7 @@ return AlertDialog(
 
                 // Category Dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Category *',
                     labelStyle: TextStyle(
@@ -2558,8 +2556,8 @@ Future<void> _createExpense({
       }
       
       // Then try email (extract name part)
-      if (currentUser.email != null && currentUser.email!.isNotEmpty) {
-        final emailParts = currentUser.email!.split('@');
+      if (currentUser.email.isNotEmpty) {
+        final emailParts = currentUser.email.split('@');
         if (emailParts.isNotEmpty) {
           return emailParts[0]; // Name before @
         }

@@ -7,7 +7,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import '../providers/app_auth_provider.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({Key? key}) : super(key: key);
+  const ForgotPasswordScreen({super.key});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();

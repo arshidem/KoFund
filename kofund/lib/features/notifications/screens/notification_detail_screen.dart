@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/notification_navigator.dart';
 

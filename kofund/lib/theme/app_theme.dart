@@ -20,31 +20,31 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         ),
         margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,  // ✅ Good practice
+        clipBehavior: Clip.antiAlias,
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: const BorderSide(color: Colors.red),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 20,
+          vertical: 16,
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -63,6 +63,20 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         ),
       ),
       dividerTheme: DividerThemeData(
@@ -91,7 +105,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         ),
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
@@ -99,24 +113,24 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.grey.shade700),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.grey.shade700),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: BorderSide(color: Colors.blue.shade400, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           borderSide: const BorderSide(color: Colors.red),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 20,
+          vertical: 16,
         ),
         filled: true,
         fillColor: Colors.grey.shade900,
@@ -137,6 +151,20 @@ class AppTheme {
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
           side: BorderSide(color: Colors.grey.shade600),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         ),
       ),
       dividerTheme: DividerThemeData(

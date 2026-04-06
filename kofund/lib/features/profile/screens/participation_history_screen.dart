@@ -2,13 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
-import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 class ParticipationHistoryScreen extends StatefulWidget {
@@ -21,8 +20,9 @@ class ParticipationHistoryScreen extends StatefulWidget {
 
 class _ParticipationHistoryScreenState
     extends State<ParticipationHistoryScreen> {
-  final RefreshController _refreshController = RefreshController();
+  // REMOVED: final RefreshController _refreshController = RefreshController();
   bool _isRefreshing = false;
+  bool _isInitialLoad = true;
   
   @override
   void initState() {
@@ -33,33 +33,21 @@ class _ParticipationHistoryScreenState
   Future<void> _loadParticipationHistory() async {
     final profileProvider = context.read<ProfileProvider>();
     await profileProvider.getUserParticipationHistory();
+    if (mounted) {
+      setState(() {
+        _isInitialLoad = false;
+      });
+    }
   }
 
-  void _onRefresh() async {
+  Future<void> _onRefresh() async {
     debugPrint('🔄 Pull to refresh triggered in Participation History');
-    
-    if (!mounted) return;
-    setState(() {
-      _isRefreshing = true;
-    });
     
     try {
       await _loadParticipationHistory();
-      if (mounted) {
-        _refreshController.refreshCompleted();
-      }
       debugPrint('✅ Participation History refresh completed');
     } catch (e) {
-      if (mounted) {
-        _refreshController.refreshFailed();
-      }
       debugPrint('❌ Participation History refresh failed: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
     }
   }
 
@@ -70,27 +58,31 @@ class _ParticipationHistoryScreenState
 
     return GradientSheetScaffold(
       title: 'My Programs',
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: '',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox.shrink(),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
-        ),
-        child: _isRefreshing
-          ? ParticipationHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
-          : _buildContent(profileProvider, participationHistory),
+      body: Column(
+        children: [
+          Expanded(
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              slivers: [
+                CupertinoSliverRefreshControl(
+                  onRefresh: _onRefresh,
+                ),
+                SliverToBoxAdapter(
+                  child: _buildContent(profileProvider, participationHistory),
+                ),
+              ],
+            ),
+          ),
+          // Fixed bottom banner ad
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.grey[900] 
+                : Colors.grey[100],
+            child: const SimpleBannerAd(),
+          ),
+        ],
       ),
     );
   }
@@ -101,79 +93,30 @@ Widget _buildContent(
 ) {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Add this
 
-  if (profileProvider.isLoading) {
-    return Column(
-      children: [
-        Expanded(
-          child: ParticipationHistorySkeleton(
-            isDarkMode: isDarkMode,
-          ),
-        ),
-        // Banner ad in loading state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
+  // Show loading skeleton on initial load or when provider is loading
+  if (_isInitialLoad || profileProvider.isLoading) {
+    return ParticipationHistorySkeleton(
+      isDarkMode: isDarkMode,
     );
   }
 
   if (profileProvider.error != null) {
-    return Column(
-      children: [
-        Expanded(
-          child: _buildErrorState(profileProvider.error!),
-        ),
-        // Banner ad in error state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
-    );
+    return _buildErrorState(profileProvider.error!);
   }
 
   if (participationHistory.isEmpty) {
-    return Column(
-      children: [
-        Expanded(
-          child: _buildEmptyState(),
-        ),
-        // Banner ad in empty state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
-    );
+    return _buildEmptyState();
   }
 
-  return Column(
-    children: [
-      Expanded(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(8), // ✅ Padding 8px only
-          itemCount: participationHistory.length,
-          itemBuilder: (context, index) {
-            final participation = participationHistory[index];
-            return _buildParticipationCard(participation);
-          },
-        ),
-      ),
-      // Banner ad in content state
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-        child: const SimpleBannerAd(),
-      ),
-    ],
+  return ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // ✅ Standardized padding
+    itemCount: participationHistory.length,
+    itemBuilder: (context, index) {
+      final participation = participationHistory[index];
+      return _buildParticipationCard(participation);
+    },
   );
 }
 
@@ -188,8 +131,8 @@ Widget _buildContent(
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -231,7 +174,7 @@ Widget _buildContent(
                     color: hasPaid 
                         ? AppColors.primary(context).withValues(alpha: 0.1) // ✅ Use primary color
                         : Colors.orange[50],
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     border: Border.all(
                       color: hasPaid 
                           ? AppColors.primary(context) // ✅ Use primary color
@@ -393,7 +336,7 @@ Widget _buildContent(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(

@@ -1,21 +1,15 @@
 // lib/features/expenses/screens/edit_expense_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/network_service.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../expenses/models/expense_model.dart';
-import '../../expenses/providers/expense_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
-import '../../programs/providers/program_provider.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class EditExpenseScreen extends StatefulWidget {
   final String expenseId;
@@ -370,7 +364,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                     const Text('Program *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<String>(
-                                      value: _selectedProgramId,
+                                      initialValue: _selectedProgramId,
                                       dropdownColor: AppColors.surface(context),
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),
@@ -409,7 +403,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                     const Text('Category *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<String>(
-                                      value: _selectedCategory,
+                                      initialValue: _selectedCategory,
                                       dropdownColor: AppColors.surface(context),
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),
@@ -430,7 +424,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                     const Text('Payment Method *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<String>(
-                                      value: _selectedPaymentMethod,
+                                      initialValue: _selectedPaymentMethod,
                                       dropdownColor: AppColors.surface(context),
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),

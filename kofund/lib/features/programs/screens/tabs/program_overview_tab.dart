@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
-import '../../../contributions/models/contribution_model.dart';
 import '../../../expenses/providers/expense_provider.dart';
-import '../../../expenses/models/expense_model.dart';
 import '../../../auth/models/user_model.dart';
 import 'package:kofund/core/services/user_service.dart';
-import '../../../auth/providers/app_auth_provider.dart';
 import '../../../participants/providers/participant_provider.dart';
-import '../../../programs/providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
 import '../../../../core/constants/app_colors.dart';
 

@@ -1,8 +1,9 @@
-﻿// lib/features/dashboard/widgets/program_carousel_widget.dart
+// lib/features/dashboard/widgets/program_carousel_widget.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -12,7 +13,6 @@ import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/features/programs/screens/program_details_screen.dart';
 import 'package:kofund/features/programs/screens/all_programs_screen.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class ProgramCarouselWidget extends StatefulWidget {
   final bool isAdmin;
@@ -225,7 +225,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
                       ),
                     ),
                   ),
-                  if (activePrograms.length >= 2 && user != null)
+                  if (activePrograms.length >= 2)
                     InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => _navigateToAllPrograms(context),
@@ -286,7 +286,7 @@ SizedBox(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
@@ -386,7 +386,7 @@ SizedBox(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
@@ -407,13 +407,13 @@ SizedBox(
           ),
           const SizedBox(height: 8),
           InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             onTap: _retryLoading,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
               child: Text(
@@ -467,7 +467,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -497,7 +497,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                       height: 36,
                       decoration: BoxDecoration(
                         color: AppColors.primary(context).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                       ),
                       child: Icon(
                         ProgramTypes.getIconData(widget.program.programType),
@@ -561,7 +561,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.green.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                           border: Border.all(
                             color: Colors.green.withValues(alpha: 0.35),
                           ),
@@ -597,7 +597,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
       color: AppColors.textSecondary(context),
     ),
   ),
-                    if (widget.program.location != null && widget.program.location!.isNotEmpty) ...[
+                    if (widget.program.location.isNotEmpty) ...[
                       const SizedBox(width: 16),
                       Icon(
                         Icons.location_on_rounded,
@@ -607,7 +607,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          widget.program.location!,
+                          widget.program.location,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -704,7 +704,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                 ),
                 const SizedBox(height: 6), // Reduced from 8
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   child: StreamBuilder<double>(
                     stream: programProvider.streamProgramTotalContributions(widget.program.programId),
                     builder: (context, contribSnap) {
@@ -760,7 +760,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
@@ -783,7 +783,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       border: Border.all(
                         color:Colors.red.withValues(alpha: 0.3) ,
                       ),
@@ -817,7 +817,7 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
                             : AppColors.textTertiary(context),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),

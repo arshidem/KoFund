@@ -1,0 +1,127 @@
+﻿Analyzing members...
+
+  error - screens\all_members_screen.dart:250:67 - The property 'communityId' can't be unconditionally accessed because the receiver can be 'null'. Try making the access conditional (using '?.') or adding a null check to the target ('!'). - unchecked_use_of_nullable_value
+  error - screens\all_members_screen.dart:836:65 - The property 'communityId' can't be unconditionally accessed because the receiver can be 'null'. Try making the access conditional (using '?.') or adding a null check to the target ('!'). - unchecked_use_of_nullable_value
+  error - screens\member_details_screen.dart:762:11 - The method '_makeAdmin' isn't defined for the type '_MemberDetailsScreenBodyState'. Try correcting the name to the name of an existing method, or defining a method named '_makeAdmin'. - undefined_method
+  error - screens\member_details_screen.dart:767:11 - The method '_removeAdmin' isn't defined for the type '_MemberDetailsScreenBodyState'. Try correcting the name to the name of an existing method, or defining a method named '_removeAdmin'. - undefined_method
+  error - screens\member_details_screen.dart:1718:5 - Expected a class member. Try placing this code inside a class member. - expected_class_member
+  error - screens\member_details_screen.dart:1718:8 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1724:21 - The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*'. - await_in_wrong_context
+  error - screens\member_details_screen.dart:1724:27 - Undefined name 'memberProvider'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1724:59 - Undefined name 'member'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1725:5 - Expected a class member. Try placing this code inside a class member. - expected_class_member
+  error - screens\member_details_screen.dart:1725:8 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1725:9 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1725:10 - Expected to find ')'. - expected_token
+  error - screens\member_details_screen.dart:1725:19 - A function body must be provided. Try adding a function body. - missing_function_body
+  error - screens\member_details_screen.dart:1725:25 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1727:5 - Expected a class member. Try placing this code inside a class member. - expected_class_member
+  error - screens\member_details_screen.dart:1727:8 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1730:12 - Undefined name 'member'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1733:7 - Expected a class member. Try placing this code inside a class member. - expected_class_member
+  error - screens\member_details_screen.dart:1733:12 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1733:12 - Methods must have an explicit list of parameters. Try adding a parameter list. - missing_method_parameters
+  error - screens\member_details_screen.dart:1740:5 - 'if' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword. - expected_identifier_but_got_keyword
+  error - screens\member_details_screen.dart:1741:7 - The function 'setState' isn't defined. Try importing the library that defines 'setState', correcting the name to the name of an existing function, or defining a function named 'setState'. - undefined_function
+  error - screens\member_details_screen.dart:1742:9 - Undefined name '_currentMember'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1742:26 - Undefined name '_currentMember'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1746:21 - The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*'. - await_in_wrong_context
+  error - screens\member_details_screen.dart:1746:27 - Undefined name 'memberProvider'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1746:59 - Undefined name 'member'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1747:5 - 'if' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword. - expected_identifier_but_got_keyword
+  error - screens\member_details_screen.dart:1747:5 - The name 'if' is already defined. Try renaming one of the declarations. - duplicate_definition
+           - The first definition of this name at screens\member_details_screen.dart:1740:5.
+  error - screens\member_details_screen.dart:1747:9 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1747:10 - Expected to find ')'. - expected_token
+  error - screens\member_details_screen.dart:1747:19 - A function body must be provided. Try adding a function body. - missing_function_body
+  error - screens\member_details_screen.dart:1747:25 - Expected an identifier. - missing_identifier
+  error - screens\member_details_screen.dart:1749:5 - 'if' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword. - expected_identifier_but_got_keyword
+  error - screens\member_details_screen.dart:1749:5 - The name 'if' is already defined. Try renaming one of the declarations. - duplicate_definition
+           - The first definition of this name at screens\member_details_screen.dart:1740:5.
+  error - screens\member_details_screen.dart:1751:9 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1752:12 - Undefined name 'member'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1754:7 - The function '_refreshMemberDataSilent' isn't defined. Try importing the library that defines '_refreshMemberDataSilent', correcting the name to the name of an existing function, or defining a function named '_refreshMemberDataSilent'. - undefined_function
+  error - screens\member_details_screen.dart:1755:7 - 'else' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword. - expected_identifier_but_got_keyword
+  error - screens\member_details_screen.dart:1755:7 - Functions must have an explicit list of parameters. Try adding a parameter list. - missing_function_parameters
+  error - screens\member_details_screen.dart:1757:7 - The function '_refreshMemberDataSilent' isn't defined. Try importing the library that defines '_refreshMemberDataSilent', correcting the name to the name of an existing function, or defining a function named '_refreshMemberDataSilent'. - undefined_function
+  error - screens\member_details_screen.dart:1759:3 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - screens\member_details_screen.dart:1763:16 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1811:30 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1813:12 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1815:22 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1817:11 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1823:11 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1824:34 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1831:16 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1879:16 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1927:30 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1929:12 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1931:22 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1933:11 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1939:11 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1940:34 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1947:30 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1950:12 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1952:22 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1954:11 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1960:11 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1961:34 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1971:30 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1984:14 - Undefined name 'mounted'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1986:30 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:1994:28 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:2002:7 - Undefined name 'context'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - screens\member_details_screen.dart:2055:1 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+warning - providers\member_provider.dart:548:51 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - screens\all_members_screen.dart:459:35 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:493:43 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:573:40 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1003:29 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1005:48 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1026:49 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1065:34 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1113:60 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - screens\all_members_screen.dart:1204:53 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1356:49 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1481:49 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1488:47 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1498:49 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1664:39 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - screens\all_members_screen.dart:1813:40 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\all_members_screen.dart:1909:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+warning - screens\member_details_screen.dart:486:45 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - screens\member_details_screen.dart:855:29 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+warning - screens\member_details_screen.dart:867:49 - The left operand can't be null, so the right operand is never executed. Try removing the operator and the right operand. - dead_null_aware_expression
+   info - providers\member_provider.dart:33:10 - The value of the field '_currentFilter' isn't used. Try removing the field, or using it. - unused_field
+   info - providers\member_provider.dart:548:48 - Dead code. Try removing the code, or fixing the code before it so that it can be reached. - dead_code
+   info - providers\member_provider.dart:591:8 - The declaration '_setLoading' isn't referenced. Try removing the declaration of '_setLoading'. - unused_element
+   info - screens\all_members_screen.dart:81:11 - The value of the field '_errorMessage' isn't used. Try removing the field, or using it. - unused_field
+   info - screens\all_members_screen.dart:92:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:125:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:136:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:152:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:159:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:172:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:181:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:204:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:209:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:219:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:228:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:235:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:268:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:275:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:296:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:299:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:842:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - screens\all_members_screen.dart:1113:57 - Dead code. Try removing the code, or fixing the code before it so that it can be reached. - dead_code
+   info - screens\all_members_screen.dart:1664:36 - Dead code. Try removing the code, or fixing the code before it so that it can be reached. - dead_code
+   info - screens\all_members_screen.dart:1924:10 - The declaration '_formatDate' isn't referenced. Try removing the declaration of '_formatDate'. - unused_element
+   info - screens\member_details_screen.dart:61:7 - The declaration '<unnamed>' isn't referenced. Try removing the declaration of '<unnamed>'. - unused_element
+   info - screens\member_details_screen.dart:144:29 - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check. - use_build_context_synchronously
+   info - screens\member_details_screen.dart:196:27 - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check. - use_build_context_synchronously
+   info - screens\member_details_screen.dart:486:42 - Dead code. Try removing the code, or fixing the code before it so that it can be reached. - dead_code
+   info - screens\member_details_screen.dart:855:26 - Dead code. Try removing the code, or fixing the code before it so that it can be reached. - dead_code
+   info - screens\member_details_screen.dart:886:10 - The declaration '_buildPhoneInfoItem' isn't referenced. Try removing the declaration of '_buildPhoneInfoItem'. - unused_element
+   info - screens\member_details_screen.dart:1374:8 - The parameter name 'sum' matches a visible type name. Try adding a name for the parameter or changing the parameter name to not match an existing type. - avoid_types_as_parameter_names
+
+121 issues found.

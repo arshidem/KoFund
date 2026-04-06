@@ -9,6 +9,7 @@ import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/skeleton/profile_screen_skeleton.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import './edit_profile_screen.dart';
 import './participation_history_screen.dart';
 import './contribution_history_screen.dart';
@@ -210,23 +211,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final authProvider = context.watch<AppAuthProvider>();
     final profileProvider = context.watch<ProfileProvider>();
 
-    final bool showBackButton = widget.forceBackButton ?? (ModalRoute.of(context)?.canPop ?? false);
-
-    // Debug info
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    debugPrint('🔍 BUILD - AppAuth user: ${authProvider.user?.uid}');
-    debugPrint('🔍 BUILD - FirebaseAuth user: ${firebaseUser?.uid}');
-    debugPrint('🔍 BUILD - Last loaded: $_lastLoadedUserId');
-    debugPrint('🔍 BUILD - ProfileProvider isDataForCurrentUser: ${profileProvider.isDataForCurrentUser}');
-    debugPrint('🔍 BUILD - ProfileProvider _loadedUserId: ${profileProvider.currentUserId}');
-
-    // Check for user changes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final currentUserId = authProvider.user?.uid;
-      if (currentUserId != null && currentUserId != _lastLoadedUserId && !_isLoadingProfile) {
-        _loadProfileData();
-      }
-    });
+    // No back button needed in profile screen main view
+    final bool showBackButton = false;
 
    // With this:
 if (_isInitialLoad || authProvider.user == null) {
@@ -445,7 +431,7 @@ if (_isLoadingProfile) {
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.3),
                                 ),
@@ -489,8 +475,8 @@ if (_isLoadingProfile) {
           decoration: BoxDecoration(
             color: AppColors.background(context),
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
+              topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              topRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),
@@ -504,7 +490,7 @@ if (_isLoadingProfile) {
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         border: Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
         ),
@@ -584,7 +570,7 @@ if (_isLoadingProfile) {
       height: 52,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.2),
           width: 1,
@@ -593,7 +579,7 @@ if (_isLoadingProfile) {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           onTap: onTap,
           child: Center(
             child: Icon(
@@ -625,9 +611,10 @@ if (_isLoadingProfile) {
           ),
         ),
         Container(
+          clipBehavior: Clip.hardEdge,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
             border: Border.all(
               color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
             ),
@@ -701,7 +688,6 @@ if (_isLoadingProfile) {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           child: Row(

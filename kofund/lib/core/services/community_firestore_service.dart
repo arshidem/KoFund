@@ -250,7 +250,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
       final communityDoc = query.docs.first;
       final communityId = communityDoc.id;
-      final communityData = communityDoc.data() as Map<String, dynamic>;
+      final communityData = communityDoc.data();
 
       final existingMember = await firestore
           .collection(FirebaseKeys.communities)

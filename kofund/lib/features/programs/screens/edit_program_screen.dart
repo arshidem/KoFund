@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
@@ -18,10 +17,10 @@ class EditProgramScreen extends StatefulWidget {
   final VoidCallback? onProgramUpdated;
 
   const EditProgramScreen({
-    Key? key,
+    super.key,
     required this.program,
     this.onProgramUpdated,
-  }) : super(key: key);
+  });
 
   @override
   State<EditProgramScreen> createState() => _EditProgramScreenState();
@@ -236,7 +235,6 @@ class _EditProgramScreenState extends State<EditProgramScreen> {
     required String hint,
     FocusNode? focusNode,
     bool obscureText = false,
-    bool showObscureToggle = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     int maxLength = 50,
@@ -664,7 +662,7 @@ if (!_isMonthlyPaymentProgram) {
 
 Widget _buildDatePickerField() {
   // Helper method to check if date is valid
-  String? _validateDate(DateTime? date) {
+  String? validateDate(DateTime? date) {
     if (date == null) return null;
     
     final today = DateTime.now();
@@ -681,7 +679,7 @@ Widget _buildDatePickerField() {
   }
 
   // Check for current error
-  final currentDateError = _dateError ?? _validateDate(_selectedDate);
+  final currentDateError = _dateError ?? validateDate(_selectedDate);
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,

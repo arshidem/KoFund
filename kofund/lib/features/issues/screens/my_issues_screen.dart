@@ -1,13 +1,11 @@
 // lib/features/issues/screens/my_issues_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/issues/providers/issue_provider.dart';
 import 'package:kofund/features/issues/models/issue_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
@@ -344,7 +342,7 @@ String _getTimeAgo(Timestamp timestamp) {
               Divider(color: AppColors.border(context)),
 
               // Issue Info
-              _buildInfoRow('Issue ID', issue.id.substring(0, 8) + '...'),
+              _buildInfoRow('Issue ID', '${issue.id.substring(0, 8)}...'),
               _buildInfoRow('Reported By', issue.reporterName),
               _buildInfoRow('Reported On', DateFormat('MMM dd, yyyy - hh:mm a').format(issue.createdAt.toDate())),
               _buildInfoRow('Status', issue.status.toUpperCase()),

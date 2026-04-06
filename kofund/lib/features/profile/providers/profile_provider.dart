@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -6,7 +5,6 @@ import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:flutter/material.dart';
 class ProfileProvider with ChangeNotifier {
@@ -586,7 +584,7 @@ Future<bool> leaveCommunity() async {
       'totalPaid': totalPaid,
       'totalSuggested': totalSuggested,
       'completionRate': completionRate,
-      'paymentRate': _participationHistory.length > 0 ? (paidCount / _participationHistory.length) * 100 : 0,
+      'paymentRate': _participationHistory.isNotEmpty ? (paidCount / _participationHistory.length) * 100 : 0,
     };
   }
 

@@ -6,7 +6,6 @@ import '../models/contribution_model.dart';
 import '../models/deleted_contribution_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
   // Cache entry class
   class CacheEntry {
@@ -98,7 +97,7 @@ Future<void> updateContribution(
       final Map<String, Map<String, dynamic>> changes = {};
       
       // Helper function to get program title
-      Future<String?> _getProgramTitle(String programId) async {
+      Future<String?> getProgramTitle(String programId) async {
         try {
           // Try to get from local cache first if you have a program provider
           // Or fetch from Firestore
@@ -158,8 +157,8 @@ Future<void> updateContribution(
       // Compare programId - STORE TITLES NOT IDS
       if (currentContribution.programId != contribution.programId) {
         // Fetch both program titles
-        final oldProgramTitle = await _getProgramTitle(currentContribution.programId);
-        final newProgramTitle = await _getProgramTitle(contribution.programId);
+        final oldProgramTitle = await getProgramTitle(currentContribution.programId);
+        final newProgramTitle = await getProgramTitle(contribution.programId);
         
         changes['program'] = { // Changed from 'programId' to 'program' for clarity
           'old': oldProgramTitle,
@@ -589,7 +588,7 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
     }
     
     final data = snapshot.data();
-    if (data == null || data is! Map<String, dynamic>) {
+    if (data == null) {
       debugPrint('❌ Contribution data is invalid or null');
       return null; // Return null instead of throwing
     }

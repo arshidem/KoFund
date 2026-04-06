@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/widgets/loading_indicator.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'dart:ui';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 // Move ChangeEntry to top level
 class ChangeEntry {
@@ -38,7 +34,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   String? _currentUserId;
   bool _isInitialLoad = true;
   bool _isRefreshing = false;
-  final RefreshController _refreshController = RefreshController();
+  // REMOVED: final RefreshController _refreshController = RefreshController();
   
   @override
   void initState() {
@@ -50,11 +46,7 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _refreshController.dispose();
-    super.dispose();
-  }
+
 
   @override
   void didChangeDependencies() {
@@ -180,29 +172,12 @@ void _debugFirestoreContribution(String contributionId) async {
   Future<void> _refreshData() async {
     debugPrint('🔄 DEBUG: Refreshing contribution history');
     
-    if (!mounted) return;
-    setState(() {
-      _isRefreshing = true;
-    });
-    
     try {
       final profileProvider = context.read<ProfileProvider>();
       await profileProvider.getUserContributionHistory();
       debugPrint('✅ DEBUG: Refresh completed successfully');
-      if (mounted) {
-        _refreshController.refreshCompleted();
-      }
     } catch (e) {
       debugPrint('❌ DEBUG: Refresh failed: $e');
-      if (mounted) {
-        _refreshController.refreshFailed();
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
     }
   }
 
@@ -218,27 +193,31 @@ void _debugFirestoreContribution(String contributionId) async {
 
     return GradientSheetScaffold(
       title: 'My Contributions',
-      body: SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _refreshData,
-        enablePullDown: true,
-        enablePullUp: false,
-        physics: const BouncingScrollPhysics(),
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: '',
-          completeText: 'Refresh complete',
-          failedText: 'Refresh failed',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-          refreshingIcon: SizedBox.shrink(),
-          completeIcon: Icon(Icons.check, color: Colors.green),
-          failedIcon: Icon(Icons.error, color: Colors.red),
-        ),
-        child: _isRefreshing 
-          ? ContributionHistorySkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
-          : _buildContent(profileProvider, authProvider, currentUser),
+      body: Column(
+        children: [
+          Expanded(
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              slivers: [
+                CupertinoSliverRefreshControl(
+                  onRefresh: _refreshData,
+                ),
+                SliverToBoxAdapter(
+                  child: _buildContent(profileProvider, authProvider, currentUser),
+                ),
+              ],
+            ),
+          ),
+          // Fixed bottom banner ad
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.grey[900] 
+                : Colors.grey[100],
+            child: const SimpleBannerAd(),
+          ),
+        ],
       ),
     );
   }
@@ -248,118 +227,48 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvid
 
   // Show loading on initial load
   if (_isInitialLoad) {
-    return Column(
-      children: [
-        Expanded(
-          child: ContributionHistorySkeleton(
-            isDarkMode: Theme.of(context).brightness == Brightness.dark
-          ),
-        ),
-        // Banner ad in loading state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
+    return ContributionHistorySkeleton(
+      isDarkMode: Theme.of(context).brightness == Brightness.dark
     );
   }
 
   // Check if user is not logged in
   if (currentUser == null) {
-    return Column(
-      children: [
-        Expanded(
-          child: _buildAuthRequiredState(),
-        ),
-        // Banner ad in auth required state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
-    );
+    return _buildAuthRequiredState();
   }
 
   // Show provider loading state
   if (profileProvider.isLoading) {
-    return Column(
-      children: [
-        Expanded(
-          child: const LoadingIndicator(),
-        ),
-        // Banner ad in loading state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
+    return ContributionHistorySkeleton(
+      isDarkMode: isDarkMode,
     );
   }
 
   // Show provider error state
   if (profileProvider.error != null) {
-    return Column(
-      children: [
-        Expanded(
-          child: _buildErrorState(profileProvider.error!),
-        ),
-        // Banner ad in error state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
-    );
+    return _buildErrorState(profileProvider.error!);
   }
 
   final contributionHistory = profileProvider.contributionHistory;
 
   // Check if no contributions
   if (contributionHistory.isEmpty) {
-    return Column(
-      children: [
-        Expanded(
-          child: _buildEmptyState(),
-        ),
-        // Banner ad in empty state
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-          child: const SimpleBannerAd(),
-        ),
-      ],
-    );
+    return _buildEmptyState();
   }
 
   return Column(
     children: [
       _buildStatsCards(contributionHistory),
-      Expanded(
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          itemCount: contributionHistory.length,
-          itemBuilder: (context, index) {
-            final contribution = contributionHistory[index];
-            _debugContributionData(contribution);
-            return _buildContributionListItem(contribution, authProvider);
-          },
-        ),
-      ),
-      // Banner ad in content state
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-        child: const SimpleBannerAd(),
+      ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+        itemCount: contributionHistory.length,
+        itemBuilder: (context, index) {
+          final contribution = contributionHistory[index];
+          _debugContributionData(contribution);
+          return _buildContributionListItem(contribution, authProvider);
+        },
       ),
     ],
   );
@@ -476,11 +385,11 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvid
     required Color color,
   }) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
       child: Container(
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -569,12 +478,12 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
                     shape: BoxShape.circle,
                     color: isEdited 
                       ? Colors.orange.withValues(alpha: 0.1)
-                      : Colors.green.withValues(alpha: 0.1),
+                      : AppColors.primary(context).withValues(alpha: 0.1),
                   ),
                   child: Icon(
                     Icons.payments,
                     size: 20,
-                    color: isEdited ? Colors.orange : Colors.green,
+                    color: isEdited ? Colors.orange : AppColors.primary(context),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -658,7 +567,7 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: isEdited ? Colors.orange : Colors.green,
+                        color: isEdited ? Colors.orange : AppColors.primary(context),
                       ),
                     ),
                   ],
@@ -674,8 +583,6 @@ Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProv
         height: 1,
         thickness: 1,
         color: AppColors.border(context),
-        indent: 16,
-        endIndent: 16,
       ),
     ],
   );
@@ -1145,7 +1052,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                                   width: 1.5,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 elevation: 0,
@@ -1170,7 +1077,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                                   backgroundColor: AppColors.primary(context),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   elevation: 4,

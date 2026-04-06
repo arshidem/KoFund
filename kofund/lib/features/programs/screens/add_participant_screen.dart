@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:developer' as developer;
 import 'dart:ui';
 import 'package:kofund/core/constants/app_dimensions.dart';
@@ -29,7 +28,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
   String _searchQuery = '';
   List<UserModel> _allCommunityUsers = [];
   List<ParticipantModel> _currentParticipants = [];
-  List<String> _addingParticipants = [];
+  final List<String> _addingParticipants = [];
   bool _isLoading = true;
 
   @override
@@ -104,7 +103,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     
     return _nonParticipants.where((user) {
       final name = user.displayName?.toLowerCase() ?? '';
-      final email = user.email?.toLowerCase() ?? '';
+      final email = user.email.toLowerCase() ?? '';
       final query = _searchQuery.toLowerCase();
       
       return name.contains(query) || email.contains(query);
@@ -312,7 +311,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                           suffixIcon: _searchController.text.isNotEmpty
                               ? Padding(
                                   padding: const EdgeInsets.only(right: 0),
-                                  child: Container(
+                                  child: SizedBox(
                                     width: 32,
                                     height: 32,
                                     child: IconButton(
@@ -389,7 +388,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: Container(
+        trailing: SizedBox(
           width: 80,
           child: ElevatedButton.icon(
             onPressed: () => _removeParticipant(participant.userId),
@@ -605,7 +604,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                   ),
                 ),
               )
-            : Container(
+            : SizedBox(
                 width: 80,
                 child: ElevatedButton.icon(
                   onPressed: () => _addParticipant(

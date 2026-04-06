@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -449,7 +449,6 @@ class _InstagramPollCard extends StatefulWidget {
   final VoidCallback onViewDetails;
 
   const _InstagramPollCard({
-    Key? key,
     required this.poll,
     required this.isDarkMode,
     required this.userId,
@@ -457,7 +456,7 @@ class _InstagramPollCard extends StatefulWidget {
     required this.canUserChangeVote,
     required this.onVote,
     required this.onViewDetails,
-  }) : super(key: key);
+  });
 
   @override
   State<_InstagramPollCard> createState() => __InstagramPollCardState();

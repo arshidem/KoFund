@@ -1,18 +1,14 @@
 // lib/features/community/screens/dashboard_screen.dart
-import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 import 'package:kofund/core/skeleton/stats_card_skeleton.dart';
 import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:clipboard/clipboard.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/members_widget.dart';
 
-import '../widgets/pending_requests_widget.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import 'package:kofund/core/widgets/admin_assistant_toast.dart';
@@ -20,19 +16,12 @@ import '../../../features/programs/providers/program_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
-import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/dashboard/widgets/program_carousel_widget.dart';
-import 'package:kofund/features/polls/widgets/poll_dashboard_widget.dart';
-import 'dart:ui';
-import 'package:kofund/core/widgets/glass_action_button.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/core/services/contribution_service.dart';
-import 'package:kofund/core/services/expense_service.dart';
 import 'package:kofund/core/services/user_service.dart';
-import 'package:kofund/core/services/program_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
@@ -43,19 +32,8 @@ import 'package:kofund/core/skeleton/members_skeleton.dart';
 // ADD THESE IMPORTS
 
 import 'package:kofund/features/members/providers/member_provider.dart';
-import 'package:kofund/features/polls/providers/poll_provider.dart';
-import 'package:kofund/core/services/contribution_service.dart';
-import 'package:kofund/core/services/expense_service.dart';
-import 'package:kofund/core/services/user_service.dart';
-import 'package:kofund/core/services/program_service.dart';
-import 'package:kofund/core/services/virtual_user_service.dart';
-import 'package:kofund/core/services/participant_service.dart';
-import 'package:kofund/core/services/community_firestore_service.dart';
 
 // 🆕 ADD INVITE IMPORTS
-import 'package:kofund/features/community/providers/community_provider.dart';
-import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToMembers;
@@ -469,7 +447,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                 boxShadow: const [
                   BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
                 ],
@@ -613,10 +591,10 @@ void _initializeWidgetProviders(String userId, String communityId) {
           if (!_inviteLoading)
             FloatingActionButton(
               onPressed: _showInviteDialog,
-              child: const Icon(Icons.share),
               tooltip: 'Invite Members',
               backgroundColor: AppColors.primary(context),
               foregroundColor: Colors.white,
+              child: const Icon(Icons.share),
             ),
         ],
       ),
@@ -727,8 +705,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
           decoration: BoxDecoration(
             color: AppColors.background(context),
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
+              topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+              topRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
           ),
         ),
@@ -756,7 +734,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         boxShadow: [
           BoxShadow(
             blurRadius: 6,

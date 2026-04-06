@@ -7,13 +7,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:kofund/features/notifications/models/notification_model.dart';
 import './notification_storage_service.dart';
 import './fcm_token_service.dart';
 
-import 'package:kofund/core/utils/notification_navigator.dart';
 import 'package:kofund/core/utils/notification_channels.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -200,7 +198,7 @@ Future<void> init({
     _setupFCMInBackground();
     
     debugPrint("✅ NotificationService initialized successfully");
-  } catch (e, stackTrace) {
+  } catch (e) {
     debugPrint("⚠️ NotificationService init error (non-critical): $e");
   }
 }
@@ -401,7 +399,7 @@ AppNotification _createNotificationFromMessage(RemoteMessage message) {
   final baseNotificationId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
   
   // 🆕 Construct full ID: base_userId (SAME as Cloud Function)
-  final notificationId = '${baseNotificationId}_${userId}';
+  final notificationId = '${baseNotificationId}_$userId';
   
   debugPrint("📝 Created notification ID: $notificationId (base: $baseNotificationId, userId: $userId)");
   

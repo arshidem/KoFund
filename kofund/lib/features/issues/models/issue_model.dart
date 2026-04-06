@@ -113,7 +113,7 @@ class IssueModel {
   }
 
   factory IssueModel.fromMap(Map<String, dynamic> map) {
-    Timestamp? _parseTimestamp(dynamic value) {
+    Timestamp? parseTimestamp(dynamic value) {
       if (value == null) return null;
       if (value is Timestamp) return value;
       if (value is int) return Timestamp.fromMillisecondsSinceEpoch(value);
@@ -141,8 +141,8 @@ class IssueModel {
       assignedDeveloperId: map['assignedDeveloperId']?.toString(),
       assignedDeveloperName: map['assignedDeveloperName']?.toString(),
       resolutionNotes: map['resolutionNotes']?.toString(),
-      createdAt: _parseTimestamp(map['createdAt']) ?? Timestamp.now(),
-      updatedAt: _parseTimestamp(map['updatedAt']) ?? Timestamp.now(),
+      createdAt: parseTimestamp(map['createdAt']) ?? Timestamp.now(),
+      updatedAt: parseTimestamp(map['updatedAt']) ?? Timestamp.now(),
       appVersion: map['appVersion']?.toString() ?? '1.0.0',
       platform: map['platform']?.toString() ?? 'android',
     );

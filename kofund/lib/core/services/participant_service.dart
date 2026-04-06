@@ -141,7 +141,7 @@ class ParticipantService {
         throw Exception('Participant not found for program $programId and user $userId');
       }
       final doc = snapshot.docs.first;
-      return ParticipantModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      return ParticipantModel.fromMap(doc.data(), doc.id);
     } catch (e) {
       debugPrint('❌ ParticipantService Error in getParticipant: $e');
       rethrow;

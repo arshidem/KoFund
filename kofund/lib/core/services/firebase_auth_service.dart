@@ -6,7 +6,6 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:developer' as developer;
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -97,7 +96,7 @@ class FirebaseAuthService {
         return null;
       }
       
-      if (kDebugMode) debugPrint('📱 Using secured auth from ${daysSinceSaved} days ago');
+      if (kDebugMode) debugPrint('📱 Using secured auth from $daysSinceSaved days ago');
       
       // Create a mock user or just return null
       // For offline mode, we'll rely on the saved UID in providers
@@ -180,7 +179,7 @@ class FirebaseAuthService {
       
       return userCredential.user;
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
@@ -421,7 +420,7 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
     
   } catch (e) {
     debugPrint('❌ Error in _cleanFCMTokensOnLogout: $e');
-    throw e;
+    rethrow;
   }
 }
  Future<void> initializeAuthService() async {

@@ -191,7 +191,7 @@ Future<void> saveNotification(AppNotification notification) async {
         return;
       }
       
-      final notificationData = notificationDoc.data() as Map<String, dynamic>?;
+      final notificationData = notificationDoc.data();
       if (notificationData?['userId'] != user.uid) {
         debugPrint('⚠️ Notification $notificationId does not belong to user ${user.uid}');
         return;
@@ -366,7 +366,7 @@ Future<void> saveNotification(AppNotification notification) async {
         return;
       }
       
-      final notificationData = notificationDoc.data() as Map<String, dynamic>?;
+      final notificationData = notificationDoc.data();
       if (notificationData?['userId'] != user.uid) {
         debugPrint('⚠️ Cannot delete notification that does not belong to user');
         return;
@@ -519,7 +519,7 @@ Future<void> saveNotification(AppNotification notification) async {
       debugPrint('📝 Stored user ID: $storedUserId');
       
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         debugPrint('\n📋 ID: ${doc.id}');
         debugPrint('   Title: ${data['title']}');
         debugPrint('   userId in data: ${data['userId']}');

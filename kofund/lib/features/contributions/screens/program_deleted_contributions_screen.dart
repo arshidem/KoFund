@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
-import 'package:flutter/services.dart';
 import '../../../../core/services/deleted_contribution_service.dart';
 import '../models/deleted_contribution_model.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -31,7 +30,7 @@ class _ProgramDeletedContributionsScreenState
   String _searchQuery = '';
   bool _isLoading = false;
   bool showBackButton = true;
-  Map<String, List<DeletedContributionModel>> _groupedByDate = {};
+  final Map<String, List<DeletedContributionModel>> _groupedByDate = {};
 
   @override
   void dispose() {
@@ -756,7 +755,7 @@ String _formatTime(DateTime date) {
                           suffixIcon: _searchController.text.isNotEmpty
                               ? Padding(
                                   padding: const EdgeInsets.only(right: 0),
-                                  child: Container(
+                                  child: SizedBox(
                                     width: 32,
                                     height: 32,
                                     child: IconButton(

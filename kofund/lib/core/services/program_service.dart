@@ -80,7 +80,7 @@ Future<List<ProgramModel>> getProgramsByCommunity(String communityId) async {
 
     // Convert to ProgramModel
     final programs = snapshot.docs
-        .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
         .toList();
 
     debugPrint('✅ Loaded ${programs.length} programs from Firestore');
@@ -169,7 +169,7 @@ Future<List<ProgramModel>> _syncExpiredProgramsStatus(List<ProgramModel> program
           .get();
 
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       throw Exception('Failed to load active programs: $e');
@@ -187,7 +187,7 @@ Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
       .snapshots()
       .map((snapshot) {
     final programs = snapshot.docs
-        .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
         .toList();
     
     // ✅ Fix: Handle null programDate values
@@ -218,7 +218,7 @@ Stream<List<ProgramModel>> streamProgramsByCommunity(String communityId) {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .toList();
     });
   }
@@ -358,7 +358,7 @@ Future<void> updateProgramModel(ProgramModel program) async {
           .get();
       
       final participants = participantsSnapshot.docs
-          .map((doc) => ParticipantModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
           .toList();
       
       // Filter participants who haven't fully paid
@@ -553,7 +553,7 @@ Future<void> _sendParticipantReminder(ProgramModel program, ParticipantModel par
       int remindersSent = 0;
       
       for (final doc in programsSnapshot.docs) {
-        final program = ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        final program = ProgramModel.fromMap(doc.data(), doc.id);
         
         // Check if reminder is due
         if (program.nextReminderDate != null && 
@@ -695,7 +695,7 @@ Future<void> sendProgramContributionReminders({
           .get();
       
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       debugPrint('❌ Error getting programs with upcoming reminders: $e');
@@ -811,7 +811,7 @@ Future<void> sendProgramContributionReminders({
           .get();
 
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .where((p) => p.hasFinancialGoals)
           .toList();
     } catch (e) {
@@ -830,7 +830,7 @@ Future<void> sendProgramContributionReminders({
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .where((p) => p.hasFinancialGoals)
           .toList();
     });

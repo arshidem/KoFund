@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
@@ -510,7 +509,7 @@ void _onParticipantsChanged() {
   }
 
   Widget _buildDatePickerField() {
-    String? _validateDate(DateTime date) {
+    String? validateDate(DateTime date) {
       final today = DateTime.now();
       final todayOnly = DateTime(today.year, today.month, today.day);
       final selectedOnly = DateTime(date.year, date.month, date.day);
@@ -524,7 +523,7 @@ void _onParticipantsChanged() {
       return null;
     }
 
-    final currentDateError = _validateDate(_selectedDate);
+    final currentDateError = validateDate(_selectedDate);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,9 +1,7 @@
 // 📁 lib/features/programs/screens/add_participant_skeleton.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../../core/constants/app_colors.dart';
 
 class AddParticipantSkeleton extends StatelessWidget {
   final bool isDarkMode;

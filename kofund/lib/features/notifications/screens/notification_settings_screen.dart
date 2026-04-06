@@ -201,7 +201,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               ),
             ),
           );
-        }).toList(),
+        }),
 
         const SizedBox(height: 24),
 

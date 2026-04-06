@@ -7,9 +7,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'dart:async';
-import 'package:intl/intl.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:flutter/services.dart';
 
 class PollDetailsScreen extends StatefulWidget {
   final String pollId;
@@ -799,7 +797,7 @@ color: Colors.green.withValues(alpha: 0.1),                borderRadius: BorderR
                 isClosed: isClosed || isExpired,
               ),
             );
-          }).toList(),
+          }),
           
           // Vote Status
           if (!canVote && poll.totalVotes > 0)

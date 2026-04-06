@@ -9,8 +9,6 @@ import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'member_details_screen.dart';
-import 'package:flutter/services.dart';
-import 'dart:ui';
 import 'package:kofund/core/skeleton/member_list_skeleton.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
@@ -20,7 +18,6 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/virtual_users/screens/create_virtual_users_screen.dart';
-import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 
@@ -59,8 +56,7 @@ class AllMembersScreen extends StatelessWidget {
 class _AllMembersScreenBody extends StatefulWidget {
   final bool? forceBackButton;
 
-  const _AllMembersScreenBody({Key? key, this.forceBackButton})
-    : super(key: key);
+  const _AllMembersScreenBody({this.forceBackButton});
 
   @override
   State<_AllMembersScreenBody> createState() => _AllMembersScreenBodyState();
@@ -106,6 +102,40 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadMembers();
     });
+  }
+
+  void _onTabTap(int index) {
+    if (_selectedTab != index) {
+      setState(() => _selectedTab = index);
+      if (index == 1) {
+        _tabAnimationController.forward();
+        _loadPendingMembersSilent();
+      } else {
+        _tabAnimationController.reverse();
+        _loadMembersSilent();
+      }
+    }
+  }
+
+  Future<void> _loadMembersSilent() async {
+    final memberProvider = context.read<MemberProvider>();
+    try {
+      await memberProvider.loadMembers();
+    } catch (e) {
+      print('❌ DEBUG: Silent load members failed: $e');
+    }
+  }
+
+  Future<void> _loadPendingMembersSilent() async {
+    final userProvider = context.read<UserProvider>();
+    final currentUser = context.read<AppAuthProvider>().user;
+    if (currentUser?.communityId != null) {
+      try {
+        await userProvider.loadCommunityMembers(currentUser!.communityId!);
+      } catch (e) {
+        print('❌ DEBUG: Silent load pending failed: $e');
+      }
+    }
   }
 
   @override
@@ -210,16 +240,23 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     try {
       final memberProvider = context.read<MemberProvider>();
-      await memberProvider.loadMembers();
+      final userProvider = context.read<UserProvider>();
+      final currentUser = context.read<AppAuthProvider>().user;
+      
+      // Load both in parallel for efficiency
+      final List<Future> futures = [memberProvider.loadMembers()];
+      
+      if (currentUser?.isAdmin == true && currentUser?.communityId != null) {
+        futures.add(userProvider.loadCommunityMembers(currentUser!.communityId!));
+      }
+      
+      await Future.wait(futures);
 
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
           _isLoading = false;
         });
-        print(
-          '✅ DEBUG: Members loaded successfully: ${memberProvider.members.length}',
-        );
       }
     } catch (error) {
       if (mounted) {
@@ -347,8 +384,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusExtraLarge)),
       ),
       builder: (context) => _buildBulkActionsBottomSheet(
         members: currentMembers,
@@ -711,16 +748,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final success = await memberProvider.bulkUpdateMemberRoles(uids, true);
 
     if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
+      _clearSelection();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Made ${members.length} users admin'),
           backgroundColor: Colors.green,
         ),
       );
-      _loadMembers();
+      _refreshDataSilent();
     }
   }
 
@@ -731,16 +766,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final success = await memberProvider.bulkUpdateMemberRoles(uids, false);
 
     if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
+      _clearSelection();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Removed admin role from ${members.length} users'),
           backgroundColor: Colors.green,
         ),
       );
-      _loadMembers();
+      _refreshDataSilent();
     }
   }
 
@@ -751,16 +784,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final success = await memberProvider.bulkUnapproveUsers(uids);
 
     if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
+      _clearSelection();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Unapproved ${members.length} users'),
           backgroundColor: Colors.green,
         ),
       );
-      _loadMembers();
+      _refreshDataSilent();
     }
   }
 
@@ -771,16 +802,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final success = await memberProvider.bulkRemoveFromCommunity(uids);
 
     if (success && mounted) {
-      setState(() {
-        _clearSelection();
-      });
+      _clearSelection();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Removed ${members.length} users from community'),
           backgroundColor: Colors.green,
         ),
       );
-      _loadMembers();
+      _refreshDataSilent();
     }
   }
 
@@ -792,7 +821,25 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     );
 
     if (mounted) {
-      _loadMembers();
+      _refreshDataSilent();
+    }
+  }
+
+  Future<void> _refreshDataSilent() async {
+    final memberProvider = context.read<MemberProvider>();
+    final userProvider = context.read<UserProvider>();
+    final currentUser = context.read<AppAuthProvider>().user;
+
+    final List<Future> futures = [memberProvider.loadMembers()];
+
+    if (currentUser?.isAdmin == true && currentUser?.communityId != null) {
+      futures.add(userProvider.loadCommunityMembers(currentUser!.communityId!));
+    }
+
+    try {
+      await Future.wait(futures);
+    } catch (e) {
+      print('❌ DEBUG: Silent data refresh failed: $e');
     }
   }
 
@@ -844,9 +891,9 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final double totalBottomHeight = bottomContentHeight + 24.0;
 
     // Dynamic collapsed/expanded calculation
-    const double toolbarHeight = 80.0;
+    const double toolbarHeight = 64.0;
     final double collapsedHeight = toolbarHeight + totalBottomHeight;
-    final double expandedHeight = collapsedHeight + 52.0;
+    final double expandedHeight = collapsedHeight + 36.0;
 
     return SliverAppBar(
       expandedHeight: expandedHeight,
@@ -875,8 +922,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                       (expandedHeight - collapsedHeight))
                   .clamp(0.0, 1.0);
 
-          // Font size: 24 at expanded, 20 at collapsed
-          final double fontSize = 20 + (4 * progress);
+          // Font size: 20 at expanded, 18 at collapsed
+          final double fontSize = 18 + (2 * progress);
 
           return Stack(
             fit: StackFit.expand,
@@ -937,8 +984,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
               decoration: BoxDecoration(
                 color: AppColors.card(context),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+                  topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+                  topRight: Radius.circular(AppDimensions.radiusExtraLarge),
                 ),
               ),
             ),
@@ -954,7 +1001,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Stack(
@@ -973,7 +1020,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                       height: double.infinity,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -1004,16 +1051,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          if (_selectedTab != index) {
-            setState(() => _selectedTab = index);
-            if (index == 1) {
-              _tabAnimationController.forward();
-            } else {
-              _tabAnimationController.reverse();
-            }
-          }
-        },
+        onTap: () => _onTabTap(index),
         child: Container(
           alignment: Alignment.center,
           color: Colors.transparent,
@@ -1072,7 +1110,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         pendingMembers = pendingMembers.where((m) {
           final query = _searchQuery.toLowerCase();
           return (m.displayName?.toLowerCase().contains(query) ?? false) ||
-                 (m.email?.toLowerCase().contains(query) ?? false) ||
+                 (m.email.toLowerCase().contains(query) ?? false) ||
                  (m.phoneNumber?.toLowerCase().contains(query) ?? false);
         }).toList();
       }
@@ -1186,7 +1224,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -1235,19 +1273,19 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
@@ -1347,7 +1385,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         height: 52,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -1358,7 +1396,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           clipBehavior: Clip.antiAlias,
           child: Row(
             children: [
@@ -1485,7 +1523,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                 foregroundColor: Colors.white,
                 elevation: 2,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
               ),
               child: const Text('Clear Search'),
@@ -1688,7 +1726,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                     }
                   },
                   icon: const Icon(
-                    Icons.remove_circle_outline,
+                    Icons.close,
                     color: Color(0xFFF43F5E),
                     size: 22,
                   ),
@@ -1753,8 +1791,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusExtraLarge)),
       ),
       builder: (ctx) {
         return Container(

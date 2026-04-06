@@ -1,6 +1,5 @@
 // lib/core/skeleton/participation_history_skeleton.dart
 import 'package:flutter/material.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ParticipationHistorySkeleton extends StatelessWidget {
@@ -26,6 +25,8 @@ class ParticipationHistorySkeleton extends StatelessWidget {
       baseColor: _baseColor(),
       highlightColor: _highlightColor(),
       child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(8),
         itemCount: 6,
         itemBuilder: (context, index) => _buildParticipationCardSkeleton(),

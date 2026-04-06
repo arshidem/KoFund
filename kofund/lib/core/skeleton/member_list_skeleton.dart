@@ -1,6 +1,5 @@
 // lib/core/skeleton/member_list_skeleton.dart
 import 'package:flutter/material.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 import 'package:shimmer/shimmer.dart';
 
 class MemberListSkeleton extends StatelessWidget {

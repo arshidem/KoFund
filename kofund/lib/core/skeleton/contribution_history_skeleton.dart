@@ -1,6 +1,5 @@
 // lib/core/skeleton/contribution_history_skeleton.dart
 import 'package:flutter/material.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ContributionHistorySkeleton extends StatelessWidget {
@@ -25,32 +24,30 @@ class ContributionHistorySkeleton extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: _baseColor(),
       highlightColor: _highlightColor(),
-      child: CustomScrollView(
-        slivers: [
+      child: Column(
+        children: [
           // Stats cards skeleton
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCardSkeleton(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCardSkeleton(),
-                  ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildStatCardSkeleton(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCardSkeleton(),
+                ),
+              ],
             ),
           ),
 
           // List items skeleton
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _buildListItemSkeleton(),
-              childCount: 8,
-            ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 8,
+            itemBuilder: (context, index) => _buildListItemSkeleton(),
           ),
         ],
       ),

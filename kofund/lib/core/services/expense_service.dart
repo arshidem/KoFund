@@ -1,7 +1,6 @@
-﻿// lib/core/services/expense_service.dart
+// lib/core/services/expense_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/expenses/models/expense_model.dart';
-import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart' show debugPrint;
 class ExpenseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -27,7 +26,7 @@ class ExpenseService {
           .get();
 
       return snapshot.docs
-          .map((doc) => ExpenseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       throw Exception('Failed to load program expenses: $e');
@@ -44,7 +43,7 @@ class ExpenseService {
           .get();
 
       return snapshot.docs
-          .map((doc) => ExpenseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       throw Exception('Failed to load community expenses: $e');
@@ -74,7 +73,7 @@ Future<void> updateExpense(
     
     final currentData = snapshot.data();
     
-    if (currentData == null || currentData is! Map<String, dynamic>) {
+    if (currentData == null) {
       throw Exception('Document has no data');
     }
     
@@ -210,7 +209,7 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
     
     final data = snapshot.data();
-    if (data == null || data is! Map<String, dynamic>) {
+    if (data == null) {
       debugPrint('❌ Expense data is invalid or null');
       return null;
     }
@@ -310,7 +309,7 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
         .orderBy('expenseDate', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => ExpenseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+            .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
             .toList());
   }
 
@@ -322,7 +321,7 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
         .orderBy('expenseDate', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => ExpenseModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+            .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
             .toList());
   }
 

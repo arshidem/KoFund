@@ -1,4 +1,4 @@
-﻿// lib/features/contributions/utils/contribution_receipt_pdf.dart
+// lib/features/contributions/utils/contribution_receipt_pdf.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -601,10 +601,10 @@ class ReceiptPreviewDialog extends StatefulWidget {
   final String contributionId;
 
   const ReceiptPreviewDialog({
-    Key? key,
+    super.key,
     required this.pdfBytes,
     required this.contributionId,
-  }) : super(key: key);
+  });
 
   @override
   State<ReceiptPreviewDialog> createState() => _ReceiptPreviewDialogState();

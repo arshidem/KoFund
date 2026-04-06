@@ -8,9 +8,7 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:flutter/services.dart';
 import 'package:kofund/core/skeleton/member_details_skeleton.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/routing/route_names.dart';
@@ -23,7 +21,6 @@ import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/features/virtual_users/screens/edit_virtual_user_screen.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:kofund/ads/simple_banner_ad.dart';
 
 // =================== MAIN SCREEN ===================
@@ -53,7 +50,7 @@ class MemberDetailsScreen extends StatelessWidget {
 class _MemberDetailsScreenBody extends StatefulWidget {
   final UserModel? member;
 
-  const _MemberDetailsScreenBody({Key? key, this.member});
+  const _MemberDetailsScreenBody({this.member});
 
   @override
   State<_MemberDetailsScreenBody> createState() =>
@@ -172,34 +169,39 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   Future<void> _refreshMemberData() async {
     try {
       setState(() => _isLoading = true);
-
-      if (_currentMember != null) {
-        final memberProvider = context.read<MemberProvider>();
-        final freshMember = await memberProvider.getMemberById(
-          _currentMember!.uid,
-        );
-        if (freshMember != null) {
-          setState(() {
-            _currentMember = freshMember;
-          });
-        }
-
-        // Load history if admin or member has detailed profile
-        final currentUser = context.read<AppAuthProvider>().user;
-        final isAdmin = currentUser?.isAdmin == true;
-        final shouldLoadHistory =
-            isAdmin || _currentMember!.showDetailedProfile;
-
-        if (shouldLoadHistory) {
-          await memberProvider.loadMemberHistoryData(_currentMember!.uid);
-        }
-      }
+      await _refreshMemberDataSilent();
     } catch (e) {
       debugPrint('❌ DEBUG: Error refreshing member data: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _refreshMemberDataSilent() async {
+    if (_currentMember == null) return;
+    
+    try {
+      final memberProvider = context.read<MemberProvider>();
+      final freshMember = await memberProvider.getMemberById(_currentMember!.uid);
+      
+      if (freshMember != null && mounted) {
+        setState(() {
+          _currentMember = freshMember;
+        });
+      }
+
+      // Load history if admin or member has detailed profile
+      final currentUser = context.read<AppAuthProvider>().user;
+      final isAdmin = currentUser?.isAdmin == true;
+      final shouldLoadHistory = isAdmin || (_currentMember?.showDetailedProfile ?? false);
+
+      if (shouldLoadHistory) {
+        await memberProvider.loadMemberHistoryData(_currentMember!.uid);
+      }
+    } catch (e) {
+      debugPrint('❌ DEBUG: Error silent refreshing member data: $e');
     }
   }
 
@@ -305,6 +307,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
         icon: const Icon(Icons.arrow_back, size: 24, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
+      actions: _buildAdminActions(member, isAdmin, isVirtualUser, currentUser?.uid),
       body: Column(
         children: [
           // Main content
@@ -518,113 +521,113 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
               ),
             ],
           ),
-
-          // Three-dot menu (only for admins viewing other members)
-          if (isAdmin &&
-              member.uid != context.read<AppAuthProvider>().user?.uid)
-            Positioned(
-              top: -8,
-              right: -10,
-              child: PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-                onSelected: (value) =>
-                    _handleMenuAction(value, member, isVirtualUser),
-                itemBuilder: (context) {
-                  // In _buildProfileHeaderCard method, update the PopupMenuButton for virtual users:
-
-                  if (isVirtualUser) {
-                    // Virtual user menu
-                    return [
-                      // Add Edit option
-                      const PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 20, color: Colors.blue),
-                            SizedBox(width: 8),
-                            Text('Edit Virtual User'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'remove',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Remove from Community'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  } else {
-                    // Regular user menu
-                    return [
-                      if (!member.isAdmin)
-                        const PopupMenuItem<String>(
-                          value: 'make_admin',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.admin_panel_settings,
-                                size: 20,
-                                color: Colors.orange,
-                              ),
-                              SizedBox(width: 8),
-                              Text('Make Admin'),
-                            ],
-                          ),
-                        ),
-                      if (member.isAdmin)
-                        const PopupMenuItem<String>(
-                          value: 'remove_admin',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.person_remove,
-                                size: 20,
-                                color: Colors.orange,
-                              ),
-                              SizedBox(width: 8),
-                              Text('Remove Admin'),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuItem<String>(
-                        value: 'unapprove',
-                        child: Row(
-                          children: [
-                            Icon(Icons.block, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Unapprove User'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'remove',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.exit_to_app,
-                              size: 20,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 8),
-                            Text('Remove from Community'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  }
-                },
-              ),
-            ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAdminActions(
+    UserModel member,
+    bool isAdmin,
+    bool isVirtualUser,
+    String? currentUserId,
+  ) {
+    if (!isAdmin || member.uid == currentUserId) return [];
+
+    return [
+      PopupMenuButton<String>(
+        icon: const Icon(
+          Icons.more_vert,
+          color: Colors.white,
+        ),
+        onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
+        itemBuilder: (context) {
+          if (isVirtualUser) {
+            // Virtual user menu
+            return [
+              const PopupMenuItem<String>(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 20, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('Edit Virtual User'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'remove',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Remove from Community'),
+                  ],
+                ),
+              ),
+            ];
+          } else {
+            // Regular user menu
+            return [
+              if (!member.isAdmin)
+                const PopupMenuItem<String>(
+                  value: 'make_admin',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.admin_panel_settings,
+                        size: 20,
+                        color: Colors.orange,
+                      ),
+                      SizedBox(width: 8),
+                      Text('Make Admin'),
+                    ],
+                  ),
+                ),
+              if (member.isAdmin)
+                const PopupMenuItem<String>(
+                  value: 'remove_admin',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_remove,
+                        size: 20,
+                        color: Colors.orange,
+                      ),
+                      SizedBox(width: 8),
+                      Text('Remove Admin'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem<String>(
+                value: 'unapprove',
+                child: Row(
+                  children: [
+                    Icon(Icons.block, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Unapprove User'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'remove',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.exit_to_app,
+                      size: 20,
+                      color: Colors.red,
+                    ),
+                    SizedBox(width: 8),
+                    Text('Remove from Community'),
+                  ],
+                ),
+              ),
+            ];
+          }
+        },
+      ),
+    ];
   }
 
   // Virtual User Info Card
@@ -861,7 +864,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
             'Role',
             isVirtualUser
                 ? 'VIRTUAL MEMBER'
-                : (member.role?.toUpperCase() ?? 'MEMBER'),
+                : (member.role.toUpperCase() ?? 'MEMBER'),
             isVirtualUser ? Icons.person_outline : Icons.verified_user_outlined,
           ),
           _buildInfoItem(
@@ -1712,28 +1715,48 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
 
   // Admin Action Methods
   void _makeAdmin(UserModel member, MemberProvider memberProvider) async {
+    // 1. Optimistic local update
+    if (mounted) {
+      setState(() {
+        _currentMember = _currentMember?.copyWith(isAdmin: true, role: 'admin');
+      });
+    }
+
     final success = await memberProvider.updateMemberRole(member.uid, true);
     if (!mounted) return;
 
-    if (success && mounted) {
+    if (success) {
       SnackbarHelper.showSuccess(
         context,
         '${member.displayName} is now an Admin',
       );
-      _refreshMemberData();
+      _refreshMemberDataSilent();
+    } else {
+      // Revert if failed
+      _refreshMemberDataSilent();
     }
   }
 
   void _removeAdmin(UserModel member, MemberProvider memberProvider) async {
+    // 1. Optimistic local update
+    if (mounted) {
+      setState(() {
+        _currentMember = _currentMember?.copyWith(isAdmin: false, role: 'member');
+      });
+    }
+
     final success = await memberProvider.updateMemberRole(member.uid, false);
     if (!mounted) return;
 
-    if (success && mounted) {
+    if (success) {
       SnackbarHelper.showSuccess(
         context,
         '${member.displayName} is no longer an Admin',
       );
-      _refreshMemberData();
+      _refreshMemberDataSilent();
+    } else {
+      // Revert if failed
+      _refreshMemberDataSilent();
     }
   }
 

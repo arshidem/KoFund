@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/auth/providers/app_auth_provider.dart' as app_auth;
 import '../../../features/auth/screens/login_screen.dart';
@@ -167,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (e) {
         debugPrint("❌ Notification initialization failed: $e");
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint("❌ Background notification init error: $e");
     }
   }

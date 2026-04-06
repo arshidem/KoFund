@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../core/constants/app_colors.dart';
 
 class EditContributionSkeleton extends StatelessWidget {
   final bool isDarkMode;

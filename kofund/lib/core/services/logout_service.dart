@@ -1,11 +1,10 @@
-﻿// First, create the LogoutService (if not already done)
+// First, create the LogoutService (if not already done)
 // lib/core/services/logout_service.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class LogoutService {
   /// Complete logout that clears EVERYTHING

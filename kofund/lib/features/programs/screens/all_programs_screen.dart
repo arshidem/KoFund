@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 
@@ -16,11 +14,9 @@ import 'create_program_screen.dart';
 import 'program_details_screen.dart';
 import 'edit_program_screen.dart';
 import 'program_reminder_screen.dart';
-import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:kofund/core/skeleton/all_program_skeleton.dart';
-import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import '../../participants/models/participant_model.dart';
 import '../../participants/providers/participant_provider.dart';
 enum ProgramStatusFilter {
@@ -177,8 +173,8 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusExtraLarge)),
       ),
       builder: (ctx) {
         return FractionallySizedBox(
@@ -247,14 +243,12 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
   }
 
   Widget _buildSliverAppBar(BuildContext context) {
-    // Search row: 52, Padding bottom: 12 => 64 base height
-    // Plus bottom rounded container: 24
+    const double toolbarHeight = 64.0;
     const double totalBottomHeight = 64.0 + 24.0;
-    const double toolbarHeight = 80.0;
 
     // Dynamic collapsed/expanded calculation
     final double collapsedHeight = toolbarHeight + totalBottomHeight;
-    final double expandedHeight = collapsedHeight + 52.0;
+    final double expandedHeight = collapsedHeight + 36.0;
 
     return SliverAppBar(
       expandedHeight: expandedHeight,
@@ -275,8 +269,8 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           // Normalized progress: 0.0 at collapsed, 1.0 at expanded
           final double progress = ((currentHeight - collapsedHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
           
-          // Font size: 24 at expanded, 20 at collapsed
-          final double fontSize = 20 + (4 * progress); // 20 to 24 scaling
+          // Font size: 20 at expanded, 18 at collapsed
+          final double fontSize = 18 + (2 * progress); // 18 to 20 scaling
           // Vertical offset for title - center it vertically above the search bar
           
           return Stack(
@@ -322,8 +316,8 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
               decoration: BoxDecoration(
                 color: AppColors.background(context),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+                  topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+                  topRight: Radius.circular(AppDimensions.radiusExtraLarge),
                 ),
               ),
             ),
@@ -346,7 +340,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -385,15 +379,15 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.12),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                 ),
               ),
@@ -407,7 +401,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           height: 52,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.2),
               width: 1,
@@ -416,7 +410,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               onTap: () => _openFilterSheet(context),
               child: Center(
                 child: badges.Badge(
@@ -468,7 +462,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: AppColors.primary(context).withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
             ),
             child: Text(
               '$resultCount ${resultCount == 1 ? 'program' : 'programs'}',
@@ -661,7 +655,7 @@ Widget _buildProgramCard(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           border: Border.all(
             color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
           ),
@@ -676,7 +670,7 @@ Widget _buildProgramCard(
         ),
         child: InkWell(
           onTap: () => _viewProgramDetails(program),
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           child: StreamBuilder<double>(
                   stream: programProvider.streamProgramTotalContributions(program.programId),
                   builder: (context, contribSnap) {
@@ -706,8 +700,7 @@ Widget _buildProgramCard(
 
                         final canJoin = !hasJoined &&
                             (!program.isFixedParticipants ||
-                                (program.maxParticipants == null ||
-                                    program.maxParticipants! > totalParticipants));
+                                (program.maxParticipants > totalParticipants));
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,7 +712,7 @@ Widget _buildProgramCard(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: programColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                                   ),
                                   child: Icon(
                                     ProgramTypes.getIconData(program.programType),
@@ -1230,10 +1223,10 @@ class FilterSheet extends StatefulWidget {
   final Function(ProgramFilters) onFiltersChanged;
 
   const FilterSheet({
-    Key? key,
+    super.key,
     required this.filters,
     required this.onFiltersChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<FilterSheet> createState() => _FilterSheetState();

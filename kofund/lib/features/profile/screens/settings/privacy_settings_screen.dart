@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -732,8 +731,8 @@ class _MemberCard extends StatelessWidget {
     final String contactInfo =
         user.phoneNumber?.isNotEmpty == true
             ? user.phoneNumber!
-            : user.email?.isNotEmpty == true
-                ? user.email!
+            : user.email.isNotEmpty == true
+                ? user.email
                 : 'No contact info';
 
     return Material(

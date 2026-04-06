@@ -7,12 +7,12 @@ class AnimatedLogo extends StatefulWidget {
   final bool loopAnimation;
 
   const AnimatedLogo({
-    Key? key,
+    super.key,
     this.size = 90,
     this.showBackground = false,
     this.backgroundColor = Colors.transparent,
     this.loopAnimation = true,
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedLogo> createState() => _AnimatedLogoState();

@@ -1,6 +1,5 @@
 // lib/services/network_service.dart
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/material.dart';
 
 class NetworkService {
   static final NetworkService _instance = NetworkService._internal();

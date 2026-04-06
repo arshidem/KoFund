@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/contribution_model.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/app_auth_provider.dart';

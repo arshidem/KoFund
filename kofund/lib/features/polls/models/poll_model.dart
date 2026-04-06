@@ -315,7 +315,7 @@ class PollModel {
     if (allowMultipleVotes) configs.add('Multiple votes');
     if (!allowVoteChange) configs.add('Votes locked');
     if (minParticipationPercent != null) {
-      configs.add('${minParticipationPercent}% min participation');
+      configs.add('$minParticipationPercent% min participation');
     }
     
     return configs.join(' • ');

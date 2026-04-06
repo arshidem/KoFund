@@ -1,8 +1,6 @@
 // lib/features/profile/skeleton/profile_screen_skeleton.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 
 class ProfileScreenSkeleton extends StatelessWidget {
   final bool isDarkMode;

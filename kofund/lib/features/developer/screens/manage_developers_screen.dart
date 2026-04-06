@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class ManageDevelopersScreen extends StatefulWidget {
@@ -464,7 +463,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
                       ),
                     )
                   else
-                    ..._developers.map(_buildDeveloperCard).toList(),
+                    ..._developers.map(_buildDeveloperCard),
 
                   const SizedBox(height: 24),
 

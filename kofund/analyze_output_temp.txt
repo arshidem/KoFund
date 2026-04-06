@@ -1,5 +1,0 @@
-﻿Analyzing participant_service.dart...                           
-
-warning - Unnecessary cast - lib\core\services\participant_service.dart:144:39 - unnecessary_cast
-warning - Unnecessary cast - lib\core\services\participant_service.dart:472:41 - unnecessary_cast
-

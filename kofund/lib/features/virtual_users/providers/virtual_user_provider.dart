@@ -7,7 +7,7 @@ class VirtualUserProvider extends ChangeNotifier {
   
   // State for bulk creation
   bool _isLoading = false;
-  List<String> _errorMessages = [];
+  final List<String> _errorMessages = [];
   int _successfulCreations = 0;
   List<UserModel> _virtualUsers = [];
   

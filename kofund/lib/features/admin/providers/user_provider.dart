@@ -82,44 +82,30 @@ Future<void> loadCommunityMembers(String communityId) async {
 // 🔄 UNAPPROVE USER (Remove from members) - FIXED VERSION
 // --------------------------------------------------------------------------
 Future<void> unapproveUser(String uid) async {
-  _setLoading(true);
+  // 1. Optimistic Update
+  final userIndex = _approvedMembers.indexWhere((user) => user.uid == uid);
+  UserModel? originalUser;
+  if (userIndex != -1) {
+    originalUser = _approvedMembers[userIndex];
+    final user = originalUser.copyWith(isApproved: false);
+    
+    _approvedMembers.removeAt(userIndex);
+    _pendingMembers.add(user);
+    notifyListeners();
+  }
+
   try {
-    // 🔹 Update in Firestore FIRST
     await _userService.unapproveUser(uid);
-    
-    // 🔹 Find user in approved list
-    final userIndex = _approvedMembers.indexWhere((user) => user.uid == uid);
-    if (userIndex != -1) {
-      // 🔹 Get a FRESH copy of the user
-      final user = _approvedMembers[userIndex].copyWith(isApproved: false);
-      
-      // 🔹 Create NEW lists (don't modify in-place)
-      final newApproved = List<UserModel>.from(_approvedMembers);
-      final newPending = List<UserModel>.from(_pendingMembers);
-      
-      // 🔹 Remove from approved
-      newApproved.removeAt(userIndex);
-      
-      // 🔹 Add to pending
-      newPending.add(user);
-      
-      // 🔹 Assign new lists
-      _approvedMembers = newApproved;
-      _pendingMembers = newPending;
-      
-      debugPrint('DEBUG: After unapprove - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
-    }
-    
     _setMessage('User removed from approved members');
   } catch (e) {
+    // 2. Revert on failure
+    if (userIndex != -1 && originalUser != null) {
+      _pendingMembers.removeWhere((u) => u.uid == uid);
+      _approvedMembers.insert(userIndex, originalUser);
+      notifyListeners();
+    }
     debugPrint('ERROR unapproving user: $e');
     _setMessage('Error unapproving user: $e');
-    
-    // 🔹 Reload data to ensure consistency
-    // You might want to get communityId from somewhere
-    // await loadCommunityMembers(communityId);
-  } finally {
-    _setLoading(false);
   }
 }
 
@@ -127,39 +113,30 @@ Future<void> unapproveUser(String uid) async {
 // 🟢 APPROVE USER (Make them a member) - FIXED VERSION
 // --------------------------------------------------------------------------
 Future<void> approveUser(String uid, String communityId) async {
-  _setLoading(true);
+  // 1. Optimistic Update
+  final pendingIndex = _pendingMembers.indexWhere((u) => u.uid == uid);
+  UserModel? originalUser;
+  if (pendingIndex != -1) {
+    originalUser = _pendingMembers[pendingIndex];
+    final user = originalUser.copyWith(isApproved: true);
+    
+    _pendingMembers.removeAt(pendingIndex);
+    _approvedMembers.add(user);
+    notifyListeners();
+  }
+
   try {
     await _userService.approveUser(uid);
-
-    // 🔹 Find user in pending list
-    final pendingIndex = _pendingMembers.indexWhere((u) => u.uid == uid);
-    if (pendingIndex != -1) {
-      // 🔹 Get a FRESH copy of the user
-      final user = _pendingMembers[pendingIndex].copyWith(isApproved: true);
-      
-      // 🔹 Create NEW lists (don't modify in-place)
-      final newPending = List<UserModel>.from(_pendingMembers);
-      final newApproved = List<UserModel>.from(_approvedMembers);
-      
-      // 🔹 Remove from pending
-      newPending.removeAt(pendingIndex);
-      
-      // 🔹 Add to approved
-      newApproved.add(user);
-      
-      // 🔹 Assign new lists
-      _pendingMembers = newPending;
-      _approvedMembers = newApproved;
-      
-      debugPrint('DEBUG: After approve - Approved: ${_approvedMembers.length}, Pending: ${_pendingMembers.length}');
-    }
-
     _setMessage('User approved successfully');
   } catch (e) {
+    // 2. Revert on failure
+    if (pendingIndex != -1 && originalUser != null) {
+      _approvedMembers.removeWhere((u) => u.uid == uid);
+      _pendingMembers.insert(pendingIndex, originalUser);
+      notifyListeners();
+    }
     debugPrint('ERROR approving user: $e');
     _setMessage('Error approving user: $e');
-  } finally {
-    _setLoading(false);
   }
 }
 
@@ -167,7 +144,14 @@ Future<void> approveUser(String uid, String communityId) async {
 // 🔴 REJECT USER (Remove from pending) - FIXED VERSION
 // --------------------------------------------------------------------------
 Future<void> rejectUser(String uid) async {
-  _setLoading(true);
+  // 1. Optimistic Update
+  final pendingIndex = _pendingMembers.indexWhere((u) => u.uid == uid);
+  UserModel? removedUser;
+  if (pendingIndex != -1) {
+    removedUser = _pendingMembers.removeAt(pendingIndex);
+    notifyListeners();
+  }
+
   try {
     // 🔹 1. Get user's communityId
     final userDoc = await FirebaseFirestore.instance
@@ -178,26 +162,26 @@ Future<void> rejectUser(String uid) async {
     final communityId = userDoc.data()?['communityId'] as String?;
 
     if (communityId == null || communityId.isEmpty) {
+      // Revert if no community ID - arguably we could skip revert if doc not found
+      if (removedUser != null) {
+        _pendingMembers.insert(pendingIndex, removedUser);
+        notifyListeners();
+      }
       _setMessage('User is not in any community');
       return;
     }
 
     // 🔹 2. Call UserService with POSITIONAL parameters
     await _userService.rejectUser(uid, communityId);
-
-    // 🔹 3. Remove user from local pending list (immutable update)
-    _pendingMembers = _pendingMembers
-        .where((user) => user.uid != uid)
-        .toList();
-
-    debugPrint('✅ DEBUG: User $uid rejected. Pending count: ${_pendingMembers.length}');
-
     _setMessage('User rejected successfully');
   } catch (e) {
+    // 2. Revert on failure
+    if (pendingIndex != -1 && removedUser != null) {
+      _pendingMembers.insert(pendingIndex, removedUser);
+      notifyListeners();
+    }
     debugPrint('❌ ERROR rejecting user: $e');
     _setMessage('Error rejecting user: $e');
-  } finally {
-    _setLoading(false);
   }
 }
 
@@ -206,39 +190,47 @@ Future<void> rejectUser(String uid) async {
 // 👑 UPDATE USER ROLE (Admin/Non-Admin) - FIXED VERSION
 // --------------------------------------------------------------------------
 Future<void> updateUserRole(String uid, bool isAdmin) async {
-  _setLoading(true);
+  // 1. Optimistic Update
+  final Map<String, int> listIndices = {
+    'approved': _approvedMembers.indexWhere((u) => u.uid == uid),
+    'pending': _pendingMembers.indexWhere((u) => u.uid == uid),
+  };
+  
+  final Map<String, UserModel> originals = {};
+  if (listIndices['approved'] != -1) {
+    originals['approved'] = _approvedMembers[listIndices['approved']!];
+    _approvedMembers[listIndices['approved']!] = originals['approved']!.copyWith(isAdmin: isAdmin);
+  }
+  if (listIndices['pending'] != -1) {
+    originals['pending'] = _pendingMembers[listIndices['pending']!];
+    _pendingMembers[listIndices['pending']!] = originals['pending']!.copyWith(isAdmin: isAdmin);
+  }
+
+  // Special logic: if user is no longer admin, remove from approved? 
+  // Wait, the original code had this logic. Let's keep it but optimistically.
+  UserModel? removedFromApproved;
+  if (!isAdmin && listIndices['approved'] != -1) {
+    removedFromApproved = _approvedMembers.removeAt(listIndices['approved']!);
+  }
+
+  notifyListeners();
+
   try {
     await _userService.updateUserRole(uid, isAdmin);
-    
-    // 🔹 Create NEW lists
-    final newApproved = List<UserModel>.from(_approvedMembers);
-    final newPending = List<UserModel>.from(_pendingMembers);
-    
-    // 🔹 Helper function to update user in a list
-    void updateInList(List<UserModel> list, String uid, bool isAdminValue) {
-      final index = list.indexWhere((user) => user.uid == uid);
-      if (index != -1) {
-        list[index] = list[index].copyWith(isAdmin: isAdminValue);
-      }
-    }
-    
-    updateInList(newApproved, uid, isAdmin);
-    updateInList(newPending, uid, isAdmin);
-    
-    // ✅ If user is no longer admin, remove from approved members
-    if (!isAdmin) {
-      newApproved.removeWhere((user) => user.uid == uid);
-    }
-    
-    // 🔹 Assign new lists
-    _approvedMembers = newApproved;
-    _pendingMembers = newPending;
-    
     _setMessage('User role updated successfully');
   } catch (e) {
+    // 2. Revert on failure
+    if (removedFromApproved != null) {
+      _approvedMembers.insert(listIndices['approved']!, removedFromApproved);
+    }
+    if (originals['approved'] != null) {
+      _approvedMembers[listIndices['approved']!] = originals['approved']!;
+    }
+    if (originals['pending'] != null) {
+      _pendingMembers[listIndices['pending']!] = originals['pending']!;
+    }
+    notifyListeners();
     _setMessage('Error updating user role: $e');
-  } finally {
-    _setLoading(false);
   }
 }
 

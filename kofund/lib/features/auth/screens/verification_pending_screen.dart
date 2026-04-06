@@ -9,10 +9,7 @@ import '../../../core/constants/app_colors.dart'; // Add AppColors
 import '../../../core/utils/snackbar_helper.dart'; // Consistent with other screens
 import '../../../routing/route_names.dart'; // Use route names
 import '../providers/app_auth_provider.dart';
-import 'login_screen.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'splash_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class VerificationPendingScreen extends StatefulWidget {

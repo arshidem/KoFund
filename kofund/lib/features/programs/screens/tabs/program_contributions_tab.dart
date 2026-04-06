@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -27,7 +25,9 @@ class ProgramContributionsTab extends StatefulWidget {
 }
 /// Simple SliverPersistentHeaderDelegate that pins a provided child.
 class _PinnedStatsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
   final double minExtent;
+  @override
   final double maxExtent;
   final Widget child;
 
@@ -122,8 +122,8 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
       }
       
       // Fallback to email if name not available
-      if (user != null && user.email != null && user.email!.isNotEmpty) {
-        return user.email!;
+      if (user != null && user.email.isNotEmpty) {
+        return user.email;
       }
       
       return 'User $userId';
@@ -453,7 +453,7 @@ Widget _buildContributionSummary(BuildContext context) {
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      "₹${widget.program.suggestedContribution!.toStringAsFixed(0)} × ${participantCount} participants",
+                      "₹${widget.program.suggestedContribution!.toStringAsFixed(0)} × $participantCount participants",
                       style: TextStyle(
                         color: AppColors.textCards(context).withValues(alpha: 0.85),
                         fontSize: 11,

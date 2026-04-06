@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:developer' as developer;
 import '../../../features/auth/models/user_model.dart';
@@ -452,7 +452,7 @@ Future<List<UserModel>> createMultipleVirtualUsers({
     return users.where((user) {
       final nameMatch = user.displayName?.toLowerCase().contains(lowerQuery) == true;
       final phoneMatch = user.phoneNumber?.toLowerCase().contains(lowerQuery) == true;
-      final emailMatch = user.email?.toLowerCase().contains(lowerQuery) == true;
+      final emailMatch = user.email.toLowerCase().contains(lowerQuery) == true;
       
       // Also check for partial matches (first name, last name)
       final displayName = user.displayName ?? '';

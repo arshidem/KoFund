@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
-import 'package:flutter/cupertino.dart';
 import '../../models/program_model.dart';
 import '../../providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
@@ -18,7 +17,6 @@ import 'package:kofund/features/programs/screens/add_participant_screen.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class SafeAsyncOperation {
   static Future<T?> execute<T>({
@@ -1427,7 +1425,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
         });
       }
       
-    } catch (error, stackTrace) {
+    } catch (error) {
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
@@ -1679,7 +1677,7 @@ Future<void> _removeContributions({
     contributionProvider.clearCacheForUser(programId, userId);
     
     String message = isMonthlyProgram && monthId != null
-        ? 'Marked $participantName as pending for ${_formatMonthDisplay(monthId!)}'
+        ? 'Marked $participantName as pending for ${_formatMonthDisplay(monthId)}'
         : 'Marked $participantName as pending';
     
     scaffoldMessenger.showSnackBar(

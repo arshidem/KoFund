@@ -28,18 +28,16 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   bool _isLoading = false;
   
 void _scrollToCommunityType() {
-  final BuildContext? currentContext = context;
-  if (currentContext != null) {
-    // You might need to wrap the dropdown in a KeyedSubtree
-    // or find another way to scroll to it
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Scrollable.ensureVisible(
-        currentContext,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
+  final BuildContext currentContext = context;
+  // You might need to wrap the dropdown in a KeyedSubtree
+  // or find another way to scroll to it
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Scrollable.ensureVisible(
+      currentContext,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  });
 }
   @override
   void dispose() {
@@ -192,7 +190,6 @@ Widget _buildInputField({
   required IconData icon,
   required String hint, // ⭐ KEEP HINT for description
   bool obscureText = false,
-  bool showObscureToggle = false,
   TextInputType keyboardType = TextInputType.text,
   int maxLines = 1,
   int maxLength = 100,

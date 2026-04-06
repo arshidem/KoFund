@@ -1,7 +1,6 @@
 // lib/features/community/screens/tabs/programs_tab.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/screens/all_programs_screen.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 

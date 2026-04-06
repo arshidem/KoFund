@@ -12,20 +12,18 @@ import '../../contributions/models/contribution_model.dart';
 import '../../contributions/providers/contribution_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
-import '../../programs/providers/program_provider.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class EditContributionScreen extends StatefulWidget {
   final String contributionId;
   final Function(ContributionModel?) onSave;
 
   const EditContributionScreen({
-    Key? key,
+    super.key,
     required this.contributionId,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   _EditContributionScreenState createState() => _EditContributionScreenState();
@@ -112,7 +110,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       }
       
       final data = snapshot.data();
-      if (data == null || data is! Map<String, dynamic>) {
+      if (data == null) {
         throw Exception('Contribution data is invalid');
       }
       
@@ -161,7 +159,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
           .get();
       
       _availablePrograms = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         debugPrint('📝 Program data: $data');
         return ProgramModel.fromMap(data, doc.id);
       }).toList();
@@ -178,7 +176,7 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
             .get();
         
         _availablePrograms = rootQuery.docs.map((doc) {
-          return ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          return ProgramModel.fromMap(doc.data(), doc.id);
         }).toList();
         
         debugPrint('✅ Found ${_availablePrograms.length} programs in root collection');
@@ -781,7 +779,7 @@ Widget _buildChangeItem({
                                     const SizedBox(height: 8),
 
                                     DropdownButtonFormField<String>(
-                                      value: _selectedProgramId,
+                                      initialValue: _selectedProgramId,
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
@@ -936,7 +934,7 @@ Widget _buildChangeItem({
                                     ),
                                     const SizedBox(height: 8),
                                     DropdownButtonFormField<String>(
-                                      value: _paymentMethods.contains(_paymentMethod)
+                                      initialValue: _paymentMethods.contains(_paymentMethod)
                                           ? _paymentMethod
                                           : (_paymentMethods.isNotEmpty ? _paymentMethods.first : null),
                                       decoration: InputDecoration(
@@ -1026,7 +1024,7 @@ Widget _buildChangeItem({
                                       ),
                                       const SizedBox(height: 8),
                                       DropdownButtonFormField<String>(
-                                        value: _monthId != null && _availableMonths.contains(_monthId)
+                                        initialValue: _monthId != null && _availableMonths.contains(_monthId)
                                             ? _monthId
                                             : (_availableMonths.isNotEmpty ? _availableMonths.first : null),
                                         decoration: InputDecoration(

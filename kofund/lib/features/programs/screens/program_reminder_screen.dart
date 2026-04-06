@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -13,7 +12,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class ProgramRemindersScreen extends StatefulWidget {
   final ProgramModel program;
 
-  const ProgramRemindersScreen({Key? key, required this.program}) : super(key: key);
+  const ProgramRemindersScreen({super.key, required this.program});
 
   @override
   State<ProgramRemindersScreen> createState() => _ProgramRemindersScreenState();
@@ -256,7 +255,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
             const SizedBox(height: 16),
             
             DropdownButtonFormField<String>(
-              value: _selectedFrequency,
+              initialValue: _selectedFrequency,
               decoration: InputDecoration(
                 labelText: 'Reminder Frequency',
                 border: OutlineInputBorder(

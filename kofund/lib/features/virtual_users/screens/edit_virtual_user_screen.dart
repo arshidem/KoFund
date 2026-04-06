@@ -11,7 +11,6 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class EditVirtualUserScreen extends StatefulWidget {

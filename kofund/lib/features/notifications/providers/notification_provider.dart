@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import 'package:kofund/core/services/notification_storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,7 +6,6 @@ import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/services/fcm_token_service.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
 class NotificationProvider extends ChangeNotifier {

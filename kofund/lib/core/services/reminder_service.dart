@@ -17,7 +17,7 @@ class ReminderService {
       final value = entry.value;
       
       if (value is Map) {
-        result[key] = _convertMap(value as Map<dynamic, dynamic>);
+        result[key] = _convertMap(value);
       } else if (value is List) {
         result[key] = _convertList(value);
       } else {
@@ -31,7 +31,7 @@ class ReminderService {
   List<dynamic> _convertList(List<dynamic> list) {
     return list.map((item) {
       if (item is Map) {
-        return _convertMap(item as Map<dynamic, dynamic>);
+        return _convertMap(item);
       } else if (item is List) {
         return _convertList(item);
       }
@@ -93,7 +93,7 @@ class ReminderService {
           
           // Handle nested maps
           if (value is Map) {
-            resultData[key] = _convertMap(value as Map<dynamic, dynamic>);
+            resultData[key] = _convertMap(value);
           } 
           // Handle nested lists
           else if (value is List) {

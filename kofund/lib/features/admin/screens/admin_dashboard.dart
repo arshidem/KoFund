@@ -1,4 +1,4 @@
-﻿// lib/features/contributions/utils/contribution_receipt_pdf.dart
+// lib/features/contributions/utils/contribution_receipt_pdf.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -9,8 +9,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class ContributionReceiptPdf {
   // Generate premium receipt PDF
@@ -416,7 +414,7 @@ static Future<Uint8List> _generateReceiptPdf({
           .doc(contributionData['userId'])
           .get();
       
-      final userData = userDoc.data() as Map<String, dynamic>?;
+      final userData = userDoc.data();
       final contributorName = userData?['name'] ?? 'Unknown User';
 
       // Fetch program name
@@ -690,10 +688,10 @@ class ReceiptPreviewDialog extends StatefulWidget {
   final String contributionId;
 
   const ReceiptPreviewDialog({
-    Key? key,
+    super.key,
     required this.pdfBytes,
     required this.contributionId,
-  }) : super(key: key);
+  });
 
   @override
   State<ReceiptPreviewDialog> createState() => _ReceiptPreviewDialogState();

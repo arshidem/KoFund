@@ -63,7 +63,7 @@ class UserModel {
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     // Helper function to parse Timestamp
-    Timestamp? _parseTimestamp(dynamic value) {
+    Timestamp? parseTimestamp(dynamic value) {
       if (value == null) return null;
       if (value is Timestamp) return value;
       if (value is int) return Timestamp.fromMillisecondsSinceEpoch(value);
@@ -91,9 +91,9 @@ class UserModel {
       isVirtualUser: map['isVirtualUser'] ?? false,
       createdBy: map['createdBy'],
       createdByName: map['createdByName'], // 🆕 ADD THIS
-      createdAt: _parseTimestamp(map['createdAt']),
-      updatedAt: _parseTimestamp(map['updatedAt']),
-      approvedAt: _parseTimestamp(map['approvedAt']),
+      createdAt: parseTimestamp(map['createdAt']),
+      updatedAt: parseTimestamp(map['updatedAt']),
+      approvedAt: parseTimestamp(map['approvedAt']),
       showDetailedProfile: map['showDetailedProfile'] ?? false,
     );
   }

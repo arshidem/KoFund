@@ -4,7 +4,6 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/profile/screens/settings/contact_support_screen.dart';
 import 'package:kofund/core/utils/app_info.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 
 class HelpFAQScreen extends StatefulWidget {
@@ -135,7 +134,7 @@ Future<void> _loadAppInfo() async {
               const SizedBox(height: 20),
 
               // FAQ List
-              ...faqItems.map((faq) => _buildFAQItem(faq, context)).toList(),
+              ...faqItems.map((faq) => _buildFAQItem(faq, context)),
 
               const SizedBox(height: 12),
 
@@ -190,7 +189,7 @@ Future<void> _loadAppInfo() async {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildAppInfoItem('App Version', '$appVersion'),
+                      _buildAppInfoItem('App Version', appVersion),
                       _buildAppInfoItem('Last Updated', 'December 2025'),
                       _buildAppInfoItem('Developer', 'Kofund Team'),
                       _buildAppInfoItem('Support Hours', 'Mon-Fri, 9 AM - 6 PM'),

@@ -8,7 +8,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/widgets/network_aware_button.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({Key? key}) : super(key: key);
+  const ChangePasswordScreen({super.key});
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();

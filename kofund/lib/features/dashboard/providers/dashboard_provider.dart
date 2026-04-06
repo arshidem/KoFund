@@ -1,9 +1,7 @@
-﻿import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:kofund/features/community/models/community_model.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
-import 'package:kofund/features/contributions/models/contribution_model.dart';
 
 import 'package:kofund/core/services/community_firestore_service.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -167,7 +165,7 @@ Future<void> loadDashboardData(String communityId) async {
       _monthlyProgramBalance = contributions - expenses;
       _monthlyProgramContributors = contributors;
 
-      debugPrint('💰 Monthly Program Financials - Collected: $contributions, Expenses: $expenses, Balance: ${_monthlyProgramBalance}');
+      debugPrint('💰 Monthly Program Financials - Collected: $contributions, Expenses: $expenses, Balance: $_monthlyProgramBalance');
 
     } catch (e) {
       debugPrint('❌ Error loading monthly program financials: $e');

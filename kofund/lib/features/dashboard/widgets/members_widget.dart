@@ -1,13 +1,13 @@
-﻿// lib/features/dashboard/widgets/members_widget.dart
+// lib/features/dashboard/widgets/members_widget.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/members/screens/all_members_screen.dart';
 import 'package:kofund/features/members/screens/member_details_screen.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class MembersWidget extends StatefulWidget {
   const MembersWidget({
@@ -341,14 +341,14 @@ SizedBox(height: 4),
     final String contactInfo =
         member.phoneNumber?.isNotEmpty == true
             ? member.phoneNumber!
-            : member.email?.isNotEmpty == true
-                ? member.email!
+            : member.email.isNotEmpty == true
+                ? member.email
                 : 'No contact info';
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         onTap: () {
           Navigator.push(
             context,
@@ -367,7 +367,7 @@ SizedBox(height: 4),
                 height: 36,
                 decoration: BoxDecoration(
                   color: AppColors.primary(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                 ),
                 child: Center(
                   child: Text(
@@ -432,7 +432,7 @@ SizedBox(height: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.orange.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                         border: Border.all(
                           color: Colors.orange.withValues(alpha: 0.35),
                         ),
@@ -475,7 +475,7 @@ SizedBox(height: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
@@ -512,7 +512,7 @@ SizedBox(height: 4),
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Padding(
@@ -528,7 +528,7 @@ SizedBox(height: 4),
                   height: 18,
                   decoration: BoxDecoration(
                     color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -537,7 +537,7 @@ SizedBox(height: 4),
                   height: 18,
                   decoration: BoxDecoration(
                     color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                 ),
                 const Spacer(),
@@ -546,7 +546,7 @@ SizedBox(height: 4),
                   height: 16,
                   decoration: BoxDecoration(
                     color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                 ),
               ],
@@ -575,7 +575,7 @@ SizedBox(height: 4),
           height: 36,
           decoration: BoxDecoration(
             color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           ),
         ),
         const SizedBox(width: 10),
@@ -590,7 +590,7 @@ SizedBox(height: 4),
                 height: 14,
                 decoration: BoxDecoration(
                   color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
               ),
               const SizedBox(height: 6),
@@ -599,7 +599,7 @@ SizedBox(height: 4),
                 height: 12,
                 decoration: BoxDecoration(
                   color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
               ),
             ],
@@ -615,7 +615,7 @@ SizedBox(height: 4),
               height: 16,
               decoration: BoxDecoration(
                 color: AppColors.textTertiary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
               ),
             ),
             const SizedBox(height: 4),
@@ -638,7 +638,7 @@ SizedBox(height: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
@@ -659,13 +659,13 @@ SizedBox(height: 4),
           ),
           const SizedBox(height: 8),
           InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             onTap: _retryLoading,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
               child: Text(

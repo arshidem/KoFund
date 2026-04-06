@@ -330,7 +330,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                         ...provider.userCommunities.map((community) {
                           return FilterChip(
-                            label: Text(community.substring(0, 8) + '...'),
+                            label: Text('${community.substring(0, 8)}...'),
                             selected: _selectedCommunity == community,
                             onSelected: (selected) {
                               setState(() {
@@ -340,7 +340,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               Navigator.pop(context);
                             },
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   
@@ -375,7 +375,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             Navigator.pop(context);
                           },
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                   
@@ -518,7 +518,7 @@ class NotificationTile extends StatelessWidget {
 color: Colors.blue.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  notification.communityId!.substring(0, 6) + '...',
+                  '${notification.communityId!.substring(0, 6)}...',
                   style: const TextStyle(
                     fontSize: 10,
                     color: Colors.blue,

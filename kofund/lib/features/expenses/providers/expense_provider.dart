@@ -1,5 +1,4 @@
-﻿import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/material.dart';
 import '../../../core/services/expense_service.dart';
 import '../../../core/services/user_service.dart';
 import '../../../features/auth/providers/app_auth_provider.dart';

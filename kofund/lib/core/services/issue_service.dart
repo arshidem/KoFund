@@ -156,7 +156,7 @@ class IssueService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
-              .map((doc) => IssueModel.fromMap(doc.data() as Map<String, dynamic>))
+              .map((doc) => IssueModel.fromMap(doc.data()))
               .toList();
         });
   }
@@ -169,7 +169,7 @@ class IssueService {
         .get();
     
     return snapshot.docs
-        .map((doc) => IssueModel.fromMap(doc.data() as Map<String, dynamic>))
+        .map((doc) => IssueModel.fromMap(doc.data()))
         .toList();
   }
   String _getPlatform() {

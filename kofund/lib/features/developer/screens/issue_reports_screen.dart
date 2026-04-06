@@ -1,13 +1,11 @@
 // lib/features/developer/screens/issue_reports_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/issues/models/issue_model.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class IssueReportsScreen extends StatefulWidget {
@@ -23,14 +21,14 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
   String _selectedSort = 'newest'; // 'newest', 'oldest'
 
 // Line 24-27: Change from Map<String, String> to Map<String, Color>
-Map<String, Color> _statusColors = {
+final Map<String, Color> _statusColors = {
   'pending': Colors.orange,
   'in-progress': Colors.blue,
   'resolved': Colors.green,
   'closed': Colors.grey,
 };
 
-  Map<String, IconData> _typeIcons = {
+  final Map<String, IconData> _typeIcons = {
     'bug': Icons.bug_report,
     'feature': Icons.lightbulb,
     'ui': Icons.palette,
@@ -545,7 +543,7 @@ color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: Bo
                     ),
                   )
                 else
-                  ...issues.map(_buildIssueCard).toList(),
+                  ...issues.map(_buildIssueCard),
 
                 const SizedBox(height: 32),
               ],

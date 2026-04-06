@@ -403,20 +403,18 @@ class _AppProvidersState extends State<AppProviders> {
       debugPrint("🔄 Initializing AppAuthProvider with offline support...");
       
       // ⭐ NEW: Use public initialization method if available
-      if (_authProvider is AppAuthProvider) {
-        // Try to access initialization via reflection or public method
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Check if auth provider has a public initialization method
-        // If not, wait for it to initialize on its own
-        final startTime = DateTime.now();
-        
-        while (!_authProvider.canAccessApp && 
-               DateTime.now().difference(startTime).inSeconds < 5) {
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-      }
+      // Try to access initialization via reflection or public method
+      await Future.delayed(const Duration(milliseconds: 500));
       
+      // Check if auth provider has a public initialization method
+      // If not, wait for it to initialize on its own
+      final startTime = DateTime.now();
+      
+      while (!_authProvider.canAccessApp && 
+             DateTime.now().difference(startTime).inSeconds < 5) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+          
       setState(() {
         _isAuthInitialized = true;
       });
@@ -808,15 +806,15 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.lightBorder),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.lightBorder),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.lightPrimary, width: 2),
           ),
           filled: true,
@@ -834,6 +832,21 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             ),
           ),
         ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: AppColors.lightPrimary,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          ),
+        ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.lightPrimary,
@@ -847,7 +860,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           ),
           color: AppColors.lightCard,
         ),
@@ -901,15 +914,15 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.darkBorder),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.darkBorder),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             borderSide: const BorderSide(color: AppColors.darkPrimary, width: 2),
           ),
           filled: true,
@@ -927,6 +940,21 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
             ),
           ),
         ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: AppColors.darkPrimary,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          ),
+        ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.darkPrimary,
@@ -940,7 +968,7 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
         cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           ),
           color: AppColors.darkCard,
         ),

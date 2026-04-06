@@ -202,7 +202,7 @@ Future<void> _joinCommunity() async {
   }
 
   final String userName = user.displayName ??
-      user.email?.split('@').first ??
+      user.email.split('@').first ??
       'User';
 
   final success = await communityProvider.joinCommunityByCode(

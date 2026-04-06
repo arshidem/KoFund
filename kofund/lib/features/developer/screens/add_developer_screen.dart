@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:flutter/services.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class AddDeveloperScreen extends StatefulWidget {
   const AddDeveloperScreen({super.key});
@@ -14,7 +13,7 @@ class AddDeveloperScreen extends StatefulWidget {
 
 class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
   final _emailController = TextEditingController();
-  bool _isAdding = false;
+  final bool _isAdding = false;
   String _searchStatus = '';
   List<QueryDocumentSnapshot> _searchResults = [];
 
@@ -182,11 +181,11 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
                               value: isDeveloper,
                               onChanged: (value) =>
                                   _makeDeveloper(doc.id, value),
-                              activeColor: AppColors.primary(context),
+                              activeThumbColor: AppColors.primary(context),
                             ),
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),

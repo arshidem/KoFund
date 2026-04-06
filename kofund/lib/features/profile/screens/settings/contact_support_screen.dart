@@ -5,7 +5,6 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});

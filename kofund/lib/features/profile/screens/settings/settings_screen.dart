@@ -9,14 +9,11 @@ import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/developer/screens/developer_dashboard_screen.dart';
-import 'package:kofund/features/developer/screens/add_developer_screen.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
-import 'dart:ui';
 import 'package:kofund/core/utils/app_info.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

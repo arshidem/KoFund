@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import '../providers/app_auth_provider.dart';
 import 'splash_screen.dart';
-import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/community/screens/join_community_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';

@@ -10,7 +10,6 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'dart:async';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:flutter/services.dart';
 
 class CreatePollScreen extends StatefulWidget {
   final String communityId;
@@ -748,7 +747,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               ],
             ),
           );
-        }).toList(),
+        }),
         const SizedBox(height: 8),
         ElevatedButton.icon(
           onPressed: _addOptionField,
@@ -790,7 +789,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
             title: const Text('Allow Vote Changes'),
             subtitle: Text(_getAllowVoteChangeDescription(_selectedType)),
             value: _allowVoteChange,
-            onChanged: (value) => setState(() => _allowVoteChange = value!),
+            onChanged: (value) => setState(() => _allowVoteChange = value),
           ),
           if (!_allowVoteChange && _allowMultipleVotes)
             Container(

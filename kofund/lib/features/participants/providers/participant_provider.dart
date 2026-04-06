@@ -1,5 +1,4 @@
-﻿import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/material.dart';
 import '../../../core/services/participant_service.dart';
 import '../models/participant_model.dart';
 

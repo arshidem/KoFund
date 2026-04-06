@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -28,7 +27,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
   List<String> _availableMonths = [];
   List<Map<String, dynamic>> _participantsWithStatus = [];
   bool _isLoading = true;
-  Map<String, double> _monthlyTotals = {};
+  final Map<String, double> _monthlyTotals = {};
 
   @override
   void initState() {
@@ -63,7 +62,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
     } catch (e) {
       debugPrint('❌ Error initializing monthly contributions: $e');
       final currentMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
-      if (_selectedMonth == null) _selectedMonth = currentMonth;
+      _selectedMonth ??= currentMonth;
       if (_availableMonths.isEmpty) _availableMonths = [currentMonth];
     } finally {
       if (mounted) {

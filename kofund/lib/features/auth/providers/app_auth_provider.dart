@@ -10,14 +10,9 @@ import '../../../routing/route_names.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:developer' as developer;
-import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:kofund/features/members/providers/member_provider.dart';
-import '../../../core/services/notification_service.dart';
 import '../../../core/services/fcm_token_service.dart';
 import '../../../core/services/notification_storage_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
 
 extension AuthNavigation on AppAuthProvider {
   /// Decide which screen to navigate after authentication
@@ -90,7 +85,7 @@ class AppAuthProvider with ChangeNotifier {
     if (_user?.displayName != null && _user!.displayName!.isNotEmpty) {
       return _user!.displayName!;
     } else if (_user?.email != null) {
-      return _user!.email!.split('@').first;
+      return _user!.email.split('@').first;
     }
     return 'User';
   }

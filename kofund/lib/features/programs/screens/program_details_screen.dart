@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
-import 'package:shimmer/shimmer.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/participant_service.dart';
 import '../../../core/services/contribution_service.dart';
@@ -594,7 +593,7 @@ class ProgramProvider with ChangeNotifier {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
           .toList();
     });
   }
@@ -810,7 +809,7 @@ class ProgramProvider with ChangeNotifier {
     return program.communityId;
   }
 
-  Map<String, StreamSubscription> _programJoinSubscriptions = {};
+  final Map<String, StreamSubscription> _programJoinSubscriptions = {};
 
   void watchProgramJoinStatus(String programId, String userId, String communityId) {
     _programJoinSubscriptions[programId]?.cancel();

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -119,6 +118,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 color: Colors.white,
               ),
             ),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.white),
+            onPressed: _updateProfile,
+            tooltip: 'Update Profile',
           ),
       ],
       body: Padding(
@@ -133,10 +138,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               // Form Fields
               _buildFormFields(),
-              const SizedBox(height: 32),
-
-              // Update Button
-              _buildUpdateButton(profileProvider),
             ],
           ),
         ),
@@ -257,7 +258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             filled: true,
             fillColor: AppColors.card(context).withValues(alpha: 0.5),
-            counterText: '${widget.user.email?.length ?? 0}/100',
+            counterText: '${widget.user.email.length ?? 0}/100',
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
           style: TextStyle(color: AppColors.textSecondary(context)),
@@ -377,44 +378,5 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildUpdateButton(ProfileProvider profileProvider) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: profileProvider.isLoading ? null : _updateProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary(context),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12), // Rounded button corners
-          ),
-        ),
-        child: profileProvider.isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.save),
-                  SizedBox(width: 8),
-                  Text(
-                    'Update Profile',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
 }
 

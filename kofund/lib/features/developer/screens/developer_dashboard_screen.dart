@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'add_developer_screen.dart';
 import 'manage_developers_screen.dart';
-import 'dart:ui';
 import 'issue_reports_screen.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class DeveloperDashboardScreen extends StatelessWidget {

@@ -1,4 +1,4 @@
-﻿// 📁 lib/core/services/deleted_contribution_service.dart
+// 📁 lib/core/services/deleted_contribution_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/contributions/models/contribution_model.dart';
@@ -73,7 +73,7 @@ class DeletedContributionService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DeletedContributionModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
+                  doc.data(),
                   doc.id,
                 ))
             .toList());
@@ -91,7 +91,7 @@ class DeletedContributionService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DeletedContributionModel.fromMap(
-                  doc.data() as Map<String, dynamic>,
+                  doc.data(),
                   doc.id,
                 ))
             .toList());
@@ -242,7 +242,7 @@ Stream<List<DeletedContributionModel>> getProgramDeletedContributions({
       .snapshots()
       .map((snapshot) => snapshot.docs
           .map((doc) => DeletedContributionModel.fromMap(
-                doc.data() as Map<String, dynamic>,
+                doc.data(),
                 doc.id,
               ))
           .toList());
