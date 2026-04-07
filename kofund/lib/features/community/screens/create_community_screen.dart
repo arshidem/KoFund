@@ -268,7 +268,18 @@ Widget _buildCommunityTypeDropdown() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      // ⭐ NO LABEL - Just the dropdown with hint
+      Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          'Community Category *',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: _typeError != null ? Colors.red : AppColors.textPrimary(context),
+            fontSize: 14,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
       Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
@@ -278,118 +289,75 @@ Widget _buildCommunityTypeDropdown() {
                 : AppColors.border(context),
             width: _typeError != null ? 1.5 : 1,
           ),
-          color: _typeError != null 
-              ? Colors.red.withValues(alpha: 0.03) 
-              : AppColors.surface(context),
+          color: AppColors.surface(context),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String?>(
             value: _selectedType,
             isExpanded: true,
             icon: Icon(
-              Icons.arrow_drop_down,
+              Icons.arrow_drop_down_rounded,
               color: _typeError != null 
                   ? Colors.red 
-                  : AppColors.textSecondary(context),
+                  : AppColors.primary(context),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            hint: Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                'Select community type *',
-                style: TextStyle(
-                  color: _typeError != null 
-                      ? Colors.red.withValues(alpha: 0.7) 
-                      : AppColors.textSecondary(context),
-                  fontSize: 14,
-                ),
+            dropdownColor: AppColors.card(context),
+            borderRadius: BorderRadius.circular(24),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            hint: Text(
+              'Select community type',
+              style: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
             ),
             items: CommunityType.allTypes.map((type) {
               return DropdownMenuItem<String?>(
                 value: type,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 1),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(context).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            CommunityType.getIcon(type),
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        ),
+                child: Row(
+                  children: [
+                    Icon(
+                      CommunityType.getMaterialIcon(type),
+                      size: 20,
+                      color: AppColors.primary(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      type,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              type,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              CommunityType.getDescription(type),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary(context),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             }).toList(),
             onChanged: (value) {
               setState(() {
                 _selectedType = value;
-                _typeError = null; // Clear error on selection
+                _typeError = null;
               });
             },
           ),
         ),
       ),
-      
-      // ⭐ ERROR MESSAGE (appears below when there's an error)
       if (_typeError != null)
         Padding(
-          padding: const EdgeInsets.only(left: 6, top: 4),
+          padding: const EdgeInsets.only(left: 6, top: 8),
           child: Row(
             children: [
-              Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 14,
-              ),
+              const Icon(Icons.error_outline, color: Colors.red, size: 14),
               const SizedBox(width: 4),
               Text(
                 _typeError!,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 12,
-                  height: 1.2,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 12),
               ),
             ],
           ),
         ),
-      
       const SizedBox(height: 16),
     ],
   );
@@ -482,11 +450,7 @@ _buildInputField(
     return null;
   },
 ),
-              const SizedBox(height: 12),
-
                       _buildCommunityTypeDropdown(),
-
-              const SizedBox(height: 12),
 
 // Description - Detailed hint
 _buildInputField(

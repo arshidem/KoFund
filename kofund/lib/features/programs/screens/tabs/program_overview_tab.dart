@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -21,26 +22,13 @@ class ProgramOverviewTab extends StatefulWidget {
 }
 
 class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
-  final RefreshController _refreshController = RefreshController(initialRefresh: false);
+  void _onRefresh() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
-    _refreshController.dispose();
     super.dispose();
-  }
-
-  void _onRefresh() async {
-    try {
-      // In a real app, you might want to call providers to fetch fresh data
-      // For now, we simulate a brief delay then complete
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) {
-        setState(() {}); // Trigger a rebuild to see fresh data if any
-      }
-      _refreshController.refreshCompleted();
-    } catch (e) {
-      _refreshController.refreshFailed();
-    }
   }
 
   @override
@@ -50,38 +38,40 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
     final participantProvider = Provider.of<ParticipantProvider>(context);
     final userService = Provider.of<UserService>(context, listen: false);
 
-    return SmartRefresher(
-      controller: _refreshController,
-      onRefresh: _onRefresh,
-      enablePullDown: true,
-      header: ClassicHeader(
-        idleText: 'Pull down to refresh',
-        releaseText: 'Release to refresh',
-        refreshingText: 'Refreshing overview...',
-        completeText: 'Refresh complete',
-        idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-        releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProgramHeader(context, participantProvider),
-            const SizedBox(height: 12),
-            _buildFinancialSummaryCard(
-              context,
-              contributionProvider,
-              expenseProvider,
-              participantProvider,
-            ),
-            const SizedBox(height: 12),
-            _buildProgramInfoCard(context, participantProvider, userService),
-            const SizedBox(height: 12),
-            _buildProgramStatusCard(context, participantProvider),
-            const SizedBox(height: 88), // Extra space for FABs in parent
-          ],
+    return Container(
+      color: AppColors.background(context),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
         ),
+        slivers: [
+          CupertinoSliverRefreshControl(
+            onRefresh: () async {
+              _onRefresh();
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(12),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildProgramHeader(context, participantProvider),
+                const SizedBox(height: 12),
+                _buildFinancialSummaryCard(
+                  context,
+                  contributionProvider,
+                  expenseProvider,
+                  participantProvider,
+                ),
+                const SizedBox(height: 12),
+                _buildProgramInfoCard(context, participantProvider, userService),
+                const SizedBox(height: 12),
+                _buildProgramStatusCard(context, participantProvider),
+                const SizedBox(height: 88), // Extra space for FABs in parent
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }

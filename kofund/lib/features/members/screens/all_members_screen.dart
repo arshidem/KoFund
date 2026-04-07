@@ -20,6 +20,7 @@ import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/virtual_users/screens/create_virtual_users_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 
 enum MemberTypeFilter { all, real, virtual }
 
@@ -598,146 +599,63 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     );
   }
 
-  void _showBulkMakeAdminConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Make Users Admin?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        content: Text(
-          'Are you sure you want to make ${members.length} user${members.length > 1 ? 's' : ''} admin?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkMakeAdmin(members);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary(context),
-            ),
-            child: const Text('Make Admin'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
+  void _showBulkMakeAdminConfirmation(List<UserModel> members) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Make Users Admin?',
+      message: 'Are you sure you want to make ${members.length} user${members.length > 1 ? 's' : ''} admin? This will grant them administrative privileges.',
+      confirmLabel: 'Make Admin',
+      icon: Icons.admin_panel_settings_rounded,
     );
+
+    if (result == true) {
+      _bulkMakeAdmin(members);
+    }
   }
 
-  void _showBulkRemoveAdminConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Remove Admin Role?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        content: Text(
-          'Are you sure you want to remove admin role from ${members.length} user${members.length > 1 ? 's' : ''}?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkRemoveAdmin(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.orange),
-            child: const Text('Remove Admin'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
+  void _showBulkRemoveAdminConfirmation(List<UserModel> members) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Remove Admin Role?',
+      message: 'Are you sure you want to remove admin role from ${members.length} user${members.length > 1 ? 's' : ''}?',
+      confirmLabel: 'Remove Admin',
+      icon: Icons.person_remove_alt_1_rounded,
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _bulkRemoveAdmin(members);
+    }
   }
 
-  void _showBulkUnapproveConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Unapprove Users?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        content: Text(
-          'Are you sure you want to unapprove ${members.length} user${members.length > 1 ? 's' : ''}?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkUnapproveUsers(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Unapprove'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
+  void _showBulkUnapproveConfirmation(List<UserModel> members) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Unapprove Users?',
+      message: 'Are you sure you want to unapprove ${members.length} user${members.length > 1 ? 's' : ''}? They will lose access to member-only areas.',
+      confirmLabel: 'Unapprove',
+      icon: Icons.block_flipped,
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _bulkUnapproveUsers(members);
+    }
   }
 
-  void _showBulkRemoveConfirmation(List<UserModel> members) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Remove from Community?',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        content: Text(
-          'Are you sure you want to remove ${members.length} user${members.length > 1 ? 's' : ''} from the community?',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        backgroundColor: AppColors.card(context),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              _bulkRemoveFromCommunity(members);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-      useRootNavigator: true,
+  void _showBulkRemoveConfirmation(List<UserModel> members) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Remove from Community?',
+      message: 'Are you sure you want to remove ${members.length} user${members.length > 1 ? 's' : ''} from the community? This action is permanent.',
+      confirmLabel: 'Remove',
+      icon: Icons.person_remove_rounded,
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _bulkRemoveFromCommunity(members);
+    }
   }
 
   // ✅ BULK ACTION IMPLEMENTATIONS
@@ -1932,28 +1850,12 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     BuildContext context,
     UserModel user,
   ) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject User?'),
-        content: Text(
-          'Are you sure you want to reject ${user.displayName ?? "this user"}? This action cannot be undone.',
-          style: TextStyle(color: AppColors.textPrimary(context)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reject', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    return await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Reject User?',
+      message: 'Are you sure you want to reject ${user.displayName ?? "this user"}? This action cannot be undone.',
+      confirmLabel: 'Reject',
+      isDestructive: true,
     );
   }
 }

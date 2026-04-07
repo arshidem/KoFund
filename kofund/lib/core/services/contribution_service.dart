@@ -413,6 +413,8 @@ class ContributionService {
           'isMonthlyContribution': data['isMonthlyContribution'] ?? false,
           'monthId': data['monthId'],
           'addedByUserName': data['addedByUserName'],
+          'communityId': data['communityId'] ?? communityId,
+          'contributorName': data['contributorName'],
         });
 
         if (data['programId'] != null) {

@@ -1,13 +1,13 @@
-// 📁 lib/features/contributions/screens/program_deleted_contributions_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 import '../../../../core/services/deleted_contribution_service.dart';
 import '../models/deleted_contribution_model.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
 import 'package:intl/intl.dart';
-import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class ProgramDeletedContributionsScreen extends StatefulWidget {
   final String programId;
   final String programName;
@@ -131,6 +131,189 @@ String _formatTime(DateTime date) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // 🔹 Modern Search Bar
+  Widget _buildModernSearchBar() {
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+          letterSpacing: 0.3,
+        ),
+        cursorColor: Colors.white,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          hintText: 'Search deleted contributions...',
+          hintStyle: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: const Icon(
+            Icons.search,
+            color: Colors.white70,
+            size: 20,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Colors.white70,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            borderSide: BorderSide(
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            borderSide: BorderSide(
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            borderSide: BorderSide(
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+          ),
+        ),
+        onChanged: (val) {
+          setState(() {
+            _searchQuery = val.toLowerCase();
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary(context),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.border(context),
+              width: 0.6,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailItem(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showContributionDetails(DeletedContributionModel record, BuildContext context) {
@@ -523,136 +706,50 @@ String _formatTime(DateTime date) {
     );
   }
 
-  Widget _buildDetailSection(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: color,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.surface(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.border(context),
-              width: 0.6,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailItem(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary(context),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showRestoreDialog(DeletedContributionModel record, BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore Contribution?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.restore, color: Colors.green),
+            SizedBox(width: 10),
+            Text('Restore Contribution?'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Do you want to restore this contribution?'),
-            const SizedBox(height: 12),
+            const Text('Are you sure you want to restore this contribution? It will be moved back to active contributions.'),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.background(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border(context)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Member: ${record.contributorName}',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                   ),
                   const SizedBox(height: 4),
-                  Text('Amount: ₹${record.amount.toStringAsFixed(2)}'),
+                  Text(
+                    'Amount: ₹${record.amount.toStringAsFixed(2)}',
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Deleted on: ${record.formattedDeletedDate}'),
+                  Text(
+                    'Deleted on: ${record.formattedDeletedDate}',
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -661,218 +758,108 @@ String _formatTime(DateTime date) {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
             ),
             onPressed: () {
               Navigator.pop(context);
               _restoreContribution(record);
             },
-            child: const Text('Restore'),
+            child: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  // 🔹 Modern Search Bar
-  Widget _buildModernSearchBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              color: Colors.transparent,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Row(
-                  children: [
-                    // Search Icon
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(18),
-                          bottomLeft: Radius.circular(18),
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          width: 0,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.search,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    
-                    // Text Field
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                        cursorColor: Colors.white,
-                        cursorWidth: 2,
-                        cursorHeight: 20,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                          hintText: 'Search deleted contributions...',
-                          hintStyle: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          filled: false,
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(right: 0),
-                                  child: SizedBox(
-                                    width: 32,
-                                    height: 32,
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      icon: const Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() {
-                                          _searchQuery = '';
-                                        });
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value.toLowerCase();
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 🔹 Build list item (compact design)
   Widget _buildDeletedContributionCard(DeletedContributionModel record, BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showContributionDetails(record, context),
         child: Container(
-          color: Colors.transparent,
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.delete_outline,
+                  color: Colors.red.shade400,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade100,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.delete_outline,
-                        color: Colors.red.shade700,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    
-                    // Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            record.contributorName,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary(context),
-                              fontSize: 15,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Deleted • ${_formatTime(record.deletedAt.toDate())}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Amount
                     Text(
-                      '₹${record.amount.toStringAsFixed(2)}',
+                      record.contributorName,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
                         fontSize: 15,
-                        color: Colors.red.shade700,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Deleted by ${record.deletedByUserName} • ${_formatTime(record.deletedAt.toDate())}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              
-              // Divider
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: AppColors.border(context),
-                indent: 16,
-                endIndent: 16,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${record.amount.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  if (record.shouldShowDeletionWarning)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Expires in ${record.daysUntilAutoDeletion}d',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.textTertiary(context).withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -881,18 +868,100 @@ String _formatTime(DateTime date) {
     );
   }
 
-  // 🔹 Build date group header
-  Widget _buildDateGroupHeader(String dateLabel) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      color: AppColors.background(context),
-      child: Text(
-        dateLabel,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary(context),
-          letterSpacing: 0.5,
+  void _onRefresh() {
+    setState(() {});
+  }
+
+  Widget _buildSliverAppBar(BuildContext context) {
+    const double toolbarHeight = 64.0;
+    const double bottomContentHeight = 64.0;
+    const double totalBottomHeight = bottomContentHeight + 24.0;
+    const double collapsedHeight = toolbarHeight + totalBottomHeight;
+    const double expandedHeight = collapsedHeight + 36.0;
+
+    return SliverAppBar(
+      expandedHeight: expandedHeight,
+      toolbarHeight: toolbarHeight,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      leading: showBackButton 
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double top = constraints.biggest.height;
+          final double currentHeight = top;
+          final double progress = ((currentHeight - collapsedHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+          final double fontSize = 18 + (2 * progress);
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient(context),
+                ),
+              ),
+              FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
+                centerTitle: true,
+                titlePadding: EdgeInsets.only(bottom: totalBottomHeight + 10),
+                title: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Deleted Contributions',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.5 - (0.5 * progress),
+                      ),
+                    ),
+                    if (progress > 0.5)
+                      Text(
+                        widget.programName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(totalBottomHeight),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: _buildModernSearchBar(),
+            ),
+            Container(
+              height: 24,
+              decoration: BoxDecoration(
+                color: AppColors.background(context),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+                  topRight: Radius.circular(AppDimensions.radiusExtraLarge),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -900,216 +969,125 @@ String _formatTime(DateTime date) {
 
   @override
   Widget build(BuildContext context) {
-    return GradientSheetScaffold(
-      title: 'Deleted Contributions',
-      leading: showBackButton 
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
-      titleWidget: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Deleted Contributions',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              widget.programName,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-      ),
-      belowHeader: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: _buildModernSearchBar(),
-          ),
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
       body: Stack(
         children: [
-          StreamBuilder<List<DeletedContributionModel>>(
-            stream: _getDeletedContributions(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: AppColors.error(context),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading deleted contributions',
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context),
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary(context),
-                  ),
-                );
-              }
-              
-              final deletedContributions = snapshot.data ?? [];
-              final filtered = deletedContributions.where((record) {
-                if (_searchQuery.isEmpty) return true;
-                return record.contributorName.toLowerCase().contains(_searchQuery) ||
-                      record.amount.toString().contains(_searchQuery);
-              }).toList();
-              
-              final groupedByDate = _groupContributionsByDate(filtered);
-              
-              if (filtered.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.delete_outline,
-                        size: 72,
-                        color: AppColors.textTertiary(context),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        _searchQuery.isEmpty
-                            ? 'No deleted contributions'
-                            : 'No matching contributions',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              return MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                child: ListView.separated(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: groupedByDate.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final dateKey = groupedByDate.keys.toList()[index];
-                    final items = groupedByDate[dateKey]!;
-                    
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.card(context),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border(context)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Date Header
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 16,
-                                  color: AppColors.primary(context),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    dateKey,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary(context),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              _buildSliverAppBar(context),
+            ],
+            body: StreamBuilder<List<DeletedContributionModel>>(
+              stream: _getDeletedContributions(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: AppColors.error(context)),
+                        const SizedBox(height: 16),
+                        Text('Error loading deleted contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16), textAlign: TextAlign.center),
+                      ],
+                    ),
+                  );
+                }
+                
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
+                }
+                
+                final deletedContributions = snapshot.data ?? [];
+                final filtered = deletedContributions.where((record) {
+                  if (_searchQuery.isEmpty) return true;
+                  return record.contributorName.toLowerCase().contains(_searchQuery) ||
+                        record.amount.toString().contains(_searchQuery);
+                }).toList();
+                
+                final groupedByDate = _groupContributionsByDate(filtered);
+                
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.delete_outline, size: 72, color: AppColors.textTertiary(context)),
+                        const SizedBox(height: 20),
+                        Text(_searchQuery.isEmpty ? 'No deleted contributions' : 'No matching contributions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context))),
+                      ],
+                    ),
+                  );
+                }
+                
+                return CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                  slivers: [
+                    CupertinoSliverRefreshControl(onRefresh: () async => _onRefresh()),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final dateKey = groupedByDate.keys.toList()[index];
+                          final items = groupedByDate[dateKey]!;
+                          
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.card(context),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.border(context)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
-                          ),
-                          
-                          // Contributions List
-                          MediaQuery.removePadding(
-                            context: context,
-                            removeTop: true,
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: items.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                thickness: 0.8,
-                                color: AppColors.border(context),
-                                indent: 16,
-                                endIndent: 16,
-                              ),
-                              itemBuilder: (context, itemIndex) {
-                                return _buildDeletedContributionCard(items[itemIndex], context);
-                              },
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.primary(context)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(dateKey, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                                        child: Text('${items.length} ${items.length == 1 ? 'item' : 'items'}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red.shade700)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: items.length,
+                                  separatorBuilder: (_, __) => Divider(height: 1, thickness: 0.8, color: AppColors.border(context), indent: 16, endIndent: 16),
+                                  itemBuilder: (context, itemIndex) => _buildDeletedContributionCard(items[itemIndex], context),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                          );
+                        },
+                        childCount: groupedByDate.length,
                       ),
-                    );
-                  },
-                ),
-              );
-            },
+                    ),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
+                  ],
+                );
+              },
+            ),
           ),
-          
-          // Loading overlay
           if (_isLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),

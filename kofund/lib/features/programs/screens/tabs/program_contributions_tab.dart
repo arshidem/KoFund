@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -8,6 +9,7 @@ import '../../../contributions/models/contribution_model.dart';
 import '../../../contributions/screens/program_deleted_contributions_screen.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../features/programs/widgets/add_contribution_modal.dart';
@@ -15,6 +17,8 @@ import 'package:kofund/features/contributions/screens/edit_contribution_screen.d
 import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 class ProgramContributionsTab extends StatefulWidget {
   final ProgramModel program;
 
@@ -56,7 +60,6 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
   String _searchQuery = '';
   String _filterMethod = 'all';
   final Map<String, String> _localUserNameCache = {};
-  final RefreshController _refreshController = RefreshController(initialRefresh: false);
 
   void _onRefresh() async {
     try {
@@ -66,16 +69,14 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
       if (mounted) {
         setState(() {});
       }
-      _refreshController.refreshCompleted();
     } catch (e) {
-      _refreshController.refreshFailed();
+      debugPrint("Refresh error: $e");
     }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _refreshController.dispose();
     super.dispose();
   }
 
@@ -164,115 +165,118 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  final isAdmin = _isAdmin(context);
+  // ✅ New Pinned Header Delegate
+  Widget _buildPinnedSearchFilter(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _PinnedStatsHeaderDelegate(
+        minExtent: 64,
+        maxExtent: 64,
+        child: Container(
+          color: AppColors.background(context),
+          padding: const EdgeInsets.only(bottom: 8, top: 4, left: AppDimensions.screenPaddingHorizontal, right: AppDimensions.screenPaddingHorizontal),
+          child: _buildSearchFilterBar(context),
+        ),
+      ),
+    );
+  }
 
-  // Use the contributions stream here (we'll listen below in StreamBuilder)
-  final contributionsStream = Provider.of<ContributionProvider>(context, listen: false)
-      .streamProgramContributions(widget.program.programId);
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = _isAdmin(context);
 
-  return Stack(
-    children: [
-      // Main scroll area with pinned stats
-      StreamBuilder<List<ContributionModel>>(
-        stream: contributionsStream,
-        builder: (context, snapshot) {
-          // Determine common states
-          final connectionWaiting = snapshot.connectionState == ConnectionState.waiting;
-          final hasError = snapshot.hasError;
-          final allContributions = snapshot.data ?? <ContributionModel>[];
-          final filtered = _filterContributions(allContributions);
+    // Use the contributions stream here (we'll listen below in StreamBuilder)
+    final contributionsStream = Provider.of<ContributionProvider>(context, listen: false)
+        .streamProgramContributions(widget.program.programId);
 
-          return SmartRefresher(
-            controller: _refreshController,
-            onRefresh: _onRefresh,
-            enablePullDown: true,
-            header: ClassicHeader(
-              idleText: 'Pull down to refresh',
-              releaseText: 'Release to refresh',
-              refreshingText: 'Refreshing contributions...',
-              completeText: 'Refresh complete',
-              idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-              releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-            ),
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // ======= SCROLLABLE STATS CARD (moved to normal sliver) =======
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0),
-                    child: _buildContributionSummary(context),
-                  ),
+    return Stack(
+      children: [
+        // Main scroll area with pinned stats
+        StreamBuilder<List<ContributionModel>>(
+          stream: contributionsStream,
+          builder: (context, snapshot) {
+            // Determine common states
+            final connectionWaiting = snapshot.connectionState == ConnectionState.waiting;
+            final hasError = snapshot.hasError;
+            final allContributions = snapshot.data ?? <ContributionModel>[];
+            final filtered = _filterContributions(allContributions);
+
+            return Container(
+              color: AppColors.background(context),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-
-                // ======= Search & Filter (scrolling) =======
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildSearchFilterBar(context),
+                slivers: [
+                  CupertinoSliverRefreshControl(
+                    onRefresh: () async {
+                      _onRefresh();
+                      await Future.delayed(const Duration(milliseconds: 500));
+                    },
                   ),
-                ),
 
-                // ======= Content: skeleton / error / empty / list =======
-                if (connectionWaiting) ...[
-                  // Show skeleton as a sliver
+                  // ======= SCROLLABLE STATS CARD =======
                   SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 8,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      child: _buildContributionSummary(context),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      // show your existing skeleton (HistoryListSkeleton) inside a sliver
-                      height: 400,
-                      child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
-                    ),
-                  ),
-                ] else if (hasError) ...[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error, color: AppColors.error(context), size: 48),
-                          const SizedBox(height: 8),
-                          Text('Error loading contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
-                          const SizedBox(height: 8),
-                          Text('${snapshot.error}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                        ],
+
+                  // ======= Search & Filter (STICKY) =======
+                  _buildPinnedSearchFilter(context),
+
+                  // ======= Content: skeleton / error / empty / list =======
+                  if (connectionWaiting) ...[
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 400,
+                        child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
                       ),
                     ),
-                  )
-                ] else if (filtered.isEmpty) ...[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _buildEmptyState(allContributions.isEmpty, context),
-                  ),
-                ] else ...[
-                  // Sliver list for contributions (keeps items performant)
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final contribution = filtered[index];
-                        final showMenu = isAdmin || _isContributor(contribution, context);
-                        return _buildContributionCard(contribution, context, showMenu);
-                      },
-                      childCount: filtered.length,
+                  ] else if (hasError) ...[
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error, color: AppColors.error(context), size: 48),
+                            const SizedBox(height: 8),
+                            Text('Error loading contributions', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
+                            const SizedBox(height: 8),
+                            Text('${snapshot.error}', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                          ],
+                        ),
+                      ),
+                    )
+                  ] else if (filtered.isEmpty) ...[
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(allContributions.isEmpty, context),
                     ),
-                  ),
-                  // Add bottom padding so last item isn't hidden by FAB or bottom sheet
-                  SliverToBoxAdapter(
-                    child: const SizedBox(height: 88),
-                  ),
+                  ] else ...[
+                    // Sliver list for contributions
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final contribution = filtered[index];
+                          final showMenu = isAdmin || _isContributor(contribution, context);
+                          return _buildContributionCard(contribution, context, showMenu);
+                        },
+                        childCount: filtered.length,
+                      ),
+                    ),
+                    // Add bottom padding
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 88),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            );
+          },
+        ),
 
       // Floating Action Button - pinned above scroll content
       Positioned(
@@ -285,7 +289,7 @@ Widget build(BuildContext context) {
             backgroundColor: AppColors.primary(context),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             elevation: 4,
             child: const Icon(Icons.add),
@@ -343,22 +347,23 @@ Widget _buildContributionSummary(BuildContext context) {
           
           final double progressPercentage = progress * 100;
 
-          return Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                  color: Colors.black.withValues(alpha: 0.06),
-                ),
-              ],
-            ),
-            child: Column(
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient(context),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary(context).withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -543,7 +548,8 @@ Widget _buildContributionSummary(BuildContext context) {
                 ],
               ],
             ),
-          );
+          ),
+        );
         },
       );
     },
@@ -718,143 +724,164 @@ Widget _buildSkeletonLoader(BuildContext context) {
 Widget _buildSearchFilterBar(BuildContext context) {
   final isAdmin = _isAdmin(context);
   
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+  return Container(
+    padding: EdgeInsets.zero,
     child: Row(
       children: [
+        // Search Field
         Expanded(
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search contributions...',
-              hintStyle: TextStyle(
-                color: AppColors.textTertiary(context),
-                fontSize: 13,
-              ),
-              prefixIcon: Icon(
-                Icons.search,
-                color: AppColors.textSecondary(context),
-                size: 18,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context),
-                    width: 2,
-                ),
-              ),
-              filled: true,
-              fillColor: AppColors.surface(context),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            ),
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 13,
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-          ),
-        ),
-        
-        const SizedBox(width: 8),
-        
-        Container(
-          width: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: AppColors.border(context),
-            ),
-            borderRadius: BorderRadius.circular(12),
-            color: AppColors.surface(context),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _filterMethod,
-              isExpanded: true,
-              icon: Icon(
-                Icons.filter_list,
-                color: AppColors.textSecondary(context),
-                size: 18,
-              ),
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 12,
-              ),
-              dropdownColor: AppColors.card(context),
-              items: const [
-                DropdownMenuItem(
-                  value: 'all', 
-                  child: Text('All Methods'),
-                ),
-                DropdownMenuItem(
-                  value: 'cash', 
-                  child: Text('Cash'),
-                ),
-                DropdownMenuItem(
-                  value: 'online', 
-                  child: Text('Online'),
-                ),
-                DropdownMenuItem(
-                  value: 'upi', 
-                  child: Text('UPI'),
-                ),
-                DropdownMenuItem(
-                  value: 'bank_transfer', 
-                  child: Text('Bank'),
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
+              border: Border.all(
+                color: AppColors.border(context).withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 14,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search contributions...',
+                hintStyle: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 13,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
               onChanged: (value) {
                 setState(() {
-                  _filterMethod = value!;
+                  _searchQuery = value;
                 });
               },
             ),
           ),
         ),
+        const SizedBox(width: 8),
         
-        // ✅ ADD THIS: Deleted Contributions Button (Only for Admin)
+        // Filter Button
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: AppColors.border(context).withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: PopupMenuButton<String>(
+              icon: Icon(
+                Icons.tune_rounded,
+                color: AppColors.primary(context),
+                size: 20,
+              ),
+              offset: const Offset(0, 52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              onSelected: (value) {
+                setState(() {
+                  _filterMethod = value;
+                });
+              },
+              itemBuilder: (context) => [
+                _buildFilterMenuItem('all', 'All Methods', Icons.payments_outlined),
+                _buildFilterMenuItem('cash', 'Cash', Icons.money_rounded),
+                _buildFilterMenuItem('upi', 'UPI', Icons.mobile_friendly_rounded),
+              ],
+            ),
+          ),
+        ),
+
         if (isAdmin) ...[
           const SizedBox(width: 8),
+          // Deleted Button
           Container(
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              border: Border.all(
-                color: AppColors.border(context),
-              ),
-              borderRadius: BorderRadius.circular(12),
               color: AppColors.surface(context),
-            ),
-            child: IconButton(
-              onPressed: () => _navigateToProgramDeletedContributions(context),
-              icon: Icon(
-                Icons.delete_outline,
-                color: AppColors.error(context),
-                size: 18,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: AppColors.error(context).withValues(alpha: 0.2),
+                width: 1,
               ),
-              tooltip: 'View Deleted Contributions',
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: IconButton(
+                onPressed: () => _navigateToProgramDeletedContributions(context),
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.error(context),
+                  size: 20,
+                ),
+                tooltip: 'Deleted Contributions',
               ),
             ),
           ),
         ],
+      ],
+    ),
+  );
+}
+
+PopupMenuItem<String> _buildFilterMenuItem(String value, String label, IconData icon) {
+  final isSelected = _filterMethod == value;
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
+          ),
+        ),
       ],
     ),
   );
@@ -1673,7 +1700,7 @@ Column(
             width: 1.5,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
           elevation: 0,
@@ -1699,7 +1726,7 @@ Column(
               backgroundColor: AppColors.primary(context),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
               padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 4,
@@ -2094,56 +2121,19 @@ Future<void> _generateReceipt(
 
 
 
-  void _showDeleteConfirmation(ContributionModel contribution, BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          'Delete Contribution',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 16,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete this contribution of ₹ ${contribution.amount.toStringAsFixed(2)}?',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 13,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 13,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteContribution(contribution, context);
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.error(context),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
+  void _showDeleteConfirmation(ContributionModel contribution, BuildContext context) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Delete Contribution?',
+      message: 'Are you sure you want to delete this contribution of ₹ ${contribution.amount.toStringAsFixed(2)}?',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+      icon: Icons.delete_forever_rounded,
     );
+
+    if (result == true) {
+      _deleteContribution(contribution, context);
+    }
   }
 
 // Update line 1899:
@@ -2180,94 +2170,48 @@ void _deleteContribution(ContributionModel contribution, BuildContext context) a
 Future<String?> _showDeleteReasonDialog(BuildContext context) async {
   final reasonController = TextEditingController();
   
-  return await showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: AppColors.card(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      title: Text(
-        'Delete Contribution',
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 16,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Please provide a reason for deleting this contribution:',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: reasonController,
-            decoration: InputDecoration(
-              hintText: 'Enter reason for deletion...',
-              hintStyle: TextStyle(
-                color: AppColors.textSecondary(context).withValues(alpha: 0.6),
-                fontSize: 13,
-              ),
-              contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: AppColors.textSecondary(context).withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context),
-                  width: 1.5,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: AppColors.textSecondary(context).withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 13,
-            ),
-            maxLines: 3,
-            textInputAction: TextInputAction.done,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 13,
-            ),
+  final result = await DialogHelper.showConfirmationDialog(
+    context,
+    title: 'Delete Reason',
+    confirmLabel: 'Confirm Delete',
+    isDestructive: true,
+    icon: Icons.delete_outline_rounded,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Please provide a reason for deleting this contribution:',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+            fontSize: 13,
           ),
         ),
-        TextButton(
-          onPressed: () {
-            final reason = reasonController.text.trim();
-            if (reason.isNotEmpty) {
-              Navigator.pop(context, reason);
-            }
-          },
-          child: Text(
-            'Delete',
-            style: TextStyle(
-              color: AppColors.error(context),
-              fontWeight: FontWeight.bold,
+        const SizedBox(height: 16),
+        TextField(
+          controller: reasonController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Enter reason for deletion...',
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary(context).withValues(alpha: 0.6),
               fontSize: 13,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            filled: true,
+            fillColor: AppColors.surface(context),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
             ),
           ),
         ),

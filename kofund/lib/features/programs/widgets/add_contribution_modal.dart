@@ -750,36 +750,82 @@ subtitle: Column(
             const SizedBox(height: 16),
 
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: filteredUsers.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: 72,
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                ),
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        child: Text(
-                          user.displayName?.isNotEmpty == true 
-                              ? user.displayName![0].toUpperCase()
-                              : 'U',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(user.displayName ?? 'Unknown User'),
-                      subtitle: Text(user.email),
-                      trailing: _selectedUser?.uid == user.uid
-                          ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
-                          : null,
+                  final isSelected = _selectedUser?.uid == user.uid;
+                  
+                  return Material(
+                    color: isSelected 
+                        ? AppColors.primary(context).withValues(alpha: 0.08) 
+                        : Colors.transparent,
+                    child: InkWell(
                       onTap: () {
                         setState(() {
                           _selectedUser = user;
                         });
                         _goToNextStep();
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.primary(context).withValues(alpha: 0.12),
+                              child: Text(
+                                user.displayName?.isNotEmpty == true 
+                                    ? user.displayName![0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  color: AppColors.primary(context),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    user.displayName ?? 'Unknown User',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    user.email,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(
+                                Icons.check_circle_rounded, 
+                                color: AppColors.primary(context),
+                                size: 22,
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/routing/route_names.dart';
@@ -14,6 +15,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:kofund/core/widgets/theme_toggle_slider.dart';
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -110,6 +112,7 @@ Future<void> _loadAppInfo() async {
                           value: themeProvider.isDarkMode,
                           onChanged: (value) => themeProvider.toggleTheme(value),
                           icon: Icons.dark_mode,
+                          isCustomSlider: true,
                         ),
                       ],
                     ),
@@ -378,7 +381,34 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
     required bool value,
     required Function(bool) onChanged,
     required IconData icon,
+    bool isCustomSlider = false,
   }) {
+    if (isCustomSlider) {
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+        trailing: ThemeToggleSlider(
+          value: value,
+          onChanged: onChanged,
+        ),
+        leading: Icon(
+          icon,
+          color: AppColors.primary(context),
+        ),
+      );
+    }
     return SwitchListTile(
       title: Text(
         title,
@@ -432,138 +462,89 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
   }
 
   void _showAppInfo() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'App Information',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
+    DialogHelper.showConfirmationDialog(
+      context,
+      title: 'App Information',
+      confirmLabel: 'Close',
+      cancelLabel: '', // Hide cancel
+      icon: Icons.info_outline_rounded,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Fund App Community Manager',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
-        ),
-        backgroundColor: AppColors.card(context),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Fund App Community Manager',
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Version: $appVersion',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-            Text(
-              'Build: $buildNumber',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'A community fund management app for organizing programs and tracking contributions.',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: TextStyle(color: AppColors.primary(context)),
-            ),
+          const SizedBox(height: 12),
+          Text(
+            'Version: $appVersion\nBuild: $buildNumber',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'A community fund management app for organizing programs and tracking contributions.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary(context), height: 1.4),
           ),
         ],
       ),
     );
   }
 
-void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(
-        'Leave Community?',
-        style: TextStyle(color: AppColors.textPrimary(context)),
-      ),
-      backgroundColor: AppColors.card(context),
-      content: Text(
-        'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
-        style: TextStyle(color: AppColors.textSecondary(context)),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-        ),
-        TextButton(
-          onPressed: () async {
-            // Check internet connection first
-            final bool isConnected = await NetworkService().isConnected;
-            if (!mounted) return;
-            
-            if (!isConnected) {
-              // Show snackbar and keep dialog open
-              SnackbarHelper.showError(
-                context,
-                'No internet connection. Please check your network and try again.'
-              );
-              return; // Don't close dialog or proceed
-            }
-            
-            // If connected, proceed with leaving
-            Navigator.pop(context);
-            
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Leaving community...'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-
-            final success = await profileProvider.leaveCommunity();
-            if (!mounted) return;
-            
-            if (success) {
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Successfully left community'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                RouteNames.login,
-                (route) => false,
-              );
-            } else {
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text('Failed to leave community: ${profileProvider.error}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.error(context),
-          ),
-          child: const Text('Leave'),
-        ),
-      ],
-    ),
+void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) async {
+  final confirm = await DialogHelper.showConfirmationDialog(
+    context,
+    title: 'Leave Community?',
+    message: 'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
+    confirmLabel: 'Leave',
+    icon: Icons.exit_to_app_rounded,
+    isDestructive: true,
   );
+
+  if (confirm == true) {
+    // Check internet connection
+    final bool isConnected = await NetworkService().isConnected;
+    if (!mounted) return;
+    
+    if (!isConnected) {
+      SnackbarHelper.showError(
+        context,
+        'No internet connection. Please check your network and try again.'
+      );
+      return;
+    }
+    
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('Leaving community...'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+
+    final success = await profileProvider.leaveCommunity();
+    if (!mounted) return;
+    
+    if (success) {
+      SnackbarHelper.showSuccess(context, 'Successfully left community');
+      
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        RouteNames.login,
+        (route) => false,
+      );
+    } else {
+      SnackbarHelper.showError(context, 'Failed to leave community: ${profileProvider.error}');
+    }
+  }
 }
-void _showDeleteAccountDialog(AppAuthProvider authProvider) {
+void _showDeleteAccountDialog(AppAuthProvider authProvider) async {
   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
   final user = FirebaseAuth.instance.currentUser;
   
@@ -572,108 +553,47 @@ void _showDeleteAccountDialog(AppAuthProvider authProvider) {
     return;
   }
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(
-        'Delete Account?',
-        style: TextStyle(color: AppColors.textPrimary(context)),
-      ),
-      backgroundColor: AppColors.card(context),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'This action cannot be undone.\n\n'
-            'All your data will be permanently deleted.',
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-          const SizedBox(height: 10),
-          
-          if (_getUserProvider(user) == 'google') ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.account_circle, color: Colors.blue, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Google Account User',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        Text(
-                          'You will need to sign in again with Google',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-          
+  final confirm = await DialogHelper.showConfirmationDialog(
+    context,
+    title: 'Delete Account?',
+    confirmLabel: 'Delete Account',
+    isDestructive: true,
+    icon: Icons.delete_forever_rounded,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'This action cannot be undone.\n\nAll your data will be permanently deleted.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        const SizedBox(height: 16),
+        
+        if (_getUserProvider(user) == 'google') ...[
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange),
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'If deletion fails:',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 26),
+                const Icon(Icons.account_circle, color: Colors.blue, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '1. Sign out',
+                      const Text(
+                        'Google Account User',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
                         ),
                       ),
                       Text(
-                        '2. Sign in again',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
-                      Text(
-                        '3. Delete immediately',
+                        'You will need to sign in again with Google',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary(context),
@@ -685,51 +605,75 @@ color: Colors.blue.withValues(alpha: 0.1),                borderRadius: BorderRa
               ],
             ),
           ),
+          const SizedBox(height: 12),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: AppColors.textSecondary(context)),
+        
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
           ),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.error(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'If deletion fails:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 26),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('1. Sign out', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                    Text('2. Sign in again', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                    Text('3. Delete immediately', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                  ],
+                ),
+              ),
+            ],
           ),
-          onPressed: () async {
-            // Check internet connection first
-            final bool isConnected = await NetworkService().isConnected;
-            if (!mounted) return;
-            
-            if (!isConnected) {
-              // Show snackbar and keep dialog open
-              SnackbarHelper.showError(
-                context,
-                'No internet connection. Please check your network and try again.'
-              );
-              return; // Don't close dialog or proceed
-            }
-            
-            // If connected, proceed with deletion
-            Navigator.pop(context);
-            final providerType = _getUserProvider(user);
-            
-            if (providerType == 'google') {
-              await _attemptAccountDeletion(profileProvider);
-            } else if (providerType == 'email') {
-              _showPasswordDialog(profileProvider);
-            } else {
-              await _attemptAccountDeletion(profileProvider);
-            }
-          },
-          child: const Text('Delete Account'),
         ),
       ],
     ),
   );
+
+  if (confirm == true) {
+    // Check internet connection first
+    final bool isConnected = await NetworkService().isConnected;
+    if (!mounted) return;
+    
+    if (!isConnected) {
+      SnackbarHelper.showError(
+        context,
+        'No internet connection. Please check your network and try again.'
+      );
+      return;
+    }
+    
+    final providerType = _getUserProvider(user);
+    
+    if (providerType == 'google') {
+      await _attemptAccountDeletion(profileProvider);
+    } else if (providerType == 'email') {
+      _showPasswordDialog(profileProvider);
+    } else {
+      await _attemptAccountDeletion(profileProvider);
+    }
+  }
 }
 
 
@@ -884,129 +828,87 @@ Future<void> _attemptAccountDeletion(
   }
 }
 
-void _showReauthenticationRequiredDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Security Required'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.security, color: Colors.orange[700], size: 24),
-              const SizedBox(width: 8),
-              const Text(
-                'Recent Sign-in Needed',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Google requires recent authentication to delete your account.',
-            style: TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 12),
-          const Text('Please:'),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('1. Sign out', style: const TextStyle(fontSize: 14)),
-                Text('2. Sign in again', style: const TextStyle(fontSize: 14)),
-                Text('3. Delete immediately', style: const TextStyle(fontSize: 14)),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+void _showReauthenticationRequiredDialog() async {
+  final result = await DialogHelper.showConfirmationDialog(
+    context,
+    title: 'Security Required',
+    confirmLabel: 'Sign Out',
+    cancelLabel: 'Cancel',
+    icon: Icons.security_rounded,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Recent Sign-in Needed',
+          style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.textPrimary(context)),
         ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            await FirebaseAuth.instance.signOut();
-            if (!mounted) return;
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              RouteNames.login,
-              (route) => false,
-            );
-          },
-          child: const Text('Sign Out'),
+        const SizedBox(height: 12),
+        Text(
+          'Google requires recent authentication to delete your account. Please sign out and sign in again to proceed.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.4),
         ),
       ],
     ),
   );
+
+  if (result == true) {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      RouteNames.login,
+      (route) => false,
+    );
+  }
 }
 
-void _showLogoutDialog(AppAuthProvider authProvider) {
-  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-  final memberProvider = Provider.of<MemberProvider>(context, listen: false);
-  
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Logout?'),
-      content: const Text('Are you sure you want to logout?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () async {
-            // Check internet connection first
-            final bool isConnected = await NetworkService().isConnected;
-            if (!mounted) return;
-            
-            if (!isConnected) {
-              // Show snackbar and close dialog
-              Navigator.pop(context);
-              SnackbarHelper.showError(
-                context, 
-                'No internet connection. Please check your network and try again.'
-              );
-              return;
-            }
-            
-            Navigator.pop(context); // close the dialog
-            
-            // 1. Clear ALL provider data first
-            profileProvider.clearAllData();
-            memberProvider.clearDataForUserChange();
-            // Add other providers as needed
-            
-            // 2. Sign out from auth
-            await authProvider.signOut(context);
-            if (!mounted) return;
-            
-            // 3. Show success message
-            SnackbarHelper.showSuccess(context, 'Logged out successfully!');
+  void _showLogoutDialog(AppAuthProvider authProvider) async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final memberProvider = Provider.of<MemberProvider>(context, listen: false);
+    
+    final confirm = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Logout?',
+      message: 'Are you sure you want to logout? You will need to sign in again to access your account.',
+      confirmLabel: 'Logout',
+      icon: Icons.logout_rounded,
+      isDestructive: true,
+    );
 
-            // 4. Navigate to login screen & clear navigation history
-            if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                RouteNames.login,
-                (route) => false,
-              );
-            }
-          },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Logout'),
-        ),
-      ],
-    ),
-  );
-}
+    if (confirm == true) {
+      // Check internet connection first
+      final bool isConnected = await NetworkService().isConnected;
+      if (!mounted) return;
+      
+      if (!isConnected) {
+        SnackbarHelper.showError(
+          context, 
+          'No internet connection. Please check your network and try again.'
+        );
+        return;
+      }
+      
+      // 1. Clear ALL provider data first
+      profileProvider.clearAllData();
+      memberProvider.clearDataForUserChange();
+      
+      // 2. Sign out from auth
+      await authProvider.signOut(context);
+      if (!mounted) return;
+      
+      // 3. Show success message
+      SnackbarHelper.showSuccess(context, 'Logged out successfully!');
+
+      // 4. Navigate to login
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        RouteNames.login,
+        (route) => false,
+      );
+    }
+  }
 }
 
 

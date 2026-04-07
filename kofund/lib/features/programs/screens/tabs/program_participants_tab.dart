@@ -1,6 +1,7 @@
 // ✅ FIXED: Stats logic and auto-close month selector
 // ✅ ADDED: Skeleton shimmer effect for loading state
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -11,12 +12,15 @@ import '../../../participants/models/participant_model.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../participants/providers/participant_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_dimensions.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/features/members/screens/member_details_screen.dart';
 import 'package:kofund/features/programs/screens/add_participant_screen.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class SafeAsyncOperation {
   static Future<T?> execute<T>({
@@ -64,7 +68,6 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
   int _streamKey = 0;
   int _currentDisplayYear = DateTime.now().year;
   bool _showMonthSelector = false;
-  final RefreshController _refreshController = RefreshController(initialRefresh: false);
   
   List<ParticipantModel> _cachedParticipants = [];
 
@@ -79,21 +82,16 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
   @override
   void dispose() {
     _searchController.dispose();
-    _refreshController.dispose();
     super.dispose();
   }
 
   void _onRefresh() async {
     try {
-      if (widget.program.isMonthlyPaymentProgram) {
-        _initializeMonths();
-      }
       setState(() {
         _streamKey++;
       });
-      _refreshController.refreshCompleted();
-    } catch (e) {
-      _refreshController.refreshFailed();
+    } catch (error) {
+      debugPrint("Refresh error: $error");
     }
   }
 
@@ -215,59 +213,71 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     }
   }
 
+  // ✅ New Pinned Header Delegate
+  Widget _buildPinnedSearchFilter(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _SliverPinnedHeaderDelegate(
+        minExtent: 64,
+        maxExtent: 64,
+        child: Container(
+          color: AppColors.background(context),
+          padding: const EdgeInsets.only(bottom: 8, top: 4, left: AppDimensions.screenPaddingHorizontal, right: AppDimensions.screenPaddingHorizontal),
+          child: _buildSearchFilterBar(context),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = _isAdmin(context);
 
     return Stack(
       children: [
-        SmartRefresher(
-          controller: _refreshController,
-          onRefresh: _onRefresh,
-          enablePullDown: true,
-          enablePullUp: false,
-          physics: const BouncingScrollPhysics(),
-          header: ClassicHeader(
-            idleText: 'Pull down to refresh',
-            releaseText: 'Release to refresh',
-            refreshingText: 'Refreshing participants...',
-            completeText: 'Refresh complete',
-            idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-            releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-            refreshingIcon: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary(context)),
-              ),
+        Container(
+          color: AppColors.background(context),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
-          ),
-          child: ListView(
-            children: [
-              _buildParticipantsStats(context),
+            slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  _onRefresh();
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+              ),
+              
+              SliverToBoxAdapter(
+                child: _buildParticipantsStats(context),
+              ),
 
               if (widget.program.isMonthlyPaymentProgram)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
-                  child: _buildMonthSelectorHeader(context),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
+                    child: _buildMonthSelectorHeader(context),
+                  ),
                 ),
 
               if (_showMonthSelector && widget.program.isMonthlyPaymentProgram)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _buildMonthGridSelector(context),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _buildMonthGridSelector(context),
+                  ),
                 ),
 
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
-                child: _buildSearchFilterBar(context),
+              // STICKY HEADER for Search & Filter
+              _buildPinnedSearchFilter(context),
+
+              _buildParticipantsListSliver(context),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 88),
               ),
-
-              _buildParticipantsListForScrollView(context),
-
-              // Bottom padding so FAB never overlaps content
-              const SizedBox(height: 88),
             ],
           ),
         ),
@@ -283,7 +293,7 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
               foregroundColor: Colors.white,
               elevation: 4,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
               child: const Icon(Icons.add),
             ),
@@ -293,28 +303,33 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
     );
   }
 
-  Widget _buildParticipantsListForScrollView(BuildContext context) {
+  Widget _buildParticipantsListSliver(BuildContext context) {
     return StreamBuilder<List<ParticipantModel>>(
       key: ValueKey('participants-${widget.program.programId}-${_selectedMonth ?? 'regular'}-$_streamKey'),
       stream: _getParticipantsStream(context),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && _cachedParticipants.isEmpty) {
-          return _buildShimmerSkeleton();
+          return SliverToBoxAdapter(
+            child: _buildShimmerSkeleton(),
+          );
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, color: AppColors.error(context), size: 48),
-                  const SizedBox(height: 8),
-                  Text('Error loading participants', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text('${snapshot.error}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)), textAlign: TextAlign.center),
-                ],
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error, color: AppColors.error(context), size: 48),
+                    const SizedBox(height: 8),
+                    Text('Error loading participants', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text('${snapshot.error}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)), textAlign: TextAlign.center),
+                  ],
+                ),
               ),
             ),
           );
@@ -328,17 +343,24 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
         final filteredParticipants = _filterParticipants(participants);
 
         if (filteredParticipants.isEmpty) {
-          return _buildEmptyState(participants.isEmpty, context);
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyState(participants.isEmpty, context),
+          );
         }
 
-        return Column(
-          children: filteredParticipants.map((participant) {
-            return _buildParticipantCard(participant, context);
-          }).toList(),
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              return _buildParticipantCard(filteredParticipants[index], context);
+            },
+            childCount: filteredParticipants.length,
+          ),
         );
       },
     );
   }
+
 
   Widget _buildParticipantsStats(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>(
@@ -788,85 +810,95 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
 
   Widget _buildMonthSelectorHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.border(context),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_month,
-                          color: AppColors.primary(context),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Monthly Payments',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary(context),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        if (_selectedMonth != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary(context).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              _formatMonthDisplay(_selectedMonth!),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary(context),
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(
-                            _showMonthSelector 
-                              ? Icons.keyboard_arrow_up 
-                              : Icons.keyboard_arrow_down,
-                            color: AppColors.primary(context),
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _showMonthSelector = !_showMonthSelector;
-                            });
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: _showMonthSelector ? 'Hide month selector' : 'Show month selector',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
+          ],
+          border: Border.all(
+            color: AppColors.border(context).withValues(alpha: 0.5),
+            width: 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Monthly Payments',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                if (_selectedMonth != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(context).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      border: Border.all(
+                        color: AppColors.primary(context).withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _formatMonthDisplay(_selectedMonth!),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary(context),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      setState(() {
+                        _showMonthSelector = !_showMonthSelector;
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        _showMonthSelector 
+                          ? Icons.keyboard_arrow_up_rounded 
+                          : Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.primary(context),
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -984,94 +1016,130 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
   }
 
   Widget _buildSearchFilterBar(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search participants...',
-              hintStyle: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 14,
-              ),
-              prefixIcon: Icon(
-                Icons.search,
-                color: AppColors.primary(context),
-                size: 20,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
+    return Container(
+      padding: EdgeInsets.zero,
+      child: Row(
+        children: [
+          // Search Field
+          Expanded(
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 14,
                 ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context),
-                  width: 2,
+                decoration: InputDecoration(
+                  hintText: 'Search participants...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textTertiary(context),
+                    fontSize: 13,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: AppColors.primary(context),
+                    size: 20,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
               ),
-              filled: true,
-              fillColor: AppColors.surface(context),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             ),
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
           ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: AppColors.border(context),
-            ),
-            borderRadius: BorderRadius.circular(12),
-            color: AppColors.surface(context),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _filterStatus,
-              icon: Icon(
-                Icons.arrow_drop_down,
-                color: AppColors.primary(context),
-                size: 20,
-              ),
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 14,
-              ),
-              dropdownColor: AppColors.card(context),
-              borderRadius: BorderRadius.circular(12),
-              items: const [
-                DropdownMenuItem(value: 'all', child: Text('All')),
-                DropdownMenuItem(value: 'paid', child: Text('Paid')),
-                DropdownMenuItem(value: 'pending', child: Text('Pending')),
+          const SizedBox(width: 8),
+          
+          // Filter Button
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _filterStatus = value!;
-                });
-              },
+              border: Border.all(
+                color: AppColors.border(context).withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
+                offset: const Offset(0, 52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                onSelected: (value) {
+                  setState(() {
+                    _filterStatus = value;
+                  });
+                },
+                itemBuilder: (context) => [
+                  _buildFilterMenuItem('all', 'All Status', Icons.list_alt_rounded),
+                  _buildFilterMenuItem('paid', 'Paid Only', Icons.check_circle_outline_rounded),
+                  _buildFilterMenuItem('pending', 'Pending Only', Icons.pending_outlined),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildFilterMenuItem(String value, String label, IconData icon) {
+    final isSelected = _filterStatus == value;
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1699,53 +1767,19 @@ Future<void> _removeContributions({
   }
 }
 
-  void _showRemoveConfirmation(ParticipantModel participant, BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        title: Text(
-          'Remove Participant',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 16,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to remove ${participant.userName} from this program?',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 13,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 13,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _removeParticipant(participant, context);
-            },
-            child: Text(
-              'Remove',
-              style: TextStyle(
-                color: AppColors.error(context),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
+  void _showRemoveConfirmation(ParticipantModel participant, BuildContext context) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Remove Participant?',
+      message: 'Are you sure you want to remove ${participant.userName} from this program?',
+      confirmLabel: 'Remove',
+      isDestructive: true,
+      icon: Icons.person_remove_rounded,
     );
+
+    if (result == true) {
+      _removeParticipant(participant, context);
+    }
   }
 
   void _removeParticipant(ParticipantModel participant, BuildContext context) async {
@@ -1852,5 +1886,29 @@ Future<void> _removeContributions({
     } catch (error) {
       return null;
     }
+  }
+}
+
+class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minExtent;
+  final double maxExtent;
+  final Widget child;
+
+  _SliverPinnedHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverPinnedHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.maxExtent != maxExtent ||
+        oldDelegate.minExtent != minExtent;
   }
 }

@@ -504,11 +504,7 @@ static Future<Uint8List> _generateReceiptPdf({
       case 'cash':
         return 'Cash';
       case 'upi':
-        return 'UPI Payment';
-      case 'bank_transfer':
-        return 'Bank Transfer';
-      case 'card':
-        return 'Credit/Debit Card';
+        return 'UPI';
       default:
         return method;
     }

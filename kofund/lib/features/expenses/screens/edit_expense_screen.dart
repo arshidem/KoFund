@@ -1,5 +1,6 @@
 // lib/features/expenses/screens/edit_expense_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,8 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../../programs/models/program_model.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/services/network_service.dart';
 
 class EditExpenseScreen extends StatefulWidget {
   final String expenseId;
@@ -45,20 +48,20 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   DateTime _selectedDate = DateTime.now();
 
   final List<String> _categories = [
-    'Food',
-    'Transport',
-    'Utilities',
-    'Materials',
-    'Events',
-    'Maintenance',
-    'Others'
+    'food',
+    'transport',
+    'venue',
+    'materials',
+    'decorations',
+    'utilities',
+    'maintenance',
+    'events',
+    'other'
   ];
 
   final List<String> _paymentMethods = [
-    'Cash',
-    'UPI',
-    'Bank Transfer',
-    'Cheque'
+    'cash',
+    'upi',
   ];
 
   bool get _hasAnyChanges {
@@ -179,8 +182,18 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  String _formatCategory(String category) => category;
-  String _formatPaymentMethod(String method) => method;
+  String _formatCategory(String category) {
+    if (category.isEmpty) return 'None';
+    return category[0].toUpperCase() + category.substring(1).toLowerCase();
+  }
+
+  String _formatPaymentMethod(String method) {
+    switch (method.toLowerCase()) {
+      case 'cash': return 'Cash';
+      case 'upi': return 'UPI';
+      default: return method.isNotEmpty ? method[0].toUpperCase() + method.substring(1).toLowerCase() : method;
+    }
+  }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
@@ -200,50 +213,117 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    String? hint,
-    int? maxLength,
-    bool showCharacterCounter = false,
-    bool isRequired = false,
+    required String hint,
+    FocusNode? focusNode,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
-    TextInputType? keyboardType,
+    int maxLength = 100,
+    List<TextInputFormatter>? inputFormatters,
+    String? errorText,
+    bool isRequired = false,
+    bool showCharacterCounter = false,
     String? Function(String?)? validator,
   }) {
+    final List<TextInputFormatter> formatters = [
+      if (inputFormatters != null) ...inputFormatters,
+      LengthLimitingTextInputFormatter(maxLength),
+    ];
+
+    String displayLabel = label;
+    if (isRequired && !label.trim().endsWith('*')) {
+      displayLabel = '$label *';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$label${isRequired ? ' *' : ''}',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          maxLength: maxLength,
-          maxLines: maxLines,
+          focusNode: focusNode,
+          obscureText: obscureText,
           keyboardType: keyboardType,
-          style: TextStyle(color: AppColors.textPrimary(context)),
+          maxLines: maxLines,
+          maxLength: maxLength,
+          maxLengthEnforcement: MaxLengthEnforcement.enforced,
+          inputFormatters: formatters,
+          validator: validator,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 14,
+          ),
           decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, color: AppColors.primary(context), size: 20),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
+            labelText: displayLabel,
+            labelStyle: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 14,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border(context)),
+            floatingLabelStyle: TextStyle(
+              color: AppColors.primary(context),
+              fontWeight: FontWeight.w600,
+            ),
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: maxLines > 1 ? 13 : 14,
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: AppColors.primary(context),
+              size: 20,
             ),
             filled: true,
             fillColor: AppColors.surface(context),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            counterText: showCharacterCounter ? null : '',
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: maxLines == 1 ? 18 : 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderSide: BorderSide(color: AppColors.border(context)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderSide: BorderSide(
+                color: AppColors.primary(context),
+                width: 2,
+              ),
+            ),
+            errorText: errorText,
+            errorStyle: const TextStyle(
+              fontSize: 12,
+              height: 1.2,
+            ),
+            counterText: '',
           ),
-          validator: validator,
         ),
+        if (showCharacterCounter)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, right: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (context, value, child) {
+                  final currentLength = value.text.length;
+                  final remaining = maxLength - currentLength;
+                  return Text(
+                    '$currentLength/$maxLength',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: remaining <= 10 
+                        ? Colors.orange 
+                        : AppColors.textSecondary(context),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -252,31 +332,27 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Date *',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
         InkWell(
           onTap: _selectDate,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border(context)),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               color: AppColors.surface(context),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, color: AppColors.primary(context), size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  DateFormat('MMM dd, yyyy').format(_selectedDate),
-                  style: TextStyle(color: AppColors.textPrimary(context)),
-                ),
-                const Spacer(),
-                const Icon(Icons.arrow_drop_down, color: Colors.grey),
-              ],
+            child: ListTile(
+              leading: Icon(Icons.calendar_today, color: AppColors.primary(context), size: 20),
+              title: Text(
+                'Expense Date *',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+              ),
+              subtitle: Text(
+                DateFormat('MMM dd, yyyy').format(_selectedDate),
+                style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              trailing: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             ),
           ),
         ),
@@ -318,16 +394,42 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        if (!_isLoading)
-          _isSaving 
-            ? const Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-              )
-            : IconButton(
-                icon: const Icon(Icons.check, color: Colors.white, size: 26),
-                onPressed: _saveChanges,
-              ),
+        StatefulBuilder(
+          builder: (context, setState) {
+            return _isSaving
+                ? const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: true,
+                      builder: (context, snapshot) {
+                        final bool isOnline = snapshot.data ?? true;
+                        
+                        return IconButton(
+                          icon: isOnline
+                              ? const Icon(Icons.check, color: Colors.white, size: 26)
+                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                          tooltip: isOnline 
+                              ? 'Save Changes'
+                              : 'Offline - No Connection',
+                          onPressed: isOnline ? _saveChanges : null,
+                        );
+                      },
+                    ),
+                  );
+          },
+        ),
       ],
       body: SafeArea(
         child: Padding(
@@ -358,28 +460,28 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                             child: Column(
                               children: [
                                 // Program Selection
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Program *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
-                                    const SizedBox(height: 8),
-                                    DropdownButtonFormField<String>(
-                                      initialValue: _selectedProgramId,
-                                      dropdownColor: AppColors.surface(context),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),
-                                        filled: true,
-                                        fillColor: AppColors.surface(context),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                                      ),
-                                      items: _availablePrograms.map((program) {
-                                        return DropdownMenuItem<String>(value: program.programId, child: Text(program.title, style: TextStyle(color: AppColors.textPrimary(context))));
-                                      }).toList(),
-                                      onChanged: (value) => setState(() => _selectedProgramId = value),
-                                      validator: (value) => value == null ? 'Please select a program' : null,
-                                      hint: const Text('Select Program'),
-                                    ),
-                                  ],
+                                DropdownButtonFormField<String>(
+                                  value: (_selectedProgramId != null && _availablePrograms.any((p) => p.programId == _selectedProgramId)) 
+                                      ? _selectedProgramId 
+                                      : null,
+                                  dropdownColor: AppColors.surface(context),
+                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: 'Program *',
+                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    filled: true,
+                                    fillColor: AppColors.surface(context),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                    prefixIcon: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 20),
+                                  ),
+                                  items: _availablePrograms.map((program) {
+                                    return DropdownMenuItem<String>(value: program.programId, child: Text(program.title, style: TextStyle(color: AppColors.textPrimary(context))));
+                                  }).toList(),
+                                  onChanged: (value) => setState(() => _selectedProgramId = value),
+                                  validator: (value) => value == null ? 'Please select a program' : null,
+                                  hint: const Text('Select Program'),
                                 ),
                                 const SizedBox(height: 16),
                                 _buildInputField(
@@ -389,6 +491,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                   hint: 'Enter expense title',
                                   maxLength: 50,
                                   isRequired: true,
+                                  showCharacterCounter: true,
                                   validator: (value) => value == null || value.trim().length < 3 ? 'Small title' : null,
                                 ),
                                 const SizedBox(height: 16),
@@ -397,45 +500,55 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 _buildInputField(controller: _amountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
                                 const SizedBox(height: 16),
                                 // Category Selection
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Category *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
-                                    const SizedBox(height: 8),
-                                    DropdownButtonFormField<String>(
-                                      initialValue: _selectedCategory,
-                                      dropdownColor: AppColors.surface(context),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),
-                                        filled: true,
-                                        fillColor: AppColors.surface(context),
-                                      ),
-                                      items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat, style: TextStyle(color: AppColors.textPrimary(context))))).toList(),
-                                      onChanged: (value) => setState(() => _selectedCategory = value),
-                                      validator: (value) => value == null ? 'Required' : null,
-                                    ),
-                                  ],
+                                DropdownButtonFormField<String>(
+                                  value: (_selectedCategory != null && _categories.contains(_selectedCategory!.toLowerCase())) 
+                                      ? _selectedCategory!.toLowerCase() 
+                                      : null,
+                                  dropdownColor: AppColors.surface(context),
+                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: 'Category *',
+                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    filled: true,
+                                    fillColor: AppColors.surface(context),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                    prefixIcon: Icon(Icons.category_outlined, color: AppColors.primary(context), size: 20),
+                                  ),
+                                  items: _categories.map((cat) => DropdownMenuItem(
+                                    value: cat, 
+                                    child: Text(_formatCategory(cat), style: TextStyle(color: AppColors.textPrimary(context)))
+                                  )).toList(),
+                                  onChanged: (value) => setState(() => _selectedCategory = value),
+                                  validator: (value) => value == null ? 'Required' : null,
+                                  hint: Text(_selectedCategory ?? 'Select Category'),
                                 ),
                                 const SizedBox(height: 16),
                                 // Payment Method
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Payment Method *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey)),
-                                    const SizedBox(height: 8),
-                                    DropdownButtonFormField<String>(
-                                      initialValue: _selectedPaymentMethod,
-                                      dropdownColor: AppColors.surface(context),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border(context))),
-                                        filled: true,
-                                        fillColor: AppColors.surface(context),
-                                      ),
-                                      items: _paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(color: AppColors.textPrimary(context))))).toList(),
-                                      onChanged: (value) => setState(() => _selectedPaymentMethod = value),
-                                      validator: (value) => value == null ? 'Required' : null,
-                                    ),
-                                  ],
+                                DropdownButtonFormField<String>(
+                                  value: (_selectedPaymentMethod != null && _paymentMethods.contains(_selectedPaymentMethod!.toLowerCase())) 
+                                      ? _selectedPaymentMethod!.toLowerCase() 
+                                      : null,
+                                  dropdownColor: AppColors.surface(context),
+                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: 'Payment Method *',
+                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                    filled: true,
+                                    fillColor: AppColors.surface(context),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                    prefixIcon: Icon(Icons.payment_outlined, color: AppColors.primary(context), size: 20),
+                                  ),
+                                  items: _paymentMethods.map((m) => DropdownMenuItem(
+                                    value: m, 
+                                    child: Text(_formatPaymentMethod(m), style: TextStyle(color: AppColors.textPrimary(context)))
+                                  )).toList(),
+                                  onChanged: (value) => setState(() => _selectedPaymentMethod = value),
+                                  validator: (value) => value == null ? 'Required' : null,
+                                  hint: Text(_selectedPaymentMethod ?? 'Select Method'),
                                 ),
                                 const SizedBox(height: 16),
                                 _buildDatePickerField(),

@@ -668,29 +668,29 @@ void _initializeWidgetProviders(String userId, String communityId) {
                       ],
                     ],
                   ),
-                  if (progress > 0.3)
-                    Opacity(
-                      opacity: (progress - 0.3) / 0.7,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.people_outline,
-                            size: 14,
-                            color: Colors.white70,
+                  Opacity(
+                    opacity: 0.7 + (0.3 * (1.0 - progress)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 11 + (3 * progress),
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${stats['membersCount'] ?? 0} Members",
+                          style: TextStyle(
+                            fontSize: 10 + (2 * progress),
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "${stats['membersCount'] ?? 0} Members",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
                   ],
                 ),
               ),

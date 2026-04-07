@@ -8,6 +8,8 @@ import '../../../contributions/providers/contribution_provider.dart';
 import '../../../../features/auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../programs/models/program_model.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ProgramMonthlyContributionsTab extends StatefulWidget {
   final ProgramModel program;
@@ -678,32 +680,20 @@ final collectionRate = totalCount > 0 ? (paidCount / totalCount) * 100.0 : 0.0; 
     return Colors.red;
   }
 
-  void _markAsPaid(Map<String, dynamic> participant) {
-    // Implement mark as paid functionality
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mark as Paid'),
-        content: Text('Mark ${participant['userName']} as paid for ${_getMonthDisplayName(_selectedMonth!)}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: Implement payment marking logic
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Marked ${participant['userName']} as paid')),
-              );
-              _loadMonthData(); // Refresh data
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
+  void _markAsPaid(Map<String, dynamic> participant) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Mark as Paid?',
+      message: 'Confirm ₹ ${widget.program.suggestedContribution?.toStringAsFixed(0)} payment for ${participant['userName']} for ${_getMonthDisplayName(_selectedMonth!)}?',
+      confirmLabel: 'Confirm',
+      icon: Icons.check_circle_outline_rounded,
     );
+
+    if (result == true) {
+      // TODO: Implement payment marking logic
+      SnackbarHelper.showSuccess(context, 'Marked ${participant['userName']} as paid');
+      _loadMonthData(); // Refresh data
+    }
   }
 
   void _viewDetails(Map<String, dynamic> participant) {

@@ -11,6 +11,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/skeleton/member_details_skeleton.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
@@ -1760,52 +1761,18 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     }
   }
 
-  void _showUnapproveConfirmation(UserModel member) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Unapprove User?',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to unapprove ${member.displayName}? '
-          'They will no longer be visible in the members list but can be re-approved later.',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _unapproveUser(member);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Unapprove'),
-          ),
-        ],
-      ),
+  void _showUnapproveConfirmation(UserModel member) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Unapprove User?',
+      message: 'Are you sure you want to unapprove ${member.displayName}? They will no longer be visible in the members list but can be re-approved later.',
+      confirmLabel: 'Unapprove',
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _unapproveUser(member);
+    }
   }
 
   void _unapproveUser(UserModel member) async {
@@ -1828,100 +1795,32 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     }
   }
 
-  void _showRemoveConfirmation(UserModel member) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Remove from Community?',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to remove ${member.displayName} from the community? '
-          'This will remove their community access completely.',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _removeFromCommunity(member);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+  void _showRemoveConfirmation(UserModel member) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Remove from Community?',
+      message: 'Are you sure you want to remove ${member.displayName} from the community? This will completely revoke their access.',
+      confirmLabel: 'Remove',
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _removeFromCommunity(member);
+    }
   }
 
-  void _showDeleteVirtualUserConfirmation(UserModel member) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete Virtual User?',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete virtual user "${member.displayName}"? '
-          'This action cannot be undone.',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary(context)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteVirtualUser(member);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  void _showDeleteVirtualUserConfirmation(UserModel member) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Delete Virtual User?',
+      message: 'Are you sure you want to delete virtual user "${member.displayName}"? This action cannot be undone and will erase all data.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _deleteVirtualUser(member);
+    }
   }
 
   void _removeFromCommunity(UserModel member) async {
@@ -2044,12 +1943,8 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     switch (paymentMethod.toLowerCase()) {
       case 'cash':
         return Icons.money;
-      case 'online':
-        return Icons.payment;
       case 'upi':
         return Icons.phone_android;
-      case 'card':
-        return Icons.credit_card;
       default:
         return Icons.payment;
     }

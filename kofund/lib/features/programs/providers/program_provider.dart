@@ -383,6 +383,7 @@ class ProgramProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading programs: $e');
+      _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -33,15 +33,11 @@ class ContributionTile extends StatelessWidget {
   }
 
   String _formatPaymentMethod(String method) {
-    switch (method) {
+    switch (method.toLowerCase()) {
       case 'cash':
         return 'Cash';
       case 'upi':
         return 'UPI';
-      case 'online':
-        return 'Online';
-      case 'bank_transfer':
-        return 'Bank';
       default:
         return method;
     }

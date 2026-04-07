@@ -6,6 +6,7 @@ import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import '../providers/program_provider.dart';
 import '../models/program_model.dart';
@@ -104,24 +105,47 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   }
 
 
-Future<void> _loadPrograms() async {
-  final authProvider = context.read<AppAuthProvider>();
-  final programProvider = context.read<ProgramProvider>();
-  
-  if (authProvider.user?.communityId != null) {
-    await programProvider.loadCommunityPrograms(authProvider.user!.communityId!);
-    await programProvider.loadMyParticipations(
-      authProvider.user!.uid, 
-      authProvider.user!.communityId!,
-    );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ✅ Reactive Loading: If auth data arrives late, trigger load
+    final authProvider = Provider.of<AppAuthProvider>(context);
+    final programProvider = Provider.of<ProgramProvider>(context, listen: false);
     
-    // ✅ Call sync again to ensure it's done
-    // Use unawaited so it doesn't block the UI
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await programProvider.syncAllProgramsStatus();
-    });
+    if (authProvider.user?.communityId != null && 
+        programProvider.programs.isEmpty && 
+        !programProvider.isLoading) {
+      _loadPrograms();
+    }
   }
-}
+
+  Future<void> _loadPrograms() async {
+    // Ensure we don't call this if the widget is not mounted or in a precarious state
+    if (!mounted) return;
+    
+    final authProvider = context.read<AppAuthProvider>();
+    final programProvider = context.read<ProgramProvider>();
+    
+    final communityId = authProvider.user?.communityId;
+    if (communityId != null) {
+      debugPrint('📥 Loading programs for community: $communityId');
+      await programProvider.loadCommunityPrograms(communityId);
+      
+      if (mounted) {
+        await programProvider.loadMyParticipations(
+          authProvider.user!.uid, 
+          communityId,
+        );
+        
+        // Use postFrame to avoid modifying state during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) programProvider.syncAllProgramsStatus();
+        });
+      }
+    } else {
+      debugPrint('⚠️ Cannot load programs: communityId is null');
+    }
+  }
 
   Future<void> _onRefresh() async {
     debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
@@ -570,21 +594,11 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
     final isAdmin = widget.isAdmin;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 100),
+      padding: const EdgeInsets.only(top: 80, bottom: 40),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (_searchQuery.isNotEmpty)
-            Icon(
-              Icons.search_off, 
-              size: 64, 
-              color: const Color(0xFF00BFA5).withValues(alpha: 0.5)
-            )
-          else
-            Icon(
-              Icons.event_note_rounded,
-              size: 64,
-              color: const Color(0xFF00BFA5).withValues(alpha: 0.5),
-            ),
+          _buildEmptyIcon(),
           const SizedBox(height: 24),
           Text(
             _searchQuery.isNotEmpty ? 'No results found' : 'No Programs Available',
@@ -610,26 +624,40 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
               textAlign: TextAlign.center,
             ),
           ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00BFA5),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                ),
-              ),
-              child: const Text('Clear Search'),
-            ),
-          ],
+          const SizedBox(height: 32),
+          if (_searchQuery.isNotEmpty)
+            _buildActionButton('Clear Search', () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            })
+          else
+            _buildActionButton('Refresh Programs', _loadPrograms, icon: Icons.refresh_rounded),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyIcon() {
+    final color = AppColors.primary(context).withValues(alpha: 0.5);
+    if (_searchQuery.isNotEmpty) {
+      return Icon(Icons.search_off, size: 64, color: color);
+    }
+    return Icon(Icons.event_note_rounded, size: 64, color: color);
+  }
+
+  Widget _buildActionButton(String label, VoidCallback onPressed, {IconData? icon}) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: icon != null ? Icon(icon, size: 18) : const SizedBox.shrink(),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+        ),
       ),
     );
   }
@@ -850,12 +878,12 @@ Widget _buildProgramCard(
                                   onTap: hasJoined 
                                     ? () => _viewProgramDetails(program)
                                     : (canJoin ? () => _joinProgram(program, programProvider, authProvider) : null),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                     decoration: BoxDecoration(
                                       color: hasJoined || canJoin ? programColor : Colors.grey[400],
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                       boxShadow: [
                                         if (hasJoined || canJoin)
                                           BoxShadow(
@@ -868,16 +896,20 @@ Widget _buildProgramCard(
                                     child: Row(
                                       children: [
                                         Text(
-                                          hasJoined ? 'DETAILS' : (canJoin ? 'JOIN NOW' : 'FULL'),
-                                          style: const TextStyle(
+                                          hasJoined ? 'DETAILS' : (canJoin ? 'JOIN NOW' : 'Full'),
+                                          style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
-                                            color: Colors.white,
+                                            color: hasJoined || canJoin ? Colors.white : Colors.white.withValues(alpha: 0.6),
                                             letterSpacing: 0.5,
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white),
+                                        Icon(
+                                          Icons.arrow_forward_ios_rounded, 
+                                          size: 10, 
+                                          color: hasJoined || canJoin ? Colors.white : Colors.white.withValues(alpha: 0.6)
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -901,52 +933,83 @@ Widget _buildProgramCard(
 
 
 
-Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
-  return PopupMenuButton<String>(
-    icon: Icon(Icons.more_vert, color: AppColors.textSecondary(context)),
-    onSelected: (value) {
-      if (value == 'edit') {
-        _editProgram(program);
-      } else if (value == 'delete') {
-        _showDeleteConfirmation(program, programProvider);
-      } else if (value == 'reminders') {
-        _navigateToRemindersScreen(program);
-      }
-    },
-    itemBuilder: (BuildContext context) => [
-      PopupMenuItem<String>(
-        value: 'edit',
-        child: Row(
-          children: [
-            Icon(Icons.edit, color: AppColors.primary(context)),
-            const SizedBox(width: 8),
-            Text('Edit Program'),
-          ],
-        ),
+  Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        color: AppColors.textTertiary(context),
+        size: 22,
       ),
-      // PopupMenuItem<String>(
-      //   value: 'reminders',
-      //   child: Row(
-      //     children: [
-      //       Icon(Icons.notifications_active, color: Colors.orange),
-      //       const SizedBox(width: 8),
-      //       Text('Set Reminders'),
-      //     ],
-      //   ),
-      // ),
-      PopupMenuItem<String>(
-        value: 'delete',
-        child: Row(
-          children: [
-            Icon(Icons.delete, color: Colors.red),
-            const SizedBox(width: 8),
-            Text('Delete Program'),
-          ],
-        ),
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-    ],
-  );
-}
+      elevation: 4,
+      color: AppColors.card(context),
+      onSelected: (value) {
+        if (value == 'edit') {
+          _editProgram(program);
+        } else if (value == 'delete') {
+          _showDeleteConfirmation(program, programProvider);
+        } else if (value == 'reminders') {
+          _navigateToRemindersScreen(program);
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        _buildPopupMenuItem(
+          value: 'edit',
+          icon: Icons.edit_rounded,
+          label: 'Edit Program',
+          color: AppColors.primary(context),
+        ),
+        _buildPopupMenuItem(
+          value: 'reminders',
+          icon: Icons.notifications_active_rounded,
+          label: 'Reminders',
+          color: Colors.orange,
+        ),
+        _buildPopupMenuItem(
+          value: 'delete',
+          icon: Icons.delete_outline_rounded,
+          label: 'Delete Program',
+          color: AppColors.error(context),
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupMenuItem({
+    required String value,
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 44,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _editProgram(ProgramModel program) {
     Navigator.push(
@@ -963,27 +1026,18 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
     );
   }
 
-  void _showDeleteConfirmation(ProgramModel program, ProgramProvider programProvider) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Program?'),
-        content: Text('Are you sure you want to delete "${program.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context)))
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteProgram(program, programProvider);
-            }, 
-            child: const Text('Delete', style: TextStyle(color: Colors.red))
-          ),
-        ],
-      ),
+  void _showDeleteConfirmation(ProgramModel program, ProgramProvider programProvider) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Delete Program?',
+      message: 'Are you sure you want to delete "${program.title}"? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
+
+    if (result == true) {
+      _deleteProgram(program, programProvider);
+    }
   }
 
   Future<void> _deleteProgram(ProgramModel program, ProgramProvider programProvider) async {
@@ -1037,16 +1091,12 @@ Widget _buildAdminMenu(ProgramModel program, ProgramProvider programProvider) {
       ProgramModel program,
       ProgramProvider programProvider,
       AppAuthProvider authProvider) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave Program?'),
-        content: Text('Are you sure you want to leave ${program.title}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Leave', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+    final confirm = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Leave Program?',
+      message: 'Are you sure you want to leave ${program.title}?',
+      confirmLabel: 'Yes, Leave',
+      isDestructive: true,
     );
 
     if (confirm == true) {

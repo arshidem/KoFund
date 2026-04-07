@@ -48,6 +48,7 @@ import 'features/issues/providers/issue_provider.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
+import 'core/widgets/theme_transition_wrapper.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
@@ -767,6 +768,12 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
       navigatorKey: navigatorKey,
       onGenerateRoute: AppRouter.onGenerateRoute,
       themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        return ThemeTransitionWrapper(
+          isDarkMode: themeProvider.isDarkMode,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       
 
       // 🌤 LIGHT THEME

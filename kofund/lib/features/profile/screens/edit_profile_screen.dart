@@ -126,10 +126,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             tooltip: 'Update Profile',
           ),
       ],
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
               // Profile Picture Section

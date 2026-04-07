@@ -357,17 +357,12 @@ static pw.Widget _iosDetail(String label, String value) {
     );
   }
 
-  // Format payment method
   static String _formatPaymentMethod(String method) {
     switch (method.toLowerCase()) {
       case 'cash':
         return 'Cash';
       case 'upi':
-        return 'UPI Payment';
-      case 'bank_transfer':
-        return 'Bank Transfer';
-      case 'card':
-        return 'Credit/Debit Card';
+        return 'UPI';
       default:
         return method;
     }

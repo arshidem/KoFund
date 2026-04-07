@@ -10,6 +10,7 @@ import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
+import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
@@ -121,12 +122,42 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
         onPressed: () => Navigator.pop(context, false),
       ),
       actions: [
-        if (_hasChanges && !_isLoading)
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.white),
-            onPressed: _updateVirtualUser,
-            tooltip: 'Save Changes',
-          ),
+        StatefulBuilder(
+          builder: (context, setState) {
+            return _isLoading
+                ? const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: StreamBuilder<bool>(
+                      stream: NetworkService().onConnectionChanged,
+                      initialData: true,
+                      builder: (context, snapshot) {
+                        final bool isOnline = snapshot.data ?? true;
+                        
+                        return IconButton(
+                          icon: isOnline
+                              ? const Icon(Icons.check, color: Colors.white, size: 26)
+                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                          tooltip: isOnline 
+                              ? 'Save Changes'
+                              : 'Offline - No Connection',
+                          onPressed: isOnline && _hasChanges && !_isLoading ? _updateVirtualUser : null,
+                        );
+                      },
+                    ),
+                  );
+          },
+        ),
       ],
       body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -281,40 +312,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                 
                 const SizedBox(height: 24),
                 
-                // Save Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading || !_hasChanges ? null : _updateVirtualUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _hasChanges 
-                          ? AppColors.primary(context) 
-                          : AppColors.textSecondary(context),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Save Changes',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

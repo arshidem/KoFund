@@ -278,199 +278,162 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     final isLoading = virtualUserProvider.isLoading;
 
     return GradientSheetScaffold(
-      title: 'Create Virtual Users',
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back,
-          size: 24,
-          color: Colors.white,
-        ),
-        onPressed: () => Navigator.pop(context, false),
-      ),
+      title: 'Virtual Members',
+      headerHeight: 60,
       body: Column(
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: _showHeader ? _buildHeaderInfo() : const SizedBox.shrink(),
-          ),
-          const Divider(height: 1),
-          if (_showBulkInput)
-            _buildBulkInputSection(),
-          // Scrollable content area
-          Expanded(
-            child: _buildScrollableContent(isLoading),
-          ),
-          // Fixed bottom actions
-          if (!_showBulkInput) // Only show fixed bottom when NOT in bulk import
-            _buildBottomActions(isLoading),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildScrollableContent(bool isLoading) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Users list when NOT in bulk import
-          if (!_showBulkInput) _buildUsersList(),
+          // Summary & Controls Header
+          _buildActionHeader(),
           
-          // When in bulk import, show bottom actions here (scrollable)
-          if (_showBulkInput) 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: _buildBottomActions(isLoading),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderInfo() {
-    return Container(
-      padding: AppStyles.paddingMedium,
-      color: AppColors.primary(context).withValues(alpha: 0.08),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.group_add, size: 20, color: AppColors.primary(context)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Add Multiple Virtual Members',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: AppColors.primary(context),
+          const Divider(height: 1, thickness: 1),
+          
+          // Main content area
+          Expanded(
+            child: Stack(
+              children: [
+                // Scrollable content
+                _buildMainContent(isLoading),
+                
+                // Loading Overlay
+                if (isLoading)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.card(context),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(color: AppColors.primary(context)),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Creating members...',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
-              // Bulk Import button in header
-              ElevatedButton.icon(
-                onPressed: _toggleBulkInput,
-                icon: Icon(Icons.upload_file, size: 18, color: Colors.white),
-                label: const Text('Bulk Import'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add members who don\'t have the app. Phone and email are optional.',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Community: ${widget.communityName}',
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Chip(
-                label: Text('${_users.length} member(s)'),
-                backgroundColor: Colors.white,
-              ),
-              const SizedBox(width: 8),
-              Chip(
-                label: Text('${_users.where((u) => (u['name'] as String).isNotEmpty).length} valid'),
-                backgroundColor: Colors.green.withValues(alpha: 0.1),
-                labelStyle: const TextStyle(color: Colors.green),
-              ),
-            ],
-          ),
+          
+          // Fixed Bottom Action Bar
+          if (!_showBulkInput) _buildPremiumBottomBar(isLoading),
         ],
       ),
     );
   }
 
-  Widget _buildBulkInputSection() {
+  Widget _buildActionHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(context)),
-        ),
+        color: AppColors.background(context),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Bulk Import',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  _bulkFocus.unfocus(); // close keyboard
-                  setState(() {
-                    _showBulkInput = false;
-                    _showHeader = true; // force header to reappear
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter one user per line. Format: Name, Phone, Email\nExample:\nJohn Doe, +919876543210, john@email.com\nJane Smith\nMike Johnson, +911234567890',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            height: 120,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border(context)),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            ),
-            child: TextField(
-              focusNode: _bulkFocus,
-              controller: _bulkInputController,
-              maxLines: null,
-              expands: true,
-              decoration: const InputDecoration(
-                hintText: 'Paste or type user data here...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _importFromBulkInput,
-              icon: const Icon(Icons.upload_file, size: 20),
-              label: const Text('Import Users'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Batch Registration',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary(context),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      widget.communityName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primary(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
+              _buildBulkToggle(),
+            ],
+          ),
+          if (!_showBulkInput) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildStatBadge(
+                  'Total Items', 
+                  '${_users.length}', 
+                  Icons.format_list_numbered_rounded,
+                  AppColors.primary(context),
+                ),
+                const SizedBox(width: 12),
+                _buildStatBadge(
+                  'Valid Leads', 
+                  '${_users.where((u) => (u['name'] as String).trim().isNotEmpty).length}', 
+                  Icons.check_circle_rounded,
+                  Colors.green,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -478,222 +441,467 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     );
   }
 
-  Widget _buildUsersList() {
+  Widget _buildBulkToggle() {
+    return Material(
+      color: _showBulkInput 
+          ? AppColors.primary(context) 
+          : AppColors.primary(context).withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+      child: InkWell(
+        onTap: _toggleBulkInput,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _showBulkInput ? Icons.edit_note_rounded : Icons.upload_file_rounded,
+                size: 18,
+                color: _showBulkInput ? Colors.white : AppColors.primary(context),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _showBulkInput ? 'Manual Entry' : 'Bulk Import',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: _showBulkInput ? Colors.white : AppColors.primary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(bool isLoading) {
+    if (_showBulkInput) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildBulkTutorial(),
+            const SizedBox(height: 20),
+            _buildEnhancedBulkInput(),
+            const SizedBox(height: 24),
+            _buildBulkActionButtons(isLoading),
+            const SizedBox(height: 40),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
-      shrinkWrap: true, // Important for nested ListView
-      physics: const NeverScrollableScrollPhysics(), // Disable scrolling of nested ListView
-      padding: const EdgeInsets.all(16),
-      itemCount: _users.length + 1,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      itemCount: _users.length + 1, // Added 1 for the "Add Another" button
+      physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
         if (index == _users.length) {
           return Padding(
-            padding: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.only(top: 8, bottom: 32),
             child: OutlinedButton.icon(
               onPressed: _addNewUser,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: const Text('Add Another Member'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary(context),
-                side: BorderSide(color: AppColors.primary(context)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: BorderSide(color: AppColors.primary(context), width: 1.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
             ),
           );
         }
-
-        final user = _users[index];
-        return _buildUserCard(index, user);
+        return _buildPremiumUserCard(index, _users[index]);
       },
     );
   }
 
-  Widget _buildUserCard(int index, Map<String, dynamic> user) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppDimensions.spaceMedium),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-      ),
-      child: Padding(
-        padding: AppStyles.paddingMedium,
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Member ${index + 1}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                if (_users.length > 1)
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle, color: Colors.red),
-                    onPressed: () => _removeUser(index),
-                    tooltip: 'Remove',
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: user['name'] as String,
-              decoration: InputDecoration(
-                labelText: 'Full Name *',
-                prefixIcon: Icon(Icons.person, color: AppColors.primary(context)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.border(context)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-                ),
-                filled: true,
-                fillColor: AppColors.surface(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-              onChanged: (value) => _updateUserField(index, 'name', value),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: user['phone'] as String? ?? '',
-              decoration: InputDecoration(
-                labelText: 'Phone (Optional)',
-                prefixIcon: Icon(Icons.phone, color: AppColors.primary(context)),
-                hintText: '+919876543210',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.border(context)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-                ),
-                filled: true,
-                fillColor: AppColors.surface(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-              keyboardType: TextInputType.phone,
-              onChanged: (value) => _updateUserField(index, 'phone', value),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: user['email'] as String? ?? '',
-              decoration: InputDecoration(
-                labelText: 'Email (Optional)',
-                prefixIcon: Icon(Icons.email, color: AppColors.primary(context)),
-                hintText: 'member@example.com',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.border(context)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-                ),
-                filled: true,
-                fillColor: AppColors.surface(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (value) => _updateUserField(index, 'email', value),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomActions(bool isLoading) {
-    final validCount = _users.where((u) => (u['name'] as String).isNotEmpty).length;
-    
+  Widget _buildBulkTutorial() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background(context),
-        border: Border(
-          top: _showBulkInput 
-              ? BorderSide.none // No border when in bulk import (scrolling)
-              : BorderSide(color: AppColors.border(context)),
-        ),
-        boxShadow: _showBulkInput
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ]
-            : null,
+        color: Colors.amber.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ready to add: $validCount user(s)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: validCount > 0 ? Colors.green : Colors.grey,
-                    ),
-                  ),
-                  if (validCount == 0)
-                    const Text(
-                      'Add at least one user with a name',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                ],
-              ),
-              ElevatedButton.icon(
-                onPressed: validCount > 0 && !isLoading ? _createVirtualUsers : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  ),
+              Icon(Icons.lightbulb_outline_rounded, color: Colors.amber, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'How to Import',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: Colors.orange,
                 ),
-                icon: isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.group_add),
-                label: isLoading
-                    ? const Text('Creating...')
-                    : const Text('Add All Members'),
               ),
             ],
           ),
           const SizedBox(height: 8),
+          const Text(
+            'Paste your member list separated by lines. You can include phone and email separated by commas.',
+            style: TextStyle(fontSize: 12, height: 1.4, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Phone and email are optional. Members can be added without contact info.',
+            'Format: Name, Phone, Email',
             style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary(context),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary(context),
             ),
-            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedBulkInput() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Text(
+              'RAW DATA INPUT',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textTertiary(context),
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          TextField(
+            focusNode: _bulkFocus,
+            controller: _bulkInputController,
+            maxLines: 12,
+            minLines: 8,
+            style: const TextStyle(
+              fontSize: 14,
+              fontFamily: 'monospace',
+              letterSpacing: 0.5,
+            ),
+            decoration: InputDecoration(
+              hintText: 'John Doe, 9876543210, john@example.com\nJane Smith, 9988776655\nMike Ross',
+              hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5)),
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.all(20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulkActionButtons(bool isLoading) {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _importFromBulkInput,
+            icon: const Icon(Icons.flash_on_rounded, size: 18),
+            label: const Text('Process & Import'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumUserCard(int index, Map<String, dynamic> user) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Card Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        color: AppColors.primary(context),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'MEMBER DETAILS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textTertiary(context),
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const Spacer(),
+                if (_users.length > 1)
+                  IconButton(
+                    icon: Icon(Icons.remove_circle_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 22),
+                    onPressed: () => _removeUser(index),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              children: [
+                _buildModernTextField(
+                  initialValue: user['name'] as String,
+                  label: 'Full Name',
+                  hint: 'Enter member name',
+                  icon: Icons.person_rounded,
+                  isRequired: true,
+                  onChanged: (val) => _updateUserField(index, 'name', val),
+                  keyboardType: TextInputType.name,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModernTextField(
+                        initialValue: user['phone'] as String? ?? '',
+                        label: 'Phone Number',
+                        hint: '9876543210',
+                        icon: Icons.phone_android_rounded,
+                        onChanged: (val) => _updateUserField(index, 'phone', val),
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  initialValue: user['email'] as String? ?? '',
+                  label: 'Email Address',
+                  hint: 'member@example.com',
+                  icon: Icons.alternate_email_rounded,
+                  onChanged: (val) => _updateUserField(index, 'email', val),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernTextField({
+    required String initialValue,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required void Function(String) onChanged,
+    bool isRequired = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          child: RichText(
+            text: TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary(context),
+              ),
+              children: isRequired ? [
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                )
+              ] : [],
+            ),
+          ),
+        ),
+        TextFormField(
+          initialValue: initialValue,
+          onChanged: onChanged,
+          keyboardType: keyboardType,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary(context),
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: AppColors.textTertiary(context).withValues(alpha: 0.5),
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+            ),
+            prefixIcon: Icon(icon, size: 18, color: AppColors.primary(context)),
+            filled: true,
+            fillColor: AppColors.surface(context),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.6)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumBottomBar(bool isLoading) {
+    final validCount = _users.where((u) => (u['name'] as String).trim().isNotEmpty).length;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Ready to register',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textTertiary(context),
+                      ),
+                    ),
+                    Text(
+                      '$validCount Member${validCount == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: validCount > 0 ? AppColors.primary(context) : AppColors.textTertiary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: Container(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: validCount > 0 && !isLoading ? _createVirtualUsers : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
+                      elevation: validCount > 0 ? 8 : 0,
+                      shadowColor: AppColors.primary(context).withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.how_to_reg_rounded),
+                              SizedBox(width: 10),
+                              Text(
+                                'Complete Setup',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

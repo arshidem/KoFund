@@ -17,7 +17,7 @@ class AppColors {
   static const lightRevenue = Color(0xFF00BFA6);
   static const lightExpense = Color(0xFFFF6B6B);
   static const lightBalance = Color(0xFF2196F3);
-  static const lightSuccess = Color(0xFF00B75C);
+  static const lightSuccess = Color(0xFF00BFA6);
   static const lightError = Color(0xFFF44336);
   static const lightWarning = Color(0xFFFFB300);
   static const lightInfo = Color(0xFF2196F3);
@@ -39,7 +39,7 @@ class AppColors {
   static const darkRevenue = Color(0xFF00E3C3);
   static const darkExpense = Color(0xFFFF8A8A);
   static const darkBalance = Color(0xFF4FC3F7);
-  static const darkSuccess = Color(0xFF32D47A);
+  static const darkSuccess = Color(0xFF00E3C3);
   static const darkError = Color(0xFFFF6B6B);
   static const darkWarning = Color(0xFFFFCA28);
   static const darkInfo = Color(0xFF4FC3F7);

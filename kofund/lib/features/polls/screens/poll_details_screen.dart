@@ -8,6 +8,8 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'dart:async';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class PollDetailsScreen extends StatefulWidget {
   final String pollId;
@@ -198,25 +200,13 @@ void _setupPollSubscription() {
   Future<void> _deletePoll() async {
     if (_isDeleting || _poll == null) return;
     
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Poll'),
-        content: const Text('Are you sure you want to delete this poll? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Delete Poll',
+      message: 'Are you sure you want to delete this poll? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+      icon: Icons.delete_outline_rounded,
     );
     
     if (result != true) return;
@@ -276,22 +266,12 @@ void _setupPollSubscription() {
   Future<void> _closePoll() async {
     if (_poll == null) return;
     
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Close Poll'),
-        content: const Text('Are you sure you want to close this poll? Users will not be able to vote anymore.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Close Poll',
+      message: 'Are you sure you want to close this poll? Users will not be able to vote anymore.',
+      confirmLabel: 'Close',
+      icon: Icons.lock_clock_rounded,
     );
     
     if (result != true) return;
@@ -321,22 +301,12 @@ void _setupPollSubscription() {
   Future<void> _reopenPoll() async {
     if (_poll == null) return;
     
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reopen Poll'),
-        content: const Text('Are you sure you want to reopen this poll? Users will be able to vote again.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reopen'),
-          ),
-        ],
-      ),
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Reopen Poll',
+      message: 'Are you sure you want to reopen this poll? Users will be able to vote again.',
+      confirmLabel: 'Reopen',
+      icon: Icons.lock_open_rounded,
     );
     
     if (result != true) return;
@@ -364,23 +334,30 @@ void _setupPollSubscription() {
   }
 
   void _showVoterDetails(String voterId, String voterName, String option) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Voter Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: $voterName'),
-            const SizedBox(height: 8),
-            Text('Vote: $option'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+    DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Voter Details',
+      confirmLabel: 'Close',
+      cancelLabel: '', // Hide cancel
+      icon: Icons.person_search_rounded,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            voterName,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary(context)),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Vote: $option',
+              style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

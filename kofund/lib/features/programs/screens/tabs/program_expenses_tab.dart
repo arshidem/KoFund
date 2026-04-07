@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart'; // Add this import
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -13,6 +14,8 @@ import '../../../../core/constants/app_dimensions.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 // Add this class at the top of your file, after the imports
 class ChangeEntry {
@@ -46,7 +49,8 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
     'other'
   ];
 
-  final RefreshController _refreshController = RefreshController(initialRefresh: false);
+  final List<String> _paymentMethods = ['cash', 'upi'];
+  String _filterPaymentMethod = 'all';
 
   void _onRefresh() async {
     try {
@@ -54,9 +58,8 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
       if (mounted) {
         setState(() {});
       }
-      _refreshController.refreshCompleted();
     } catch (e) {
-      _refreshController.refreshFailed();
+      debugPrint("Refresh error: $e");
     }
   }
 
@@ -88,89 +91,115 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
   @override
   void dispose() {
     _searchController.dispose();
-    _refreshController.dispose();
     super.dispose();
   }
 
-@override
-Widget build(BuildContext context) {
-  final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
-  final isAdmin = _isAdmin(context);
-  final currentUser = authProvider.user;
-  
-  return Stack(
-    children: [
-      // Change from Column to ListView to make everything scrollable
-      SmartRefresher(
-        controller: _refreshController,
-        onRefresh: _onRefresh,
-        enablePullDown: true,
-        header: ClassicHeader(
-          idleText: 'Pull down to refresh',
-          releaseText: 'Release to refresh',
-          refreshingText: 'Refreshing expenses...',
-          completeText: 'Refresh complete',
-          idleIcon: Icon(Icons.arrow_downward, color: AppColors.textSecondary(context)),
-          releaseIcon: Icon(Icons.arrow_upward, color: AppColors.primary(context)),
-        ),
-        child: ListView(
-          children: [
-            // Expense Summary (Now scrollable)
-            _buildExpenseSummary(context),
-            
-            const SizedBox(height: 0),
-            
-            // Search and Filter Bar
-            _buildSearchFilterBar(context),
-            
-            const SizedBox(height: 8),
-            
-            // Expenses List - No longer needs Expanded
-            StreamBuilder<List<ExpenseModel>>(
-              stream: Provider.of<ExpenseProvider>(context, listen: false)
-                  .streamProgramExpenses(widget.program.programId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary(context),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return _buildErrorState(snapshot.error, context);
-                }
-
-                final expenses = snapshot.data ?? [];
-                final filteredExpenses = _filterExpenses(expenses);
-
-                if (filteredExpenses.isEmpty) {
-                  return _buildEmptyState(expenses.isEmpty, isAdmin, context);
-                }
-
-                return Column(
-                  children: filteredExpenses.map((expense) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 0),
-                      child: _buildExpenseCard(expense, context, isAdmin),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-            
-            // Not Approved Message (inside ListView)
-            if (currentUser != null && !currentUser.isApproved)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                child: _buildNotApprovedMessage(context),
-              ),
-            
-            const SizedBox(height: 88),
-          ],
+  // ✅ New Pinned Header Delegate
+  Widget _buildPinnedSearchFilter(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _SliverPinnedHeaderDelegate(
+        minExtent: 64,
+        maxExtent: 64,
+        child: Container(
+          color: AppColors.background(context),
+          padding: const EdgeInsets.only(bottom: 8, top: 4, left: AppDimensions.screenPaddingHorizontal, right: AppDimensions.screenPaddingHorizontal),
+          child: _buildSearchFilterBar(context),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
+    final isAdmin = _isAdmin(context);
+    final currentUser = authProvider.user;
+    
+    return Stack(
+      children: [
+        Container(
+          color: AppColors.background(context),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  _onRefresh();
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+              ),
+
+              // Expense Summary (Now scrollable)
+              SliverToBoxAdapter(
+                child: _buildExpenseSummary(context),
+              ),
+              
+              // Search and Filter Bar (STICKY)
+              _buildPinnedSearchFilter(context),
+              
+              // Expenses List
+              StreamBuilder<List<ExpenseModel>>(
+                stream: Provider.of<ExpenseProvider>(context, listen: false)
+                    .streamProgramExpenses(widget.program.programId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 400,
+                        child: HistoryListSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return SliverToBoxAdapter(
+                      child: _buildErrorState(snapshot.error, context),
+                    );
+                  }
+
+                  final expenses = snapshot.data ?? [];
+                  final filteredExpenses = _filterExpenses(expenses);
+
+                  if (filteredExpenses.isEmpty) {
+                    return SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(expenses.isEmpty, isAdmin, context),
+                    );
+                  }
+
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final expense = filteredExpenses[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 0),
+                          child: _buildExpenseCard(expense, context, isAdmin),
+                        );
+                      },
+                      childCount: filteredExpenses.length,
+                    ),
+                  );
+                },
+              ),
+              
+              // Not Approved Message
+              if (currentUser != null && !currentUser.isApproved)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                    child: _buildNotApprovedMessage(context),
+                  ),
+                ),
+              
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 88),
+              ),
+            ],
+          ),
+        ),
 
       // Floating Add Button (stays same)
       if (isAdmin || (currentUser != null && currentUser.isApproved))
@@ -182,7 +211,7 @@ Widget build(BuildContext context) {
             backgroundColor: AppColors.primary(context),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             elevation: 4,
             child: const Icon(Icons.add),
@@ -563,117 +592,119 @@ Widget _buildExpenseSummary(BuildContext context) {
       final approvedExpenses = expenses.where((e) => e.status == 'approved').fold(0.0, (sum, expense) => sum + expense.amount);
       final pendingExpenses = expenses.where((e) => e.status == 'pending').fold(0.0, (sum, expense) => sum + expense.amount);
 
-      return Container(
-        width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-              color: Colors.black.withValues(alpha: 0.06),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// ───────────────── Header ─────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Expenses Overview",
-                      style: TextStyle(
-                        color: AppColors.textCards(context).withValues(alpha: 0.9),
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "All Time Summary",
-                      style: TextStyle(
-                        color: AppColors.textCards(context),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Top-right icon + count (mirrors contributions card)
-                Row(
-                  children: [
-                    Icon(
-                      Icons.receipt_long,
-                      color: AppColors.textCards(context),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${expenses.length}',
-                      style: TextStyle(
-                        color: AppColors.textCards(context),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            /// ───────────────── APPROVED EXPENSES (Big Text) ─────────────────
-            Text(
-              "₹${approvedExpenses.toStringAsFixed(0)}",
-              style: TextStyle(
-                color: AppColors.textCards(context),
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient(context),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary(context).withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                "Approved Expenses",
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// ───────────────── Header ─────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Expenses Overview",
+                        style: TextStyle(
+                          color: AppColors.textCards(context).withValues(alpha: 0.9),
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "All Time Summary",
+                        style: TextStyle(
+                          color: AppColors.textCards(context),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+  
+                  // Top-right icon + count (mirrors contributions card)
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.receipt_long,
+                        color: AppColors.textCards(context),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${expenses.length}',
+                        style: TextStyle(
+                          color: AppColors.textCards(context),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+  
+              const SizedBox(height: 16),
+  
+              /// ───────────────── APPROVED EXPENSES (Big Text) ─────────────────
+              Text(
+                "₹${approvedExpenses.toStringAsFixed(0)}",
                 style: TextStyle(
-                  color: AppColors.textCards(context).withValues(alpha: 0.85),
-                  fontSize: 11,
+                  color: AppColors.textCards(context),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-
-            const SizedBox(height: 12),
-
-            /// ───────────────── Stats Row ─────────────────
-            Row(
-              children: [
-                _buildStatChip(
-                  context,
-                  icon: Icons.receipt,
-                  label: "Total",
-                  value: "₹${totalExpenses.toStringAsFixed(0)}",
-                  color: AppColors.textCards(context),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  "Approved Expenses",
+                  style: TextStyle(
+                    color: AppColors.textCards(context).withValues(alpha: 0.85),
+                    fontSize: 11,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _buildStatChip(
-                  context,
-                  icon: Icons.pending,
-                  label: "Pending",
-                  value: "₹${pendingExpenses.toStringAsFixed(0)}",
-                  color: Colors.orange,
-                ),
-              ],
-            ),
-          ],
+              ),
+  
+              const SizedBox(height: 12),
+  
+              /// ───────────────── Stats Row ─────────────────
+              Row(
+                children: [
+                  _buildStatChip(
+                    context,
+                    icon: Icons.receipt,
+                    label: "Total",
+                    value: "₹${totalExpenses.toStringAsFixed(0)}",
+                    color: AppColors.textCards(context),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatChip(
+                    context,
+                    icon: Icons.pending,
+                    label: "Pending",
+                    value: "₹${pendingExpenses.toStringAsFixed(0)}",
+                    color: Colors.orange,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     },
@@ -681,147 +712,154 @@ Widget _buildExpenseSummary(BuildContext context) {
 }
 
   Widget _buildSearchFilterBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8), // 8px horizontal padding
+    return Container(
+      padding: EdgeInsets.zero,
       child: Row(
         children: [
           // Search Field
           Expanded(
-            flex: 2,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search expenses...',
-                hintStyle: TextStyle(
-                  color: AppColors.textTertiary(context),
-                  fontSize: 13,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary(context),
-                  size: 18,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppColors.border(context),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppColors.border(context),
+              ),
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search expenses...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textTertiary(context),
+                    fontSize: 13,
                   ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
                     color: AppColors.primary(context),
-                    width: 2,
+                    size: 20,
                   ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                filled: true,
-                fillColor: AppColors.surface(context),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              ),
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 13,
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-            ),
-          ),
-          
-          const SizedBox(width: 8), // 8px gap
-          
-          // Status Filter
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.border(context),
-                ),
-                borderRadius: BorderRadius.circular(12),
-                color: AppColors.surface(context),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _filterStatus,
-                  isExpanded: true,
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    color: AppColors.textSecondary(context),
-                    size: 18,
-                  ),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 12,
-                  ),
-                  dropdownColor: AppColors.card(context),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All Status')),
-                    DropdownMenuItem(value: 'approved', child: Text('Approved')),
-                    DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                    DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _filterStatus = value!;
-                    });
-                  },
-                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
               ),
             ),
           ),
-          
-          const SizedBox(width: 8), // 8px gap
-          
-          // Category Filter
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.border(context),
-                ),
-                borderRadius: BorderRadius.circular(12),
-                color: AppColors.surface(context),
+          const SizedBox(width: 12),
+          // Filter Button
+        Container(
+          height: 44,
+          width: 44,
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            border: Border.all(color: AppColors.border(context), width: 1),
+          ),
+          child: PopupMenuButton<String>(
+            icon: Icon(Icons.tune, color: AppColors.primary(context), size: 20),
+            padding: EdgeInsets.zero,
+            onSelected: (value) {
+              setState(() {
+                if (value.startsWith('status:')) {
+                  _filterStatus = value.substring(7);
+                } else if (value.startsWith('cat:')) {
+                  _filterCategory = value.substring(4);
+                } else if (value.startsWith('pay:')) {
+                  _filterPaymentMethod = value.substring(4);
+                }
+              });
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                enabled: false,
+                child: Text('Filter by Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
               ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _filterCategory,
-                  isExpanded: true,
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    color: AppColors.textSecondary(context),
-                    size: 18,
-                  ),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 12,
-                  ),
-                  dropdownColor: AppColors.card(context),
-                  items: [
-                    const DropdownMenuItem(value: 'all', child: Text('All Cat')),
-                    ..._categories.map((category) => 
-                      DropdownMenuItem(
-                        value: category,
-                        child: Text(category.substring(0, 3)),
-                      )
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _filterCategory = value!;
-                    });
-                  },
-                ),
+              _buildFilterMenuItem('status:all', 'All Status', Icons.list_alt_rounded, isStatus: true, isPayment: false),
+              _buildFilterMenuItem('status:approved', 'Approved', Icons.check_circle_outline_rounded, isStatus: true, isPayment: false),
+              _buildFilterMenuItem('status:pending', 'Pending', Icons.pending_outlined, isStatus: true, isPayment: false),
+              _buildFilterMenuItem('status:rejected', 'Rejected', Icons.cancel_outlined, isStatus: true, isPayment: false),
+              
+              const PopupMenuDivider(),
+              
+              const PopupMenuItem(
+                enabled: false,
+                child: Text('Filter by Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
               ),
+              _buildFilterMenuItem('cat:all', 'All Categories', Icons.category_outlined, isStatus: false, isPayment: false),
+              ..._categories.map((cat) => 
+                _buildFilterMenuItem('cat:$cat', cat.substring(0,1).toUpperCase() + cat.substring(1), Icons.label_outline_rounded, isStatus: false, isPayment: false)
+              ),
+
+              const PopupMenuDivider(),
+
+              const PopupMenuItem(
+                enabled: false,
+                child: Text('Filter by Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+              ),
+              _buildFilterMenuItem('pay:all', 'All Methods', Icons.payments_outlined, isStatus: false, isPayment: true),
+              _buildFilterMenuItem('pay:cash', 'Cash', Icons.money, isStatus: false, isPayment: true),
+              _buildFilterMenuItem('pay:upi', 'UPI', Icons.phone_android, isStatus: false, isPayment: true),
+            ],
+          ),
+        ),
+      ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildFilterMenuItem(String value, String label, IconData icon, {required bool isStatus, required bool isPayment}) {
+    String actualValue;
+    if (isStatus) {
+      actualValue = value.substring(7);
+    } else if (isPayment) {
+      actualValue = value.substring(4);
+    } else {
+      actualValue = value.substring(4);
+    }
+
+    bool isSelected;
+    if (isStatus) {
+      isSelected = _filterStatus == actualValue;
+    } else if (isPayment) {
+      isSelected = _filterPaymentMethod == actualValue;
+    } else {
+      isSelected = _filterCategory == actualValue;
+    }
+    
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
             ),
           ),
         ],
@@ -839,7 +877,7 @@ Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
         backgroundColor: AppColors.primary(context),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         ),
         elevation: 4,
         child: const Icon(Icons.add),
@@ -979,6 +1017,10 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
 
     if (_filterCategory != 'all') {
       filtered = filtered.where((expense) => expense.category == _filterCategory).toList();
+    }
+
+    if (_filterPaymentMethod != 'all') {
+      filtered = filtered.where((expense) => expense.paymentMethod == _filterPaymentMethod).toList();
     }
 
     return filtered;
@@ -1490,7 +1532,7 @@ Container(
               width: 1.5,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
             padding: const EdgeInsets.symmetric(vertical: 16),
             elevation: 0,
@@ -1883,12 +1925,9 @@ Widget _buildSectionHeader(BuildContext context, {required String title, require
 
 // Add this method for payment method formatting
 String _formatPaymentMethod(String method) {
-  switch (method) {
+  switch (method.toLowerCase()) {
     case 'cash': return 'Cash';
-    case 'bank_transfer': return 'Bank Transfer';
     case 'upi': return 'UPI';
-    case 'cheque': return 'Cheque';
-    case 'online': return 'Online';
     default: return method;
   }
 }
@@ -1934,57 +1973,19 @@ String _formatPaymentMethod(String method) {
       );
     }
   }
-
-  void _showDeleteConfirmation(ExpenseModel expense, BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          'Delete Expense',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 16,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete "${expense.title}"? This action cannot be undone.',
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-            fontSize: 13,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 13,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteExpense(expense, context);
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.error(context),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
+  void _showDeleteConfirmation(ExpenseModel expense, BuildContext context) async {
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Delete Expense?',
+      message: 'Are you sure you want to delete "${expense.title}"? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+      icon: Icons.delete_outline_rounded,
     );
+
+    if (result == true) {
+      _deleteExpense(expense, context);
+    }
   }
 
   void _deleteExpense(ExpenseModel expense, BuildContext context) async {
@@ -2008,11 +2009,12 @@ String _formatPaymentMethod(String method) {
     }
   }
 
-void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
+  void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   String selectedCategory = _categories.first;
+  String selectedPaymentMethod = _paymentMethods.first;
   DateTime selectedDate = DateTime.now();
 
   // Input formatters
@@ -2106,6 +2108,7 @@ void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
                 description: descriptionController.text.trim(),
                 amount: double.parse(amountController.text),
                 category: selectedCategory,
+                paymentMethod: selectedPaymentMethod,
                 expenseDate: selectedDate,
                 isAdmin: isAdmin,
               );
@@ -2340,6 +2343,55 @@ return AlertDialog(
                 ),
                 const SizedBox(height: 12),
 
+                // Payment Method Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedPaymentMethod,
+                  decoration: InputDecoration(
+                    labelText: 'Payment Method *',
+                    labelStyle: TextStyle(
+                      color: AppColors.textSecondary(context),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      borderSide: BorderSide(
+                        color: AppColors.border(context),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      borderSide: BorderSide(
+                        color: AppColors.border(context),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      borderSide: BorderSide(
+                        color: AppColors.primary(context),
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.surface(context),
+                  ),
+                  dropdownColor: AppColors.card(context),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 13,
+                  ),
+                  items: _paymentMethods.map((method) {
+                    return DropdownMenuItem(
+                      value: method,
+                      child: Text(method.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedPaymentMethod = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+
                 // Date Picker
                 Row(
                   children: [
@@ -2530,6 +2582,7 @@ Future<void> _createExpense({
   required String description,
   required double amount,
   required String category,
+  required String paymentMethod,
   required DateTime expenseDate,
   required bool isAdmin,
 }) async {
@@ -2575,6 +2628,7 @@ Future<void> _createExpense({
       description: description,
       amount: amount,
       category: category,
+      paymentMethod: paymentMethod,
       paidBy: currentUser.uid, // User ID
       paidByName: getUserDisplayName(), // ✅ FIXED: Pass String, not UserModel
       expenseDate: expenseDate,
@@ -2646,6 +2700,30 @@ Future<void> _createExpense({
       case 'decorations': return Icons.celebration;
       default: return Icons.receipt;
     }
+  }
+}
+
+class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minExtent;
+  final double maxExtent;
+  final Widget child;
+
+  _SliverPinnedHeaderDelegate({
+    required this.minExtent,
+    required this.maxExtent,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverPinnedHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.maxExtent != maxExtent ||
+        oldDelegate.minExtent != minExtent;
   }
 }
 

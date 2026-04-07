@@ -15,6 +15,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_styles.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 
 // Import skeleton files
 import '../../../../core/skeleton/program_overview_skeleton.dart';
@@ -200,45 +202,55 @@ Widget build(BuildContext context) {
                   (p) => p.userId == currentUserId && p.status == 'joined',
                 );
 
-                return hasUserJoined
-                    ? Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: IconButton(
-                          onPressed: () => _leaveProgram(context),
-                          icon: const Icon(
-                            Icons.exit_to_app_rounded,
-                            color: Colors.white,
-                          ),
-                          tooltip: 'Leave Program',
-                        ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ElevatedButton(
-                          onPressed: () => _joinProgram(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withValues(alpha: 0.15),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                            ),
-                            elevation: 2,
-                            shadowColor: Colors.black.withValues(alpha: 0.5),
-                          ),
-                          child: const Text(
-                            'Join',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      );
+                if (hasUserJoined) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: IconButton(
+                      onPressed: () => _leaveProgram(context),
+                      icon: const Icon(
+                        Icons.exit_to_app_rounded,
+                        color: Colors.white,
+                      ),
+                      tooltip: 'Leave Program',
+                    ),
+                  );
+                }
+
+                // CHECK IF FULL
+                final totalParticipants = participants.length;
+                final maxParticipants = _cachedProgram?.maxParticipants ?? 0;
+                final isFixed = _cachedProgram?.participantType == 'fixed';
+                final isFull = isFixed && totalParticipants >= maxParticipants;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ElevatedButton(
+                    onPressed: isFull ? null : () => _joinProgram(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isFull 
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.white.withValues(alpha: 0.15),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      ),
+                      elevation: isFull ? 0 : 2,
+                      shadowColor: Colors.black.withValues(alpha: 0.5),
+                    ),
+                    child: Text(
+                      isFull ? 'Full' : 'Join',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isFull ? Colors.white.withValues(alpha: 0.5) : Colors.white,
+                      ),
+                    ),
+                  ),
+                );
               },
             ),
           ],
@@ -465,54 +477,13 @@ Widget build(BuildContext context) {
     final currentUser = authProvider.user;
     if (currentUser == null) return;
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.card(context),
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-        ),
-        title: Text(
-          'Leave Program?',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to leave this program? '
-          'This action cannot be undone.',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary(context),
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textSecondary(context),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error(context),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              ),
-            ),
-            child: const Text('Leave Program'),
-          ),
-        ],
-      ),
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Leave Program?',
+      message: 'Are you sure you want to leave this program? You will no longer receive updates or participate in activities.',
+      confirmLabel: 'Yes, Leave',
+      cancelLabel: 'Keep it',
+      isDestructive: true,
     );
 
     if (result == true) {
@@ -520,22 +491,14 @@ Widget build(BuildContext context) {
         await participantProvider.leaveProgram(widget.programId, currentUser.uid);
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Left the program successfully!'),
-            backgroundColor: AppColors.success(context),
-          ),
-        );
+        // Success snackbar
+        // Success snackbar
+        SnackbarHelper.showSuccess(context, 'Left the program successfully!');
         
         // Refresh data after leaving
         _refreshAllData();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to leave program: $e'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to leave program: $e');
       }
     }
   }

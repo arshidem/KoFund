@@ -5,6 +5,7 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/constants/community_types.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/community/providers/community_provider.dart';
+import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
@@ -33,6 +34,8 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _isOnline = true;
+  late final NetworkService _networkService;
 
   @override
   void initState() {
@@ -40,6 +43,13 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     _nameController = TextEditingController();
     _descriptionController = TextEditingController();
     _locationController = TextEditingController();
+    _networkService = NetworkService();
+    
+    _networkService.onConnectionChanged.listen((isConnected) {
+      if (mounted) {
+        setState(() => _isOnline = isConnected);
+      }
+    });
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCommunityData();
@@ -139,31 +149,11 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     bool isRequired = false,
     String? Function(String?)? validator,
   }) {
+    final double borderRadius = maxLines > 1 ? 24.0 : AppDimensions.radiusFull;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            text: label,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-            ),
-            children: isRequired
-                ? [
-                    TextSpan(
-                      text: ' *',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ]
-                : [],
-          ),
-        ),
-        const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -171,26 +161,40 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
           maxLength: maxLength,
           validator: validator,
           decoration: InputDecoration(
+            labelText: isRequired ? '$label *' : label,
+            labelStyle: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
             hintText: hint,
             hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 16,
+              color: AppColors.textTertiary(context),
+              fontSize: 15,
             ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
+            prefixIcon: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.primary(context),
+                size: 18,
+              ),
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(borderRadius),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(borderRadius),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              borderRadius: BorderRadius.circular(borderRadius),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -198,68 +202,88 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
             ),
             filled: true,
             fillColor: AppColors.surface(context),
-            contentPadding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 20,
-              bottom: 20,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
           style: TextStyle(
             color: AppColors.textPrimary(context),
             fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildCommunityTypeSelector() {
+  Widget _buildCommunityTypeDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Community Type',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Community Category',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+              fontSize: 14,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: CommunityType.allTypes.map((type) {
-            final isSelected = _selectedType == type;
-            return ChoiceChip(
-              label: Text(
-                type,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textPrimary(context),
-                ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            border: Border.all(
+              color: AppColors.border(context),
+            ),
+            color: AppColors.surface(context),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedType,
+              isExpanded: true,
+              icon: Icon(
+                Icons.arrow_drop_down_rounded,
+                color: AppColors.primary(context),
               ),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedType = type;
-                });
+              dropdownColor: AppColors.card(context),
+              borderRadius: BorderRadius.circular(24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              items: CommunityType.allTypes.map((type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Row(
+                    children: [
+                      Icon(
+                        CommunityType.getMaterialIcon(type),
+                        size: 20,
+                        color: AppColors.primary(context),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        type,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedType = value;
+                  });
+                }
               },
-              backgroundColor: AppColors.surface(context),
-              selectedColor: AppColors.primary(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                side: BorderSide(
-                  color: isSelected 
-                      ? AppColors.primary(context) 
-                      : AppColors.border(context),
-                ),
-              ),
-            );
-          }).toList(),
+            ),
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -295,33 +319,42 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     );
   }
 
- @override
-Widget build(BuildContext context) {
-  final communityProvider = context.watch<CommunityProvider>();
-  final community = communityProvider.currentCommunity;
+  @override
+  Widget build(BuildContext context) {
+    final communityProvider = context.watch<CommunityProvider>();
+    final community = communityProvider.currentCommunity;
 
-  return GradientSheetScaffold(
-    title: 'Edit Community',
-    actions: [
-      if (_isLoading)
-        const Padding(
-          padding: EdgeInsets.only(right: 16),
-          child: SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
+    return GradientSheetScaffold(
+      title: 'Settings',
+      actions: [
+        if (!_isOnline)
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Icon(Icons.cloud_off_rounded, color: Colors.white70, size: 20),
           ),
-        )
-      else
-        IconButton(
-          onPressed: _updateCommunity,
-          icon: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
-          tooltip: 'Save Changes',
-        ),
-    ],
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+          )
+        else
+          IconButton(
+            onPressed: _isOnline ? _updateCommunity : null,
+            icon: Icon(
+              Icons.check_rounded, 
+              color: _isOnline ? Colors.white : Colors.white.withValues(alpha: 0.5), 
+              size: 28
+            ),
+            tooltip: 'Save Changes',
+          ),
+      ],
     body: Stack(
         children: [
           // SCROLLABLE CONTENT
@@ -401,8 +434,7 @@ Widget build(BuildContext context) {
                       },
                     ),
 
-                    // Community Type Selector
-                    _buildCommunityTypeSelector(),
+                    _buildCommunityTypeDropdown(),
 
                     // Location
                     _buildInputField(
@@ -418,37 +450,58 @@ Widget build(BuildContext context) {
 
                     // Community Info
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: AppColors.surface(context),
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        border: Border.all(color: AppColors.border(context)),
+                        color: AppColors.card(context),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Community Information',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary(context),
-                              fontSize: 14,
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline_rounded, color: AppColors.primary(context), size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Community Metadata',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary(context),
+                                  fontSize: 16,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Divider(height: 1),
+                          ),
                           _buildInfoRow('Community ID', community.communityId),
+                          const SizedBox(height: 8),
                           _buildInfoRow('Invite Code', community.inviteCode),
+                          const SizedBox(height: 8),
                           _buildInfoRow('Created By', community.createdByName),
+                          const SizedBox(height: 8),
                           _buildInfoRow(
-                            'Created On',
+                            'Created Date',
                             '${community.createdAt.toDate().day}/${community.createdAt.toDate().month}/${community.createdAt.toDate().year}',
                           ),
-                          _buildInfoRow('Total Members', '${community.totalMembers}'),
+                          const SizedBox(height: 8),
+                          _buildInfoRow('Member Count', '${community.totalMembers} Members'),
                         ],
                       ),
                     ),
                     
-                    const SizedBox(height: 48), 
+                    const SizedBox(height: 80), 
                   ],
                 ],
               ),

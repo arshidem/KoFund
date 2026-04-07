@@ -347,7 +347,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvid
   }
 
   Widget _buildStatsCards(List<Map<String, dynamic>> contributions) {
-    final totalAmount = contributions.fold(0.0, (sum, c) => sum + (c['amount'] as double));
+    final totalAmount = contributions.fold(0.0, (sum, c) => sum + (c['amount']?.toDouble() ?? 0.0));
     final totalCount = contributions.length;
     final averageAmount = totalCount > 0 ? totalAmount / totalCount : 0.0;
 
@@ -1417,43 +1417,30 @@ String _getFieldDisplayName(String field) {
   return buffer.toString();
 }
 
-// Generate receipt method
 Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution, AppAuthProvider authProvider) async {
   if (!context.mounted) return;
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
-  );
-
   try {
-    // Convert to ContributionModel
+    // 1. Convert to ContributionModel
     final contributionModel = _convertMapToContributionModel(contribution, authProvider);
     
-    // Get user name
+    // 2. Get user name
     final contributorName = await _getUserName(authProvider.user?.uid ?? '');
-    if (!mounted) return;
     
-    if (!context.mounted) return;
-    
-    Navigator.of(context).pop();
+    if (!mounted || !context.mounted) return;
 
-    // Generate and show receipt
+    // 3. Now call the generator which will show its own progress dialog
     await ContributionReceiptPdf.generateAndShowReceipt(
       context: context,
       contribution: contributionModel,
       contributorName: contributorName,
       programName: contribution['programTitle'] ?? 'Unknown Program',
+      communityName: contribution['communityName'], // Use the fixed field from service
     );
 
-  } catch (e, st) {
-    if (context.mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
+    debugPrint('✅ Receipt generation process completed');
 
+  } catch (e, st) {
     debugPrint('Receipt error: $e\n$st');
 
     if (context.mounted) {
@@ -1477,7 +1464,7 @@ ContributionModel _convertMapToContributionModel(Map<String, dynamic> contributi
     contributionId: contribution['contributionId'] ?? '',
     programId: contribution['programId'] ?? '',
     userId: contribution['userId'] ?? authProvider.user?.uid ?? '',
-    contributorName: contribution['contributorName'] ?? authProvider.user?.displayName ?? '',
+    contributorName: contribution['contributorName'] ?? authProvider.user?.displayName ?? 'User',
     communityId: contribution['communityId'] ?? '',
     amount: (contribution['amount'] ?? 0).toDouble(),
     paymentMethod: contribution['paymentMethod'] ?? 'cash',
@@ -1485,17 +1472,17 @@ ContributionModel _convertMapToContributionModel(Map<String, dynamic> contributi
     monthId: contribution['monthId'],
     addedByUserId: contribution['addedByUserId'],
     addedByUserName: contribution['addedByUserName'],
-    addedAt: contribution['addedAt'] as Timestamp? ?? Timestamp.now(),
+    addedAt: contribution['addedAt'] is Timestamp ? contribution['addedAt'] as Timestamp : Timestamp.now(),
     
     // FIX: Better handling of isEdited
     isEdited: _getIsEditedStatus(contribution),
     
     lastEditedByUserId: contribution['lastEditedByUserId'],
     lastEditedByUserName: contribution['lastEditedByUserName'],
-    lastEditedAt: contribution['lastEditedAt'] as Timestamp?,
+    lastEditedAt: contribution['lastEditedAt'] is Timestamp ? contribution['lastEditedAt'] as Timestamp : null,
     editReason: contribution['editReason'],
-    editHistory: contribution['editHistory'] ?? [],
-    createdAt: (contribution['createdAt'] as Timestamp?) ?? Timestamp.now(),
+    editHistory: (contribution['editHistory'] is List) ? List<Map<String, dynamic>>.from(contribution['editHistory']) : [],
+    createdAt: (contribution['createdAt'] is Timestamp) ? contribution['createdAt'] as Timestamp : Timestamp.now(),
   );
 }
 
@@ -1562,11 +1549,9 @@ Future<String> _getUserName(String? userId) async {
 
   // Helper method for payment method formatting
   String _formatPaymentMethod(String method) {
-    switch (method) {
+    switch (method.toLowerCase()) {
       case 'cash': return 'Cash';
       case 'upi': return 'UPI';
-      case 'online': return 'Online';
-      case 'bank_transfer': return 'Bank Transfer';
       default: return method;
     }
   }
