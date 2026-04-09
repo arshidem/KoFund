@@ -615,6 +615,12 @@ Future<bool> leaveCommunity() async {
   }) async {
     if (_isLoading && !forceRefresh) return;
     
+    // ⭐ NEW CACHE CHECK: Stop redundant Firestore reads!
+    if (!forceRefresh && _loadedUserId == userId) {
+      debugPrint('⚡ ProfileProvider: Returning cached data for user $userId');
+      return;
+    }
+    
     _setLoading(true);
     _error = null;
     

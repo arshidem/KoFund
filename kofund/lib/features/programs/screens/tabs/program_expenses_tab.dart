@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -127,6 +128,7 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
             slivers: [
               CupertinoSliverRefreshControl(
                 onRefresh: () async {
+                  HapticHelper.light();
                   _onRefresh();
                   await Future.delayed(const Duration(milliseconds: 500));
                 },

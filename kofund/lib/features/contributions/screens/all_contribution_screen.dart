@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -30,7 +31,10 @@ class _AllContributionsScreenState extends State<AllContributionsScreen> {
       body: Consumer<ContributionProvider>(
         builder: (context, provider, child) {
           return RefreshIndicator(
-            onRefresh: () async => provider.refresh(),
+            onRefresh: () async {
+              HapticHelper.light();
+              await provider.refresh();
+            },
             edgeOffset: 8,
             color: AppColors.primary(context),
             child: CustomScrollView(

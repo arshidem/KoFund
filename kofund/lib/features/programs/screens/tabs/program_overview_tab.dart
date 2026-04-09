@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../expenses/providers/expense_provider.dart';
@@ -11,6 +11,7 @@ import 'package:kofund/core/services/user_service.dart';
 import '../../../participants/providers/participant_provider.dart';
 import '../../../participants/models/participant_model.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/milestone_celebration_overlay.dart';
 
 class ProgramOverviewTab extends StatefulWidget {
   final ProgramModel program;
@@ -22,8 +23,24 @@ class ProgramOverviewTab extends StatefulWidget {
 }
 
 class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
+  final GlobalKey<MilestoneCelebrationOverlayState> _celebrationKey = GlobalKey();
+  double _previousProgress = 0.0;
+  static const List<double> _milestones = [50.0, 75.0, 100.0];
+
   void _onRefresh() {
     setState(() {});
+  }
+
+  /// Checks if progress has crossed a milestone threshold and triggers celebration.
+  void _checkMilestone(double currentProgress) {
+    for (final milestone in _milestones) {
+      if (_previousProgress < milestone && currentProgress >= milestone) {
+        debugPrint('🎉 Milestone reached: ${milestone.toInt()}%');
+        _celebrationKey.currentState?.triggerCelebration();
+        break; // Only trigger once per update
+      }
+    }
+    _previousProgress = currentProgress;
   }
 
   @override
@@ -47,6 +64,7 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
         slivers: [
           CupertinoSliverRefreshControl(
             onRefresh: () async {
+              HapticHelper.light();
               _onRefresh();
               await Future.delayed(const Duration(milliseconds: 500));
             },
@@ -469,30 +487,38 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
                 final double totalExpected = (widget.program.totalProgramAmount ?? 0.0) > 0 ? widget.program.totalProgramAmount! : (widget.program.suggestedContribution ?? 0.0) * (participantCount > 0 ? participantCount : (widget.program.isFixedParticipants ? widget.program.maxParticipants : 1));
                 final progressPercentage = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0.0;
 
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(gradient: AppColors.primaryGradient(context), borderRadius: BorderRadius.circular(16)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [Icon(Icons.account_balance_wallet_rounded, size: 18, color: Colors.white), const SizedBox(width: 6), Text('Financial Summary', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white))]),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildSummaryMetric(context, label: 'Collected', value: totalCollected, icon: Icons.payments_rounded, accent: Colors.white),
-                          _buildSummaryMetric(context, label: 'Expenses', value: totalExpenses, icon: Icons.receipt_long_rounded, accent: Colors.white),
-                          _buildSummaryMetric(context, label: 'Balance', value: balanceAmount, icon: Icons.account_balance_rounded, accent: Colors.white),
+                // Check for milestone crossing
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _checkMilestone(progressPercentage);
+                });
+
+                return MilestoneCelebrationOverlay(
+                  key: _celebrationKey,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(gradient: AppColors.primaryGradient(context), borderRadius: BorderRadius.circular(16)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [Icon(Icons.account_balance_wallet_rounded, size: 18, color: Colors.white), const SizedBox(width: 6), Text('Financial Summary', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white))]),
+                        const SizedBox(height: 14),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildSummaryMetric(context, label: 'Collected', value: totalCollected, icon: Icons.payments_rounded, accent: Colors.white),
+                            _buildSummaryMetric(context, label: 'Expenses', value: totalExpenses, icon: Icons.receipt_long_rounded, accent: Colors.white),
+                            _buildSummaryMetric(context, label: 'Balance', value: balanceAmount, icon: Icons.account_balance_rounded, accent: Colors.white),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (totalExpected > 0) ...[
+                          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Collection Target', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))), Text('₹${totalCollected.toStringAsFixed(0)} / ₹${totalExpected.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))]),
+                          const SizedBox(height: 6),
+                          ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: (totalCollected / totalExpected).clamp(0, 1), backgroundColor: Colors.white.withValues(alpha: 0.2), valueColor: AlwaysStoppedAnimation(Colors.white))),
                         ],
-                      ),
-                      const SizedBox(height: 14),
-                      if (totalExpected > 0) ...[
-                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Collection Target', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))), Text('₹${totalCollected.toStringAsFixed(0)} / ₹${totalExpected.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))]),
-                        const SizedBox(height: 6),
-                        ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: (totalCollected / totalExpected).clamp(0, 1), backgroundColor: Colors.white.withValues(alpha: 0.2), valueColor: AlwaysStoppedAnimation(Colors.white))),
                       ],
-                    ],
+                    ),
                   ),
                 );
               },

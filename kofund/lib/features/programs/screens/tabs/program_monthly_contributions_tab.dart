@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -129,6 +130,7 @@ class _ProgramMonthlyContributionsTabState extends State<ProgramMonthlyContribut
   }
 
   Future<void> _onRefresh() async {
+    HapticHelper.light();
     try {
       await _loadMonthData();
       _refreshController.refreshCompleted();

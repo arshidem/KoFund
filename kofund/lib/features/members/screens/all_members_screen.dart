@@ -1,5 +1,6 @@
 // lib/features/members/screens/all_members_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,24 +33,9 @@ class AllMembersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AppAuthProvider>(context);
-
-    return ChangeNotifierProvider(
-      create: (_) => MemberProvider(
-        userService: Provider.of<UserService>(context, listen: false),
-        authProvider: auth,
-        participantService: Provider.of<ParticipantService>(
-          context,
-          listen: false,
-        ),
-        contributionService: Provider.of<ContributionService>(
-          context,
-          listen: false,
-        ),
-        virtualUserService: VirtualUserService(),
-      ),
-      child: _AllMembersScreenBody(forceBackButton: forceBackButton),
-    );
+    // ⭐ Use the global MemberProvider from main.dart instead of creating
+    // a new one every time. This preserves cached data across navigations.
+    return _AllMembersScreenBody(forceBackButton: forceBackButton);
   }
 }
 
@@ -273,12 +259,13 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
   // Pull to refresh handler
   void _onRefresh() async {
+    HapticHelper.light();
     print('🔄 DEBUG: Pull to refresh triggered for tab $_selectedTab');
 
     try {
       if (_selectedTab == 0) {
         final memberProvider = context.read<MemberProvider>();
-        await memberProvider.loadMembers();
+        await memberProvider.loadMembers(reset: true);
       } else {
         final userProvider = context.read<UserProvider>();
         final currentUser = context.read<AppAuthProvider>().user;

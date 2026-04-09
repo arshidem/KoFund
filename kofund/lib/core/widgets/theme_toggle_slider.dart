@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 
 class ThemeToggleSlider extends StatelessWidget {
   final bool value;
@@ -13,9 +14,12 @@ class ThemeToggleSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => onChanged(!value),
+      onTap: () {
+        HapticHelper.selection();
+        onChanged(!value);
+      },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 150),
         width: 64,
         height: 34,
         decoration: BoxDecoration(
@@ -31,30 +35,10 @@ class ThemeToggleSlider extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Icons in background
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    Icons.wb_sunny_rounded,
-                    size: 14,
-                    color: value ? Colors.grey.withValues(alpha: 0.3) : Colors.orangeAccent,
-                  ),
-                  Icon(
-                    Icons.nightlight_round,
-                    size: 14,
-                    color: value ? Colors.blueAccent : Colors.grey.withValues(alpha: 0.3),
-                  ),
-                ],
-              ),
-            ),
-            
             // Sliding knob
             AnimatedAlign(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOutBack,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeInOutCubic,
               alignment: value ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4),

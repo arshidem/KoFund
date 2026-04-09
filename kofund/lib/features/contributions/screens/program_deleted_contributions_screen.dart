@@ -8,6 +8,8 @@ import '../models/deleted_contribution_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import 'package:intl/intl.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
+
 class ProgramDeletedContributionsScreen extends StatefulWidget {
   final String programId;
   final String programName;
@@ -1022,7 +1024,13 @@ String _formatTime(DateTime date) {
                 return CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                   slivers: [
-                    CupertinoSliverRefreshControl(onRefresh: () async => _onRefresh()),
+                    CupertinoSliverRefreshControl(
+                      onRefresh: () async {
+                        HapticHelper.light();
+                        _onRefresh();
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                    ),
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {

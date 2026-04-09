@@ -1,5 +1,6 @@
 // lib/features/members/screens/member_details_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -207,6 +208,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   }
 
   Future<void> _onRefresh() async {
+    HapticHelper.light();
     await _refreshMemberData();
     if (!mounted) return;
   }

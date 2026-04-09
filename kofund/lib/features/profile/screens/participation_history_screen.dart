@@ -10,6 +10,8 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/programs/constants/program_types.dart';
 import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
+
 class ParticipationHistoryScreen extends StatefulWidget {
   const ParticipationHistoryScreen({super.key});
 
@@ -41,6 +43,7 @@ class _ParticipationHistoryScreenState
   }
 
   Future<void> _onRefresh() async {
+    HapticHelper.light();
     debugPrint('🔄 Pull to refresh triggered in Participation History');
     
     try {

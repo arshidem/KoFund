@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
 import 'package:kofund/ads/simple_banner_ad.dart';
@@ -487,6 +488,7 @@ Widget build(BuildContext context) {
     );
 
     if (result == true) {
+      HapticHelper.success();
       try {
         await participantProvider.leaveProgram(widget.programId, currentUser.uid);
         if (!mounted) return;

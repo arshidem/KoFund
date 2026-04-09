@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart' hide RefreshIndicator;
 
@@ -148,6 +149,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   }
 
   Future<void> _onRefresh() async {
+    HapticHelper.light();
     debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
     
     try {

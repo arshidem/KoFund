@@ -13,6 +13,8 @@ import 'package:kofund/features/programs/providers/program_provider.dart';
 import 'package:kofund/features/programs/models/program_model.dart';
 import 'package:kofund/features/programs/screens/program_details_screen.dart';
 import 'package:kofund/features/programs/screens/all_programs_screen.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 
 class ProgramCarouselWidget extends StatefulWidget {
   final bool isAdmin;
@@ -36,6 +38,17 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
   void initState() {
     super.initState();
     debugPrint('🔄 DEBUG: ProgramCarouselWidget initState called');
+    
+    // Fast-cache check to bypass the loading skeleton flash for frame 0
+    final authProvider = context.read<AppAuthProvider>();
+    final programProvider = context.read<ProgramProvider>();
+    final user = authProvider.user;
+    
+    if (user != null && user.communityId != null && 
+        programProvider.programs.isNotEmpty && 
+        programProvider.programs.first.communityId == user.communityId) {
+      _isLoading = false;
+    }
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndLoadData();
@@ -82,16 +95,30 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
   Future<void> _loadProgramsData(String communityId) async {
     if (!mounted) return;
     
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
-    });
+    final programProvider = context.read<ProgramProvider>();
+    final authProvider = context.read<AppAuthProvider>();
+    
+    // Determine if we have existing cached data for this community
+    final hasExistingData = programProvider.programs.isNotEmpty && 
+                            programProvider.programs.first.communityId == communityId;
+    
+    if (!hasExistingData) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
+    } else {
+      // Immediately clear error states and rely on instant playback
+      setState(() {
+        _isLoading = false;
+        _hasError = false;
+        _errorMessage = null;
+      });
+    }
     
     try {
-      final programProvider = context.read<ProgramProvider>();
-      final authProvider = context.read<AppAuthProvider>();
-      
+      // Fetch fresh data in the background
       await programProvider.loadCommunityPrograms(communityId);
       
       if (authProvider.user != null) {
@@ -249,7 +276,7 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
 // Program carousel with wider cards
 // Program carousel with wider cards - UPDATE THE HEIGHT
 SizedBox(
-  height: 310, // Keep this or reduce slightly to 310 if needed
+  height: 330,
   child: PageView.builder(
     controller: _pageController,
     itemCount: activePrograms.length,
@@ -362,7 +389,7 @@ SizedBox(
 
        // Carousel skeleton with wider cards
 SizedBox(
-  height: 320,
+  height: 330,
   child: PageView.builder(
     controller: PageController(viewportFraction: 0.94), // Match the viewportFraction
     itemCount: 2,
@@ -635,26 +662,34 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatItem(
-                  'Collected',
-                  Icons.account_balance_wallet_rounded,
-                  Colors.green,
-                  (collected) => '₹${collected.toStringAsFixed(0)}',
-                  widget.program.programId,
+                Expanded(
+                  child: _buildStatItem(
+                    'Collected',
+                    Icons.account_balance_wallet_rounded,
+                    AppColors.primary(context),
+                    (collected) => '₹${collected.toStringAsFixed(0)}',
+                    widget.program.programId,
+                  ),
                 ),
-                _buildStatItem(
-                  'Expenses',
-                  Icons.money_off_rounded,
-                  Colors.orange,
-                  (expenses) => '₹${expenses.toStringAsFixed(0)}',
-                  widget.program.programId,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildStatItem(
+                    'Expenses',
+                    Icons.money_off_rounded,
+                    AppColors.primary(context),
+                    (expenses) => '₹${expenses.toStringAsFixed(0)}',
+                    widget.program.programId,
+                  ),
                 ),
-                _buildStatItem(
-                  'Balance',
-                  Icons.savings_rounded,
-                  Colors.blue,
-                  (balance) => '₹${balance.toStringAsFixed(0)}',
-                  widget.program.programId,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildStatItem(
+                    'Balance',
+                    Icons.savings_rounded,
+                    AppColors.primary(context),
+                    (balance) => '₹${balance.toStringAsFixed(0)}',
+                    widget.program.programId,
+                  ),
                 ),
               ],
             ),
@@ -862,37 +897,54 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
       builder: (context, snapshot) {
         final value = snapshot.data ?? 0.0;
         
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 14,
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 13,
+                    color: color,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: color.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                formatValue(value),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                   color: color,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              formatValue(value),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: color,
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -1019,25 +1071,17 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
     final user = authProvider.user;
     if (user == null) return;
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave Program?'),
-        content: Text('Are you sure you want to leave ${widget.program.title}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), 
-            child: const Text('Cancel')
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text('Leave', style: TextStyle(color: Colors.red))
-          ),
-        ],
-      ),
+    final confirm = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Leave Program?',
+      message: 'Are you sure you want to leave ${widget.program.title}?',
+      confirmLabel: 'Leave',
+      icon: Icons.exit_to_app_rounded,
+      isDestructive: true,
     );
 
     if (confirm == true) {
+      HapticHelper.success();
       setState(() => _isLeaving = true);
 
       try {

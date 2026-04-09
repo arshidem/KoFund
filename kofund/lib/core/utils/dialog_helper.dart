@@ -14,11 +14,13 @@ class DialogHelper {
     bool isDestructive = false,
     Widget? content,
   }) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierLabel: '',
-      barrierColor: Colors.black.withValues(alpha: 0.4), // Slightly lighter more premium barrier
+      barrierColor: Colors.black.withValues(alpha: isDark ? 0.6 : 0.4), 
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
         final primaryColor = AppColors.primary(context);
@@ -30,6 +32,9 @@ class DialogHelper {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
+            side: isDark 
+                ? BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)
+                : BorderSide.none,
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -54,8 +59,9 @@ class DialogHelper {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Central Badge Icon
-                      Container(
+                      // Central Badge Icon with PREMIUM DARK GLOW
+                      _PulseIcon(
+                        child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: badgeColor.withValues(alpha: 0.1),
@@ -68,10 +74,18 @@ class DialogHelper {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: badgeColor.withValues(alpha: 0.3),
-                                blurRadius: 12,
+                                color: badgeColor.withValues(alpha: isDark ? 0.5 : 0.3),
+                                blurRadius: isDark ? 20 : 12,
+                                spreadRadius: isDark ? 2 : 0,
                                 offset: const Offset(0, 4),
                               ),
+                              // Extra neon glow for dark mode
+                              if (isDark)
+                                BoxShadow(
+                                  color: badgeColor.withValues(alpha: 0.2),
+                                  blurRadius: 40,
+                                  spreadRadius: 5,
+                                ),
                             ],
                           ),
                           child: Icon(
@@ -80,6 +94,7 @@ class DialogHelper {
                             size: 24,
                           ),
                         ),
+                      ),
                       ),
                       const SizedBox(height: 24),
                       
@@ -122,7 +137,9 @@ class DialogHelper {
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   side: BorderSide(
-                                    color: AppColors.border(context).withValues(alpha: 0.5),
+                                    color: isDark 
+                                        ? Colors.white.withValues(alpha: 0.1)
+                                        : AppColors.border(context).withValues(alpha: 0.5),
                                     width: 1.5,
                                   ),
                                   shape: RoundedRectangleBorder(
@@ -143,21 +160,34 @@ class DialogHelper {
                           
                           // Confirm Button
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: badgeColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  if (isDark)
+                                    BoxShadow(
+                                      color: badgeColor.withValues(alpha: 0.2),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                ],
                               ),
-                              child: Text(
-                                confirmLabel,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: badgeColor,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  confirmLabel,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
                             ),
@@ -175,8 +205,8 @@ class DialogHelper {
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return BackdropFilter(
           filter: ImageFilter.blur(
-            sigmaX: 4 * animation.value,
-            sigmaY: 4 * animation.value,
+            sigmaX: (isDark ? 8 : 4) * animation.value,
+            sigmaY: (isDark ? 8 : 4) * animation.value,
           ),
           child: FadeTransition(
             opacity: animation,
@@ -190,6 +220,46 @@ class DialogHelper {
           ),
         );
       },
+    );
+  }
+}
+
+class _PulseIcon extends StatefulWidget {
+  final Widget child;
+  const _PulseIcon({required this.child});
+
+  @override
+  State<_PulseIcon> createState() => _PulseIconState();
+}
+
+class _PulseIconState extends State<_PulseIcon> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: widget.child,
     );
   }
 }

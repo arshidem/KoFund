@@ -4,6 +4,7 @@ import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:clipboard/clipboard.dart';
 import '../providers/dashboard_provider.dart';
@@ -63,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _hasShownAdminToast = false;
 
 Future<void> _onRefresh() async {
+  HapticHelper.light();
   debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
   if (_isManualRefreshing) return;
 

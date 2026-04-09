@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'dart:ui' as dart_ui;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -34,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadProfileData(forceRefresh: true);
+      _loadProfileData(forceRefresh: false);
     });
   }
 
@@ -141,6 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   Future<void> _onRefresh() async {
+    HapticHelper.light();
     debugPrint('🔄 Pull to refresh triggered');
     
     try {

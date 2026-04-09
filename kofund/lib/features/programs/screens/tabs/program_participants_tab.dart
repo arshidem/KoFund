@@ -2,6 +2,7 @@
 // ✅ ADDED: Skeleton shimmer effect for loading state
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -244,6 +245,7 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
             slivers: [
               CupertinoSliverRefreshControl(
                 onRefresh: () async {
+                  HapticHelper.light();
                   _onRefresh();
                   await Future.delayed(const Duration(milliseconds: 500));
                 },

@@ -56,9 +56,15 @@ class MemberProvider with ChangeNotifier {
 
   // ==================== LOAD ALL MEMBERS ====================
 /// Load all members at once (no pagination)
-Future<void> loadMembers({String filterType = 'all', bool reset = true}) async {
+Future<void> loadMembers({String filterType = 'all', bool reset = false}) async {
   if (_isLoading) {
     developer.log('⏸️ MemberProvider: loadMembers skipped - already loading');
+    return;
+  }
+
+  // ⭐ CACHE CHECK: Skip Firestore reads if data is already available
+  if (!reset && _members.isNotEmpty && _currentFilter == filterType) {
+    developer.log('⚡ MemberProvider: Returning ${_members.length} cached members');
     return;
   }
   

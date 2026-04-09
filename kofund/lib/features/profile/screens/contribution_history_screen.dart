@@ -14,6 +14,8 @@ import 'package:intl/intl.dart';
 import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
+
 // Move ChangeEntry to top level
 class ChangeEntry {
   final String fieldName;
@@ -170,6 +172,7 @@ void _debugFirestoreContribution(String contributionId) async {
   }
 
   Future<void> _refreshData() async {
+    HapticHelper.light();
     debugPrint('🔄 DEBUG: Refreshing contribution history');
     
     try {
