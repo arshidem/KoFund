@@ -349,15 +349,15 @@ class AppAuthProvider with ChangeNotifier {
     try {
       final current = FirebaseAuth.instance.currentUser;
       if (current == null) return;
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token == null) return;
-      await FirebaseFirestore.instance.collection('users').doc(current.uid).set(
-        {'fcmToken': token, 'fcmTokenUpdatedAt': FieldValue.serverTimestamp()},
-        SetOptions(merge: true),
-      );
-      debugPrint('✅ FCM token saved for ${current.uid}');
+      
+      // ✅ Use FCMTokenService for consistency (passing current communityId if available)
+      final fcmTokenService = FCMTokenService();
+      final communityIds = _user?.communityId != null ? [_user!.communityId!] : <String>[];
+      await fcmTokenService.storeCurrentUserToken(communityIds: communityIds);
+      
+      debugPrint('✅ FCM token saved via service for ${current.uid}');
     } catch (e) {
-      debugPrint('⚠️ Failed saving FCM token: $e');
+      debugPrint('⚠️ Failed saving FCM token via service: $e');
     }
   }
 
@@ -405,7 +405,7 @@ class AppAuthProvider with ChangeNotifier {
         debugPrint('✅ Verification email sent to: $email');
 
         // ✅ REGISTER FCM TOKEN AFTER SIGNUP
-        await _registerFCMTokenAfterLogin(user.uid);
+        await saveFcmTokenForCurrentUser();
 
         // Keep user signed in so they can access verification screen
         // The user will remain signed in but won't be able to access main app until verified
@@ -515,7 +515,7 @@ class AppAuthProvider with ChangeNotifier {
         }
 
         // ✅ REGISTER FCM TOKEN FOR NOTIFICATIONS
-        await _registerFCMTokenAfterLogin(user.uid);
+        await saveFcmTokenForCurrentUser();
 
         _isOfflineMode = false; // We're online now
         _setLoading(false);
@@ -532,103 +532,7 @@ class AppAuthProvider with ChangeNotifier {
     }
   }
 
-  Future<String?> getFCMTokenWithRetry() async {
-    const maxAttempts = 3;
-
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        debugPrint("🔄 [FCM] Attempt $attempt to get token...");
-
-        // ⭐ ADD DELAY BEFORE FIRST ATTEMPT
-        if (attempt == 1) {
-          await Future.delayed(const Duration(seconds: 1));
-        }
-
-        final token = await FirebaseMessaging.instance.getToken();
-
-        if (token != null && token.isNotEmpty) {
-          debugPrint("✅ [FCM] Got token: ${token.substring(0, 20)}...");
-          return token;
-        }
-
-        if (attempt < maxAttempts) {
-          await Future.delayed(
-            Duration(seconds: attempt * 2),
-          ); // ⭐ Increase delay
-        }
-      } catch (e) {
-        debugPrint("❌ [FCM] Attempt $attempt failed: $e");
-
-        // ⭐ ADD SPECIFIC ERROR HANDLING
-        if (e.toString().contains('SERVICE_NOT_AVAILABLE')) {
-          debugPrint("⚠️ FCM service unavailable - increasing delay...");
-          await Future.delayed(Duration(seconds: attempt * 3));
-        } else if (attempt < maxAttempts) {
-          await Future.delayed(Duration(seconds: attempt * 2));
-        }
-      }
-    }
-
-    debugPrint("⚠️ [FCM DEBUG] Could not get FCM token after retries");
-    return null;
-  }
-
-  Future<void> _registerFCMTokenAfterLogin(String userId) async {
-    try {
-      debugPrint(
-        '📱 [FCM DEBUG] Starting FCM token registration for user: $userId',
-      );
-
-      // ⭐ MAKE THIS ASYNC - DON'T WAIT FOR COMPLETION
-      Future.microtask(() async {
-        try {
-          final token = await getFCMTokenWithRetry();
-
-          if (token == null) {
-            debugPrint(
-              '⚠️ [FCM DEBUG] Could not get FCM token - will retry later',
-            );
-            // ⭐ SCHEDULE RETRY LATER
-            Future.delayed(const Duration(seconds: 10), () async {
-              try {
-                final retryToken = await FirebaseMessaging.instance.getToken();
-                if (retryToken != null) {
-                  await _saveFCMTokenToFirestore(userId, retryToken);
-                }
-              } catch (e) {
-                debugPrint('⚠️ [FCM] Scheduled retry failed: $e');
-              }
-            });
-            return;
-          }
-
-          await _saveFCMTokenToFirestore(userId, token);
-        } catch (e) {
-          debugPrint('❌ [FCM DEBUG] Async token registration error: $e');
-        }
-      });
-
-      debugPrint(
-        '✅ [FCM DEBUG] FCM token registration attempt started (async)',
-      );
-    } catch (e) {
-      debugPrint('❌ [FCM DEBUG] Error in FCM token registration setup: $e');
-    }
-  }
-
-  // ⭐ EXTRACT TOKEN SAVING LOGIC
-  Future<void> _saveFCMTokenToFirestore(String userId, String token) async {
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'fcmTokens': FieldValue.arrayUnion([token]),
-        'lastTokenUpdate': FieldValue.serverTimestamp(),
-      });
-
-      debugPrint('✅ [FCM DEBUG] FCM token saved to Firestore for user $userId');
-    } catch (e) {
-      debugPrint('⚠️ [FCM DEBUG] Error saving token to Firestore: $e');
-    }
-  }
+  // REMOVED manual FCM registration methods as they are now handled by FCMTokenService
 
   // ✅ Check if current user needs verification
   bool get needsEmailVerification {
@@ -714,7 +618,7 @@ class AppAuthProvider with ChangeNotifier {
         }
 
         // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS
-        await _registerFCMTokenAfterLogin(user.uid);
+        await saveFcmTokenForCurrentUser();
 
         _isOfflineMode = false; // We're online now
         _setLoading(false);

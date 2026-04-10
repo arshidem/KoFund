@@ -60,6 +60,7 @@ int get _displayCurrentStep {
   String? _lastCommunityId;
   // Amount controller to allow programmatic updates (auto-fill)
   late TextEditingController _amountController;
+  bool _isSubmitting = false; // Add this guard
 // Add these to your _AddContributionModalState class variables
 int _currentDisplayYear = DateTime.now().year;
 final bool _showMonthSelector = true; // Set to true to show by default for monthly programs
@@ -224,85 +225,83 @@ Widget build(BuildContext context) {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const SizedBox(height: 30),
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           
-          // Header
+          // Header with premium typography
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.close),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surface(context),
+                ),
+                icon: const Icon(Icons.close, size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 8),
               Text(
                 'Add Contribution',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
               const Spacer(),
               if (_currentStep > 0)
-                TextButton(
+                TextButton.icon(
                   onPressed: _goToPreviousStep,
-                  child: const Text('Back'),
+                  icon: const Icon(Icons.arrow_back_ios, size: 14),
+                  label: const Text('Back'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary(context),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // Progress bar
-          Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '$_displayCurrentStep/$_totalSteps',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+          // Modern Pill Progress Indicator
+          Row(
+            children: List.generate(_totalSteps, (index) {
+              final isActive = _displayCurrentStep > index;
+              return Expanded(
+                child: Container(
+                  margin: EdgeInsets.only(right: index == _totalSteps - 1 ? 0 : 8),
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isActive 
+                        ? AppColors.primary(context)
+                        : AppColors.primary(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
-                  Text(
-                    '$_totalSteps/$_totalSteps',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: List.generate(_totalSteps, (index) {
-                  return Expanded(
-                    child: Container(
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: _displayCurrentStep > index 
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey[200],
-                        borderRadius: index == 0 
-                            ? const BorderRadius.only(
-                                topLeft: Radius.circular(3),
-                                bottomLeft: Radius.circular(3),
-                              )
-                            : index == _totalSteps - 1
-                                ? const BorderRadius.only(
-                                    topRight: Radius.circular(3),
-                                    bottomRight: Radius.circular(3),
-                                  )
-                                : BorderRadius.zero,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
+                ),
+              );
+            }),
           ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Step $_displayCurrentStep of $_totalSteps',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           const SizedBox(height: 20),
 
          Expanded(
@@ -361,7 +360,7 @@ Widget _buildBottomActionSection() {
             initialData: initialOnline,
             builder: (context, streamSnapshot) {
               final isOnline = streamSnapshot.data ?? initialOnline;
-              final isDisabled = _amount <= 0 || !isOnline || isLoading;
+              final isDisabled = _amount <= 0 || !isOnline || isLoading || _isSubmitting;
 
               return Column(
                 mainAxisSize: MainAxisSize.min,
@@ -382,33 +381,42 @@ Widget _buildBottomActionSection() {
                         ),
                         elevation: 2,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isOnline
-                                ? (_isMonthlyProgram
-                                    ? Icons.calendar_month
-                                    : Icons.add)
-                                : Icons.wifi_off,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            isOnline
-                                ? (_isMonthlyProgram
-                                    ? 'Add Monthly Contribution'
-                                    : 'Add Contribution')
-                                : 'Offline',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                      child: _isSubmitting 
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
                               color: Colors.white,
+                              strokeWidth: 2,
                             ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isOnline
+                                    ? (_isMonthlyProgram
+                                        ? Icons.calendar_month
+                                        : Icons.add)
+                                    : Icons.wifi_off,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                isOnline
+                                    ? (_isMonthlyProgram
+                                        ? 'Add Monthly Contribution'
+                                        : 'Add Contribution')
+                                    : 'Offline',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     ),
                   ),
 
@@ -509,71 +517,29 @@ Widget _buildProgramSelectionStep(String communityId) {
                   final program = programs[index];
                   final isMonthly = program.isMonthlyPaymentProgram;
                   
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isMonthly 
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          isMonthly ? Icons.calendar_month : Icons.event,
-                          color: isMonthly ? Colors.green : Theme.of(context).colorScheme.primary,
-                        ),
+                  final isSelected = _selectedProgram?.programId == program.programId;
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.card(context),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                      border: Border.all(
+                        color: isSelected 
+                            ? AppColors.primary(context) 
+                            : AppColors.border(context),
+                        width: isSelected ? 2 : 1,
                       ),
-                      title: Row(
-                        children: [
-                          Text(program.title),
-                          if (isMonthly) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Monthly',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.green[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                     // In _buildProgramSelectionStep, update the subtitle section:
-
-subtitle: Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Text(
-      program.programDate != null
-          ? '${program.programDate!.day}/${program.programDate!.month}/${program.programDate!.year}'
-          : 'Monthly Program',
-    ),
-    if (program.suggestedContribution != null && program.suggestedContribution! > 0)
-      Text(
-        'Suggested: ₹${program.suggestedContribution}',
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.green[700],
-        ),
-      ),
-  ],
-),
-                      trailing: _selectedProgram?.programId == program.programId
-                          ? Icon(
-                              Icons.check_circle, 
-                              color: isMonthly ? Colors.green : Theme.of(context).colorScheme.primary
-                            )
-                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                       onTap: () {
                         setState(() {
                           _selectedProgram = program;
@@ -589,6 +555,107 @@ subtitle: Column(
                         });
                         _goToNextStep();
                       },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            // Program Icon Bubble
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isMonthly 
+                                    ? Colors.green.withValues(alpha: 0.15)
+                                    : AppColors.primary(context).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                              ),
+                              child: Icon(
+                                isMonthly ? Icons.calendar_today_rounded : Icons.event_rounded,
+                                color: isMonthly ? Colors.green : AppColors.primary(context),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Program Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          program.title,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary(context),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isMonthly)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                          ),
+                                          child: Text(
+                                            'Monthly',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.green[700],
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    program.programDate != null
+                                        ? '${program.programDate!.day}/${program.programDate!.month}/${program.programDate!.year}'
+                                        : 'Monthly Program',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                  ),
+                                  if (program.suggestedContribution != null && program.suggestedContribution! > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        'Suggested: ₹${program.suggestedContribution}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.green[600],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            // Selection Indicator
+                            if (isSelected)
+                              Container(
+                                margin: const EdgeInsets.only(left: 16),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary(context),
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -720,53 +787,96 @@ subtitle: Column(
 
         return Column(
           children: [
-            // Search bar
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search members...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            // Modern Search bar
+            Container(
+              height: 52,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? AppColors.surface(context) 
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                border: Border.all(
+                  color: AppColors.border(context),
+                  width: 1,
                 ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.trim().toLowerCase();
-                });
-              },
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary(context),
+                  letterSpacing: 0.3,
+                ),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  hintText: 'Search members...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary(context)),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                            FocusScope.of(context).unfocus();
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
             ),
             const SizedBox(height: 16),
 
             Expanded(
-              child: ListView.separated(
+              child: ListView.builder(
                 itemCount: filteredUsers.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: 72,
-                  color: AppColors.border(context).withValues(alpha: 0.5),
-                ),
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final isSelected = _selectedUser?.uid == user.uid;
                   
-                  return Material(
-                    color: isSelected 
-                        ? AppColors.primary(context).withValues(alpha: 0.08) 
-                        : Colors.transparent,
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.card(context),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                      border: Border.all(
+                        color: isSelected 
+                            ? AppColors.primary(context) 
+                            : AppColors.border(context),
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected 
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary(context).withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                       onTap: () {
                         setState(() {
                           _selectedUser = user;
@@ -777,17 +887,23 @@ subtitle: Column(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.primary(context).withValues(alpha: 0.12),
-                              child: Text(
-                                user.displayName?.isNotEmpty == true 
-                                    ? user.displayName![0].toUpperCase()
-                                    : 'U',
-                                style: TextStyle(
-                                  color: AppColors.primary(context),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary(context).withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  user.displayName?.isNotEmpty == true 
+                                      ? user.displayName![0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    color: AppColors.primary(context),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ),
                             ),
@@ -799,7 +915,7 @@ subtitle: Column(
                                   Text(
                                     user.displayName ?? 'Unknown User',
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary(context),
                                     ),
@@ -818,10 +934,20 @@ subtitle: Column(
                               ),
                             ),
                             if (isSelected)
-                              Icon(
-                                Icons.check_circle_rounded, 
-                                color: AppColors.primary(context),
-                                size: 22,
+                              Container(
+                                margin: const EdgeInsets.only(left: 12),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary(context),
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4.0),
+                                  child: Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -862,123 +988,163 @@ Widget _buildContributionDetailsStep() {
         ),
         const SizedBox(height: 20),
 
-        // For monthly programs show Amount + Payment Method in one row above month grid
-        if (_isMonthlyProgram) ...[
-          Row(
+        // Amount Input (Large and Centered)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Column(
             children: [
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: '₹ ',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                    ),
-                    suffix: _selectedProgram?.suggestedContribution != null
-                        ? Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Text(
-                              'Suggested: ₹${_selectedProgram!.suggestedContribution}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: _amountController,
-                  onChanged: (value) {
-                    setState(() {
-                      _amount = double.tryParse(value) ?? 0;
-                    });
-                  },
+              Text(
+                'Amount',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary(context),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 1,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _paymentMethod,
-                  decoration: InputDecoration(
-                    labelText: 'Payment',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '₹',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
                     ),
                   ),
-                  items: _paymentMethods.map((method) {
-                    return DropdownMenuItem(
-                      value: method,
-                      child: Text(method[0].toUpperCase() + method.substring(1)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _paymentMethod = value!;
-                    });
-                  },
-                ),
+                  const SizedBox(width: 8),
+                  IntrinsicWidth(
+                    child: TextField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '0',
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _amount = double.tryParse(value) ?? 0;
+                        });
+                      },
+                    ),
+                  ),
+                ],
               ),
+              if (_selectedProgram?.suggestedContribution != null && _selectedProgram!.suggestedContribution! > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                    ),
+                    child: Text(
+                      'Suggested: ₹${_selectedProgram!.suggestedContribution}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (_availableMonths.isNotEmpty) _buildMonthGridSelector(context),
-          const SizedBox(height: 16),
-        ] else ...[
-          // Non-monthly: amount first then payment method (single column)
-          TextFormField(
-            controller: _amountController,
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              ),
-              suffix: _selectedProgram?.suggestedContribution != null
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: Text(
-                        'Suggested: ₹${_selectedProgram!.suggestedContribution}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
-                        ),
+        ),
+        const SizedBox(height: 24),
+
+        // Payment Method Selection (Chips)
+        Text(
+          'Payment Method',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: _paymentMethods.map((method) {
+            final isSelected = _paymentMethod == method;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                    right: method == _paymentMethods.last ? 0 : 12),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _paymentMethod = method;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary(context).withValues(alpha: 0.1)
+                          : AppColors.surface(context),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary(context)
+                            : AppColors.border(context),
+                        width: isSelected ? 2 : 1,
                       ),
-                    )
-                  : null,
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              setState(() {
-                _amount = double.tryParse(value) ?? 0;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _paymentMethod,
-            decoration: InputDecoration(
-              labelText: 'Payment Method',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          method.toLowerCase() == 'cash' 
+                              ? Icons.payments_outlined
+                              : Icons.account_balance_wallet_outlined,
+                          color: isSelected 
+                              ? AppColors.primary(context) 
+                              : AppColors.textSecondary(context),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          method[0].toUpperCase() + method.substring(1),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected 
+                                ? AppColors.primary(context) 
+                                : AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-            items: _paymentMethods.map((method) {
-              return DropdownMenuItem(
-                value: method,
-                child: Text(method[0].toUpperCase() + method.substring(1)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _paymentMethod = value!;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 24),
+        
+        if (_isMonthlyProgram && _availableMonths.isNotEmpty) 
+          _buildMonthGridSelector(context),
+          
+        if (_isMonthlyProgram) const SizedBox(height: 16),
         const SizedBox(height: 20),
 
         // Summary
@@ -1405,9 +1571,12 @@ void _goToPreviousStep() {
 }
 
 Future<void> _submitContribution() async {
+  if (_isSubmitting) return; // Guard against multiple clicks
+
+  // Validate required fields
   if (_selectedProgram == null || _selectedUser == null || _amount <= 0) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Please fill all required fields'),
         backgroundColor: Colors.red,
       ),
@@ -1418,7 +1587,7 @@ Future<void> _submitContribution() async {
   // Validate month selection for monthly programs
   if (_isMonthlyProgram && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Please select month for monthly contribution'),
         backgroundColor: Colors.red,
       ),
@@ -1427,42 +1596,37 @@ Future<void> _submitContribution() async {
   }
 
   try {
+    setState(() => _isSubmitting = true); // Start submission
+    
     // Get current user info for entry tracking
     final auth = Provider.of<AppAuthProvider>(context, listen: false);
     final currentUser = auth.user;
 
-final contribution = ContributionModel(
-  contributionId: '', // Will be set by Firestore
-  programId: _selectedProgram!.programId,
-  userId: _selectedUser!.uid, // Who contributed
-  contributorName: _selectedUser!.displayName ?? 'Unknown', // ✅ ADD THIS REQUIRED FIELD
-  communityId: _selectedProgram!.communityId,
-  amount: _amount,
-  paymentMethod: _paymentMethod,
-  
-  // ✅ ADD: Entry tracking - who added this record
-  addedByUserId: currentUser?.uid,
-  addedByUserName: currentUser?.displayName ?? 'Admin',
-  addedAt: Timestamp.now(),
-  
-  // ✅ Monthly fields
-  isMonthlyContribution: _isMonthlyProgram,
-  monthId: _isMonthlyProgram ? _selectedMonth : null,
-  
-  // Existing timestamp field
-  createdAt: Timestamp.now(),
-);
+    final contribution = ContributionModel(
+      contributionId: '', // Will be set by Firestore
+      programId: _selectedProgram!.programId,
+      userId: _selectedUser!.uid, // Who contributed
+      contributorName: _selectedUser!.displayName ?? 'Unknown',
+      communityId: _selectedProgram!.communityId,
+      amount: _amount,
+      paymentMethod: _paymentMethod,
+      addedByUserId: currentUser?.uid,
+      addedByUserName: currentUser?.displayName ?? 'Admin',
+      addedAt: Timestamp.now(),
+      isMonthlyContribution: _isMonthlyProgram,
+      monthId: _isMonthlyProgram ? _selectedMonth : null,
+      createdAt: Timestamp.now(),
+    );
 
     // Use Provider to add contribution
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
     await contributionProvider.addContribution(contribution);
-    if (!mounted) return;
-
+    
     if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Contribution added successfully!'),
+        content: const Text('Contribution added successfully!'),
         backgroundColor: AppColors.primary(context),
       ),
     );
@@ -1477,6 +1641,10 @@ final contribution = ContributionModel(
         backgroundColor: Colors.red,
       ),
     );
+  } finally {
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+    }
   }
 }
 }

@@ -185,7 +185,19 @@ Widget build(BuildContext context) {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
   return GradientSheetScaffold(
-    title: 'Program Details',
+    titleWidget: FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        _cachedProgram?.title ?? 'Program Details',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    ),
+    title: 'Program Details', // Fallback for voice over/accessibility
     headerHeight: 60,
     actions: currentUserId == null || _isProgramLoading
         ? null

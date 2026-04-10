@@ -74,6 +74,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   final RefreshController _refreshController = RefreshController();
   String _searchQuery = '';
   ProgramFilters _filters = ProgramFilters();
+  bool _initialLoadAttempted = false;
 
   int _getActiveFilterCount() {
     int count = 0;
@@ -85,7 +86,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPrograms();
+    // ✅ Data is triggered in didChangeDependencies to ensure communityId is available
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -109,13 +110,17 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ✅ Reactive Loading: If auth data arrives late, trigger load
+    // ✅ Reactive Loading: If auth data arrives late or changed, trigger load
     final authProvider = Provider.of<AppAuthProvider>(context);
     final programProvider = Provider.of<ProgramProvider>(context, listen: false);
     
-    if (authProvider.user?.communityId != null && 
-        programProvider.programs.isEmpty && 
+    final communityId = authProvider.user?.communityId;
+    
+    if (communityId != null && 
+        !_initialLoadAttempted && 
         !programProvider.isLoading) {
+      debugPrint('🚀 DEBUG: Initial programs load triggered in AllProgramsScreen');
+      _initialLoadAttempted = true;
       _loadPrograms();
     }
   }
@@ -257,7 +262,7 @@ List<ProgramModel> _applyFilters(List<ProgramModel> programs) {
           ],
         ),
       ),
-      floatingActionButton: isAdmin
+      floatingActionButton: (isAdmin && programProvider.programs.isNotEmpty)
           ? FloatingActionButton(
               onPressed: () => _navigateToCreateProgram(context),
               backgroundColor: const Color(0xFF00BFA5),
@@ -632,8 +637,12 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
               _searchController.clear();
               setState(() => _searchQuery = '');
             })
-          else
-            _buildActionButton('Refresh Programs', _loadPrograms, icon: Icons.refresh_rounded),
+          else if (isAdmin)
+            _buildActionButton(
+              'Create Program', 
+              () => _navigateToCreateProgram(context), 
+              icon: Icons.add_rounded
+            ),
         ],
       ),
     );

@@ -360,9 +360,9 @@ class ProgramProvider with ChangeNotifier {
     });
   }
 
-  Future<void> createProgram(ProgramModel program) async {
+  Future<void> createProgram(ProgramModel program, {bool sendNotification = true}) async {
     try {
-      await _programService.createProgram(program);
+      await _programService.createProgram(program, sendNotification: sendNotification);
       notifyListeners();
     } catch (e) {
       rethrow;

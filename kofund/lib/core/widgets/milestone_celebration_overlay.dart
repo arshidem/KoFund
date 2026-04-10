@@ -88,20 +88,20 @@ class MilestoneCelebrationOverlayState extends State<MilestoneCelebrationOverlay
           top: -20,
           child: ConfettiWidget(
             confettiController: _confettiController,
-            blastDirection: pi / 2, // Straight down
-            maxBlastForce: 20, // Set a lower max blast force
-            minBlastForce: 5, // Set a lower min blast force
-            emissionFrequency: 0.05,
-            numberOfParticles: 35, // Premium subtle amount
-            gravity: 0.1, // Slower descent
-            createParticlePath: drawStar, // Draw star shapes
+            blastDirectionality: BlastDirectionality.explosive, // Explosive burst like fireworks
+            shouldLoop: false,
             colors: const [
               Colors.green,
               Colors.blue,
               Colors.pink,
               Colors.orange,
-              Colors.purple
+              Colors.purple,
+              Colors.amber,
+              Colors.cyan,
             ],
+            createParticlePath: drawStar,
+            numberOfParticles: 50, // More particles for premium feel
+            gravity: 0.15, // Slightly faster descent for more energy
           ),
         ),
       ],

@@ -39,6 +39,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   String? _programType;
   bool _isLoading = false;
   bool _isMonthlyPaymentProgram = false;
+  bool _sendNotification = true; // ✅ NEW: Control notification sending
   String? _programTypeError;
 
   // Track which field was last edited by user
@@ -745,7 +746,7 @@ void _onParticipantsChanged() {
         lastReminderSent: null,
       );
 
-      await programProvider.createProgram(program);
+      await programProvider.createProgram(program, sendNotification: _sendNotification);
       if (!mounted) return;
       
       Navigator.pop(context);
@@ -891,6 +892,43 @@ onChanged: (value) {
     }
   });
 },
+                          activeThumbColor: AppColors.primary(context),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 🆕 3.1 Notify Community Toggle
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                          color: AppColors.surface(context),
+                          border: Border.all(
+                            color: AppColors.border(context),
+                          ),
+                        ),
+                        child: SwitchListTile(
+                          title: Text(
+                            'Notify Community',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Send a push notification to all members',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+                          value: _sendNotification,
+                          onChanged: (value) {
+                            setState(() {
+                              _sendNotification = value;
+                            });
+                          },
                           activeThumbColor: AppColors.primary(context),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                         ),

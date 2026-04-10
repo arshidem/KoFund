@@ -76,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   /// Ensure splash shows for at least 2 seconds
   void _startSplashTimer() {
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       _initializeAppWithTimeout();
     });

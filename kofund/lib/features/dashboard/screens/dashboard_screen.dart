@@ -31,7 +31,8 @@ import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
 import 'package:kofund/core/skeleton/members_skeleton.dart';
 
 // ADD THESE IMPORTS
-
+import 'package:badges/badges.dart' as badges;
+import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
 
 // 🆕 ADD INVITE IMPORTS
@@ -479,6 +480,59 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
+  Widget _buildNotificationIconButton(BuildContext context) {
+    return Consumer<NotificationProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              onTap: () {
+                HapticHelper.light();
+                Navigator.pushNamed(context, RouteNames.notifications);
+              },
+              child: Center(
+                child: badges.Badge(
+                  showBadge: provider.unreadCount > 0,
+                  badgeContent: Text(
+                    provider.unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  badgeStyle: badges.BadgeStyle(
+                    badgeColor: AppColors.error(context),
+                    padding: const EdgeInsets.all(4),
+                    elevation: 0,
+                  ),
+                  position: badges.BadgePosition.topEnd(top: -6, end: -6),
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -609,18 +663,20 @@ void _initializeWidgetProviders(String userId, String communityId) {
   Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode) {
     return SliverAppBar(
       expandedHeight: 160,
+      toolbarHeight: 100,
       floating: false,
       pinned: true,
       stretch: true,
       elevation: 0,
-      centerTitle: true,
+      centerTitle: false,
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
-          final double progress = ((top - 84) / (160 - 84)).clamp(0.0, 1.0);
-          final double fontSize = 18 + (6 * progress);
+          final double statusBarHeight = MediaQuery.paddingOf(context).top;
+          final double progress = ((top - (100 + statusBarHeight)) / (160 - 100)).clamp(0.0, 1.0);
+          final double fontSize = 18 + (12 * progress);
           
           return Stack(
             fit: StackFit.expand,
@@ -630,69 +686,82 @@ void _initializeWidgetProviders(String userId, String communityId) {
                   gradient: AppColors.primaryGradient(context),
                 ),
               ),
+              // REMOVED Positioned notification icon - moved into FlexibleSpaceBar Row
               FlexibleSpaceBar(
                 stretchModes: const [StretchMode.zoomBackground],
-                centerTitle: true,
-                titlePadding: EdgeInsets.only(bottom: 16 + (40 * progress)),
-              title: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          stats['clubName'] ?? "Your Club Name",
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -0.5 - (0.5 * progress),
-                          ),
-                        ),
-                      ),
-                      if (_isAdmin && progress > 0.5) ...[
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: _navigateToEditCommunity,
-                          child: Icon(
-                            Icons.edit_rounded,
-                            size: 16 * progress,
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Opacity(
-                    opacity: 0.7 + (0.3 * (1.0 - progress)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+              ),
+              // ✅ MANUAL HEADER: Moving outside FlexibleSpaceBar to avoid auto-scaling of icons
+              Positioned(
+                left: 20,
+                right: 16,
+                bottom: 24 + (18 * progress),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 11 + (3 * progress),
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "${stats['membersCount'] ?? 0} Members",
-                          style: TextStyle(
-                            fontSize: 10 + (2 * progress),
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: 0.2,
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  stats['clubName'] ?? "Your Club Name",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5 - (0.5 * progress),
+                                  ),
+                                ),
+                              ),
+                              if (_isAdmin && progress > 0.5) ...[
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: _navigateToEditCommunity,
+                                  child: Icon(
+                                    Icons.edit_rounded,
+                                    size: 20 * progress,
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
+                        // 🔔 FIXED SIZE: This will NOT scale with the AppBar
+                        _buildNotificationIconButton(context),
                       ],
                     ),
-                  ),
+                    Opacity(
+                      opacity: 0.7 + (0.3 * (1.0 - progress)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 13 + (3 * progress),
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${stats['membersCount'] ?? 0} Members",
+                            style: TextStyle(
+                              fontSize: 12 + (2 * progress),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

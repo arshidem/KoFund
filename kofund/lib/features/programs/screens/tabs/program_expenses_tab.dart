@@ -208,15 +208,26 @@ class _ProgramExpensesTabState extends State<ProgramExpensesTab> {
         Positioned(
           bottom: 16,
           right: 16,
-          child: FloatingActionButton(
-            onPressed: () => _showAddExpenseDialog(context, isAdmin),
-            backgroundColor: AppColors.primary(context),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            elevation: 4,
-            child: const Icon(Icons.add),
+          child: StreamBuilder<List<ExpenseModel>>(
+            stream: Provider.of<ExpenseProvider>(context, listen: false)
+                .streamProgramExpenses(widget.program.programId),
+            builder: (context, snapshot) {
+              final expenses = snapshot.data ?? [];
+              final filteredExpenses = _filterExpenses(expenses);
+              return Visibility(
+                visible: filteredExpenses.isNotEmpty,
+                child: FloatingActionButton(
+                  onPressed: () => _showAddExpenseDialog(context, isAdmin),
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                  elevation: 4,
+                  child: const Icon(Icons.add),
+                ),
+              );
+            },
           ),
         ),
     ],
@@ -602,13 +613,6 @@ Widget _buildExpenseSummary(BuildContext context) {
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient(context),
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary(context).withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -923,21 +927,25 @@ Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
   }
 
 Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
+  final authProvider = context.read<AppAuthProvider>();
+  final currentUser = authProvider.user;
+  final canAdd = isAdmin || (currentUser != null && currentUser.isApproved);
+
   return Container(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.all(24),
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           noExpenses ? Icons.receipt_long_outlined : Icons.search_off,
-          size: 60,
-          color: AppColors.textTertiary(context),
+          size: 80,
+          color: AppColors.primary(context).withValues(alpha: 0.2),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
         Text(
           noExpenses ? 'No Expenses Yet' : 'No Matching Expenses',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary(context),
           ),
@@ -946,14 +954,31 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
         const SizedBox(height: 8),
         Text(
           noExpenses 
-              ? (isAdmin ? 'Add your first expense to get started' : 'No expenses have been added yet')
+              ? (canAdd ? 'Add your first expense to get started' : 'No expenses have been added yet')
               : 'Try adjusting your search or filters',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.textSecondary(context),
-            fontSize: 12,
+            fontSize: 14,
           ),
         ),
+        if (noExpenses && canAdd) ...[
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () => _showAddExpenseDialog(context, isAdmin),
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text('Add Expense'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+              elevation: 2,
+            ),
+          ),
+        ],
       ],
     ),
   );

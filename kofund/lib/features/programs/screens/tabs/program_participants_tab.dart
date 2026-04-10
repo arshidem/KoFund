@@ -287,18 +287,25 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
         Positioned(
           bottom: 16,
           right: 16,
-          child: Visibility(
-            visible: isAdmin,
-            child: FloatingActionButton(
-              onPressed: () => _navigateToAddParticipantScreen(context),
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              ),
-              child: const Icon(Icons.add),
-            ),
+          child: StreamBuilder<List<ParticipantModel>>(
+            stream: _getParticipantsStream(context),
+            builder: (context, snapshot) {
+              final participants = snapshot.data ?? [];
+              final filtered = _filterParticipants(participants);
+              return Visibility(
+                visible: isAdmin && filtered.isNotEmpty,
+                child: FloatingActionButton(
+                  onPressed: () => _navigateToAddParticipantScreen(context),
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                  child: const Icon(Icons.add),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -400,13 +407,6 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient(context),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary(context).withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1376,25 +1376,26 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
 }
 
   Widget _buildEmptyState(bool noParticipants, BuildContext context) {
+    final isAdmin = _isAdmin(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               noParticipants ? Icons.people_outline : Icons.search_off,
-              size: 60,
-              color: AppColors.textTertiary(context),
+              size: 80,
+              color: AppColors.primary(context).withValues(alpha: 0.2),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               noParticipants 
                 ? 'No participants yet' 
                 : 'No results found',
               style: TextStyle(
                 color: AppColors.textPrimary(context),
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1403,14 +1404,31 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
               noParticipants 
                 ? widget.program.isMonthlyPaymentProgram
                   ? 'Participants will appear here when they pay for the selected month'
-                  : 'Participants will appear here when they join the program'
+                  : 'Start by adding participants to your program to track their contributions.'
                 : 'Try adjusting your search or filter',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary(context),
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
+            if (noParticipants && isAdmin) ...[
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () => _navigateToAddParticipantScreen(context),
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Add Participant'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ],
           ],
         ),
       ),

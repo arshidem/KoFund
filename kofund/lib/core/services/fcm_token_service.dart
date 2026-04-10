@@ -331,25 +331,44 @@ Future<void> storeCurrentUserToken({
     }
   }
 
-  // ⭐ NEW: Get tokens by community ID
+  // ⭐ UPDATED: Get tokens by community ID (Robust version)
   Future<List<String>> getTokensByCommunity(String communityId) async {
     try {
       debugPrint("🔍 Getting tokens for community: $communityId");
       
+      final Set<String> allTokens = {};
+
+      // 1. Try dedicated tokens collection
       final tokensSnapshot = await _firestore
           .collection('user_notification_tokens')
           .where('isActive', isEqualTo: true)
           .where('communityIds', arrayContains: communityId)
           .get();
       
-      final tokens = tokensSnapshot.docs
-          .map((doc) => doc.data()['token'] as String?)
-          .where((token) => token != null && token.isNotEmpty)
-          .map((token) => token!)
-          .toList();
+      for (final doc in tokensSnapshot.docs) {
+        final token = doc.data()['token'] as String?;
+        if (token != null && token.isNotEmpty) allTokens.add(token);
+      }
+      debugPrint("   Found ${tokensSnapshot.docs.length} tokens in dedicated collection");
+
+      // 2. BACKUP: Try users collection (the source of truth)
+      final usersSnapshot = await _firestore
+          .collection('users')
+          .where('communityId', isEqualTo: communityId)
+          .get();
       
-      debugPrint("✅ Found ${tokens.length} tokens for community $communityId");
-      return tokens;
+      for (final doc in usersSnapshot.docs) {
+        final userData = doc.data();
+        final tokens = userData['fcmTokens'] as List<dynamic>?;
+        if (tokens != null) {
+          for (final token in tokens) {
+            if (token is String && token.isNotEmpty) allTokens.add(token);
+          }
+        }
+      }
+      debugPrint("   Total unique tokens after checking users collection: ${allTokens.length}");
+      
+      return allTokens.toList();
       
     } catch (e) {
       debugPrint("❌ Error getting tokens by community: $e");

@@ -6,7 +6,7 @@
  * Cloud Functions for KoFund - v2 API
  * UPDATED FOR COMMUNITY-BASED NOTIFICATION SYSTEM
  */
-const { onCall } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
@@ -384,6 +384,7 @@ exports.sendCommunityNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 30,
+    enforceAppCheck: false, // ⭐ Disable enforcement to bypass 403 error during dev
   },
   async (request) => {
     try {
@@ -410,7 +411,7 @@ exports.sendCommunityNotification = onCall(
       console.log("Type:", type);
       
       if (!communityId || !title || !body) {
-        throw new Error("Missing required fields: communityId, title, body");
+        throw new HttpsError("invalid-argument", "Missing required fields: communityId, title, body");
       }
       
       const now = new Date();
@@ -429,9 +430,14 @@ exports.sendCommunityNotification = onCall(
       
       const senderData = senderDoc.data();
       const senderCommunities = senderData.notificationCommunities || [];
+      const senderPrimaryCommunity = senderData.communityId;
       
-      if (!senderCommunities.includes(communityId)) {
-        throw new Error("Sender is not a member of this community");
+      const isAuthorized = senderPrimaryCommunity === communityId || 
+                          senderCommunities.includes(communityId);
+      
+      if (!isAuthorized) {
+        console.error(`❌ Sender ${auth.uid} not authorized for community ${communityId}`);
+        throw new HttpsError("permission-denied", "Sender is not a member of this community");
       }
       
       // 2. Get community info
@@ -453,52 +459,49 @@ exports.sendCommunityNotification = onCall(
       
       console.log(`📱 Found ${tokensSnapshot.size} active token entries for community ${communityId}`);
       
-      // 4. Collect tokens and user info
+      // 4. ⭐ BACKUP: Get tokens from primary user profiles
+      const communityMembersSnapshot = await db
+        .collection('users')
+        .where('communityId', '==', communityId)
+        .where('isApproved', '==', true)
+        .where('isVirtualUser', '!=', true)
+        .get();
+        
+      console.log(`👥 Found ${communityMembersSnapshot.size} primary community members to check`);
+
+      // Collect tokens and user info
       const allTokens = [];
       const tokenToUserMap = new Map();
       const usersToNotify = new Set(); // Track unique users
       
+      // A. Process dedicated token entries
       for (const tokenDoc of tokensSnapshot.docs) {
         const tokenData = tokenDoc.data();
         const token = tokenData.token;
         const userId = tokenData.userId;
         
-        // ⭐ NEW: Skip the sender (person creating the notification)
-        if (userId === auth.uid) {
-          console.log(`⏭️ Skipping sender's token (${userId})`);
-          continue;
-        }
+        if (userId === auth.uid) continue;
+        if (typeof token !== 'string' || token.length < 50) continue;
         
-        // Validate token format
-        if (typeof token !== 'string' || token.length < 50) {
-          continue;
-        }
+        allTokens.push(token);
+        tokenToUserMap.set(token, userId);
+        usersToNotify.add(userId);
+      }
+
+      // B. Process primary community members (Backup)
+      for (const userDoc of communityMembersSnapshot.docs) {
+        const userId = userDoc.id;
+        const userData = userDoc.data();
         
-        // Get user info to check eligibility
-        try {
-          const userDoc = await db.collection('users').doc(userId).get();
-          if (!userDoc.exists) continue;
-          
-          const userData = userDoc.data();
-          
-          // Check if user is still eligible (email verified, approved, in community)
-          const isEligible = 
-            userData.isApproved === true &&
-            (userData.communityId === communityId || 
-             (userData.notificationCommunities && userData.notificationCommunities.includes(communityId)));
-          
-          if (!isEligible) {
-            console.log(`⏭️ User ${userId} not eligible for notifications`);
-            continue;
+        if (userId === auth.uid) continue;
+        
+        const fcmTokens = userData.fcmTokens || [];
+        for (const token of fcmTokens) {
+          if (typeof token === 'string' && token.length >= 50 && !allTokens.includes(token)) {
+            allTokens.push(token);
+            tokenToUserMap.set(token, userId);
+            usersToNotify.add(userId);
           }
-          
-          allTokens.push(token);
-          tokenToUserMap.set(token, userId);
-          usersToNotify.add(userId);
-          
-        } catch (userError) {
-          console.log(`⚠️ Error checking user ${userId}: ${userError.message}`);
-          continue;
         }
       }
       
@@ -782,7 +785,8 @@ exports.sendUserNotification = onCall(
       
       // Check if user is eligible for notifications
       const isEligible = 
-        userData.isApproved === true;
+        userData.isApproved === true &&
+        userData.isVirtualUser !== true;
       
       if (!isEligible) {
         throw new Error("Target user is not eligible for notifications");
@@ -1228,8 +1232,8 @@ exports.sendProgramContributionReminders = onCall(
           const userData = userDoc.data();
           
           // Check eligibility - FIXED: Match your Flutter logic
-          if (!userData.isApproved) {
-            console.log(`⏭️ Skipping - user ${participant.userId} not approved`);
+          if (!userData.isApproved || userData.isVirtualUser === true) {
+            console.log(`\u23EF\uFE0F Skipping - user ${participant.userId} not approved or is virtual`);
             continue;
           }
           

@@ -783,88 +783,134 @@ String _formatTime(DateTime date) {
   }
 
   Widget _buildDeletedContributionCard(DeletedContributionModel record, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor = Colors.red;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showContributionDetails(record, context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
+        child: Stack(
+          children: [
+            // Vertical accent bar
+            Positioned(
+              left: 0,
+              top: 12,
+              bottom: 12,
+              width: 3.5,
+              child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red.shade400,
-                  size: 20,
+                  color: accentColor.withValues(alpha: 0.8),
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      record.contributorName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                        fontSize: 15,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Deleted by ${record.deletedByUserName} • ${_formatTime(record.deletedAt.toDate())}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary(context),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
                 children: [
-                  Text(
-                    '₹${record.amount.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: AppColors.textPrimary(context),
+                  // Icon Container
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.delete_sweep_outlined,
+                      color: accentColor.withValues(alpha: 0.7),
+                      size: 22,
                     ),
                   ),
-                  if (record.shouldShowDeletionWarning)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Expires in ${record.daysUntilAutoDeletion}d',
+                  const SizedBox(width: 14),
+                  
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.contributorName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(context),
+                            fontSize: 15,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              'By ${record.deletedByUserName}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(width: 3, height: 3, decoration: BoxDecoration(color: AppColors.textTertiary(context).withValues(alpha: 0.3), shape: BoxShape.circle)),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatTime(record.deletedAt.toDate()),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textTertiary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Trailing info
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₹${record.amount.toStringAsFixed(0)}',
                         style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: AppColors.textPrimary(context),
+                          letterSpacing: -0.5,
                         ),
                       ),
-                    ),
+                      if (record.shouldShowDeletionWarning)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${record.daysUntilAutoDeletion}d left',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppColors.textTertiary(context).withValues(alpha: 0.3),
+                  ),
                 ],
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: AppColors.textTertiary(context).withValues(alpha: 0.5),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1040,33 +1086,65 @@ String _formatTime(DateTime date) {
                           return Container(
                             decoration: BoxDecoration(
                               color: AppColors.card(context),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.border(context)),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border(context).withValues(alpha: 0.6)),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
+                                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
                                 ),
                               ],
                             ),
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            clipBehavior: Clip.antiAlias,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                                Container(
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.3)),
+                                    ),
+                                  ),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.primary(context)),
-                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary(context).withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.primary(context)),
+                                      ),
+                                      const SizedBox(width: 10),
                                       Expanded(
-                                        child: Text(dateKey, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+                                        child: Text(
+                                          dateKey.toUpperCase(), 
+                                          style: TextStyle(
+                                            fontSize: 12, 
+                                            fontWeight: FontWeight.w800, 
+                                            color: AppColors.textPrimary(context).withValues(alpha: 0.8),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
-                                        child: Text('${items.length} ${items.length == 1 ? 'item' : 'items'}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red.shade700)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withValues(alpha: 0.1), 
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${items.length} ARCHIVED', 
+                                          style: const TextStyle(
+                                            fontSize: 10, 
+                                            fontWeight: FontWeight.w900, 
+                                            color: Colors.red,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1076,7 +1154,13 @@ String _formatTime(DateTime date) {
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
                                   itemCount: items.length,
-                                  separatorBuilder: (_, __) => Divider(height: 1, thickness: 0.8, color: AppColors.border(context), indent: 16, endIndent: 16),
+                                  separatorBuilder: (_, __) => Divider(
+                                    height: 1, 
+                                    thickness: 0.5, 
+                                    color: AppColors.border(context).withValues(alpha: 0.4), 
+                                    indent: 16, 
+                                    endIndent: 16,
+                                  ),
                                   itemBuilder: (context, itemIndex) => _buildDeletedContributionCard(items[itemIndex], context),
                                 ),
                               ],

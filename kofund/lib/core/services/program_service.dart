@@ -16,7 +16,7 @@ class ProgramService {
   // -------------------------------------------------------------
   // Create Program
   // -------------------------------------------------------------
-Future<String> createProgram(ProgramModel program) async {
+Future<String> createProgram(ProgramModel program, {bool sendNotification = true}) async {
   try {
     // Get current user info for notification
     final currentUser = _auth.currentUser;
@@ -31,29 +31,31 @@ Future<String> createProgram(ProgramModel program) async {
     // 2. Create updated program model with ID
     final createdProgram = program.copyWith(programId: programId);
     
-    // 3. 🆕 SEND NOTIFICATION TO COMMUNITY
-    try {
-      // Import NotificationService at the top of your file:
-      // import 'package:kofund/core/services/notification_service.dart';
-      final notificationService = NotificationService();
-      
-      await notificationService.sendCommunityNotification(
-        communityId: program.communityId,
-        title: 'New Program Created 🎯',
-        body: '${program.title} has been created. ${program.description}',
-        type: NotificationType.program,
-        data: {
-          'programId': programId,
-          'createdBy': currentUser.uid,
-          'createdByName': currentUser.displayName ?? 'User',
-        },
-        programId: programId,
-        senderName: currentUser.displayName ?? 'User',
-      );
-      debugPrint('📢 Community notification sent for new program: $programId');
-    } catch (notificationError) {
-      debugPrint('⚠️ Failed to send notification (non-critical): $notificationError');
-      // Don't fail the program creation if notification fails
+    // 3. 🆕 SEND NOTIFICATION TO COMMUNITY (Only if enabled)
+    if (sendNotification) {
+      try {
+        final notificationService = NotificationService();
+        
+        await notificationService.sendCommunityNotification(
+          communityId: program.communityId,
+          title: 'New Program Created 🎯',
+          body: '${program.title} has been created. ${program.description}',
+          type: NotificationType.program,
+          data: {
+            'programId': programId,
+            'createdBy': currentUser.uid,
+            'createdByName': currentUser.displayName ?? 'User',
+          },
+          programId: programId,
+          senderName: currentUser.displayName ?? 'User',
+        );
+        debugPrint('📢 Community notification sent for new program: $programId');
+      } catch (notificationError) {
+        debugPrint('⚠️ Failed to send notification (non-critical): $notificationError');
+        // Don't fail the program creation if notification fails
+      }
+    } else {
+      debugPrint('🔕 Community notification skipped as per request for program: $programId');
     }
 
     debugPrint('✅ Program created: $programId');

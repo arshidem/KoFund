@@ -601,17 +601,25 @@ Future<void> sendCommunityNotification({
       return;
     }
     
-    // ⭐ NEW: Validate sender belongs to community
+    // ⭐ UPDATED: Validate sender belongs to community (Check primary communityId AND notificationCommunities)
     final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-    final userCommunities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
+    final userData = userDoc.data() ?? {};
+    final userPrimaryCommunityId = userData['communityId'] as String?;
+    final userNotificationCommunities = (userData['notificationCommunities'] as List<dynamic>?)
         ?.map((e) => e.toString())
         .toList() ?? [];
     
-    if (!userCommunities.contains(communityId)) {
-      debugPrint("❌ User doesn't belong to community $communityId");
-      debugPrint("   User communities: ${userCommunities.join(', ')}");
+    final isAuthorized = userPrimaryCommunityId == communityId || 
+                         userNotificationCommunities.contains(communityId);
+                         
+    if (!isAuthorized) {
+      debugPrint("❌ User not authorized for community notification: $communityId");
+      debugPrint("   User Primary Community: $userPrimaryCommunityId");
+      debugPrint("   User Notification Communities: ${userNotificationCommunities.join(', ')}");
       return;
     }
+    
+    debugPrint("✅ Sender authorized for community $communityId (via ${userPrimaryCommunityId == communityId ? 'Primary ID' : 'Notification List'})");
     
     final currentUserName = currentUser.displayName ?? 'User';
     
@@ -746,7 +754,7 @@ Future<void> sendCommunityNotification({
     }
   }
 
-// ⭐ UPDATED: Fallback method with community filtering
+// ⭐ UPDATED: Fallback method (Robust version)
 Future<void> _sendCommunityNotificationLocalFallback({
   required String communityId,
   required String title,
@@ -757,29 +765,25 @@ Future<void> _sendCommunityNotificationLocalFallback({
   String? senderName,
 }) async {
   try {
-    debugPrint("🔄 Using local fallback method...");
+    debugPrint("🔄 [Fallback] Starting robust delivery to community: $communityId");
     
-    // ⭐ UPDATED: Use token service to get tokens by community
-    final communityTokens = await _tokenService.getTokensByCommunity(communityId);
-    debugPrint("👥 Found ${communityTokens.length} active tokens for community");
+    // 1. Get all members of this community
+    final usersSnapshot = await _firestore
+        .collection('users')
+        .where('communityId', isEqualTo: communityId)
+        .get();
+        
+    debugPrint("👥 [Fallback] Found ${usersSnapshot.docs.length} community members");
     
-    // Get user IDs for these tokens
-    final batch = FirebaseFirestore.instance.batch();
+    if (usersSnapshot.docs.isEmpty) return;
+
+    final batch = _firestore.batch();
     final now = DateTime.now();
     final baseNotificationId = '${now.millisecondsSinceEpoch}';
-    
-    for (final token in communityTokens) {
-      // Get user ID for this token
-      final tokenDoc = await _firestore
-          .collection('user_notification_tokens')
-          .doc(token)
-          .get();
-      
-      if (!tokenDoc.exists) continue;
-      
-      final userId = tokenDoc.data()?['userId'] as String?;
-      if (userId == null) continue;
-      
+    int notificationsCreated = 0;
+
+    for (final userDoc in usersSnapshot.docs) {
+      final userId = userDoc.id;
       final notificationId = '${baseNotificationId}_$userId';
       
       final notification = AppNotification(
@@ -796,39 +800,27 @@ Future<void> _sendCommunityNotificationLocalFallback({
         timestamp: now,
         senderName: senderName ?? 'KoFund Admin',
       );
-      
-      // Check if notification already exists before saving
-      final existingDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .doc(notificationId)
-          .get();
-      
-      if (existingDoc.exists) {
-        debugPrint("⚠️ Fallback: Notification $notificationId already exists for user $userId");
-        continue;
-      }
-      
-      final notificationRef = FirebaseFirestore.instance
+
+      final notificationRef = _firestore
           .collection('users')
           .doc(userId)
           .collection('notifications')
           .doc(notificationId);
       
       batch.set(notificationRef, notification.toFirestore());
-      
-      // Show local notification if this is the current user
+      notificationsCreated++;
+
+      // Show local notification only if this is the current active user
       if (_auth.currentUser?.uid == userId) {
         await _showLocalNotification(notification);
       }
     }
     
     await batch.commit();
-    debugPrint("✅ Local fallback: Saved notifications");
+    debugPrint("✅ [Fallback] Successfully saved $notificationsCreated notifications to community member records");
     
   } catch (e) {
-    debugPrint("❌ Local fallback error: $e");
+    debugPrint("❌ [Fallback] Error: $e");
   }
 }
 

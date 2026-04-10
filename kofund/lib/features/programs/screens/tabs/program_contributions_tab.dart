@@ -284,18 +284,25 @@ class _ProgramContributionsTabState extends State<ProgramContributionsTab> {
       Positioned(
         bottom: 16,
         right: 16,
-        child: Visibility(
-          visible: isAdmin,
-          child: FloatingActionButton(
-            onPressed: () => _showAddContributionModal(context),
-            backgroundColor: AppColors.primary(context),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            elevation: 4,
-            child: const Icon(Icons.add),
-          ),
+        child: StreamBuilder<List<ContributionModel>>(
+          stream: contributionsStream,
+          builder: (context, snapshot) {
+            final contributions = snapshot.data ?? [];
+            final filtered = _filterContributions(contributions);
+            return Visibility(
+              visible: isAdmin && filtered.isNotEmpty,
+              child: FloatingActionButton(
+                onPressed: () => _showAddContributionModal(context),
+                backgroundColor: AppColors.primary(context),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                ),
+                elevation: 4,
+                child: const Icon(Icons.add),
+              ),
+            );
+          },
         ),
       ),
     ],
@@ -357,13 +364,6 @@ Widget _buildContributionSummary(BuildContext context) {
               decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient(context),
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary(context).withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
               child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,48 +1123,58 @@ void _navigateToProgramDeletedContributions(BuildContext context) {
   }
 
   Widget _buildEmptyState(bool noContributions, BuildContext context) {
+    final isAdmin = _isAdmin(context);
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            noContributions ? Icons.payments_outlined : Icons.search_off,
-            size: 60,
-            color: AppColors.textTertiary(context),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            noContributions ? 'No Contributions Yet' : 'No Matching Contributions',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              noContributions ? Icons.payments_outlined : Icons.search_off,
+              size: 80,
+              color: AppColors.primary(context).withValues(alpha: 0.2),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            noContributions 
-                ? 'Contributions will appear here when participants make payments'
-                : 'Try adjusting your search or filters',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 12,
+            const SizedBox(height: 24),
+            Text(
+              noContributions ? 'No Contributions Yet' : 'No Matching Contributions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 16),
-          if (_isAdmin(context))
-            ElevatedButton.icon(
-              onPressed: () => _showAddContributionModal(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Add First Contribution'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary(context),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 8),
+            Text(
+              noContributions 
+                  ? 'Contributions will appear here when participants make payments.'
+                  : 'Try adjusting your search or filters',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 14,
               ),
             ),
-        ],
+            if (noContributions && isAdmin) ...[
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () => _showAddContributionModal(context),
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Add Contribution'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1179,10 +1189,11 @@ void _navigateToProgramDeletedContributions(BuildContext context) {
 
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
       filtered = filtered.where((contribution) {
-        // We'll filter by user name when we have it
-        // For now, just return all
-        return true;
+        return contribution.contributorName.toLowerCase().contains(query) ||
+               contribution.paymentMethod.toLowerCase().contains(query) ||
+               contribution.amount.toString().contains(query);
       }).toList();
     }
 
@@ -2220,6 +2231,11 @@ Future<String?> _showDeleteReasonDialog(BuildContext context) async {
       ],
     ),
   );
+
+  if (result == true) {
+    return reasonController.text.trim();
+  }
+  return null;
 }
 
   String _formatPaymentMethod(String method) {

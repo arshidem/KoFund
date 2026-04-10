@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -115,8 +116,16 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     if (kDebugMode) debugPrint('✅ Firebase initialized');
+
+    // 🛡️ Initialize App Check to secure Cloud Functions
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+      appleProvider: AppleProvider.appAttest,
+      webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'), // Use actual key if targeting web
+    );
+    if (kDebugMode) debugPrint('✅ Firebase App Check activated');
   } catch (e) {
-    if (kDebugMode) debugPrint('❌ Firebase init FAILED: $e');
+    if (kDebugMode) debugPrint('❌ Firebase init/AppCheck FAILED: $e');
   }
 
   // Set Firebase Auth persistence
@@ -512,8 +521,16 @@ class _AppProvidersState extends State<AppProviders> {
         ChangeNotifierProvider<AppAuthProvider>.value(value: _authProvider),
         
         // 🔔 Notification Provider
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider2<NotificationService, FCMTokenService, NotificationProvider>(
           create: (_) => NotificationProvider(),
+          update: (_, notificationService, fcmTokenService, previous) {
+            final provider = previous ?? NotificationProvider();
+            provider.initializeServices(
+              notificationService: notificationService,
+              tokenService: fcmTokenService,
+            );
+            return provider;
+          },
         ),
 
         // 🌐 Community Provider

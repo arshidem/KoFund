@@ -241,104 +241,63 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       children: [
         Expanded(
           child: Container(
-            height: 56,
+            height: 52,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 1.5, // Increased border width
-              ),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ],
-              color: Colors.transparent, // Transparent background
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Row(
-                  children: [
-                    // 🔍 SEARCH ICON - Transparent with white border
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent, // Transparent background
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(18),
-                          bottomLeft: Radius.circular(18),
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          width: 0, // Same border width
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.search,
-                        color: Colors.white, // White icon
-                        size: 22,
-                      ),
-                    ),
-                    
-                    // 📝 SEARCH FIELD
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white, // Always white text
-                          letterSpacing: 0.5,
-                        ),
-                        cursorColor: Colors.white, // White cursor
-                        cursorWidth: 2,
-                        cursorHeight: 20,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                          hintText: 'Search members...',
-                          hintStyle: const TextStyle(
-                            color: Colors.white70, // White hint with 70% opacity
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          filled: false,
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(right: 0),
-                                  child: SizedBox(
-                                    width: 32,
-                                    height: 32,
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      icon: const Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        onChanged: (value) {
-                          setState(() => _searchQuery = value);
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+              cursorColor: Colors.white,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                hintText: 'Search members...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          FocusScope.of(context).unfocus();
                         },
-                      ),
-                    ),
-                  ],
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                 ),
               ),
+              onChanged: (value) {
+                setState(() => _searchQuery = value);
+              },
             ),
           ),
         ),
