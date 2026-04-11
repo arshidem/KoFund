@@ -4,6 +4,7 @@ import 'package:kofund/core/skeleton/program_card_skeleton.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:clipboard/clipboard.dart';
@@ -26,9 +27,11 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
+import 'dart:ui' as dart_ui;
 import 'package:kofund/features/community/providers/community_provider.dart';
 import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
 import 'package:kofund/core/skeleton/members_skeleton.dart';
+import 'package:kofund/core/services/storage_service.dart';
 
 // ADD THESE IMPORTS
 import 'package:badges/badges.dart' as badges;
@@ -63,6 +66,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _inviteLink = '';
   bool _inviteLoading = false;
   bool _hasShownAdminToast = false;
+  
+  // 🆕 Greeting functionality
+  bool _showGreeting = true;
+  double _greetingOpacity = 1.0;
 
 Future<void> _onRefresh() async {
   HapticHelper.light();
@@ -533,6 +540,66 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
+  Widget _buildCommunityAvatar(BuildContext context, Map<String, dynamic> stats, String? cid, bool isAdmin, UserModel? user, {double size = 46}) {
+    final String? logoUrl = stats['clubLogo'];
+    final String clubName = (stats['clubName'] != null && stats['clubName'].toString().trim().isNotEmpty)
+        ? stats['clubName']
+        : (user?.communityName ?? 'Community');
+    final String initial = clubName.isNotEmpty ? clubName[0].toUpperCase() : 'C';
+
+    Widget avatar = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: logoUrl != null && logoUrl.isNotEmpty
+          ? ClipOval(
+              child: Image.network(
+                logoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _buildInitialPlaceholder(initial, size),
+              ),
+            )
+          : _buildInitialPlaceholder(initial, size),
+    );
+
+    return avatar;
+  }
+
+  Widget _buildInitialPlaceholder(String initial, double size) {
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.45,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  String _getGreetingText(String? name) {
+    final hour = DateTime.now().hour;
+    String timeGreeting;
+    if (hour < 12) {
+      timeGreeting = "Morning";
+    } else if (hour < 17) {
+      timeGreeting = "Afternoon";
+    } else {
+      timeGreeting = "Evening";
+    }
+    
+    final displayName = (name != null && name.isNotEmpty) ? name.split(' ').first : 'there';
+    return "Good $timeGreeting, $displayName!";
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -562,6 +629,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     ChangeNotifierProvider(
       create: (_) => CommunityProvider(
         CommunityFirestoreService(),
+        StorageService(),
       ),
     ),
     ChangeNotifierProvider(
@@ -585,7 +653,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
-            _buildDashboardSliverAppBar(stats, isDarkMode),
+            _buildDashboardSliverAppBar(stats, isDarkMode, cid, user),
           ];
         },
         body: CustomScrollView(
@@ -660,112 +728,180 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
-  Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode) {
+  Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode, String? cid, UserModel? user) {
+    final bool isAdmin = user?.isAdmin ?? false;
+    
     return SliverAppBar(
-      expandedHeight: 160,
-      toolbarHeight: 100,
-      floating: false,
+      expandedHeight:280,
+      toolbarHeight: 90,
       pinned: true,
       stretch: true,
       elevation: 0,
-      centerTitle: false,
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 20.0),
+          child: _buildNotificationIconButton(context),
+        ),
+      ],
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final double top = constraints.biggest.height;
-          final double statusBarHeight = MediaQuery.paddingOf(context).top;
-          final double progress = ((top - (100 + statusBarHeight)) / (160 - 100)).clamp(0.0, 1.0);
-          final double fontSize = 18 + (12 * progress);
+          final double topPadding = MediaQuery.of(context).padding.top;
+          final double collapsedHeight = 90 + topPadding + 28;
+          final double expandedHeight = 280.0;
           
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient(context),
+          final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
+              (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+
+          final double expandedOpacity = (expandRatio * 2 - 1).clamp(0.0, 1.0);
+          
+          // Math for smooth Avatar sliding and scaling (EXACT Profile Screen Constants)
+          final double currentAvatarSize = dart_ui.lerpDouble(60.0, 96.0, expandRatio)!;
+          final double currentAvatarX = dart_ui.lerpDouble(20.0, (constraints.maxWidth - currentAvatarSize) / 2, expandRatio)!;
+          final double currentAvatarY = dart_ui.lerpDouble(topPadding + 15.0, topPadding + 40.0, expandRatio)!;
+          
+          // Math for smooth Swarm translating and scaling (EXACT Profile Screen Curve)
+          final double arcOffset = (1 - (2 * expandRatio - 1).abs()); 
+          final double dodgeAmount = 20.0 * (arcOffset > 0 ? arcOffset : 0); 
+          
+          final double currentNameTop = dart_ui.lerpDouble(26.0 + topPadding, 155.0 + topPadding, expandRatio)! + dodgeAmount;
+          final double currentMembersTop = dart_ui.lerpDouble(50.0 + topPadding, 185.0 + topPadding, expandRatio)! + dodgeAmount;
+          final double currentBadgeTop = dart_ui.lerpDouble(80.0 + topPadding, 212.0 + topPadding, expandRatio)! + dodgeAmount;
+          
+          final double currentLeftPadding = dart_ui.lerpDouble(90.0, 0.0, expandRatio)!;
+          final double currentRightPadding = dart_ui.lerpDouble(70.0, 0.0, expandRatio)!;
+          final double currentAlignmentX = dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!;
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient(context),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Sliding & Scaling Avatar (Always Visible)
+                Positioned(
+                  left: currentAvatarX,
+                  top: currentAvatarY,
+                  child: _buildCommunityAvatar(
+                    context, 
+                    stats, 
+                    cid, 
+                    isAdmin, 
+                    user,
+                    size: currentAvatarSize,
+                  ),
                 ),
-              ),
-              // REMOVED Positioned notification icon - moved into FlexibleSpaceBar Row
-              FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground],
-              ),
-              // ✅ MANUAL HEADER: Moving outside FlexibleSpaceBar to avoid auto-scaling of icons
-              Positioned(
-                left: 20,
-                right: 16,
-                bottom: 24 + (18 * progress),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  stats['clubName'] ?? "Your Club Name",
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: fontSize,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5 - (0.5 * progress),
-                                  ),
-                                ),
-                              ),
-                              if (_isAdmin && progress > 0.5) ...[
-                                const SizedBox(width: 6),
-                                GestureDetector(
-                                  onTap: _navigateToEditCommunity,
-                                  child: Icon(
-                                    Icons.edit_rounded,
-                                    size: 20 * progress,
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        // 🔔 FIXED SIZE: This will NOT scale with the AppBar
-                        _buildNotificationIconButton(context),
-                      ],
-                    ),
-                    Opacity(
-                      opacity: 0.7 + (0.3 * (1.0 - progress)),
+
+                // 2. SWARMING CLUB NAME
+                Positioned(
+                  top: currentNameTop,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
+                    child: Align(
+                      alignment: Alignment(currentAlignmentX, 0),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              (stats['clubName'] != null && stats['clubName'].toString().trim().isNotEmpty)
+                                  ? stats['clubName']
+                                  : (user?.communityName ?? ""),
+                              style: TextStyle(
+                                fontSize: dart_ui.lerpDouble(18.0, 26.0, expandRatio)!,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isAdmin) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: _navigateToEditCommunity,
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 16,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 3. SWARMING MEMBERS
+                Positioned(
+                  top: currentMembersTop,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
+                    child: Align(
+                      alignment: Alignment(currentAlignmentX, 0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.people_outline,
-                            size: 13 + (3 * progress),
-                            color: Colors.white,
+                            Icons.people_alt_rounded,
+                            size: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
+                            color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
                             "${stats['membersCount'] ?? 0} Members",
                             style: TextStyle(
-                              fontSize: 12 + (2 * progress),
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
+                              fontSize: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
+                              color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+
+                // 4. GREETING OVERLAY (Centered in expanded state)
+                if (expandedOpacity > 0 && _showGreeting)
+                  Positioned(
+                    top: currentBadgeTop,
+                    left: 0,
+                    right: 0,
+                    child: Opacity(
+                      opacity: expandedOpacity * _greetingOpacity,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          child: Text(
+                            _getGreetingText(user?.displayName),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
@@ -773,6 +909,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         preferredSize: const Size.fromHeight(28),
         child: Container(
           height: 28,
+          width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.background(context),
             borderRadius: const BorderRadius.only(
@@ -870,4 +1007,3 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 }
-

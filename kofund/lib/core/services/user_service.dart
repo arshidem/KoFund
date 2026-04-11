@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../features/auth/models/user_model.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/constants/notification_types.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -145,6 +147,19 @@ class UserService {
         'role': 'member', // or 'admin'
         'approvedAt': Timestamp.now(),
       });
+
+      // 🔔 Trigger Notification to User
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendUserNotification(
+          userId: uid,
+          title: '🎉 Welcome to the Community!',
+          body: 'Your membership request has been approved. You can now access all features.',
+          type: NotificationType.approval,
+        );
+      } catch (e) {
+        debugPrint('⚠️ Approval notification failed: $e');
+      }
     } catch (e) {
       throw 'Failed to approve user: $e';
     }
@@ -188,6 +203,19 @@ class UserService {
 
       await batch.commit();
       debugPrint('✅ Admin rejected user $uid from community $communityId');
+
+      // 🔔 Trigger Notification to User
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendUserNotification(
+          userId: uid,
+          title: '😔 Membership Request Update',
+          body: 'Your request to join the community was not approved at this time.',
+          type: NotificationType.account,
+        );
+      } catch (e) {
+        debugPrint('⚠️ Reject notification failed: $e');
+      }
       
     } catch (e) {
       debugPrint('❌ Error rejecting user: $e');
@@ -246,6 +274,18 @@ class UserService {
       });
     } catch (e) {
       throw 'Failed to update privacy settings: $e';
+    }
+  }
+
+  /// Update user's notification settings
+  Future<void> updateUserNotificationSettings(String uid, bool enabled) async {
+    try {
+      await usersCollection.doc(uid).update({
+        'notificationsEnabled': enabled,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw 'Failed to update notification settings: $e';
     }
   }
 

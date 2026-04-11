@@ -69,6 +69,8 @@ dependencies:
   flutter_dotenv: ^6.0.0
   liquid_pull_to_refresh: ^3.0.1
   confetti: ^0.8.0
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
 
 dev_dependencies:
   flutter_test:

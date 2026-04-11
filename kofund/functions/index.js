@@ -401,6 +401,8 @@ exports.sendCommunityNotification = onCall(
         type = "announcement",
         programId = null,
         senderName = "KoFund",
+        skipPush = false, // 🆕 NEW: Option to skip push notification delivery
+        targetRole = null, // 🆕 NEW: Filter by role (e.g., 'admin')
         data: notificationData = {}
       } = data || {};
       
@@ -409,6 +411,7 @@ exports.sendCommunityNotification = onCall(
       console.log("Title:", title);
       console.log("Sender:", auth.uid);
       console.log("Type:", type);
+      console.log("Skip Push:", skipPush);
       
       if (!communityId || !title || !body) {
         throw new HttpsError("invalid-argument", "Missing required fields: communityId, title, body");
@@ -459,15 +462,23 @@ exports.sendCommunityNotification = onCall(
       
       console.log(`📱 Found ${tokensSnapshot.size} active token entries for community ${communityId}`);
       
-      // 4. ⭐ BACKUP: Get tokens from primary user profiles
-      const communityMembersSnapshot = await db
-        .collection('users')
-        .where('communityId', '==', communityId)
-        .where('isApproved', '==', true)
-        .where('isVirtualUser', '!=', true)
-        .get();
+      if (targetRole) {
+        communityMembersSnapshot = await db
+          .collection('users')
+          .where('communityId', '==', communityId)
+          .where('role', '==', targetRole)
+          .where('isVirtualUser', '!=', true)
+          .get();
+      } else {
+        communityMembersSnapshot = await db
+          .collection('users')
+          .where('communityId', '==', communityId)
+          .where('isApproved', '==', true)
+          .where('isVirtualUser', '!=', true)
+          .get();
+      }
         
-      console.log(`👥 Found ${communityMembersSnapshot.size} primary community members to check`);
+      console.log(`👥 Found ${communityMembersSnapshot.size} primary community members to check (Target Role: ${targetRole || 'all'})`);
 
       // Collect tokens and user info
       const allTokens = [];
@@ -584,7 +595,7 @@ exports.sendCommunityNotification = onCall(
       let pushNotificationsSent = 0;
       const failedTokens = [];
       
-      if (uniqueTokens.length > 0) {
+      if (!skipPush && uniqueTokens.length > 0) {
         // Split into chunks of 500 (FCM limit)
         const chunkSize = 500;
         
@@ -749,7 +760,7 @@ exports.sendUserNotification = onCall(
         throw new Error("Missing required fields: userId, title, body");
       }
       
-      // ⭐ NEW: Validate sender permissions
+      // ✅ FIXED: Validate sender permissions (check BOTH primary communityId AND list)
       if (auth.uid !== userId) {
         // Check if sender is admin or in same community
         const senderDoc = await db.collection('users').doc(auth.uid).get();
@@ -762,8 +773,16 @@ exports.sendUserNotification = onCall(
         
         // If community is specified, check if sender is in same community
         if (communityId && !isAdmin) {
+          const senderPrimaryCommunity = senderData.communityId || null;
           const senderCommunities = senderData.notificationCommunities || [];
-          if (!senderCommunities.includes(communityId)) {
+          
+          // ✅ Check BOTH the primary communityId AND the notificationCommunities array
+          const isAuthorized = senderPrimaryCommunity === communityId ||
+                               senderCommunities.includes(communityId);
+          
+          if (!isAuthorized) {
+            console.error(`❌ Sender ${auth.uid} not authorized for community ${communityId}`);
+            console.error(`   Primary: ${senderPrimaryCommunity}, List: ${senderCommunities.join(', ')}`);
             throw new Error("Sender is not a member of the specified community");
           }
         }

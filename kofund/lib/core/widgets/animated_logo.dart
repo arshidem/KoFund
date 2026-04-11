@@ -21,29 +21,35 @@ class AnimatedLogo extends StatefulWidget {
 class _AnimatedLogoState extends State<AnimatedLogo>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _shimmerAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 4000), // Slowed down significantly
+      duration: const Duration(milliseconds: 800), // Snappier pop entrance
       vsync: this,
     );
 
-    _shimmerAnimation = Tween<double>(begin: -1.5, end: 2.5).animate(
+    // ⭐ Scale effect: starts at 80% and goes to 100%
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeInOutSine,
+        curve: Curves.easeOutBack, // Gives it that slight premium 'bounce' feel
       ),
     );
 
-    if (widget.loopAnimation) {
-      _controller.repeat();
-    } else {
-      _controller.forward();
-    }
+    // ⭐ Opacity: fades from invisible to fully visible
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    _controller.forward();
   }
 
   @override
@@ -57,28 +63,13 @@ class _AnimatedLogoState extends State<AnimatedLogo>
     return SizedBox(
       width: widget.size,
       height: widget.size,
-      child: AnimatedBuilder(
-        animation: _shimmerAnimation,
-        builder: (context, child) {
-          return ShaderMask(
-            blendMode: BlendMode.srcATop,
-            shaderCallback: (bounds) {
-              return LinearGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.0),
-                  Colors.white.withValues(alpha: 0.5),
-                  Colors.white.withValues(alpha: 0.0),
-                ],
-                stops: const [0.4, 0.5, 0.6], // Tighter stops make the shimmer thinner
-                begin: Alignment(_shimmerAnimation.value - 1.0, _shimmerAnimation.value - 1.0),
-                end: Alignment(_shimmerAnimation.value + 1.0, _shimmerAnimation.value + 1.0),
-              ).createShader(bounds);
-            },
-            child: child,
-          );
-        },
-        child: CustomPaint(
-          painter: const _SvgLogoPainter(),
+      child: FadeTransition(
+        opacity: _opacityAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: CustomPaint(
+            painter: const _SvgLogoPainter(),
+          ),
         ),
       ),
     );

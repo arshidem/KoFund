@@ -83,6 +83,8 @@ class NotificationChannels {
         return 'community_channel';
       case NotificationType.contribution:
         return 'contributions_channel';
+      case NotificationType.pendingUser:
+        return 'admin_channel';
       default:
         return 'default_channel';
     }

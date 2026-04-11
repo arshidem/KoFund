@@ -171,6 +171,35 @@ String? getUserProviderType() {
     }
   }
 
+  // ✅ UPDATE NOTIFICATION SETTINGS
+  Future<bool> updateNotificationSettings(bool enabled) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return false;
+
+    _isLoading = true;
+    _error = null;
+    _safeNotifyListeners();
+
+    try {
+      await _userService.updateUserNotificationSettings(
+        currentUser.uid, 
+        enabled
+      );
+      
+      _isLoading = false;
+      _safeNotifyListeners();
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error updating notification settings: $e');
+      _error = 'Failed to update notification settings: $e';
+      _isLoading = false;
+      _safeNotifyListeners();
+      
+      return false;
+    }
+  }
+
 Future<bool> deleteUserAccount({String? password}) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {

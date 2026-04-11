@@ -1,7 +1,9 @@
 // lib/core/services/contribution_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/contributions/models/contribution_model.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/constants/notification_types.dart';
 
 class ContributionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,6 +14,26 @@ class ContributionService {
   Future<String> addContribution(ContributionModel contribution) async {
     try {
       final docRef = await _firestore.collection('contributions').add(contribution.toMap());
+      
+      // 🔔 Trigger Community Notification
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendCommunityNotification(
+          communityId: contribution.communityId,
+          title: '💰 New Contribution Recorded',
+          body: '${contribution.contributorName} added a contribution of \$${contribution.amount.toStringAsFixed(2)}.',
+          type: NotificationType.contribution,
+          programId: contribution.programId,
+          data: {
+            'contributionId': docRef.id,
+            'amount': contribution.amount,
+            'userId': contribution.userId,
+          },
+        );
+      } catch (e) {
+        debugPrint('⚠️ Contribution notification failed: $e');
+      }
+
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to add contribution: $e');

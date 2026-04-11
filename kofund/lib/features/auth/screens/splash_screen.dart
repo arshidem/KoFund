@@ -74,12 +74,9 @@ class _SplashScreenState extends State<SplashScreen> {
     debugPrint('🗑️ Cleared pending invite code from storage');
   }
 
-  /// Ensure splash shows for at least 2 seconds
+  /// Ensure splash shows for exactly 1 second to match logo shimmer
   void _startSplashTimer() {
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      _initializeAppWithTimeout();
-    });
+    _initializeAppWithTimeout();
   }
 
   /// Initialize notification system ASYNCHRONOUSLY
@@ -181,10 +178,16 @@ class _SplashScreenState extends State<SplashScreen> {
         listen: false,
       );
 
+      // ⭐ Start the 1.0-second animation timer
+      final splashTimer = Future.delayed(const Duration(milliseconds: 1000));
+
       // ⭐ WAIT for auth provider to be initialized
       debugPrint("⏳ Waiting for auth provider initialization...");
       await authProvider.waitForInitialization();
       debugPrint("✅ Auth provider initialized");
+
+      // ⭐ Ensure we wait at least for the 1-second shimmer to finish
+      await splashTimer;
 
       // Now perform navigation
       await _performInitialization(authProvider);
@@ -201,7 +204,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _performInitialization(
     app_auth.AppAuthProvider authProvider,
   ) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Artificial delay removed as it's handled by the splashTimer in _initializeAppWithTimeout
 
     debugPrint("=== SPLASH SCREEN INITIALIZATION ===");
     debugPrint("Auth Provider Status:");

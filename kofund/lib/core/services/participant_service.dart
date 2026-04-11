@@ -1,7 +1,9 @@
 // lib/core/services/participant_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/participants/models/participant_model.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/constants/notification_types.dart';
 
 class ParticipantService {
   final FirebaseFirestore _firestore;
@@ -284,10 +286,16 @@ class ParticipantService {
             'hasPaidContribution': currentHasPaid,
             'updatedAt': FieldValue.serverTimestamp(),
           });
+          
+          _notifyAdminsOfJoin(participant);
+          
           return docToReuse.id;
         }
       }
       final docRef = await _firestore.collection('participants').add(participant.toMap());
+      
+      _notifyAdminsOfJoin(participant);
+      
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to join program: $e');
@@ -527,6 +535,30 @@ class ParticipantService {
       }
     } catch (e) {
       throw Exception('Failed to update participant contribution: $e');
+    }
+  }
+  Future<void> _notifyAdminsOfJoin(ParticipantModel participant) async {
+    try {
+      final notificationService = NotificationService();
+      
+      // Get program info for title
+      final programDoc = await _firestore.collection('programs').doc(participant.programId).get();
+      final programName = programDoc.data()?['title'] ?? 'Program';
+      
+      await notificationService.sendCommunityNotification(
+        communityId: participant.communityId,
+        title: '👥 New Program Participant',
+        body: '${participant.userName} has joined $programName.',
+        type: NotificationType.program,
+        targetRole: 'admin',
+        programId: participant.programId,
+        data: {
+          'userId': participant.userId,
+          'programId': participant.programId,
+        },
+      );
+    } catch (e) {
+      debugPrint('⚠️ Admin join notification failed: $e');
     }
   }
 }

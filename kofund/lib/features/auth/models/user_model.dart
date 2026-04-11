@@ -18,6 +18,7 @@ class UserModel {
   final Timestamp? updatedAt;
   final Timestamp? approvedAt;
   final bool showDetailedProfile;
+  final bool notificationsEnabled;
 
   UserModel({
     required this.uid,
@@ -37,6 +38,7 @@ class UserModel {
     this.updatedAt,
     this.approvedAt,
     this.showDetailedProfile = false,
+    this.notificationsEnabled = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -95,6 +97,7 @@ class UserModel {
       updatedAt: parseTimestamp(map['updatedAt']),
       approvedAt: parseTimestamp(map['approvedAt']),
       showDetailedProfile: map['showDetailedProfile'] ?? false,
+      notificationsEnabled: map['notificationsEnabled'] ?? true,
     );
   }
 
@@ -116,6 +119,7 @@ class UserModel {
     Timestamp? updatedAt,
     Timestamp? approvedAt,
     bool? showDetailedProfile,
+    bool? notificationsEnabled,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -135,6 +139,7 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
       approvedAt: approvedAt ?? this.approvedAt,
       showDetailedProfile: showDetailedProfile ?? this.showDetailedProfile,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
 

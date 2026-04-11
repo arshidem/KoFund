@@ -29,6 +29,7 @@ import 'core/services/issue_service.dart';
 import 'core/services/notification_storage_service.dart';
 import 'core/services/fcm_token_service.dart';
 import 'core/services/secure_storage_service.dart';
+import 'core/services/storage_service.dart';
 
 // 🧠 Providers
 import 'features/auth/providers/app_auth_provider.dart';
@@ -366,6 +367,7 @@ class _AppProvidersState extends State<AppProviders> {
   late final NotificationStorageService notificationStorageService;
   late final FCMTokenService fcmTokenService;
   late final NotificationService notificationService;
+  late final StorageService storageService;
   
   String? _webInviteCode;
   
@@ -396,6 +398,7 @@ class _AppProvidersState extends State<AppProviders> {
     notificationStorageService = NotificationStorageService();
     fcmTokenService = FCMTokenService();
     notificationService = NotificationService();
+    storageService = StorageService();
     
     
     // Create auth provider
@@ -535,7 +538,10 @@ class _AppProvidersState extends State<AppProviders> {
 
         // 🌐 Community Provider
         ChangeNotifierProvider(
-          create: (_) => CommunityProvider(communityFirestoreService),
+          create: (_) => CommunityProvider(
+            communityFirestoreService,
+            storageService,
+          ),
         ),
 
         // 👥 User Provider

@@ -66,7 +66,7 @@ Future<void> _loadAppInfo() async {
     return 'other';
   }
   
-  bool _notificationsEnabled = true;
+  // Removed local _notificationsEnabled state
 
   @override
   Widget build(BuildContext context) {
@@ -88,97 +88,70 @@ Future<void> _loadAppInfo() async {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                   // App Settings Section
+                  // App Settings Section
                   _buildSectionHeader('App Preferences'),
-                  Card(
-                    color: AppColors.card(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                      child: Column(
-                        children: [
-                        _buildSettingsSwitch(
-                          context: context,
-                          title: 'Push Notifications',
-                          subtitle: 'Receive program updates and reminders',
-                          value: _notificationsEnabled,
-                          onChanged: (value) => setState(() => _notificationsEnabled = value),
-                          icon: Icons.notifications_active,
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsSwitch(
-                          context: context,
-                          title: 'Dark Mode',
-                          subtitle: 'Switch to dark theme',
-                          value: themeProvider.isDarkMode,
-                          onChanged: (value) => themeProvider.toggleTheme(value),
-                          icon: Icons.dark_mode,
-                          isCustomSlider: true,
-                        ),
-                      ],
-                    ),
+                  _buildSettingsSwitch(
+                    context: context,
+                    title: 'Push Notifications',
+                    subtitle: 'Receive program updates and reminders',
+                    value: authProvider.user?.notificationsEnabled ?? true,
+                    onChanged: (value) async {
+                      final success = await profileProvider.updateNotificationSettings(value);
+                      if (success) {
+                        await authProvider.refreshUserData();
+                        setState(() {});
+                      }
+                    },
+                    icon: Icons.notifications_active,
+                  ),
+                  _buildSettingsSwitch(
+                    context: context,
+                    title: 'Dark Mode',
+                    subtitle: 'Switch to dark theme',
+                    value: themeProvider.isDarkMode,
+                    onChanged: (value) => themeProvider.toggleTheme(value),
+                    icon: Icons.dark_mode,
+                    isCustomSlider: true,
                   ),
 
                   const SizedBox(height: 24),
 
                   // Account Section
                   _buildSectionHeader('Account'),
-                  Card(
-                    color: AppColors.card(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Change Password',
-                          icon: Icons.lock,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Privacy Settings',
-                          icon: Icons.privacy_tip,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
-                        ),
-                      ],
-                    ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Change Password',
+                    icon: Icons.lock,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Privacy Settings',
+                    icon: Icons.privacy_tip,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
                   ),
 
                   const SizedBox(height: 24),
 
                   // Support Section
                   _buildSectionHeader('Support'),
-                  Card(
-                    color: AppColors.card(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Help & FAQ',
-                          icon: Icons.help,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Contact Support',
-                          icon: Icons.support_agent,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Report Issue',
-                          icon: Icons.bug_report,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
-                        ),
-                      ],
-                    ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Help & FAQ',
+                    icon: Icons.help,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Contact Support',
+                    icon: Icons.support_agent,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Report Issue',
+                    icon: Icons.bug_report,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
                   ),
 
                   const SizedBox(height: 24),
@@ -191,12 +164,7 @@ Future<void> _loadAppInfo() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildSectionHeader('Developer Tools'),
-                            Card(
-                              color: AppColors.card(context),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: _buildSettingsItem(
+                             _buildSettingsItem(
                                 context: context,
                                 title: 'Developer Dashboard',
                                 icon: Icons.developer_mode,
@@ -208,7 +176,6 @@ Future<void> _loadAppInfo() async {
                                 ),
                                 color: Colors.blue,
                               ),
-                            ),
                             const SizedBox(height: 24),
                           ],
                         );
@@ -219,45 +186,32 @@ Future<void> _loadAppInfo() async {
 
                   // About Section
                   _buildSectionHeader('About'),
-                  Card(
-                    color: AppColors.card(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Terms of Service',
-                          icon: Icons.description,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Privacy Policy',
-                          icon: Icons.security,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'Community Guidelines',
-                          icon: Icons.groups,
-                          onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
-                        ),
-                        Divider(height: 1, color: AppColors.border(context)),
-                        _buildSettingsItem(
-                          context: context,
-                          title: 'App Version',
-                          icon: Icons.info,
-                          onTap: _showAppInfo,
-                          trailing: Text(
-                            'v$appVersion',
-                            style: TextStyle(color: AppColors.textSecondary(context)),
-                          ),
-                        ),
-                      ],
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Terms of Service',
+                    icon: Icons.description,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Privacy Policy',
+                    icon: Icons.security,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'Community Guidelines',
+                    icon: Icons.groups,
+                    onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
+                  ),
+                  _buildSettingsItem(
+                    context: context,
+                    title: 'App Version',
+                    icon: Icons.info,
+                    onTap: _showAppInfo,
+                    trailing: Text(
+                      'v$appVersion',
+                      style: TextStyle(color: AppColors.textSecondary(context)),
                     ),
                   ),
 

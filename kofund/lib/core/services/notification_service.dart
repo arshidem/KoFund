@@ -30,6 +30,10 @@ class NotificationService {
   late NotificationStorageService _storage;
   late FCMTokenService _tokenService;
 
+  // ⭐ NEW: Callbacks for notification actions to avoid circular dependencies
+  Future<void> Function(Map<String, dynamic>)? onApproveUser;
+  Future<void> Function(Map<String, dynamic>)? onRejectUser;
+
   // ⭐ NEW: Store notification preferences
   static const String _notificationPrefsKey = 'notification_settings';
   
@@ -296,7 +300,8 @@ if (user != null) {
 
     await _localNotifications.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse: _onNotificationClick,
+      onDidReceiveNotificationResponse: _onDidReceiveNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
     await NotificationChannels.createAllChannels(_localNotifications);
@@ -464,45 +469,59 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
 
   Future<void> _showLocalNotification(AppNotification notification) async {
     try {
-      final androidDetails = AndroidNotificationDetails(
-        NotificationChannels.getChannelId(notification.type),
-        NotificationChannels.getChannelName(notification.type),
-        channelDescription: NotificationChannels.getChannelName(notification.type),
-        importance: Importance.high,
-        priority: Priority.high,
-        color: notification.priorityColor,
-        styleInformation: BigTextStyleInformation(
-          notification.body,
-          htmlFormatBigText: true,
-          contentTitle: notification.title,
-          htmlFormatContentTitle: true,
-        ),
-        autoCancel: true,
-        showWhen: true,
-        enableLights: true,
-        enableVibration: true,
-      );
-
-      final iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      final details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
+      final List<AndroidNotificationAction> actions = [];
+      if (notification.type == NotificationType.pendingUser) {
+        actions.add(const AndroidNotificationAction(
+          'approve_user',
+          'Approve',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ));
+        actions.add(const AndroidNotificationAction(
+          'reject_user',
+          'Reject',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ));
+      }
 
       await _localNotifications.show(
         notification.hashCode,
         notification.title,
         notification.body,
-        details,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            NotificationChannels.getChannelId(notification.type),
+            NotificationChannels.getChannelName(notification.type),
+            channelDescription: NotificationChannels.getChannelName(notification.type),
+            importance: Importance.high,
+            priority: Priority.high,
+            color: notification.priorityColor,
+            styleInformation: BigTextStyleInformation(
+              notification.body,
+              htmlFormatBigText: true,
+              contentTitle: notification.title,
+              htmlFormatContentTitle: true,
+            ),
+            autoCancel: true,
+            showWhen: true,
+            enableLights: true,
+            enableVibration: true,
+            actions: actions,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            categoryIdentifier: notification.type == NotificationType.pendingUser ? 'pending_user_actions' : null,
+          ),
+        ),
         payload: jsonEncode({
           'notificationId': notification.id,
           'type': notification.type.name,
           'deepLink': notification.deepLink,
+          'userId': notification.data['userId'], // Target user ID for actions
+          'communityId': notification.data['communityId'],
           ...notification.data,
         }),
       );
@@ -513,20 +532,54 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
     }
   }
 
-  void _onNotificationClick(NotificationResponse response) {
-    debugPrint("🎯 Local notification clicked");
+  void _onDidReceiveNotificationResponse(NotificationResponse response) {
+    debugPrint("🎯 Notification response received: ${response.actionId}");
     try {
       if (response.payload != null) {
         final data = jsonDecode(response.payload!);
-        debugPrint("📦 Payload data: $data");
-        if (data['notificationId'] != null) {
-          _storage.markAsRead(data['notificationId']);
+        
+        // Handle Action Buttons
+        if (response.actionId == 'approve_user') {
+          _handleActionApproveUser(data);
+        } else if (response.actionId == 'reject_user') {
+          _handleActionRejectUser(data);
+        } else {
+          // Standard click
+          if (data['notificationId'] != null) {
+            _storage.markAsRead(data['notificationId']);
+          }
+          // TODO: Handle deep links or navigation if needed
         }
       }
     } catch (e) {
-      debugPrint("❌ Error processing notification click: $e");
+      debugPrint("❌ Error processing notification response: $e");
     }
   }
+
+  // Action Handlers (Forward to injected callbacks)
+  Future<void> _handleActionApproveUser(Map<String, dynamic> data) async {
+    if (onApproveUser != null) {
+      debugPrint("✅ Executing injected Approve callback");
+      await onApproveUser!(data);
+    } else {
+      debugPrint("⚠️ No Approve callback registered in NotificationService");
+    }
+  }
+
+  Future<void> _handleActionRejectUser(Map<String, dynamic> data) async {
+    if (onRejectUser != null) {
+      debugPrint("❌ Executing injected Reject callback");
+      await onRejectUser!(data);
+    } else {
+      debugPrint("⚠️ No Reject callback registered in NotificationService");
+    }
+  }
+
+@pragma('vm:entry-point')
+static void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Handle background action if needed
+  debugPrint("🎯 Background notification tap: ${notificationResponse.actionId}");
+}
 
   // Public API
   Future<String?> getFCMToken() => _messaging.getToken();
@@ -539,27 +592,6 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
   Future<void> unsubscribeFromTopic(String topic) async {
     await _messaging.unsubscribeFromTopic(topic);
     debugPrint("✅ Unsubscribed from topic: $topic");
-  }
-
-  // Test method
-  Future<void> sendTestNotification() async {
-    try {
-      final testNotification = AppNotification(
-        id: 'test_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Test Notification 🔔',
-        body: 'This is a test notification from KoFund. Time: ${DateTime.now().toLocal()}',
-        type: NotificationType.announcement,
-        priority: NotificationPriority.normal,
-        timestamp: DateTime.now(),
-      );
-      
-      await _storage.saveNotification(testNotification);
-      await _showLocalNotification(testNotification);
-      
-      debugPrint("✅ Test notification sent successfully");
-    } catch (e) {
-      debugPrint("❌ Error sending test notification: $e");
-    }
   }
 
   // ⭐ NEW: Update user's communities (call when user joins/leaves)
@@ -591,9 +623,11 @@ Future<void> sendCommunityNotification({
   Map<String, dynamic> data = const {},
   String? programId,
   String? senderName,
+  bool skipPush = false, // 🆕 NEW: Option to skip push notification
+  String? targetRole, // 🆕 NEW: Filter by role (e.g., 'admin')
 }) async {
   try {
-    debugPrint("📢 Calling Cloud Function: sendCommunityNotification");
+    debugPrint("📢 Calling Cloud Function: sendCommunityNotification (skipPush: $skipPush)");
     
     final currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -635,6 +669,8 @@ Future<void> sendCommunityNotification({
       'programId': programId,
       'senderName': senderName ?? currentUserName,
       'senderId': currentUser.uid, // ⭐ ADD: For validation in Cloud Function
+      'skipPush': skipPush, // 🆕 PASS SKIP PUSH FLAG
+      'targetRole': targetRole, // 🆕 PASS TARGET ROLE
       'data': {
         ...data,
         'senderId': currentUser.uid,
@@ -686,73 +722,6 @@ Future<void> sendCommunityNotification({
     debugPrint("📌 Stack trace: $stackTrace");
   }
 }
-
-  // Debug functions
-  Future<void> debugUserTokens(String communityId) async {
-    try {
-      debugPrint("🔍 Debugging user tokens for community: $communityId");
-      
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = functions.httpsCallable('debugUserTokens');
-      
-      final result = await callable.call({
-        'communityId': communityId,
-      });
-      
-      final resultData = result.data as Map<String, dynamic>;
-      
-      debugPrint("📊 ===== TOKEN DEBUG REPORT =====");
-      debugPrint("✅ Success: ${resultData['success']}");
-      debugPrint("🏘️ Community ID: ${resultData['communityId']}");
-      debugPrint("👥 Total Users: ${resultData['totalUsers']}");
-      debugPrint("📱 Total Tokens: ${resultData['totalTokens']}");
-      
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint("❌ Functions error: ${e.code} - ${e.message}");
-    } catch (e) {
-      debugPrint("❌ Error debugging tokens: $e");
-    }
-  }
-
-  Future<void> debugCheckUserEligibility(String communityId) async {
-    try {
-      debugPrint("🔍 Checking user eligibility for notifications");
-      
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = functions.httpsCallable('checkUserNotificationEligibility');
-      
-      final result = await callable.call({
-        'communityId': communityId,
-      });
-      
-      final resultData = result.data as Map<String, dynamic>;
-      
-      debugPrint("📊 ===== ELIGIBILITY REPORT =====");
-      debugPrint("✅ Success: ${resultData['success']}");
-      
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint("❌ Functions error: ${e.code} - ${e.message}");
-    } catch (e) {
-      debugPrint("❌ Error checking eligibility: $e");
-    }
-  }
-
-  Future<void> testCloudFunctions() async {
-    try {
-      debugPrint("🧪 Testing Cloud Functions...");
-      
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('testKoFund');
-      
-      final result = await callable.call();
-      final resultData = result.data as Map<String, dynamic>;
-      
-      debugPrint("✅ Cloud Functions Test Result: $resultData");
-      
-    } catch (e) {
-      debugPrint("❌ Cloud Functions test failed: $e");
-    }
-  }
 
 // ⭐ UPDATED: Fallback method (Robust version)
 Future<void> _sendCommunityNotificationLocalFallback({
@@ -848,12 +817,19 @@ Future<void> sendUserNotification({
     // Check if sender and receiver are in same community
     if (communityId != null) {
       final senderDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-      final senderCommunities = (senderDoc.data()?['notificationCommunities'] as List<dynamic>?)
+      final senderData = senderDoc.data() ?? {};
+      final senderPrimaryCommunity = senderData['communityId'] as String?;
+      final senderNotifCommunities = (senderData['notificationCommunities'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList() ?? [];
       
-      if (!senderCommunities.contains(communityId)) {
-        debugPrint("❌ Sender not in community $communityId");
+      // ✅ Check BOTH primary communityId AND notificationCommunities list
+      final isAuthorized = senderPrimaryCommunity == communityId ||
+                           senderNotifCommunities.contains(communityId);
+      
+      if (!isAuthorized) {
+        debugPrint("❌ Sender not authorized for community $communityId");
+        debugPrint("   Primary: $senderPrimaryCommunity, List: ${senderNotifCommunities.join(', ')}");
         return;
       }
     }

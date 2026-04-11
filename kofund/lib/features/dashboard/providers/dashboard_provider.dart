@@ -230,6 +230,7 @@ Future<void> loadDashboardData(String communityId) async {
     return {
       // Community Info
       'clubName': _currentCommunity?.name ?? '',
+      'clubLogo': _currentCommunity?.logoUrl,
       'clubType': _currentCommunity?.type ?? '',
       'membersCount': _approvedMembersCount,
       

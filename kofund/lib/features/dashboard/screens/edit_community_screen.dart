@@ -5,6 +5,8 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/constants/community_types.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/community/providers/community_provider.dart';
+import 'package:kofund/features/community/models/community_model.dart';
+import 'package:kofund/features/dashboard/providers/dashboard_provider.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -50,10 +52,6 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
         setState(() => _isOnline = isConnected);
       }
     });
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadCommunityData();
-    });
   }
 
   @override
@@ -62,32 +60,6 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
-  }
-
-  void _loadCommunityData() {
-    final communityProvider = context.read<CommunityProvider>();
-    final authProvider = context.read<AppAuthProvider>();
-    
-    final community = communityProvider.currentCommunity;
-    final user = authProvider.user;
-    
-    if (community != null && user != null && !_isInitialized) {
-      _nameController.text = community.name;
-      _descriptionController.text = community.description ?? '';
-      _selectedType = community.type;
-      
-      if (community.location != null && community.location is Map) {
-        final locationMap = community.location as Map<String, dynamic>;
-        _locationController.text = locationMap['address'] ?? '';
-      }
-      
-      if (community.settings != null) {
-        _settings = Map<String, dynamic>.from(community.settings!);
-      }
-      
-      _isInitialized = true;
-      setState(() {});
-    }
   }
 
   Future<void> _updateCommunity() async {
@@ -116,7 +88,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
         communityId: community.communityId,
         name: _nameController.text.trim(),
         type: _selectedType,
-        description: _descriptionController.text.trim(),
+        description: _descriptionController.text.trim(), // Still passed but can be empty/short
         location: _locationController.text.trim().isNotEmpty 
             ? _locationController.text.trim()
             : null,
@@ -138,6 +110,21 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     }
   }
 
+  Widget _buildSectionHeader(String title, {bool isRequired = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        isRequired ? '${title.toUpperCase()} *' : title.toUpperCase(),
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context).withValues(alpha: 0.6),
+          fontSize: 11,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
@@ -154,6 +141,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildSectionHeader(label, isRequired: isRequired),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -161,12 +149,6 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
           maxLength: maxLength,
           validator: validator,
           decoration: InputDecoration(
-            labelText: isRequired ? '$label *' : label,
-            labelStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
             hintText: hint,
             hintStyle: TextStyle(
               color: AppColors.textTertiary(context),
@@ -177,7 +159,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.primary(context).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
@@ -215,22 +197,118 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     );
   }
 
+  Widget _buildCommunityImageSection(CommunityProvider provider, CommunityModel community) {
+    final String? logoUrl = community.logoUrl;
+    final String initial = community.name.isNotEmpty ? community.name[0].toUpperCase() : 'C';
+
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () async {
+              final success = await provider.pickAndUploadLogo(community.communityId);
+              if (success && mounted) {
+                SnackbarHelper.showSuccess(context, 'Logo updated successfully!');
+              } else if (provider.error != null && mounted) {
+                SnackbarHelper.showError(context, provider.error!);
+              }
+            },
+            child: Stack(
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primary(context).withValues(alpha: 0.2),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: logoUrl != null && logoUrl.isNotEmpty
+                      ? ClipOval(
+                          child: Image.network(
+                            logoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildInitialPlaceholder(initial),
+                          ),
+                        )
+                      : _buildInitialPlaceholder(initial),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(context),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                if (provider.isLoading)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Change Community Logo',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary(context),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInitialPlaceholder(String initial) {
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: AppColors.primary(context),
+          fontSize: 48,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildCommunityTypeDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'Community Category',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
+        _buildSectionHeader('Community Category'),
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
@@ -322,7 +400,37 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final communityProvider = context.watch<CommunityProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final community = communityProvider.currentCommunity;
+    final user = authProvider.user;
+
+    final dashboardProvider = context.read<DashboardProvider>();
+    final cid = user?.communityId ?? dashboardProvider.getDashboardStats()['communityId']?.toString();
+    
+    // Attempt to use community from either provider
+    final effectiveCommunity = community ?? dashboardProvider.currentCommunity;
+
+    if (effectiveCommunity != null && !_isInitialized) {
+      _nameController.text = effectiveCommunity.name;
+      _descriptionController.text = effectiveCommunity.description ?? '';
+      _selectedType = effectiveCommunity.type;
+      
+      if (effectiveCommunity.location != null && effectiveCommunity.location is Map) {
+        final locationMap = effectiveCommunity.location as Map<String, dynamic>;
+        _locationController.text = locationMap['address'] ?? '';
+      }
+      
+      if (effectiveCommunity.settings != null) {
+        _settings = Map<String, dynamic>.from(effectiveCommunity.settings!);
+      }
+      
+      _isInitialized = true;
+    } else if (effectiveCommunity == null && cid != null && !communityProvider.isLoading) {
+      // Trigger load if missing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        communityProvider.loadCurrentCommunity(cid);
+      });
+    }
 
     return GradientSheetScaffold(
       title: 'Settings',
@@ -395,6 +503,9 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                   else ...[
                     const SizedBox(height: 16),
                     
+                    // Community Logo Section
+                    _buildCommunityImageSection(communityProvider, community),
+                    
                     // Community Name
                     _buildInputField(
                       controller: _nameController,
@@ -418,20 +529,12 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                     _buildInputField(
                       controller: _descriptionController,
                       label: 'Description',
-                      hint: 'Describe your community',
+                      hint: 'Describe your community (Optional)',
                       icon: Icons.description,
                       maxLines: 3,
                       maxLength: 500,
-                      isRequired: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter community description';
-                        }
-                        if (value.trim().length < 10) {
-                          return 'Description must be at least 10 characters';
-                        }
-                        return null;
-                      },
+                      isRequired: false,
+                      validator: null,
                     ),
 
                     _buildCommunityTypeDropdown(),
@@ -495,8 +598,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                             'Created Date',
                             '${community.createdAt.toDate().day}/${community.createdAt.toDate().month}/${community.createdAt.toDate().year}',
                           ),
-                          const SizedBox(height: 8),
-                          _buildInfoRow('Member Count', '${community.totalMembers} Members'),
+                         
                         ],
                       ),
                     ),

@@ -249,26 +249,32 @@ if (_isLoadingProfile) {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        slivers: [
-          CupertinoSliverRefreshControl(
-            onRefresh: _onRefresh,
-          ),
-          _buildSliverAppBar(context, user),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 24),
-                _buildMetricBoard(context, totalParticipations, totalContributions),
-                const SizedBox(height: 32),
-                _buildNewControlCenter(context, user),
-                const SizedBox(height: 100),
-              ]),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            _buildSliverAppBar(context, user),
+          ];
+        },
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            CupertinoSliverRefreshControl(
+              onRefresh: _onRefresh,
             ),
-          ),
-        ],
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 24),
+                  _buildMetricBoard(context, totalParticipations, totalContributions),
+                  const SizedBox(height: 32),
+                  _buildNewControlCenter(context, user),
+                  const SizedBox(height: 100),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

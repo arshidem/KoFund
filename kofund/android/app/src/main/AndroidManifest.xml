@@ -169,6 +169,12 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Declare image_cropper activity -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
     </application>
 
 </manifest>

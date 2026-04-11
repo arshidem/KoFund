@@ -180,6 +180,8 @@ class AppNotification {
         return Icons.groups;
       case NotificationType.contribution:
         return Icons.currency_rupee;
+      case NotificationType.pendingUser:
+        return Icons.person_add;
     }
   }
 

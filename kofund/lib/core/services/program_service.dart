@@ -36,6 +36,7 @@ Future<String> createProgram(ProgramModel program, {bool sendNotification = true
       try {
         final notificationService = NotificationService();
         
+        // A. Send notification to all community members (including PUSH)
         await notificationService.sendCommunityNotification(
           communityId: program.communityId,
           title: 'New Program Created 🎯',
@@ -48,8 +49,26 @@ Future<String> createProgram(ProgramModel program, {bool sendNotification = true
           },
           programId: programId,
           senderName: currentUser.displayName ?? 'User',
+          skipPush: false, // 🔔 NOW: Everyone gets a push notification
         );
-        debugPrint('📢 Community notification sent for new program: $programId');
+
+        // B. Send push notification ALSO to the creator (Current User)
+        // Since sendCommunityNotification excludes the sender, we notify them specifically
+        await notificationService.sendUserNotification(
+          userId: currentUser.uid,
+          title: 'Program Created Successfully! ✅',
+          body: 'Your program "${program.title}" is now active.',
+          type: NotificationType.program,
+          data: {
+            'programId': programId,
+            'isCreator': true,
+          },
+          programId: programId,
+          communityId: program.communityId,
+          senderName: 'KoFund',
+        );
+        
+        debugPrint('📢 Specialized notifications sent for new program: $programId');
       } catch (notificationError) {
         debugPrint('⚠️ Failed to send notification (non-critical): $notificationError');
         // Don't fail the program creation if notification fails

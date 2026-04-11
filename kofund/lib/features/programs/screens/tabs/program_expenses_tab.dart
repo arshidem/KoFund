@@ -779,51 +779,20 @@ Widget _buildExpenseSummary(BuildContext context) {
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             border: Border.all(color: AppColors.border(context), width: 1),
           ),
-          child: PopupMenuButton<String>(
-            icon: Icon(Icons.tune, color: AppColors.primary(context), size: 20),
-            padding: EdgeInsets.zero,
-            onSelected: (value) {
-              setState(() {
-                if (value.startsWith('status:')) {
-                  _filterStatus = value.substring(7);
-                } else if (value.startsWith('cat:')) {
-                  _filterCategory = value.substring(4);
-                } else if (value.startsWith('pay:')) {
-                  _filterPaymentMethod = value.substring(4);
-                }
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                enabled: false,
-                child: Text('Filter by Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  HapticHelper.light();
+                  _showFilterBottomSheet(context);
+                },
+                child: Center(
+                  child: Icon(Icons.tune, color: AppColors.primary(context), size: 20),
+                ),
               ),
-              _buildFilterMenuItem('status:all', 'All Status', Icons.list_alt_rounded, isStatus: true, isPayment: false),
-              _buildFilterMenuItem('status:approved', 'Approved', Icons.check_circle_outline_rounded, isStatus: true, isPayment: false),
-              _buildFilterMenuItem('status:pending', 'Pending', Icons.pending_outlined, isStatus: true, isPayment: false),
-              _buildFilterMenuItem('status:rejected', 'Rejected', Icons.cancel_outlined, isStatus: true, isPayment: false),
-              
-              const PopupMenuDivider(),
-              
-              const PopupMenuItem(
-                enabled: false,
-                child: Text('Filter by Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
-              ),
-              _buildFilterMenuItem('cat:all', 'All Categories', Icons.category_outlined, isStatus: false, isPayment: false),
-              ..._categories.map((cat) => 
-                _buildFilterMenuItem('cat:$cat', cat.substring(0,1).toUpperCase() + cat.substring(1), Icons.label_outline_rounded, isStatus: false, isPayment: false)
-              ),
-
-              const PopupMenuDivider(),
-
-              const PopupMenuItem(
-                enabled: false,
-                child: Text('Filter by Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
-              ),
-              _buildFilterMenuItem('pay:all', 'All Methods', Icons.payments_outlined, isStatus: false, isPayment: true),
-              _buildFilterMenuItem('pay:cash', 'Cash', Icons.money, isStatus: false, isPayment: true),
-              _buildFilterMenuItem('pay:upi', 'UPI', Icons.phone_android, isStatus: false, isPayment: true),
-            ],
+            ),
           ),
         ),
       ],
@@ -831,47 +800,218 @@ Widget _buildExpenseSummary(BuildContext context) {
     );
   }
 
-  PopupMenuItem<String> _buildFilterMenuItem(String value, String label, IconData icon, {required bool isStatus, required bool isPayment}) {
-    String actualValue;
-    if (isStatus) {
-      actualValue = value.substring(7);
-    } else if (isPayment) {
-      actualValue = value.substring(4);
-    } else {
-      actualValue = value.substring(4);
-    }
-
-    bool isSelected;
-    if (isStatus) {
-      isSelected = _filterStatus == actualValue;
-    } else if (isPayment) {
-      isSelected = _filterPaymentMethod == actualValue;
-    } else {
-      isSelected = _filterCategory == actualValue;
-    }
-    
-    return PopupMenuItem<String>(
-      value: value,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
-            ),
-          ),
-        ],
+  void _showFilterBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Widget buildFilterColumn(String title, List<Widget> children) {
+              return Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...children,
+                  ],
+                ),
+              );
+            }
+
+            Widget buildFilterItem(String label, IconData icon, bool isSelected, VoidCallback onTap) {
+              return InkWell(
+                onTap: () {
+                  onTap();
+                  HapticHelper.selection();
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary(context).withValues(alpha: 0.1) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 8,
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border(context),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter Expenses',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            _filterStatus = 'all';
+                            _filterCategory = 'all';
+                            _filterPaymentMethod = 'all';
+                          });
+                          setState(() {});
+                          HapticHelper.medium();
+                        },
+                        child: Text(
+                          'Reset',
+                          style: TextStyle(color: AppColors.primary(context)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Status Column
+                      buildFilterColumn(
+                        'STATUS',
+                        [
+                          buildFilterItem('All', Icons.list_alt_rounded, _filterStatus == 'all', () {
+                            setSheetState(() => _filterStatus = 'all');
+                            setState(() {});
+                          }),
+                          buildFilterItem('Approved', Icons.check_circle_outline_rounded, _filterStatus == 'approved', () {
+                            setSheetState(() => _filterStatus = 'approved');
+                            setState(() {});
+                          }),
+                          buildFilterItem('Pending', Icons.pending_outlined, _filterStatus == 'pending', () {
+                            setSheetState(() => _filterStatus = 'pending');
+                            setState(() {});
+                          }),
+                          buildFilterItem('Rejected', Icons.cancel_outlined, _filterStatus == 'rejected', () {
+                            setSheetState(() => _filterStatus = 'rejected');
+                            setState(() {});
+                          }),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      // Category Column
+                      buildFilterColumn(
+                        'CATEGORY',
+                        [
+                          buildFilterItem('All', Icons.category_outlined, _filterCategory == 'all', () {
+                            setSheetState(() => _filterCategory = 'all');
+                            setState(() {});
+                          }),
+                          ..._categories.map((cat) => buildFilterItem(
+                            cat.substring(0, 1).toUpperCase() + cat.substring(1),
+                            Icons.label_outline_rounded,
+                            _filterCategory == cat,
+                            () {
+                              setSheetState(() => _filterCategory = cat);
+                              setState(() {});
+                            },
+                          )),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      // Payment Column
+                      buildFilterColumn(
+                        'PAYMENT',
+                        [
+                          buildFilterItem('All', Icons.payments_outlined, _filterPaymentMethod == 'all', () {
+                            setSheetState(() => _filterPaymentMethod = 'all');
+                            setState(() {});
+                          }),
+                          buildFilterItem('Cash', Icons.money, _filterPaymentMethod == 'cash', () {
+                            setSheetState(() => _filterPaymentMethod = 'cash');
+                            setState(() {});
+                          }),
+                          buildFilterItem('UPI', Icons.phone_android, _filterPaymentMethod == 'upi', () {
+                            setSheetState(() => _filterPaymentMethod = 'upi');
+                            setState(() {});
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        ),
+                      ),
+                      child: const Text('Apply Filters', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
+
 
 Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
   return Visibility(

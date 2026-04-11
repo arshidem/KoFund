@@ -1,13 +1,20 @@
-﻿import 'dart:async';
+import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
 import 'package:kofund/features/community/models/community_model.dart';
 import 'package:kofund/core/constants/community_types.dart';
+import 'package:kofund/core/services/storage_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'dart:io';
 
 class CommunityProvider with ChangeNotifier {
   final CommunityFirestoreService _communityService;
+  final StorageService _storageService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ImagePicker _picker = ImagePicker();
 
   CommunityModel? _currentCommunity;
   List<CommunityModel> _userCommunities = [];
@@ -35,7 +42,7 @@ class CommunityProvider with ChangeNotifier {
   int _monthlyProgramParticipants = 0;
   double _monthlyProgramCollected = 0;
 
-  CommunityProvider(this._communityService);
+  CommunityProvider(this._communityService, this._storageService);
 
   // Getters
   CommunityModel? get currentCommunity => _currentCommunity;
@@ -445,6 +452,97 @@ Future<void> regenerateInviteCode(String communityId) async {
       _error = 'Failed to update community: $e';
       _isLoading = false;
       notifyListeners();
+      return false;
+    }
+  }
+
+  // ✅ Upload community logo with size validation & compression
+  static const int _maxLogoSizeBytes = 2 * 1024 * 1024; // 2 MB hard limit
+
+  Future<bool> pickAndUploadLogo(String communityId) async {
+    try {
+      // Step 1: Pick from gallery
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 90, // High quality before crop
+      );
+
+      if (image == null) return false; // User cancelled picker
+
+      // Step 2: Crop to square (1:1 ratio — perfect for circular logo)
+      final CroppedFile? cropped = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 80,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Logo',
+            toolbarColor: const Color(0xFF00BFA6), // KoFund teal
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: const Color(0xFF00BFA6),
+            lockAspectRatio: true,
+            hideBottomControls: false,
+            initAspectRatio: CropAspectRatioPreset.square,
+          ),
+          IOSUiSettings(
+            title: 'Crop Logo',
+            aspectRatioLockEnabled: true,
+            minimumAspectRatio: 1.0,
+            resetAspectRatioEnabled: false,
+          ),
+        ],
+      );
+
+      if (cropped == null) return false; // User cancelled crop
+
+      // Step 3: Check file size AFTER crop + compression
+      final File croppedFile = File(cropped.path);
+      final int fileSizeBytes = await croppedFile.length();
+      const double limitMb = _maxLogoSizeBytes / (1024 * 1024);
+
+      if (fileSizeBytes > _maxLogoSizeBytes) {
+        _error = 'Image is too large (${(fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB). '
+                 'Please choose an image smaller than ${limitMb.toStringAsFixed(0)} MB.';
+        notifyListeners();
+        return false;
+      }
+
+      debugPrint('📸 Uploading logo: ${(fileSizeBytes / 1024).toStringAsFixed(1)} KB');
+
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      // Step 4: Upload to Firebase Storage
+      final String logoUrl = await _storageService.uploadCommunityLogo(
+        communityId,
+        croppedFile,
+      );
+
+      // Step 5: Persist URL to Firestore
+      await _communityService.updateCommunity(
+        communityId: communityId,
+        logoUrl: logoUrl,
+        name: _currentCommunity?.name ?? '',
+        type: _currentCommunity?.type ?? CommunityType.other,
+        description: _currentCommunity?.description ?? '',
+      );
+
+      // Step 6: Reload live data
+      await loadCurrentCommunity(communityId);
+
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('✅ Community logo updated successfully');
+      return true;
+    } catch (e) {
+      _error = 'Failed to upload logo: $e';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('❌ Logo upload failed: $e');
       return false;
     }
   }

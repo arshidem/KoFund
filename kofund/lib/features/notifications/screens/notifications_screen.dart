@@ -596,6 +596,8 @@ class NotificationCard extends StatelessWidget {
           return Colors.blue;
         case NotificationType.reminder:
           return Colors.orange;
+        case NotificationType.pendingUser:
+          return Colors.orangeAccent;
         default:
           return AppColors.primary(context);
       }

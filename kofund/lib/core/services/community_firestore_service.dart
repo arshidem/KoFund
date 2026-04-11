@@ -2,6 +2,9 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/community/models/community_model.dart';
 import 'package:kofund/core/constants/firebase_keys.dart';
+import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/constants/notification_types.dart';
 
 class CommunityFirestoreService {
   FirebaseFirestore get firestore => FirebaseFirestore.instance;
@@ -288,12 +291,27 @@ String _generateInviteLink(String inviteCode, String communityId) {
         'updatedAt': Timestamp.now(),
       });
 
-      batch.update(communityRef, {
-        'pendingMembers': FieldValue.increment(1),
-        'lastActivityAt': Timestamp.now(),
-      });
-
       await batch.commit();
+
+      // 🔔 Trigger Notification to Admins
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendCommunityNotification(
+          communityId: communityId,
+          title: '🆕 New Join Request',
+          body: '$userName has requested to join ${communityData['name']}.',
+          type: NotificationType.pendingUser,
+          targetRole: 'admin',
+          data: {
+            'userId': userId,
+            'userName': userName,
+            'communityId': communityId,
+            'deepLink': '/admin/members/pending',
+          },
+        );
+      } catch (e) {
+        debugPrint('⚠️ Admin notification failed: $e');
+      }
     } catch (e) {
       rethrow;
     }

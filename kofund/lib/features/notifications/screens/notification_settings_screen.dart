@@ -64,6 +64,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Community Updates';
       case NotificationType.contribution:
         return 'Contribution Notifications';
+      case NotificationType.pendingUser:
+        return 'New Member Requests';
     }
   }
 
@@ -93,6 +95,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Icons.groups;
       case NotificationType.contribution:
         return Icons.currency_rupee;
+      case NotificationType.pendingUser:
+        return Icons.person_add_rounded;
     }
   }
 
@@ -122,6 +126,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Colors.cyan;
       case NotificationType.contribution:
         return Colors.lightGreen;
+      case NotificationType.pendingUser:
+        return Colors.orangeAccent;
     }
   }
 
@@ -246,6 +252,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Community news and member activities';
       case NotificationType.contribution:
         return 'Contribution updates and confirmations';
+      case NotificationType.pendingUser:
+        return 'Alerts for new member join requests (Admins only)';
     }
   }
 }

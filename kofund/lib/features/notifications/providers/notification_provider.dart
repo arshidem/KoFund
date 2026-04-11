@@ -7,6 +7,7 @@ import 'package:kofund/core/services/fcm_token_service.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/user_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationStorageService _storage = NotificationStorageService();
@@ -55,7 +56,24 @@ class NotificationProvider extends ChangeNotifier {
   }) {
     _notificationService = notificationService;
     _tokenService = tokenService;
-    debugPrint('✅ NotificationProvider services initialized');
+    
+    // Register action callbacks
+    _notificationService.onApproveUser = (data) async {
+      final userId = data['userId'];
+      if (userId == null) return;
+      await UserService().approveUser(userId);
+      refresh();
+    };
+    
+    _notificationService.onRejectUser = (data) async {
+      final userId = data['userId'];
+      final communityId = data['communityId'];
+      if (userId == null || communityId == null) return;
+      await UserService().rejectUser(userId, communityId);
+      refresh();
+    };
+
+    debugPrint('✅ NotificationProvider services initialized and callbacks registered');
   }
 
   // ⭐ UPDATED: Listen to auth changes

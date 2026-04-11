@@ -11,6 +11,7 @@ enum NotificationType {
   community,
   contribution,
   program,
+  pendingUser,
 }
 
 enum NotificationPriority {
