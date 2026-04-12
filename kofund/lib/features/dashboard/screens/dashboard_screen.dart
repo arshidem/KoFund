@@ -32,6 +32,7 @@ import 'package:kofund/features/community/providers/community_provider.dart';
 import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
 import 'package:kofund/core/skeleton/members_skeleton.dart';
 import 'package:kofund/core/services/storage_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 // ADD THESE IMPORTS
 import 'package:badges/badges.dart' as badges;
@@ -560,10 +561,11 @@ void _initializeWidgetProviders(String userId, String communityId) {
       ),
       child: logoUrl != null && logoUrl.isNotEmpty
           ? ClipOval(
-              child: Image.network(
-                logoUrl,
+              child: CachedNetworkImage(
+                imageUrl: logoUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildInitialPlaceholder(initial, size),
+                placeholder: (context, url) => _buildInitialPlaceholder(initial, size),
+                errorWidget: (context, url, error) => _buildInitialPlaceholder(initial, size),
               ),
             )
           : _buildInitialPlaceholder(initial, size),

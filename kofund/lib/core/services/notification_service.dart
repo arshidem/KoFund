@@ -15,6 +15,8 @@ import './fcm_token_service.dart';
 import 'package:kofund/core/utils/notification_channels.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:kofund/main.dart' show navigatorKey;
+
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -121,13 +123,31 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
     // ⭐ REMOVED: Firestore saving logic here
     // Cloud Function already saved the notification
 
-    // Show local notification
-    const androidDetails = AndroidNotificationDetails(
-      'default_channel',
-      'Default',
-      channelDescription: 'Default notifications',
-      importance: Importance.high,
+    // Show local notification with actions in background
+    final List<AndroidNotificationAction> actions = [];
+    final type = _parseNotificationTypeFromString(data['type']);
+    final programId = data['programId'];
+
+    if (type == NotificationType.pendingUser) {
+      actions.add(const AndroidNotificationAction('approve_user', 'Approve', showsUserInterface: true, cancelNotification: true));
+      actions.add(const AndroidNotificationAction('reject_user', 'Reject', showsUserInterface: true, cancelNotification: true));
+    }
+    
+    if ((type == NotificationType.announcement || type == NotificationType.program) && programId != null) {
+      actions.add(const AndroidNotificationAction('join_program', 'Join Program 🎯', showsUserInterface: true, cancelNotification: true));
+    }
+
+    final channelId = NotificationChannels.getChannelId(type);
+    final channelName = NotificationChannels.getChannelName(type);
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelName,
+      importance: Importance.max,
       priority: Priority.high,
+      actions: actions,
+      styleInformation: BigTextStyleInformation(appNotification.body),
     );
     
     const iosDetails = DarwinNotificationDetails(
@@ -136,7 +156,7 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
       presentSound: true,
     );
     
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
@@ -147,6 +167,10 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
       appNotification.title,
       appNotification.body,
       details,
+      payload: jsonEncode({
+        ...data,
+        'id': notificationId,
+      }),
     );
     
     debugPrint("✅ Background notification handled");
@@ -157,9 +181,10 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
 
   static NotificationType _parseNotificationTypeFromString(String? type) {
     if (type == null) return NotificationType.announcement;
+    String typeStr = type.contains('.') ? type.split('.').last : type;
     try {
       return NotificationType.values.firstWhere(
-        (e) => e.name == type.toLowerCase(),
+        (e) => e.name.toLowerCase() == typeStr.toLowerCase(),
       );
     } catch (_) {
       return NotificationType.announcement;
@@ -384,8 +409,20 @@ Future<void> _handleForegroundMessage(RemoteMessage message) async {
   Future<void> _handleNotificationMessage(RemoteMessage message) async {
     try {
       final notification = _createNotificationFromMessage(message);
-      await _storage.markAsRead(notification.id);
-      debugPrint("🎯 Notification clicked: ${notification.title}");
+      debugPrint("🎯 Notification tapped: ${notification.title}");
+
+      // Import the navigatorKey from main.dart to navigate without a context
+      // Give the navigator a brief moment to be ready (cold start)
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final nav = navigatorKey.currentState;
+      if (nav == null) {
+        debugPrint("⚠️ Navigator not ready yet");
+        return;
+      }
+
+      // Navigate using the same logic as local notification taps
+      _navigateToDetailScreen(notification.data);
     } catch (e) {
       debugPrint("❌ Error handling notification message: $e");
     }
@@ -430,9 +467,11 @@ AppNotification _createNotificationFromMessage(RemoteMessage message) {
 
   NotificationType _parseNotificationType(String? type) {
     if (type == null) return NotificationType.announcement;
+    // Handle both "announcement" and "NotificationType.announcement"
+    String typeStr = type.contains('.') ? type.split('.').last : type;
     try {
       return NotificationType.values.firstWhere(
-        (e) => e.name == type.toLowerCase(),
+        (e) => e.name.toLowerCase() == typeStr.toLowerCase(),
       );
     } catch (_) {
       return NotificationType.announcement;
@@ -480,6 +519,18 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
         actions.add(const AndroidNotificationAction(
           'reject_user',
           'Reject',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ));
+      }
+
+      // Add Join action for program announcements
+      if ((notification.type == NotificationType.announcement || 
+           notification.type == NotificationType.program) && 
+          (notification.programId != null || notification.data['programId'] != null)) {
+        actions.add(const AndroidNotificationAction(
+          'join_program',
+          'Join Program 🎯',
           showsUserInterface: true,
           cancelNotification: true,
         ));
@@ -541,19 +592,89 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
         // Handle Action Buttons
         if (response.actionId == 'approve_user') {
           _handleActionApproveUser(data);
+          return;
         } else if (response.actionId == 'reject_user') {
           _handleActionRejectUser(data);
-        } else {
-          // Standard click
-          if (data['notificationId'] != null) {
-            _storage.markAsRead(data['notificationId']);
-          }
-          // TODO: Handle deep links or navigation if needed
+          return;
+        } else if (response.actionId == 'join_program') {
+          // Open detail screen first
+          _navigateToDetailScreen(data);
+          return;
         }
+
+        // Standard notification tap
+        if (data['notificationId'] != null) {
+          _storage.markAsRead(data['notificationId']);
+        }
+        
+        // Navigate to details
+        _navigateToDetailScreen(data);
       }
     } catch (e) {
       debugPrint("❌ Error processing notification response: $e");
     }
+  }
+
+  void handleNotificationTap(AppNotification notification) {
+    _navigateToDetailScreen({
+      ...notification.data,
+      'id': notification.id,
+      'title': notification.title,
+      'body': notification.body,
+      'programId': notification.programId,
+      'recipientId': notification.userId, // ✅ Avoid overwriting 'userId' in data
+    });
+  }
+
+  void _navigateToDetailScreen(Map<String, dynamic> data) async {
+    // Wait for navigator to be ready
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    final nav = navigatorKey.currentState;
+    if (nav == null) return;
+
+    final programId = data['programId'];
+    if (programId != null && programId.toString().isNotEmpty) {
+      debugPrint("🚀 Navigating directly to Program Details: $programId");
+      nav.pushNamed(
+        '/program-details',
+        arguments: programId.toString(),
+      );
+      return;
+    }
+
+    // Create AppNotification from data
+    final notification = _createNotificationFromData(data);
+    
+    nav.pushNamed(
+      '/notification-detail',
+      arguments: notification,
+    );
+  }
+
+  AppNotification _createNotificationFromData(Map<String, dynamic> data) {
+    final now = DateTime.now();
+    // ✅ Check recipientId first, then userId, to correctly set the owner without losing original data
+    final ownerId = data['recipientId'] ?? data['userId'] ?? _auth.currentUser?.uid;
+    final baseNotificationId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
+    final notificationId = data['id'] ?? '${baseNotificationId}_$ownerId';
+
+    return AppNotification(
+      id: notificationId,
+      title: data['title'] ?? 'New Notification',
+      body: data['body'] ?? '',
+      type: _parseNotificationType(data['type']),
+      priority: _parsePriority(data['priority']),
+      data: data,
+      userId: ownerId,
+      programId: data['programId'],
+      communityId: data['communityId'],
+      isRead: false,
+      timestamp: now,
+      deepLink: data['deepLink'],
+      senderName: data['senderName'],
+      imageUrl: data['imageUrl'],
+    );
   }
 
   // Action Handlers (Forward to injected callbacks)
@@ -846,13 +967,13 @@ Future<void> sendUserNotification({
       'title': title,
       'body': body,
       'type': type.name,
-      'senderId': currentUser.uid, // ⭐ ADD: For validation
+      'senderId': currentUser.uid,
+      'senderName': senderName, // ⭐ MOVE TO ROOT: Required by Cloud Function
       'data': {
         ...data,
         'programId': programId,
         'communityId': communityId,
-        'senderName': senderName,
-        // 🆕 Add notificationId so Cloud Function uses the same ID
+        'senderName': senderName, // Keep in data too for local parsing
         'notificationId': notificationId,
       },
     };

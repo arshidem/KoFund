@@ -15,7 +15,8 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/utils/app_info.dart';
-import 'package:kofund/core/widgets/theme_toggle_slider.dart';
+import 'package:kofund/core/widgets/premium_switch.dart';
+import 'package:flutter/cupertino.dart';
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -82,190 +83,214 @@ Future<void> _loadAppInfo() async {
                       ),
                       slivers: [
                         SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                  // App Settings Section
-                  // App Settings Section
-                  _buildSectionHeader('App Preferences'),
-                  _buildSettingsSwitch(
-                    context: context,
-                    title: 'Push Notifications',
-                    subtitle: 'Receive program updates and reminders',
-                    value: authProvider.user?.notificationsEnabled ?? true,
-                    onChanged: (value) async {
-                      final success = await profileProvider.updateNotificationSettings(value);
-                      if (success) {
-                        await authProvider.refreshUserData();
-                        setState(() {});
-                      }
-                    },
-                    icon: Icons.notifications_active,
-                  ),
-                  _buildSettingsSwitch(
-                    context: context,
-                    title: 'Dark Mode',
-                    subtitle: 'Switch to dark theme',
-                    value: themeProvider.isDarkMode,
-                    onChanged: (value) => themeProvider.toggleTheme(value),
-                    icon: Icons.dark_mode,
-                    isCustomSlider: true,
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // App Settings Section
+                _buildSectionHeader('App Preferences'),
+                _buildSettingsGroup(
+                  children: [
+                    _buildSettingsSwitch(
+                      context: context,
+                      title: 'Push Notifications',
+                      subtitle: 'Receive program updates and reminders',
+                      value: authProvider.user?.notificationsEnabled ?? true,
+                      onChanged: (value) async {
+                        final success =
+                            await profileProvider.updateNotificationSettings(value);
+                        if (success) {
+                          await authProvider.refreshUserData();
+                          setState(() {});
+                        }
+                      },
+                      icon: Icons.notifications_active_rounded,
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsSwitch(
+                      context: context,
+                      title: 'Dark Mode',
+                      subtitle: 'Switch to dark theme',
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) => themeProvider.toggleTheme(value),
+                      icon: Icons.dark_mode_rounded,
+                      isCustomSlider: true,
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                  // Account Section
-                  _buildSectionHeader('Account'),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Change Password',
-                    icon: Icons.lock,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.changePassword),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Privacy Settings',
-                    icon: Icons.privacy_tip,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.privacySettings),
-                  ),
+                // Account Section
+                _buildSectionHeader('Account'),
+                _buildSettingsGroup(
+                  children: [
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Change Password',
+                      icon: Icons.lock_outline_rounded,
+                      subtitle: 'Update your security credentials',
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.changePassword),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Privacy Settings',
+                      icon: Icons.privacy_tip_outlined,
+                      subtitle: 'Manage your visibility and data',
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.privacySettings),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                  // Support Section
-                  _buildSectionHeader('Support'),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Help & FAQ',
-                    icon: Icons.help,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Contact Support',
-                    icon: Icons.support_agent,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.contactSupport),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Report Issue',
-                    icon: Icons.bug_report,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.reportIssue),
-                  ),
+                // Support Section
+                _buildSectionHeader('Support'),
+                _buildSettingsGroup(
+                  children: [
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Help & FAQ',
+                      icon: Icons.help_outline_rounded,
+                      onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Contact Support',
+                      icon: Icons.support_agent_rounded,
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.contactSupport),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Report Issue',
+                      icon: Icons.bug_report_outlined,
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.reportIssue),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                  // Developer Tools Section
-                  Consumer<AppAuthProvider>(
-                    builder: (context, auth, child) {
-                      if (auth.isDeveloper) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSectionHeader('Developer Tools'),
-                             _buildSettingsItem(
+                // Developer Tools Section
+                Consumer<AppAuthProvider>(
+                  builder: (context, auth, child) {
+                    if (auth.isDeveloper) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader('Developer Tools'),
+                          _buildSettingsGroup(
+                            children: [
+                              _buildSettingsItem(
                                 context: context,
                                 title: 'Developer Dashboard',
-                                icon: Icons.developer_mode,
+                                icon: Icons.developer_mode_rounded,
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const DeveloperDashboardScreen(),
+                                    builder: (context) =>
+                                        const DeveloperDashboardScreen(),
                                   ),
                                 ),
                                 color: Colors.blue,
                               ),
-                            const SizedBox(height: 24),
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-
-                  // About Section
-                  _buildSectionHeader('About'),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Terms of Service',
-                    icon: Icons.description,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.termsOfService),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Privacy Policy',
-                    icon: Icons.security,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.privacyPolicy),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'Community Guidelines',
-                    icon: Icons.groups,
-                    onTap: () => Navigator.pushNamed(context, RouteNames.communityGuidelines),
-                  ),
-                  _buildSettingsItem(
-                    context: context,
-                    title: 'App Version',
-                    icon: Icons.info,
-                    onTap: _showAppInfo,
-                    trailing: Text(
-                      'v$appVersion',
-                      style: TextStyle(color: AppColors.textSecondary(context)),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Danger Zone
-                  _buildSectionHeader('Danger Zone', isDangerZone: true),
-                  Card(
-                    color: Colors.transparent,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.card(context),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildDangerTile(
-                                context: context,
-                                icon: Icons.exit_to_app,
-                                title: 'Leave Community',
-                                onTap: () => _showLeaveCommunityDialog(context, authProvider, profileProvider),
-                              ),
-                              Divider(height: 1, color: AppColors.border(context)),
-                              _buildDangerTile(
-                                context: context,
-                                icon: Icons.delete_forever,
-                                title: 'Delete Account',
-                                onTap: () => _showDeleteAccountDialog(authProvider),
-                              ),
-                              Divider(height: 1, color: AppColors.border(context)),
-                              _buildDangerTile(
-                                context: context,
-                                icon: Icons.logout,
-                                title: 'Logout',
-                                onTap: () => _showLogoutDialog(authProvider),
-                              ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const SizedBox(height: 32),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
-                  const SizedBox(height: 32),
-                ],
-              ),
+                // About Section
+                _buildSectionHeader('About'),
+                _buildSettingsGroup(
+                  children: [
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Terms of Service',
+                      icon: Icons.description_outlined,
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.termsOfService),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Privacy Policy',
+                      icon: Icons.security_rounded,
+                      onTap: () =>
+                          Navigator.pushNamed(context, RouteNames.privacyPolicy),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'Community Guidelines',
+                      icon: Icons.groups_outlined,
+                      onTap: () => Navigator.pushNamed(
+                          context, RouteNames.communityGuidelines),
+                    ),
+                    _buildItemDivider(),
+                    _buildSettingsItem(
+                      context: context,
+                      title: 'App Version',
+                      icon: Icons.info_outline_rounded,
+                      onTap: _showAppInfo,
+                      trailing: Text(
+                        'v$appVersion',
+                        style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+
+                // Danger Zone
+                _buildSectionHeader('Danger Zone', isDangerZone: true),
+                _buildSettingsGroup(
+                  children: [
+                    _buildDangerTile(
+                      context: context,
+                      icon: Icons.exit_to_app_rounded,
+                      title: 'Leave Community',
+                      onTap: () => _showLeaveCommunityDialog(
+                          context, authProvider, profileProvider),
+                    ),
+                    _buildItemDivider(),
+                    _buildDangerTile(
+                      context: context,
+                      icon: Icons.delete_forever_rounded,
+                      title: 'Delete Account',
+                      onTap: () => _showDeleteAccountDialog(authProvider),
+                    ),
+                    _buildItemDivider(),
+                    _buildDangerTile(
+                      context: context,
+                      icon: Icons.logout_rounded,
+                      title: 'Logout',
+                      onTap: () => _showLogoutDialog(authProvider),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 40),
+              ],
             ),
           ),
+        ),
         ],
       ),
     );
@@ -314,19 +339,22 @@ Widget _buildDangerTile({
     ),
   );
 }
-Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: isDangerZone ? AppColors.error(context) : AppColors.textPrimary(context), // Red for danger zone
+  Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: isDangerZone 
+              ? AppColors.error(context).withValues(alpha: 0.7) 
+              : AppColors.textPrimary(context).withValues(alpha: 0.4),
+          letterSpacing: 1.5,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSettingsSwitch({
     required BuildContext context,
@@ -337,53 +365,67 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
     required IconData icon,
     bool isCustomSlider = false,
   }) {
-    if (isCustomSlider) {
-      return ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-        trailing: ThemeToggleSlider(
-          value: value,
-          onChanged: onChanged,
-        ),
-        leading: Icon(
-          icon,
-          color: AppColors.primary(context),
-        ),
-      );
-    }
-    return SwitchListTile(
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary(context),
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: AppColors.primary(context),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+             if (isCustomSlider)
+              PremiumSwitch(
+                value: value,
+                onChanged: onChanged,
+                activeIcon: Icons.nightlight_round,
+                inactiveIcon: Icons.wb_sunny_rounded,
+                activeColor: const Color(0xFF1E1E2C),
+                inactiveColor: isDark ? const Color(0xFF1E1E2C) : const Color(0xFFE0E0E0),
+              )
+            else
+              PremiumSwitch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: AppColors.primary(context),
+              ),
+          ],
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          color: AppColors.textSecondary(context),
-        ),
-      ),
-      value: value,
-      onChanged: onChanged,
-      secondary: Icon(
-        icon,
-        color: AppColors.primary(context),
-      ),
-      activeThumbColor: AppColors.primary(context),
     );
   }
 
@@ -394,24 +436,100 @@ Widget _buildSectionHeader(String title, {bool isDangerZone = false}) {
     required VoidCallback onTap,
     Color? color,
     Widget? trailing,
+    String? subtitle,
   }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: color ?? AppColors.primary(context),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: color ?? AppColors.textPrimary(context),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (color ?? AppColors.primary(context)).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: color ?? AppColors.primary(context),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: color ?? AppColors.textPrimary(context),
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              trailing ??
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: AppColors.textPrimary(context).withValues(alpha: 0.2),
+                  ),
+            ],
+          ),
         ),
       ),
-      trailing: trailing ?? Icon(
-        Icons.chevron_right,
-        color: color ?? AppColors.textSecondary(context),
-        size: 18,
+    );
+  }
+
+  Widget _buildSettingsGroup({required List<Widget> children}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
       ),
-      onTap: onTap,
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildItemDivider() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
     );
   }
 

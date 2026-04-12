@@ -59,14 +59,16 @@ class NotificationProvider extends ChangeNotifier {
     
     // Register action callbacks
     _notificationService.onApproveUser = (data) async {
-      final userId = data['userId'];
+      final userId = data['pendingUserId'] ?? data['userId']; // ✅ Prioritize pendingUserId
       if (userId == null) return;
-      await UserService().approveUser(userId);
+      
+      final currentUserName = _auth.currentUser?.displayName;
+      await UserService().approveUser(userId, adminName: currentUserName);
       refresh();
     };
     
     _notificationService.onRejectUser = (data) async {
-      final userId = data['userId'];
+      final userId = data['pendingUserId'] ?? data['userId']; // ✅ Prioritize pendingUserId
       final communityId = data['communityId'];
       if (userId == null || communityId == null) return;
       await UserService().rejectUser(userId, communityId);

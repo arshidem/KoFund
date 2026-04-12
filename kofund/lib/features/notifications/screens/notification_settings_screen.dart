@@ -1,5 +1,10 @@
+import 'package:kofund/core/widgets/premium_switch.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
+import 'package:kofund/core/constants/app_colors.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/notification_types.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
@@ -44,7 +49,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Payment Notifications';
       case NotificationType.programUpdate:
         return 'Program Updates';
-      case NotificationType.program: // 🆕 ADDED
+      case NotificationType.program:
         return 'New Programs';
       case NotificationType.adminAlert:
         return 'Admin Alerts';
@@ -75,7 +80,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Icons.payment;
       case NotificationType.programUpdate:
         return Icons.update;
-      case NotificationType.program: // 🆕 ADDED
+      case NotificationType.program:
         return Icons.calendar_today;
       case NotificationType.adminAlert:
         return Icons.admin_panel_settings;
@@ -106,7 +111,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Colors.green;
       case NotificationType.programUpdate:
         return Colors.blue;
-      case NotificationType.program: // 🆕 ADDED
+      case NotificationType.program:
         return Colors.deepPurple;
       case NotificationType.adminAlert:
         return Colors.red;
@@ -147,82 +152,141 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   Widget _buildContent() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Preferences'),
+          _buildSettingsGroup(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Text(
+                  'Choose which notifications you want to receive. Critical security alerts are always sent.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              _buildItemDivider(),
+              ...NotificationType.values.expand((type) => [
+                    _buildNotificationToggle(type),
+                    if (type != NotificationType.values.last) _buildItemDivider(),
+                  ]),
+            ],
+          ),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroup({required List<Widget> children}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildItemDivider() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 72,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+    );
+  }
+
+  Widget _buildNotificationToggle(NotificationType type) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _getTypeIconColor(type).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _getTypeIcon(type),
+              color: _getTypeIconColor(type),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Notification Preferences',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
                 Text(
-                  'Choose which notifications you want to receive',
+                  _getTypeLabel(type),
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _getDescription(type),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textPrimary(context).withValues(alpha: 0.5),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-        
-        const SizedBox(height: 16),
-
-        ...NotificationType.values.map((type) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              leading: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getTypeIconColor(type).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getTypeIcon(type),
-                  color: _getTypeIconColor(type),
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                _getTypeLabel(type),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              subtitle: Text(
-                _getDescription(type),
-                style: const TextStyle(fontSize: 13),
-              ),
-              trailing: Switch(
-                value: _settings[type] ?? true,
-                onChanged: (value) => _saveSetting(type, value),
-              ),
-            ),
-          );
-        }),
-
-        const SizedBox(height: 24),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Note: Critical notifications related to account security will always be sent.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.error,
-              fontStyle: FontStyle.italic,
-            ),
+          const SizedBox(width: 8),
+          PremiumSwitch(
+            value: _settings[type] ?? true,
+            onChanged: (value) => _saveSetting(type, value),
+            activeColor: AppColors.primary(context),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -232,7 +296,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Payment confirmations, failures, and receipts';
       case NotificationType.programUpdate:
         return 'Updates about programs you\'ve joined';
-      case NotificationType.program: // 🆕 ADDED
+      case NotificationType.program:
         return 'Notifications when new programs are created';
       case NotificationType.adminAlert:
         return 'Important alerts for administrators only';

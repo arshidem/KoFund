@@ -111,19 +111,81 @@ Widget _buildContent(
     return _buildEmptyState();
   }
 
-  return ListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // ✅ Standardized padding
-    itemCount: participationHistory.length,
-    itemBuilder: (context, index) {
-      final participation = participationHistory[index];
-      return _buildParticipationCard(participation);
-    },
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Participation History'),
+        _buildSettingsGroup(
+          children: List.generate(participationHistory.length, (index) {
+            final participation = participationHistory[index];
+            return Column(
+              children: [
+                _buildParticipationItem(participation),
+                if (index < participationHistory.length - 1) _buildItemDivider(),
+              ],
+            );
+          }),
+        ),
+        const SizedBox(height: 32),
+      ],
+    ),
   );
 }
 
-  Widget _buildParticipationCard(Map<String, dynamic> participation) {
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroup({required List<Widget> children}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildItemDivider() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+    );
+  }
+
+  Widget _buildParticipationItem(Map<String, dynamic> participation) {
     final programTitle = participation['programTitle'] ?? 'Unnamed Program';
     final programType = participation['programType'] ?? ProgramTypes.general;
     final joinedAt = _parseDate(participation['joinedAt']);
@@ -132,20 +194,28 @@ Widget _buildContent(
     final suggestedContribution = (participation['suggestedContribution'] ?? 0).toDouble();
     final progressPercentage = (participation['progressPercentage'] ?? 0).toDouble();
 
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge)),
+    return Material(
+      color: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
-                _buildProgramIcon(programType),
-                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    ProgramTypes.getIconData(programType),
+                    size: 20,
+                    color: AppColors.primary(context),
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,67 +223,52 @@ Widget _buildContent(
                       Text(
                         programTitle,
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary(context),
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        _formatDate(joinedAt),
+                        'Joined on ${_formatDate(joinedAt)}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary(context),
+                          color: AppColors.textPrimary(context).withValues(alpha: 0.5),
                         ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: hasPaid 
-                        ? AppColors.primary(context).withValues(alpha: 0.1) // ✅ Use primary color
-                        : Colors.orange[50],
+                    color: hasPaid
+                        ? AppColors.primary(context).withValues(alpha: 0.1)
+                        : Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                    border: Border.all(
-                      color: hasPaid 
-                          ? AppColors.primary(context) // ✅ Use primary color
-                          : Colors.orange,
-                    ),
                   ),
                   child: Text(
-                    hasPaid ? 'Paid' : 'Pending',
+                    hasPaid ? 'PAID' : 'PENDING',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: hasPaid 
-                          ? AppColors.primary(context) // ✅ Use primary color
-                          : Colors.orange,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: hasPaid ? AppColors.primary(context) : Colors.orange,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Program Type
-            _buildDetailRow('Type', ProgramTypes.getDisplayName(programType)),
-
-            // Contribution info
             if (suggestedContribution > 0) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               _buildContributionInfo(
                 contributionPaid,
                 suggestedContribution,
                 hasPaid,
                 progressPercentage,
               ),
-            ] else ...[
-              const SizedBox(height: 8),
-              _buildNoContributionInfo(),
             ],
           ],
         ),

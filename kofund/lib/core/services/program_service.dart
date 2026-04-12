@@ -18,63 +18,43 @@ class ProgramService {
   // -------------------------------------------------------------
 Future<String> createProgram(ProgramModel program, {bool sendNotification = true}) async {
   try {
-    // Get current user info for notification
     final currentUser = _auth.currentUser;
     if (currentUser == null) {
       throw Exception('User not authenticated');
     }
 
-    // 1. Create program in Firestore
     final docRef = await _firestore.collection('programs').add(program.toMap());
     final programId = docRef.id;
-    
-    // 2. Create updated program model with ID
-    final createdProgram = program.copyWith(programId: programId);
-    
-    // 3. 🆕 SEND NOTIFICATION TO COMMUNITY (Only if enabled)
+
     if (sendNotification) {
       try {
-        final notificationService = NotificationService();
+        // Fetch community name for the notification body
+        final communityDoc = await _firestore.collection('communities').doc(program.communityId).get();
+        String communityName = communityDoc.data()?['name'] ?? '';
         
-        // A. Send notification to all community members (including PUSH)
-        await notificationService.sendCommunityNotification(
-          communityId: program.communityId,
-          title: 'New Program Created 🎯',
-          body: '${program.title} has been created. ${program.description}',
-          type: NotificationType.program,
-          data: {
-            'programId': programId,
-            'createdBy': currentUser.uid,
-            'createdByName': currentUser.displayName ?? 'User',
-          },
-          programId: programId,
-          senderName: currentUser.displayName ?? 'User',
-          skipPush: false, // 🔔 NOW: Everyone gets a push notification
-        );
+        // Fallback: Check user's own data if community doc is missing or name is empty
+        if (communityName.isEmpty) {
+          final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+          communityName = userDoc.data()?['communityName'] ?? 'Your Community';
+        }
 
-        // B. Send push notification ALSO to the creator (Current User)
-        // Since sendCommunityNotification excludes the sender, we notify them specifically
-        await notificationService.sendUserNotification(
-          userId: currentUser.uid,
-          title: 'Program Created Successfully! ✅',
-          body: 'Your program "${program.title}" is now active.',
-          type: NotificationType.program,
+        await NotificationService().sendCommunityNotification(
+          communityId: program.communityId,
+          title: program.title,
+          body: 'New program in $communityName · Tap to join',
+          type: NotificationType.announcement,
+          programId: programId,
           data: {
             'programId': programId,
-            'isCreator': true,
+            'title': program.title,
+            'communityName': communityName,
+            'type': NotificationType.announcement.name,
+            'deepLink': 'program/$programId',
           },
-          programId: programId,
-          communityId: program.communityId,
-          senderName: 'KoFund',
         );
-        
-        debugPrint('📢 Specialized notifications sent for new program: $programId');
-      } catch (notificationError) {
-        debugPrint('⚠️ Failed to send notification (non-critical): $notificationError');
-        // Don't fail the program creation if notification fails
+      } catch (e) {
+        debugPrint('⚠️ Push notification failed: $e');
       }
-    } else {
-      debugPrint('🔕 Community notification skipped as per request for program: $programId');
     }
 
     debugPrint('✅ Program created: $programId');

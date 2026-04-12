@@ -287,14 +287,10 @@ class ParticipantService {
             'updatedAt': FieldValue.serverTimestamp(),
           });
           
-          _notifyAdminsOfJoin(participant);
-          
           return docToReuse.id;
         }
       }
       final docRef = await _firestore.collection('participants').add(participant.toMap());
-      
-      _notifyAdminsOfJoin(participant);
       
       return docRef.id;
     } catch (e) {
@@ -535,30 +531,6 @@ class ParticipantService {
       }
     } catch (e) {
       throw Exception('Failed to update participant contribution: $e');
-    }
-  }
-  Future<void> _notifyAdminsOfJoin(ParticipantModel participant) async {
-    try {
-      final notificationService = NotificationService();
-      
-      // Get program info for title
-      final programDoc = await _firestore.collection('programs').doc(participant.programId).get();
-      final programName = programDoc.data()?['title'] ?? 'Program';
-      
-      await notificationService.sendCommunityNotification(
-        communityId: participant.communityId,
-        title: '👥 New Program Participant',
-        body: '${participant.userName} has joined $programName.',
-        type: NotificationType.program,
-        targetRole: 'admin',
-        programId: participant.programId,
-        data: {
-          'userId': participant.userId,
-          'programId': participant.programId,
-        },
-      );
-    } catch (e) {
-      debugPrint('⚠️ Admin join notification failed: $e');
     }
   }
 }

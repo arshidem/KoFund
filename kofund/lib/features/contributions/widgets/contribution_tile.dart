@@ -6,7 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/contribution_provider.dart';
 import '../../../core/services/user_service.dart';
-import '../../programs/utils/contribution_receipt_pdf.dart';
+import '../../programs/utils/contribution_receipt_image.dart';
 import '../screens/edit_contribution_screen.dart';
 
 class ContributionTile extends StatelessWidget {
@@ -234,7 +234,7 @@ class ContributionTile extends StatelessWidget {
       
       if (context.mounted) Navigator.pop(context);
       
-      await ContributionReceiptPdf.generateAndShowReceipt(
+      await ContributionReceiptImage.generateAndShowReceipt(
         context: context,
         contribution: contribution,
         contributorName: contributorName,

@@ -3,6 +3,7 @@ import '../../../features/auth/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/constants/notification_types.dart';
+import 'package:intl/intl.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -140,22 +141,49 @@ class UserService {
   }
 
   /// Approve a pending user
-  Future<void> approveUser(String uid) async {
+  Future<void> approveUser(String uid, {String? adminName}) async {
     try {
       await usersCollection.doc(uid).update({
         'isApproved': true,
         'role': 'member', // or 'admin'
         'approvedAt': Timestamp.now(),
+        if (adminName != null) 'approvedBy': adminName,
       });
 
-      // 🔔 Trigger Notification to User
+      // 🔔 Trigger Notification to User (You're In! 🎉)
       try {
         final notificationService = NotificationService();
+        
+        // Fetch user data to get community info
+        String communityName = 'the community';
+        String? communityLogo;
+        final userDoc = await usersCollection.doc(uid).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>?;
+          communityName = userData?['communityName'] ?? 'the community';
+          final communityId = userData?['communityId'];
+          
+          if (communityId != null) {
+            final communityDoc = await _firestore.collection('communities').doc(communityId).get();
+            if (communityDoc.exists) {
+              communityLogo = communityDoc.data()?['logoUrl'];
+            }
+          }
+        }
+
         await notificationService.sendUserNotification(
           userId: uid,
-          title: '🎉 Welcome to the Community!',
-          body: 'Your membership request has been approved. You can now access all features.',
+          title: 'You\'re In! 🎉',
+          body: 'Your request to join $communityName has been approved.',
           type: NotificationType.approval,
+          senderName: adminName,
+          data: {
+            'deepLink': '/community/home',
+            'communityName': communityName,
+            'communityLogo': communityLogo, // ✅ Add logo
+            'approvedAt': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
+            'approvedBy': adminName ?? 'Admin',
+          },
         );
       } catch (e) {
         debugPrint('⚠️ Approval notification failed: $e');
@@ -204,18 +232,7 @@ class UserService {
       await batch.commit();
       debugPrint('✅ Admin rejected user $uid from community $communityId');
 
-      // 🔔 Trigger Notification to User
-      try {
-        final notificationService = NotificationService();
-        await notificationService.sendUserNotification(
-          userId: uid,
-          title: '😔 Membership Request Update',
-          body: 'Your request to join the community was not approved at this time.',
-          type: NotificationType.account,
-        );
-      } catch (e) {
-        debugPrint('⚠️ Reject notification failed: $e');
-      }
+      debugPrint('✅ Admin rejected user $uid from community $communityId');
       
     } catch (e) {
       debugPrint('❌ Error rejecting user: $e');

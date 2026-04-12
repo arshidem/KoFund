@@ -453,85 +453,58 @@ exports.sendCommunityNotification = onCall(
       const communityData = communityDoc.data();
       const communityName = communityData.name || 'Community';
       
-      // 3. ⭐ NEW: Get ACTIVE tokens for this community (from dedicated collection)
-      const tokensSnapshot = await db
-        .collection('user_notification_tokens')
-        .where('isActive', '==', true)
-        .where('communityIds', 'array-contains', communityId)
+      // 3. ✅ RELIABLE: Directly query users collection by communityId
+      // This uses a simple two-field compound query (communityId + isApproved)
+      // no composite index required, and works for ALL community members.
+      const communityMembersSnapshot = await db
+        .collection('users')
+        .where('communityId', '==', communityId)
+        .where('isApproved', '==', true)
         .get();
-      
-      console.log(`📱 Found ${tokensSnapshot.size} active token entries for community ${communityId}`);
-      
-      if (targetRole) {
-        communityMembersSnapshot = await db
-          .collection('users')
-          .where('communityId', '==', communityId)
-          .where('role', '==', targetRole)
-          .where('isVirtualUser', '!=', true)
-          .get();
-      } else {
-        communityMembersSnapshot = await db
-          .collection('users')
-          .where('communityId', '==', communityId)
-          .where('isApproved', '==', true)
-          .where('isVirtualUser', '!=', true)
-          .get();
-      }
-        
-      console.log(`👥 Found ${communityMembersSnapshot.size} primary community members to check (Target Role: ${targetRole || 'all'})`);
+
+      console.log(`👥 Found ${communityMembersSnapshot.size} approved members in community ${communityId}`);
 
       // Collect tokens and user info
       const allTokens = [];
       const tokenToUserMap = new Map();
       const usersToNotify = new Set(); // Track unique users
-      
-      // A. Process dedicated token entries
-      for (const tokenDoc of tokensSnapshot.docs) {
-        const tokenData = tokenDoc.data();
-        const token = tokenData.token;
-        const userId = tokenData.userId;
-        
-        if (userId === auth.uid) continue;
-        if (typeof token !== 'string' || token.length < 50) continue;
-        
-        allTokens.push(token);
-        tokenToUserMap.set(token, userId);
-        usersToNotify.add(userId);
-      }
 
-      // B. Process primary community members (Backup)
       for (const userDoc of communityMembersSnapshot.docs) {
         const userId = userDoc.id;
         const userData = userDoc.data();
-        
+
+        // Skip the sender (admin who created the program)
         if (userId === auth.uid) continue;
-        
+
+        // Skip virtual users
+        if (userData.isVirtualUser === true) continue;
+
+        // Collect all FCM tokens for this user
         const fcmTokens = userData.fcmTokens || [];
         for (const token of fcmTokens) {
-          if (typeof token === 'string' && token.length >= 50 && !allTokens.includes(token)) {
+          if (typeof token === 'string' && token.length >= 50) {
             allTokens.push(token);
             tokenToUserMap.set(token, userId);
             usersToNotify.add(userId);
           }
         }
       }
-      
+
       // Remove duplicate tokens
       const uniqueTokens = [...new Set(allTokens)];
       console.log(`📱 Unique tokens to notify: ${uniqueTokens.length}`);
       console.log(`👥 Unique users to notify: ${usersToNotify.size}`);
-      
+
       if (uniqueTokens.length === 0) {
-        return {
-          success: true,
-          message: "No eligible users with active tokens found in community",
-          usersNotified: 0,
-          pushNotificationsSent: 0,
-          communityId,
-          communityName,
-          senderExcluded: true,
-          timestamp: now.toISOString(),
-        };
+        console.log(`⚠️ No FCM tokens found. Members may not have logged in or granted push permission.`);
+        // Still create in-app notifications for all approved, non-virtual members
+        for (const userDoc of communityMembersSnapshot.docs) {
+          const userId = userDoc.id;
+          const uData = userDoc.data();
+          if (userId !== auth.uid && uData.isVirtualUser !== true) {
+            usersToNotify.add(userId);
+          }
+        }
       }
       
       // 5. Create notification documents for each user
@@ -603,11 +576,8 @@ exports.sendCommunityNotification = onCall(
           const tokenChunk = uniqueTokens.slice(i, i + chunkSize);
           
           const message = {
-            notification: {
-              title: title,
-              body: body,
-            },
             data: {
+              ...notificationData,
               communityId,
               type,
               programId: programId || '',
@@ -617,6 +587,8 @@ exports.sendCommunityNotification = onCall(
               notificationId: baseNotificationId,
               timestamp: now.toISOString(),
               click_action: 'FLUTTER_NOTIFICATION_CLICK',
+              title: title,
+              body: body,
             },
             tokens: tokenChunk,
             android: {
@@ -625,9 +597,14 @@ exports.sendCommunityNotification = onCall(
             apns: {
               payload: {
                 aps: {
+                  alert: {
+                    title: title,
+                    body: body,
+                  },
                   contentAvailable: true,
                   badge: 1,
                   sound: 'default',
+                  category: 'program_announcement',
                 },
               },
             },
@@ -887,6 +864,7 @@ exports.sendUserNotification = onCall(
             body: body,
           },
           data: {
+            ...notificationData,
             userId: userId,
             communityId: communityId || userData.communityId || '',
             type: type,
@@ -897,6 +875,8 @@ exports.sendUserNotification = onCall(
             notificationId: notificationId,
             timestamp: now.toISOString(),
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            title: title,
+            body: body,
           },
           tokens: uniqueTokens,
           android: {

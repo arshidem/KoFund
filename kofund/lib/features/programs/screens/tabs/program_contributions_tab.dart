@@ -15,7 +15,7 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../features/programs/widgets/add_contribution_modal.dart';
 import 'package:kofund/features/contributions/screens/edit_contribution_screen.dart';
-import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
+import 'package:kofund/features/programs/utils/contribution_receipt_image.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
@@ -2106,7 +2106,7 @@ Future<void> _generateReceipt(
     Navigator.of(context).pop();
 
     // Generate and show receipt
-    await ContributionReceiptPdf.generateAndShowReceipt(
+    await ContributionReceiptImage.generateAndShowReceipt(
       context: context,
       contribution: contribution,
       contributorName: userName,

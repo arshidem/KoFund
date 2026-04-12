@@ -501,7 +501,8 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
                           isApproved: false,
                           isCurrentUser: _isCurrentUser(user),
                           onApprove: () async {
-                            await userProvider.approveUser(user.uid, communityId);
+                            final currentAdminName = Provider.of<AppAuthProvider>(context, listen: false).user?.displayName;
+                            await userProvider.approveUser(user.uid, communityId, adminName: currentAdminName);
                             if (!mounted) return;
                             SnackbarHelper.showSuccess(context, 'User approved');
                             await userProvider.loadCommunityMembers(communityId);

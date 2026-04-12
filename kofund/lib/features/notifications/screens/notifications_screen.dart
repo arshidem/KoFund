@@ -9,6 +9,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/constants/notification_types.dart';
+import '../../../core/services/notification_service.dart';
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -644,11 +645,7 @@ class NotificationCard extends StatelessWidget {
               if (!notification.isRead) {
                 provider.markAsRead(notification.id);
               }
-              Navigator.pushNamed(
-                context,
-                RouteNames.notificationDetail,
-                arguments: notification,
-              );
+              NotificationService().handleNotificationTap(notification);
             },
             child: Stack(
               children: [

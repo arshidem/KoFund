@@ -9,7 +9,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
-import 'package:kofund/features/programs/utils/contribution_receipt_pdf.dart';
+import 'package:kofund/features/programs/utils/contribution_receipt_image.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
 import 'package:flutter/cupertino.dart';
@@ -259,23 +259,110 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvid
     return _buildEmptyState();
   }
 
-  return Column(
-    children: [
-      _buildStatsCards(contributionHistory),
-      ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
-        itemCount: contributionHistory.length,
-        itemBuilder: (context, index) {
-          final contribution = contributionHistory[index];
-          _debugContributionData(contribution);
-          return _buildContributionListItem(contribution, authProvider);
-        },
-      ),
-    ],
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStatsCards(contributionHistory),
+        const SizedBox(height: 32),
+          _buildListHeader('Contribution History'),
+        _buildSettingsGroup(
+          children: List.generate(contributionHistory.length, (index) {
+            final contribution = contributionHistory[index];
+            return Column(
+              children: [
+                _buildContributionListItem(contribution, authProvider),
+                if (index < contributionHistory.length - 1) _buildItemDivider(),
+              ],
+            );
+          }),
+        ),
+        const SizedBox(height: 100),
+      ],
+    ),
   );
 }
+
+  Widget _buildListHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, {required String title, required IconData icon}) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary(context).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: AppColors.primary(context),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context),
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsGroup({required List<Widget> children}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2F2F).withValues(alpha: 0.6) : Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildItemDivider() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
+    );
+  }
 
   Widget _buildAuthRequiredState() {
     return Center(
@@ -350,246 +437,210 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvid
   }
 
   Widget _buildStatsCards(List<Map<String, dynamic>> contributions) {
-    final totalAmount = contributions.fold(0.0, (sum, c) => sum + (c['amount']?.toDouble() ?? 0.0));
+    final totalAmount = contributions.fold(
+        0.0, (sum, c) => sum + (c['amount']?.toDouble() ?? 0.0));
     final totalCount = contributions.length;
-    final averageAmount = totalCount > 0 ? totalAmount / totalCount : 0.0;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E2F2F).withValues(alpha: 0.6)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color:
+              isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+        ],
+      ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Expanded(
-            child: _buildStatCard(
-              title: 'Total Paid',
-              value: '₹${totalAmount.toStringAsFixed(2)}',
-              icon: Icons.currency_rupee,
-              color: Colors.white,
-            ),
+          _buildStatItem(
+            label: 'TOTAL PAID',
+            value: '₹${totalAmount.toInt()}',
+            icon: Icons.account_balance_wallet_rounded,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              title: 'Contributions',
-              value: totalCount.toString(),
-              icon: Icons.payments,
-              color: Colors.white,
-            ),
+          Container(
+            height: 60,
+            width: 1,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.2),
+          ),
+          _buildStatItem(
+            label: 'RECORDS',
+            value: totalCount.toString(),
+            icon: Icons.receipt_long_rounded,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
+  Widget _buildStatItem({
+    required String label,
     required String value,
-    String? subtitle,
     required IconData icon,
-    required Color color,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient(context),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return Column(
+      children: [
+        Icon(icon, size: 30, color: const Color(0xFF00D2B4)),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary(context),
+            letterSpacing: -0.5,
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContributionListItem(
+      Map<String, dynamic> contribution, AppAuthProvider authProvider) {
+    final programTitle = contribution['programTitle'] ?? 'Unknown Program';
+    final amount = (contribution['amount'] ?? 0).toDouble();
+    final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
+    final createdAt =
+        (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+
+    final isEdited = _getIsEditedStatus(contribution);
+    final monthDisplayName = contribution['monthDisplayName'] ?? '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          _showContributionDetails(contribution, authProvider);
+        },
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: isEdited
+                      ? Colors.orange.withValues(alpha: 0.1)
+                      : AppColors.primary(context).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 20, color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+                child: Icon(
+                  Icons.receipt_long_rounded,
+                  size: 20,
+                  color: isEdited ? Colors.orange : AppColors.primary(context),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            programTitle,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary(context),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isEdited) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'EDITED',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      monthDisplayName.isNotEmpty
+                          ? '$monthDisplayName • ${_formatPaymentMethod(paymentMethod)}'
+                          : _formatPaymentMethod(paymentMethod),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textPrimary(context)
+                            .withValues(alpha: 0.5),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${amount.toInt()}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color:
+                          isEdited ? Colors.orange : AppColors.primary(context),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatTime(createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color:
+                          AppColors.textPrimary(context).withValues(alpha: 0.3),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
     );
   }
-
-Widget _buildContributionListItem(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
-  final programTitle = contribution['programTitle'] ?? 'Unknown Program';
-  final amount = (contribution['amount'] ?? 0).toDouble();
-  final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
-  final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-  
-  // FIX: Check if isEdited exists and handle different data types
-  final isEdited = _getIsEditedStatus(contribution);
-  final monthDisplayName = contribution['monthDisplayName'] ?? '';
-
-  return Column(
-    children: [
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            _showContributionDetails(contribution, authProvider);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                // Circular icon - Use different color for edited items
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isEdited 
-                      ? Colors.orange.withValues(alpha: 0.1)
-                      : AppColors.primary(context).withValues(alpha: 0.1),
-                  ),
-                  child: Icon(
-                    Icons.payments,
-                    size: 20,
-                    color: isEdited ? Colors.orange : AppColors.primary(context),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                // Main content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              programTitle,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: AppColors.textPrimary(context),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isEdited)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: Colors.orange.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Edited',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        monthDisplayName.isNotEmpty 
-                          ? '$monthDisplayName • Paid via ${_formatPaymentMethod(paymentMethod)}'
-                          : 'Paid via ${_formatPaymentMethod(paymentMethod)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Time and amount
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _formatTime(createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '₹${amount.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: isEdited ? Colors.orange : AppColors.primary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      
-      // Horizontal divider
-      Divider(
-        height: 1,
-        thickness: 1,
-        color: AppColors.border(context),
-      ),
-    ],
-  );
-}
 
 // Add this helper method to properly handle isEdited status
 bool _getIsEditedStatus(Map<String, dynamic> contribution) {
@@ -1323,35 +1374,6 @@ Widget _buildInfoRowMinimal(
   );
 }
 
-// Helper method for section headers
-Widget _buildSectionHeader(BuildContext context, {required String title, required IconData icon}) {
-  return Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primary(context).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: AppColors.primary(context),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary(context),
-          letterSpacing: 0.3,
-        ),
-      ),
-    ],
-  );
-}
 
 // Helper method to get formatted edit history
 List<Map<String, dynamic>> _getFormattedEditHistory(Map<String, dynamic> contribution) {
@@ -1433,7 +1455,7 @@ Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution,
     if (!mounted || !context.mounted) return;
 
     // 3. Now call the generator which will show its own progress dialog
-    await ContributionReceiptPdf.generateAndShowReceipt(
+    await ContributionReceiptImage.generateAndShowReceipt(
       context: context,
       contribution: contributionModel,
       contributorName: contributorName,

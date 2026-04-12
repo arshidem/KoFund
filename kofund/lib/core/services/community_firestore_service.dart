@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:kofund/features/community/models/community_model.dart';
 import 'package:kofund/core/constants/firebase_keys.dart';
 import 'package:flutter/foundation.dart';
@@ -293,25 +294,27 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
       await batch.commit();
 
-      // 🔔 Trigger Notification to Admins
+      // 🔔 Trigger Notification to Admins (New Member Pending Approval)
       try {
         final notificationService = NotificationService();
         await notificationService.sendCommunityNotification(
           communityId: communityId,
-          title: '🆕 New Join Request',
-          body: '$userName has requested to join ${communityData['name']}.',
+          title: 'New Join Request 👤',
+          body: '$userName wants to join ${communityData['name']}. Review now.',
           type: NotificationType.pendingUser,
           targetRole: 'admin',
           data: {
-            'userId': userId,
-            'userName': userName,
+            'memberName': userName,
+            'communityName': communityData['name'] ?? 'the community',
+            'requestedAt': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
+            'pendingUserId': userId, // ✅ Use pendingUserId to avoid confusion with recipient or sender
             'communityId': communityId,
-            'deepLink': '/admin/members/pending',
           },
         );
       } catch (e) {
         debugPrint('⚠️ Admin notification failed: $e');
       }
+
     } catch (e) {
       rethrow;
     }

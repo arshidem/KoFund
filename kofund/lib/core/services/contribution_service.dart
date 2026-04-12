@@ -4,6 +4,7 @@ import '../../features/contributions/models/contribution_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/constants/notification_types.dart';
+import 'package:intl/intl.dart';
 
 class ContributionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,19 +16,53 @@ class ContributionService {
     try {
       final docRef = await _firestore.collection('contributions').add(contribution.toMap());
       
-      // 🔔 Trigger Community Notification
+      // 🔔 Trigger User Notification (Contribution Added for Me)
       try {
         final notificationService = NotificationService();
-        await notificationService.sendCommunityNotification(
-          communityId: contribution.communityId,
-          title: '💰 New Contribution Recorded',
-          body: '${contribution.contributorName} added a contribution of \$${contribution.amount.toStringAsFixed(2)}.',
+        
+        // Fetch program name for body
+        String programName = 'Program';
+        try {
+          final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
+          if (programDoc.exists) {
+            programName = programDoc.data()?['title'] ?? 'Program';
+          }
+        } catch (_) {}
+
+        final title = '₹${contribution.amount.toStringAsFixed(0)} Recorded ✅';
+        final body = contribution.isMonthlyContribution && contribution.monthId != null 
+            ? '${contribution.monthDisplayName} contribution · $programName' 
+            : programName;
+
+        // C. Running total for detailed screen
+        double totalPaidSoFar = 0;
+        double totalDue = 0;
+        try {
+          totalPaidSoFar = await getUserProgramTotalContributions(contribution.programId, contribution.userId);
+          final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
+          if (programDoc.exists) {
+            totalDue = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
+          }
+        } catch (_) {}
+
+        final recorderName = contribution.addedByUserName ?? 'Admin';
+
+        await notificationService.sendUserNotification(
+          userId: contribution.userId,
+          title: title,
+          body: body,
           type: NotificationType.contribution,
-          programId: contribution.programId,
+          senderName: recorderName,
           data: {
             'contributionId': docRef.id,
-            'amount': contribution.amount,
-            'userId': contribution.userId,
+            'amountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
+            'programName': programName,
+            'period': contribution.monthDisplayName ?? 'N/A',
+            'recordedBy': recorderName,
+            'senderName': recorderName,
+            'runningTotal': '₹${totalPaidSoFar.toStringAsFixed(0)} / ₹${totalDue.toStringAsFixed(0)}',
+            'programId': contribution.programId,
+            'timestamp': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
           },
         );
       } catch (e) {

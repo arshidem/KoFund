@@ -60,6 +60,8 @@ int get _displayCurrentStep {
   String? _lastCommunityId;
   // Amount controller to allow programmatic updates (auto-fill)
   late TextEditingController _amountController;
+  final FocusNode _amountFocusNode = FocusNode();
+  bool _hasAutofocusedAmount = false;
   bool _isSubmitting = false; // Add this guard
 // Add these to your _AddContributionModalState class variables
 int _currentDisplayYear = DateTime.now().year;
@@ -168,6 +170,7 @@ void initState() {
 void dispose() {
   _searchController.dispose();
   _amountController.dispose();
+  _amountFocusNode.dispose();
   super.dispose();
 }
 
@@ -994,7 +997,6 @@ Widget _buildContributionDetailsStep() {
           decoration: BoxDecoration(
             color: AppColors.surface(context),
             borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-            border: Border.all(color: AppColors.border(context)),
           ),
           child: Column(
             children: [
@@ -1024,6 +1026,7 @@ Widget _buildContributionDetailsStep() {
                   IntrinsicWidth(
                     child: TextField(
                       controller: _amountController,
+                      focusNode: _amountFocusNode,
                       keyboardType: TextInputType.number,
                       style: TextStyle(
                         fontSize: 48,
@@ -1032,6 +1035,10 @@ Widget _buildContributionDetailsStep() {
                       ),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                         hintText: '0',
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -1068,6 +1075,11 @@ Widget _buildContributionDetailsStep() {
           ),
         ),
         const SizedBox(height: 24),
+
+        if (_isMonthlyProgram && _availableMonths.isNotEmpty) 
+          _buildMonthSelectorField(context),
+          
+        if (_isMonthlyProgram) const SizedBox(height: 24),
 
         // Payment Method Selection (Chips)
         Text(
@@ -1141,9 +1153,6 @@ Widget _buildContributionDetailsStep() {
         ),
         const SizedBox(height: 24),
         
-        if (_isMonthlyProgram && _availableMonths.isNotEmpty) 
-          _buildMonthGridSelector(context),
-          
         if (_isMonthlyProgram) const SizedBox(height: 16),
         const SizedBox(height: 20),
 
@@ -1236,6 +1245,223 @@ Card(
     ),
   );
 }
+Widget _buildMonthSelectorField(BuildContext context) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Contribution Month',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary(context),
+        ),
+      ),
+      const SizedBox(height: 12),
+      InkWell(
+        onTap: () => _showMonthPickerModal(context),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_month_outlined,
+                color: AppColors.primary(context),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _selectedMonth != null 
+                      ? _formatMonthDisplay(_selectedMonth!)
+                      : 'Select Month',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: AppColors.textSecondary(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+void _showMonthPickerModal(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setModalState) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Month',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.surface(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Year Selection
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface(context),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.chevron_left, color: AppColors.primary(context)),
+                            onPressed: () {
+                              setModalState(() {
+                                _currentDisplayYear--;
+                              });
+                              setState(() {}); // Keep parent synced
+                            },
+                          ),
+                          Text(
+                            '$_currentDisplayYear',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.chevron_right, color: AppColors.primary(context)),
+                            onPressed: () {
+                              setModalState(() {
+                                _currentDisplayYear++;
+                              });
+                              setState(() {}); // Keep parent synced
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Month Grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.5,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final monthNumber = index + 1;
+                      final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
+                      final isSelected = monthId == _selectedMonth;
+                      final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
+                      
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedMonth = monthId;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? AppColors.primary(context) 
+                                : isCurrentMonth
+                                    ? AppColors.primary(context).withValues(alpha: 0.1)
+                                    : AppColors.surface(context),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? AppColors.primary(context) 
+                                  : isCurrentMonth
+                                      ? AppColors.primary(context)
+                                      : AppColors.border(context),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              _getShortMonthName(monthNumber),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isSelected 
+                                    ? Colors.white 
+                                    : AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
 Widget _buildSummaryItem(
   BuildContext context, {
   required String label,
@@ -1302,212 +1528,6 @@ Widget _buildSummaryItem(
   );
 }
 
-Widget _buildMonthGridSelector(BuildContext context) {
-  return Card(
-    color: Theme.of(context).cardColor,
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Select Month',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-              border: Border.all(
-                color: Theme.of(context).dividerColor,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_left,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 24,
-                    ),
-                    onPressed: _goToPreviousYear,
-                    tooltip: 'Previous year',
-                  ),
-                  Text(
-                    '$_currentDisplayYear',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 24,
-                    ),
-                    onPressed: _goToNextYear,
-                    tooltip: 'Next year',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 12),
-          
-          GridView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: 12,
-            itemBuilder: (context, index) {
-              final monthNumber = index + 1;
-              final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
-              final isSelected = monthId == _selectedMonth;
-              final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
-              
-              // ✅ Check if month is in our available months list
-              final isAvailable = _availableMonths.contains(monthId);
-              
-              // If not available, add it to the list dynamically
-              if (!isAvailable && !_availableMonths.any((m) => m.startsWith('$_currentDisplayYear'))) {
-                // This is a new year we haven't loaded yet
-                // Dynamically add months for this year
-                final newMonths = _getMonthsForYear(_currentDisplayYear);
-                _availableMonths.addAll(newMonths);
-                _availableMonths.sort();
-              }
-              
-              // Calculate if it's a future month
-              final now = DateTime.now();
-              final currentMonthId = _formatMonthId(now);
-              final isFutureMonth = monthId.compareTo(currentMonthId) > 0;
-              
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedMonth = monthId;
-                  });
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected 
-                        ? Theme.of(context).colorScheme.primary 
-                        : isFutureMonth 
-                          ? Theme.of(context).colorScheme.surface
-                          : Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected 
-                          ? Theme.of(context).colorScheme.primary 
-                          : isCurrentMonth 
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).dividerColor,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    boxShadow: isSelected 
-                        ? [
-                            BoxShadow(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _getShortMonthName(monthNumber),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isSelected 
-                              ? Colors.white 
-                              : isFutureMonth 
-                                ? Theme.of(context).disabledColor
-                                : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 2),
-                      
-                      Text(
-                        _currentDisplayYear.toString().substring(2), // Show last 2 digits
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isSelected 
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : Theme.of(context).disabledColor,
-                        ),
-                      ),
-                      
-                      if (isCurrentMonth && !isSelected)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Icon(
-                            Icons.circle,
-                            size: 6,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Selected month info
-          if (_selectedMonth != null)
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.calendar_month, size: 16, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Selected: ${_formatMonthDisplay(_selectedMonth!)}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
-}
-
   String _getMonthAbbreviation(String monthId) {
     final parts = monthId.split('-');
     final month = int.parse(parts[1]);
@@ -1546,11 +1566,21 @@ Widget _buildMonthGridSelector(BuildContext context) {
     return "$monthName $year$suffix";
   }
 
+
   void _goToNextStep() {
     if (_currentStep < 2) {
       setState(() {
         _currentStep++;
       });
+      if (_currentStep == 2 && !_hasAutofocusedAmount) {
+        _hasAutofocusedAmount = true;
+        // Delay focus request to ensure the step is rendered
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            _amountFocusNode.requestFocus();
+          }
+        });
+      }
     }
   }
 

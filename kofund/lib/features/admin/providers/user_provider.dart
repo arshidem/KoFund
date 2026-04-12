@@ -109,10 +109,9 @@ Future<void> unapproveUser(String uid) async {
   }
 }
 
-// --------------------------------------------------------------------------
 // 🟢 APPROVE USER (Make them a member) - FIXED VERSION
 // --------------------------------------------------------------------------
-Future<void> approveUser(String uid, String communityId) async {
+Future<void> approveUser(String uid, String communityId, {String? adminName}) async {
   // 1. Optimistic Update
   final pendingIndex = _pendingMembers.indexWhere((u) => u.uid == uid);
   UserModel? originalUser;
@@ -126,7 +125,7 @@ Future<void> approveUser(String uid, String communityId) async {
   }
 
   try {
-    await _userService.approveUser(uid);
+    await _userService.approveUser(uid, adminName: adminName);
     _setMessage('User approved successfully');
   } catch (e) {
     // 2. Revert on failure
