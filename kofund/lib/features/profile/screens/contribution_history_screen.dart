@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
-import 'package:kofund/core/widgets/loading_indicator.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -35,7 +34,7 @@ class ContributionHistoryScreen extends StatefulWidget {
 class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
   String? _currentUserId;
   bool _isInitialLoad = true;
-  bool _isRefreshing = false;
+  final bool _isRefreshing = false;
   // REMOVED: final RefreshController _refreshController = RefreshController();
   
   @override

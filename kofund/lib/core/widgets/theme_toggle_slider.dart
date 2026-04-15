@@ -20,10 +20,10 @@ class ThemeToggleSlider extends StatelessWidget {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 64,
-        height: 34,
+        width: 50,
+        height: 28,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           color: value ? const Color(0xFF1E1E2C) : const Color(0xFFE0E0E0),
           boxShadow: [
             BoxShadow(
@@ -41,9 +41,9 @@ class ThemeToggleSlider extends StatelessWidget {
               curve: Curves.easeInOutCubic,
               alignment: value ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: 26,
-                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
@@ -58,7 +58,7 @@ class ThemeToggleSlider extends StatelessWidget {
                 child: Center(
                   child: Icon(
                     value ? Icons.nightlight_round : Icons.wb_sunny_rounded,
-                    size: 16,
+                    size: 14,
                     color: value ? Colors.indigo : Colors.orange,
                   ),
                 ),

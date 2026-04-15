@@ -89,8 +89,13 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
     }
     
     // 🆕 Use notificationId from data if available (from Cloud Function)
-    final notificationId = data['notificationId'] ?? 
+    final String baseId = data['notificationId'] ?? 
                           '${now.millisecondsSinceEpoch}_bg_${currentUserId ?? 'anonymous'}';
+    
+    // Ensure ID consistency with foreground: baseId_userId
+    final notificationId = (currentUserId != null && !baseId.contains('_$currentUserId'))
+        ? '${baseId}_$currentUserId'
+        : baseId;
     
     // 🆕 Check if this is from Cloud Function (has sentFromApp flag)
     final isFromCloudFunction = data['sentFromApp'] == 'true' || 
@@ -438,12 +443,13 @@ AppNotification _createNotificationFromMessage(RemoteMessage message) {
   final userId = data['userId'] ?? _auth.currentUser?.uid;
   
   // Get base notificationId
-  final baseNotificationId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
+  final String baseId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
   
   // 🆕 Construct full ID: base_userId (SAME as Cloud Function)
-  final notificationId = '${baseNotificationId}_$userId';
+  // Ensure we don't double-append userId if it's already there
+  final notificationId = baseId.contains('_$userId') ? baseId : '${baseId}_$userId';
   
-  debugPrint("📝 Created notification ID: $notificationId (base: $baseNotificationId, userId: $userId)");
+  debugPrint("📝 Created notification ID: $notificationId (base: $baseId, userId: $userId)");
   
   return AppNotification(
     id: notificationId,
@@ -656,8 +662,10 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
     final now = DateTime.now();
     // ✅ Check recipientId first, then userId, to correctly set the owner without losing original data
     final ownerId = data['recipientId'] ?? data['userId'] ?? _auth.currentUser?.uid;
-    final baseNotificationId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
-    final notificationId = data['id'] ?? '${baseNotificationId}_$ownerId';
+    final String baseId = data['notificationId'] ?? '${now.millisecondsSinceEpoch}';
+    final notificationId = (data['id'] != null) 
+        ? data['id'].toString() 
+        : (baseId.contains('_$ownerId') ? baseId : '${baseId}_$ownerId');
 
     return AppNotification(
       id: notificationId,
@@ -960,7 +968,8 @@ Future<void> sendUserNotification({
     
     // Create the SAME notification ID that Cloud Function will use
     final now = DateTime.now();
-    final notificationId = '${now.millisecondsSinceEpoch}_$userId';
+    final baseId = now.millisecondsSinceEpoch.toString();
+    final notificationId = '${baseId}_$userId';
     
     final callData = {
       'userId': userId,
@@ -974,7 +983,7 @@ Future<void> sendUserNotification({
         'programId': programId,
         'communityId': communityId,
         'senderName': senderName, // Keep in data too for local parsing
-        'notificationId': notificationId,
+        'notificationId': baseId, // ⭐ Passing ONLY baseId to avoid double-appending
       },
     };
     
@@ -982,28 +991,6 @@ Future<void> sendUserNotification({
     final resultData = result.data as Map<String, dynamic>;
     
     debugPrint("✅ User notification sent: $resultData");
-    
-    // Just show local notification if it's the current user
-    if (currentUser.uid == userId) {
-      // Create notification object for local display ONLY
-      final notification = AppNotification(
-        id: notificationId, // Use SAME ID as Cloud Function
-        title: title,
-        body: body,
-        type: type,
-        priority: NotificationPriority.normal,
-        data: data,
-        userId: userId,
-        communityId: communityId,
-        programId: programId,
-        isRead: false,
-        timestamp: now,
-        senderName: senderName,
-      );
-      
-      // 🆕 Only show local notification, don't save to Firestore
-      await _showLocalNotification(notification);
-    }
     
   } on FirebaseFunctionsException catch (e) {
     debugPrint("❌ Cloud Function error: ${e.code} - ${e.message}");

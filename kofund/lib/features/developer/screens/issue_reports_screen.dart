@@ -7,6 +7,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/issues/models/issue_model.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/skeleton/issue_reports_skeleton.dart';
 
 class IssueReportsScreen extends StatefulWidget {
   const IssueReportsScreen({super.key});
@@ -20,13 +21,12 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
   String _selectedFilter = 'all'; // 'all', 'pending', 'in-progress', 'resolved'
   String _selectedSort = 'newest'; // 'newest', 'oldest'
 
-// Line 24-27: Change from Map<String, String> to Map<String, Color>
-final Map<String, Color> _statusColors = {
-  'pending': Colors.orange,
-  'in-progress': Colors.blue,
-  'resolved': Colors.green,
-  'closed': Colors.grey,
-};
+  final Map<String, Color> _statusColors = {
+    'pending': Colors.orange,
+    'in-progress': Colors.blue,
+    'resolved': Colors.green,
+    'closed': Colors.grey,
+  };
 
   final Map<String, IconData> _typeIcons = {
     'bug': Icons.bug_report,
@@ -119,7 +119,8 @@ final Map<String, Color> _statusColors = {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.blue),
                   ),
                   child: Text(
@@ -282,87 +283,263 @@ color: Colors.blue.withValues(alpha: 0.1),                    borderRadius: Bord
   }
 
   void _showIssueDetails(IssueModel issue) {
-    showDialog(
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Issue Details', style: TextStyle(color: AppColors.textPrimary(context))),
-        backgroundColor: AppColors.card(context),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(issue.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              const SizedBox(height: 12),
-              Row(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary(context).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: _statusColors[issue.status]!.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _statusColors[issue.status]!),
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(issue.status.toUpperCase(), style: TextStyle(color: _statusColors[issue.status], fontWeight: FontWeight.bold)),
+                    child: Icon(
+                      _typeIcons[issue.type] ?? Icons.error,
+                      color: _statusColors[issue.status],
+                      size: 24,
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Report # ${issue.id.substring(0, 8).toUpperCase()}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Text(
+                          issue.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text(issue.type.toUpperCase(), style: const TextStyle(color: Colors.blue)),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Text('Description:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              Text(issue.description, style: TextStyle(color: AppColors.textSecondary(context))),
-              if (issue.stepsToReproduce != null) ...[
-                const SizedBox(height: 12),
-                Text('Steps to Reproduce:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-                Text(issue.stepsToReproduce!, style: TextStyle(color: AppColors.textSecondary(context))),
-              ],
-              const SizedBox(height: 12),
-              Divider(color: AppColors.border(context)),
-              Text('Reported by:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              Text('${issue.reporterName} (${issue.reporterEmail})', style: TextStyle(color: AppColors.textSecondary(context))),
-              const SizedBox(height: 8),
-              Text('Reported on:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              Text(DateFormat('MMM dd, yyyy - hh:mm a').format(issue.createdAt.toDate()), style: TextStyle(color: AppColors.textSecondary(context))),
-              const SizedBox(height: 8),
-              Text('App Version:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              Text(issue.appVersion, style: TextStyle(color: AppColors.textSecondary(context))),
-              Text('Platform:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-              Text(issue.platform.toUpperCase(), style: TextStyle(color: AppColors.textSecondary(context))),
-              if (issue.assignedDeveloperName != null) ...[
-                const SizedBox(height: 8),
-                Text('Assigned to:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-                Text(issue.assignedDeveloperName!, style: TextStyle(color: Colors.blue)),
-              ],
-              if (issue.resolutionNotes != null) ...[
-                const SizedBox(height: 12),
-                Text('Resolution Notes:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
-                Text(issue.resolutionNotes!, style: TextStyle(color: AppColors.textSecondary(context))),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-          if (issue.status == 'pending') ...[
-            ElevatedButton(
-              onPressed: () {
-                _assignToMe(issue.id);
-                Navigator.pop(context);
-              },
-              child: const Text('Assign to Me'),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status & Type
+                    Row(
+                      children: [
+                        _buildBadge(issue.status.toUpperCase(), _statusColors[issue.status]!),
+                        const SizedBox(width: 10),
+                        _buildBadge(issue.type.toUpperCase(), Colors.blue),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('DESCRIPTION'),
+                    const SizedBox(height: 8),
+                    _buildContentBox(issue.description, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.03)),
+
+                    if (issue.stepsToReproduce != null && issue.stepsToReproduce!.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('STEPS TO REPRODUCE'),
+                      const SizedBox(height: 8),
+                      _buildContentBox(issue.stepsToReproduce!, color: Colors.orange.withValues(alpha: 0.05), borderColor: Colors.orange.withValues(alpha: 0.1)),
+                    ],
+
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('REPORTER INFORMATION'),
+                    const SizedBox(height: 12),
+                    _buildDetailRow(Icons.person_outline, 'Name', issue.reporterName),
+                    _buildDetailRow(Icons.email_outlined, 'Email', issue.reporterEmail),
+                    _buildDetailRow(Icons.calendar_today_outlined, 'Reported On', DateFormat('MMM dd, yyyy - hh:mm a').format(issue.createdAt.toDate())),
+                    
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('SYSTEM DETAILS'),
+                    const SizedBox(height: 12),
+                    _buildDetailRow(Icons.info_outline, 'App Version', 'v${issue.appVersion}'),
+                    _buildDetailRow(Icons.devices, 'Platform', issue.platform.toUpperCase()),
+                    
+                    if (issue.assignedDeveloperName != null) ...[
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('ASSIGNMENT'),
+                      const SizedBox(height: 12),
+                      _buildDetailRow(Icons.engineering_rounded, 'Developer', issue.assignedDeveloperName!, valueColor: Colors.blue),
+                    ],
+
+                    if (issue.resolutionNotes != null && issue.resolutionNotes!.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('RESOLUTION NOTES'),
+                      const SizedBox(height: 8),
+                      _buildContentBox(issue.resolutionNotes!, color: Colors.green.withValues(alpha: 0.05), borderColor: Colors.green.withValues(alpha: 0.1)),
+                    ],
+                    
+                    const SizedBox(height: 100), // Space for bottom actions
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom Actions Bar
+            Container(
+              padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF162626) : Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                  if (issue.status == 'pending') ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _assignToMe(issue.id);
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.assignment_ind_rounded, size: 20, color: Colors.white),
+                        label: const Text('Assign to Me', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary(context),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: color),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w900,
+        color: AppColors.textTertiary(context),
+        letterSpacing: 1.5,
+      ),
+    );
+  }
+
+  Widget _buildContentBox(String content, {required Color color, Color? borderColor}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        border: borderColor != null ? Border.all(color: borderColor) : null,
+      ),
+      child: Text(
+        content,
+        style: TextStyle(
+          fontSize: 14,
+          color: AppColors.textPrimary(context).withValues(alpha: 0.8),
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.textTertiary(context).withValues(alpha: 0.6)),
+          const SizedBox(width: 12),
+          Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? AppColors.textPrimary(context),
+            ),
+          ),
         ],
       ),
     );
@@ -404,7 +581,7 @@ color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: Bo
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const IssueReportsSkeleton();
           }
 
           final issues = snapshot.data!.docs
@@ -597,4 +774,3 @@ color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: Bo
     );
   }
 }
-

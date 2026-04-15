@@ -315,7 +315,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             // Program Announcement Join Card
             if (isProgramAnnouncement) ...[
               const SizedBox(height: 28),
-              _buildProgramJoinCard(context, notification, programId!),
+              _buildProgramJoinCard(context, notification, programId),
             ],
 
             // Additional Details

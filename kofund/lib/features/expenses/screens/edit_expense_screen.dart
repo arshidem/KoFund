@@ -461,7 +461,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                               children: [
                                 // Program Selection
                                 DropdownButtonFormField<String>(
-                                  value: (_selectedProgramId != null && _availablePrograms.any((p) => p.programId == _selectedProgramId)) 
+                                  initialValue: (_selectedProgramId != null && _availablePrograms.any((p) => p.programId == _selectedProgramId)) 
                                       ? _selectedProgramId 
                                       : null,
                                   dropdownColor: AppColors.surface(context),
@@ -501,7 +501,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 const SizedBox(height: 16),
                                 // Category Selection
                                 DropdownButtonFormField<String>(
-                                  value: (_selectedCategory != null && _categories.contains(_selectedCategory!.toLowerCase())) 
+                                  initialValue: (_selectedCategory != null && _categories.contains(_selectedCategory!.toLowerCase())) 
                                       ? _selectedCategory!.toLowerCase() 
                                       : null,
                                   dropdownColor: AppColors.surface(context),
@@ -527,7 +527,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 const SizedBox(height: 16),
                                 // Payment Method
                                 DropdownButtonFormField<String>(
-                                  value: (_selectedPaymentMethod != null && _paymentMethods.contains(_selectedPaymentMethod!.toLowerCase())) 
+                                  initialValue: (_selectedPaymentMethod != null && _paymentMethods.contains(_selectedPaymentMethod!.toLowerCase())) 
                                       ? _selectedPaymentMethod!.toLowerCase() 
                                       : null,
                                   dropdownColor: AppColors.surface(context),

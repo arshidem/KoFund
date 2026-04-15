@@ -58,7 +58,7 @@ class ContributionHistorySkeleton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: _itemColor(),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(

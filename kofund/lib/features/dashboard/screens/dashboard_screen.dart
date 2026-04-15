@@ -69,8 +69,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _hasShownAdminToast = false;
   
   // 🆕 Greeting functionality
-  bool _showGreeting = true;
-  double _greetingOpacity = 1.0;
+  final bool _showGreeting = true;
+  final double _greetingOpacity = 1.0;
 
 Future<void> _onRefresh() async {
   HapticHelper.light();

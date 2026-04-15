@@ -5,7 +5,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:kofund/core/widgets/network_aware_button.dart';
+import 'package:kofund/core/services/network_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -78,8 +78,44 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return GradientSheetScaffold(
       title: 'Change Password',
+      actions: [
+        if (!_passwordChanged)
+          Consumer<AppAuthProvider>(
+            builder: (context, authProvider, child) {
+              return authProvider.isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.only(right: 16),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: StreamBuilder<bool>(
+                        stream: NetworkService().onConnectionChanged,
+                        initialData: true,
+                        builder: (context, snapshot) {
+                          final bool isOnline = snapshot.data ?? true;
+                          return IconButton(
+                            icon: isOnline
+                                ? const Icon(Icons.check, color: Colors.white, size: 26)
+                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                            tooltip: isOnline ? 'Update Password' : 'Offline - No Connection',
+                            onPressed: isOnline ? _changePassword : null,
+                          );
+                        },
+                      ),
+                    );
+            },
+          ),
+      ],
       body: Padding(
-        padding: AppStyles.screenPadding,
+        padding: AppStyles.screenPadding.copyWith(top: 8),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           child: _passwordChanged ? _buildSuccessUI() : _buildFormUI(),
@@ -103,25 +139,55 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Update Your Password',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(context),
+            // Decorative Header
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(context).withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary(context).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.admin_panel_settings_rounded,
+                        size: 48,
+                        color: AppColors.primary(context),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Secure Your Account',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Regularly updating your password helps prevent unauthorized access to your account data.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary(context),
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter your current password and set a new one to keep your account secure.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary(context),
-                height: 1.5,
-              ),
-            ),
-            
-            const SizedBox(height: 32),
             
             _buildInputField(
               controller: _currentPasswordController,
@@ -198,13 +264,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               builder: (context, authProvider, child) {
                 return Column(
                   children: [
-                    NetworkAwareButton(
-                      label: 'Update Password',
-                      icon: Icons.security_rounded,
-                      isLoading: authProvider.isLoading,
-                      onPressed: _changePassword,
-                    ),
-                    
                     if (authProvider.error != null) ...[
                       const SizedBox(height: 16),
                       Container(

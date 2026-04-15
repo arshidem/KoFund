@@ -220,7 +220,7 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
                         ? '₹${widget.program.suggestedContribution!.toStringAsFixed(0)}'
                         : 'Flexible',
                     valueColor: widget.program.suggestedContribution != null
-                        ? AppColors.primary(context)
+                        ? AppColors.textPrimary(context)
                         : AppColors.textSecondary(context),
                   ),
                   _buildHeaderInfoTile(
@@ -238,13 +238,13 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
                             ? AppColors.textTertiary(context)
                             : AppColors.error(context),
                   ),
-                  _buildHeaderInfoTile(
-                    context,
-                    icon: Icons.assessment_rounded,
-                    title: 'Estimated Total',
-                    value: _calculateEstimatedTotal(widget.program, participantCount),
-                    valueColor: AppColors.primary(context),
-                  ),
+                  if (!widget.program.isMonthlyPaymentProgram)
+                    _buildHeaderInfoTile(
+                      context,
+                      icon: Icons.assessment_rounded,
+                      title: 'Estimated Total',
+                      value: _calculateEstimatedTotal(widget.program, participantCount),
+                    ),
                 ],
               ),
             ],
@@ -352,31 +352,29 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
                 icon: Icons.monetization_on_rounded,
                 label: 'Suggested Contribution',
                 value: '₹ ${widget.program.suggestedContribution!.toStringAsFixed(0)} per person',
-                valueColor: Colors.green,
               ),
             const SizedBox(height: 12),
-            if (widget.program.totalProgramAmount != null)
+            if (widget.program.totalProgramAmount != null && !widget.program.isMonthlyPaymentProgram)
               _buildDetailTile(
                 context,
                 icon: Icons.account_balance_wallet_rounded,
                 label: 'Total Program Budget',
                 value: '₹ ${widget.program.totalProgramAmount!.toStringAsFixed(0)}',
-                valueColor: AppColors.primary(context),
               ),
-            const SizedBox(height: 12),
-            StreamBuilder<int>(
-              stream: participantProvider.streamProgramParticipantCount(widget.program.programId),
-              builder: (context, snapshot) {
-                final participantCount = snapshot.data ?? 0;
-                return _buildDetailTile(
-                  context,
-                  icon: Icons.assessment_rounded,
-                  label: 'Estimated Total Collection',
-                  value: _calculateEstimatedTotal(widget.program, participantCount),
-                  valueColor: AppColors.primary(context),
-                );
-              },
-            ),
+            if (!widget.program.isMonthlyPaymentProgram) const SizedBox(height: 12),
+            if (!widget.program.isMonthlyPaymentProgram)
+              StreamBuilder<int>(
+                stream: participantProvider.streamProgramParticipantCount(widget.program.programId),
+                builder: (context, snapshot) {
+                  final participantCount = snapshot.data ?? 0;
+                  return _buildDetailTile(
+                    context,
+                    icon: Icons.assessment_rounded,
+                    label: 'Estimated Total Collection',
+                    value: _calculateEstimatedTotal(widget.program, participantCount),
+                  );
+                },
+              ),
             const SizedBox(height: 12),
             StreamBuilder<int>(
               stream: participantProvider.streamProgramParticipantCount(widget.program.programId),
@@ -417,7 +415,6 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
               icon: Icons.groups_rounded,
               label: 'Participant Type',
               value: widget.program.participantType == 'fixed' ? 'Fixed (Limited slots)' : 'Unlimited (Open for all)',
-              valueColor: widget.program.participantType == 'fixed' ? Colors.orange : Colors.green,
             ),
             const SizedBox(height: 12),
             Container(
@@ -484,7 +481,9 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
               stream: participantProvider.streamProgramParticipantCount(widget.program.programId),
               builder: (context, participantSnapshot) {
                 final participantCount = participantSnapshot.data ?? 0;
-                final double totalExpected = (widget.program.totalProgramAmount ?? 0.0) > 0 ? widget.program.totalProgramAmount! : (widget.program.suggestedContribution ?? 0.0) * (participantCount > 0 ? participantCount : (widget.program.isFixedParticipants ? widget.program.maxParticipants : 1));
+                final double totalExpected = widget.program.isMonthlyPaymentProgram 
+                    ? 0.0 
+                    : ((widget.program.totalProgramAmount ?? 0.0) > 0 ? widget.program.totalProgramAmount! : (widget.program.suggestedContribution ?? 0.0) * (participantCount > 0 ? participantCount : (widget.program.isFixedParticipants ? widget.program.maxParticipants : 1)));
                 final progressPercentage = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0.0;
 
                 // Check for milestone crossing

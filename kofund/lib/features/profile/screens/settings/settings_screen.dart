@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -16,7 +17,6 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/utils/app_info.dart';
 import 'package:kofund/core/widgets/premium_switch.dart';
-import 'package:flutter/cupertino.dart';
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -84,7 +84,7 @@ Future<void> _loadAppInfo() async {
                       slivers: [
                         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            padding: AppStyles.screenPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

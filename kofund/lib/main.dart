@@ -339,7 +339,7 @@ class FirebaseInitializationWrapper extends StatelessWidget {
   Future<bool> _checkFirebaseInitialized() async {
     try {
       // Check if Firebase is initialized by trying to access a property
-      final app = Firebase.app();
+      Firebase.app();
       return true;
     } catch (e) {
       debugPrint('Firebase not initialized: $e');
@@ -456,27 +456,7 @@ class _AppProvidersState extends State<AppProviders> {
     }
   }
 
-  // 🎯 Retrieve web invite code from SharedPreferences
-  static Future<String?> getWebInviteCode() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('web_invite_code');
-    } catch (e) {
-      debugPrint('❌ Error retrieving invite code: $e');
-      return null;
-    }
-  }
 
-  // 🎯 Clear web invite code from SharedPreferences
-  static Future<void> clearWebInviteCode() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('web_invite_code');
-      debugPrint('✅ Invite code cleared');
-    } catch (e) {
-      debugPrint('❌ Error clearing invite code: $e');
-    }
-  }
   
   Future<void> _initializeNotificationServices() async {
     try {

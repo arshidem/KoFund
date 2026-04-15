@@ -783,7 +783,7 @@ Widget _buildProgramSelectionStep(String communityId) {
         if (_searchQuery.isNotEmpty) {
           filteredUsers = filteredUsers.where((user) {
             final name = (user.displayName ?? '').toLowerCase();
-            final email = (user.email ?? '').toLowerCase();
+            final email = user.email.toLowerCase();
             return name.contains(_searchQuery) || email.contains(_searchQuery);
           }).toList();
         }

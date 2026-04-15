@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../routing/route_names.dart';
 import '../../features/notifications/models/notification_model.dart';
-import '../../core/constants/notification_types.dart';
 
 class NotificationNavigator {
   /// Called from inside the app (e.g. NotificationDetailScreen action button).

@@ -9,6 +9,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
 import 'package:kofund/features/members/screens/member_details_screen.dart';
+import 'package:kofund/core/skeleton/approval_requests_skeleton.dart';
 import 'dart:ui';
 
 class ApprovalRequestsScreen extends StatefulWidget {
@@ -394,7 +395,12 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
           completeIcon: Icon(Icons.check, color: Colors.green),
           failedIcon: Icon(Icons.error, color: Colors.red),
         ),
-        child: CustomScrollView(
+        child: userProvider.isLoading && userProvider.pendingMembers.isEmpty && userProvider.approvedMembers.isEmpty
+          ? ListView(
+              physics: const NeverScrollableScrollPhysics(),
+              children: [ApprovalRequestsSkeleton.buildList(context)],
+            )
+          : CustomScrollView(
           slivers: [
             // Search Results Header (if searching)
             if (_searchQuery.isNotEmpty && (filteredPending.isNotEmpty || filteredApproved.isNotEmpty))

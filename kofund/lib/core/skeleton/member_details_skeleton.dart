@@ -41,7 +41,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
         decoration: BoxDecoration(
           color: hasGradient ? null : (dark ? Colors.grey[850] : Colors.white),
           gradient: hasGradient ? AppColors.primaryGradient(context) : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             if (!hasGradient)
               BoxShadow(

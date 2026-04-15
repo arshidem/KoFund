@@ -33,10 +33,10 @@ class PremiumSwitch extends StatelessWidget {
         opacity: isEnabled ? 1.0 : 0.5,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 64,
-          height: 34,
+          width: 50,
+          height: 28,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             color: value 
                 ? (activeColor ?? const Color(0xFF00D2B4)) 
                 : (inactiveColor ?? (isDark ? Colors.white10 : Colors.black12)),
@@ -57,9 +57,9 @@ class PremiumSwitch extends StatelessWidget {
                 curve: Curves.easeOutBack,
                 alignment: value ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 26,
-                  height: 26,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: 22,
+                  height: 22,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
@@ -75,7 +75,7 @@ class PremiumSwitch extends StatelessWidget {
                       ? Center(
                           child: Icon(
                             value ? activeIcon : inactiveIcon,
-                            size: 16,
+                            size: 14,
                             color: value 
                                 ? (activeColor ?? const Color(0xFF00D2B4)) 
                                 : Colors.grey,

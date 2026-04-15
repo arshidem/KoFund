@@ -9,7 +9,6 @@ import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'dart:async';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class PollDetailsScreen extends StatefulWidget {
   final String pollId;

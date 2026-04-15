@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 
 class StatsCardSkeleton extends StatelessWidget {
   final bool isDarkMode;
@@ -8,15 +10,19 @@ class StatsCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+    final containerColor = AppColors.card(context);
+
     return Shimmer.fromColors(
-      baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-      highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+      baseColor: baseColor,
+      highlightColor: highlightColor,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
+          color: containerColor,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

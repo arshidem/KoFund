@@ -67,7 +67,7 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
     
     try {
       programProvider.getProgramById(widget.programId).listen((program) {
-        if (program != null) {
+        if (program != null && mounted) {
           setState(() {
             _cachedProgram = program;
             _isProgramLoading = false;
@@ -75,9 +75,11 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen>
         }
       });
     } catch (e) {
-      setState(() {
-        _isProgramLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProgramLoading = false;
+        });
+      }
     }
   }
 

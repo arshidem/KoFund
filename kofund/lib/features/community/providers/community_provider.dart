@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
 import 'package:kofund/features/community/models/community_model.dart';

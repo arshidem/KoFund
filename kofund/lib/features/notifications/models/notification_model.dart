@@ -207,4 +207,14 @@ class AppNotification {
   bool get isHighPriority => 
       priority == NotificationPriority.critical || 
       priority == NotificationPriority.high;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AppNotification &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

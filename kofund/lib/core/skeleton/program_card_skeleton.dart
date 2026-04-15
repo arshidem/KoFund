@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 
 class ProgramCardSkeleton extends StatelessWidget {
   final bool isDarkMode;
@@ -8,6 +10,9 @@ class ProgramCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -15,26 +20,26 @@ class ProgramCardSkeleton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Shimmer.fromColors(
-              baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-              highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
               child: Container(
                 width: 100,
                 height: 24,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
             Shimmer.fromColors(
-              baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-              highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
               child: Container(
                 width: 70,
                 height: 20,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
@@ -49,7 +54,7 @@ class ProgramCardSkeleton extends StatelessWidget {
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                child: _buildSingleProgramCardSkeleton(),
+                child: _buildSingleProgramCardSkeleton(context),
               );
             },
           ),
@@ -58,16 +63,19 @@ class ProgramCardSkeleton extends StatelessWidget {
     );
   }
 
-  Widget _buildSingleProgramCardSkeleton() {
+  Widget _buildSingleProgramCardSkeleton(BuildContext context) {
+    final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+
     return Shimmer.fromColors(
-      baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-      highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+      baseColor: baseColor,
+      highlightColor: highlightColor,
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.card(context),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

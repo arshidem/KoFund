@@ -2,8 +2,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/participants/models/participant_model.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kofund/core/services/notification_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
 
 class ParticipantService {
   final FirebaseFirestore _firestore;

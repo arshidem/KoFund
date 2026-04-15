@@ -36,7 +36,7 @@ class ProgramListSkeleton extends StatelessWidget {
 
   static Widget _buildProgramCardSkeleton(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -94,15 +94,35 @@ class ProgramListSkeleton extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(width: 50, height: 24, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
-                  const SizedBox(width: 8),
-                  Container(width: 50, height: 24, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                  // Stat 1
+                  Container(
+                    width: 60,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Stat 2
+                  Container(
+                    width: 70,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ],
               ),
+              // Pill Button
               Container(
-                width: 100,
-                height: 40,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                width: 90,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(100), // radiusFull
+                ),
               ),
             ],
           ),

@@ -262,7 +262,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               ),
             ),
             value: _enableReminders,
-            activeColor: AppColors.primary(context),
+            activeThumbColor: AppColors.primary(context),
             onChanged: (value) {
               HapticHelper.medium();
               setState(() {
@@ -820,7 +820,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                   child: const Row(
                     children: [
                       Icon(Icons.info_outline, color: Colors.orange),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Test mode was active. No actual push notifications were delivered to users.',

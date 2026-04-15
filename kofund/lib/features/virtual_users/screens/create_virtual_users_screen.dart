@@ -4,7 +4,6 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
-import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class CreateVirtualUsersScreen extends StatefulWidget {
@@ -26,7 +25,6 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
   final TextEditingController _bulkInputController = TextEditingController();
   bool _showBulkInput = false;
   final FocusNode _bulkFocus = FocusNode();
-  bool _showHeader = true;
 
   @override
   void initState() {
@@ -35,10 +33,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
 
     _bulkFocus.addListener(() {
       if (!_showBulkInput) return; // ignore focus when bulk is closed
-
-      setState(() {
-        _showHeader = !_bulkFocus.hasFocus;
-      });
+      setState(() {});
     });
   }
 
@@ -131,9 +126,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
       return;
     }
 
-    final adminName = currentUser.displayName ?? 
-                      currentUser.email.split('@').first ?? 
-                      'Admin';
+    final adminName = currentUser.displayName ?? currentUser.email.split('@').first;
 
     final validUsers = _users.where((user) {
       final name = user['name'] as String;
@@ -536,7 +529,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
           const Row(
             children: [
               Icon(Icons.lightbulb_outline_rounded, color: Colors.amber, size: 20),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 'How to Import',
                 style: TextStyle(
@@ -867,7 +860,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
               const SizedBox(width: 16),
               Expanded(
                 flex: 2,
-                child: Container(
+                child: SizedBox(
                   height: 56,
                   child: ElevatedButton(
                     onPressed: validCount > 0 && !isLoading ? _createVirtualUsers : null,

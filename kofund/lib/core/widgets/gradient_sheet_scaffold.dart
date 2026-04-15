@@ -14,7 +14,7 @@ class GradientSheetScaffold extends StatelessWidget {
     this.actions,
     this.onPop,
     this.headerHeight = 72,
-    this.gapBelowHeader = 12,
+    this.gapBelowHeader = 0,
     this.sheetBorderRadius = 28,
     this.belowHeader,
     required this.body,

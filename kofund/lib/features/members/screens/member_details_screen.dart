@@ -537,94 +537,98 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
   ) {
     if (!isAdmin || member.uid == currentUserId) return [];
 
+    PopupMenuItem<String> buildPopupMenuItem({
+      required String value,
+      required IconData icon,
+      required String label,
+      required Color color,
+    }) {
+      return PopupMenuItem<String>(
+        value: value,
+        height: 44,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return [
       PopupMenuButton<String>(
         icon: const Icon(
           Icons.more_vert,
           color: Colors.white,
+          size: 24,
         ),
+        offset: const Offset(0, 40),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 4,
+        color: AppColors.card(context),
         onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
         itemBuilder: (context) {
           if (isVirtualUser) {
             // Virtual user menu
             return [
-              const PopupMenuItem<String>(
+              buildPopupMenuItem(
                 value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 20, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Edit Virtual User'),
-                  ],
-                ),
+                icon: Icons.edit_rounded,
+                label: 'Edit Virtual User',
+                color: Colors.blue,
               ),
-              const PopupMenuItem<String>(
+              buildPopupMenuItem(
                 value: 'remove',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 20, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Remove from Community'),
-                  ],
-                ),
+                icon: Icons.delete_outline_rounded,
+                label: 'Remove from Community',
+                color: AppColors.error(context),
               ),
             ];
           } else {
             // Regular user menu
             return [
               if (!member.isAdmin)
-                const PopupMenuItem<String>(
+                buildPopupMenuItem(
                   value: 'make_admin',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.admin_panel_settings,
-                        size: 20,
-                        color: Colors.orange,
-                      ),
-                      SizedBox(width: 8),
-                      Text('Make Admin'),
-                    ],
-                  ),
+                  icon: Icons.admin_panel_settings_rounded,
+                  label: 'Make Admin',
+                  color: Colors.orange,
                 ),
               if (member.isAdmin)
-                const PopupMenuItem<String>(
+                buildPopupMenuItem(
                   value: 'remove_admin',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.person_remove,
-                        size: 20,
-                        color: Colors.orange,
-                      ),
-                      SizedBox(width: 8),
-                      Text('Remove Admin'),
-                    ],
-                  ),
+                  icon: Icons.person_remove_rounded,
+                  label: 'Remove Admin',
+                  color: Colors.orange,
                 ),
-              const PopupMenuItem<String>(
+              buildPopupMenuItem(
                 value: 'unapprove',
-                child: Row(
-                  children: [
-                    Icon(Icons.block, size: 20, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Unapprove User'),
-                  ],
-                ),
+                icon: Icons.block_rounded,
+                label: 'Unapprove User',
+                color: AppColors.error(context),
               ),
-              const PopupMenuItem<String>(
+              buildPopupMenuItem(
                 value: 'remove',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.exit_to_app,
-                      size: 20,
-                      color: Colors.red,
-                    ),
-                    SizedBox(width: 8),
-                    Text('Remove from Community'),
-                  ],
-                ),
+                icon: Icons.exit_to_app_rounded,
+                label: 'Remove from Community',
+                color: AppColors.error(context),
               ),
             ];
           }
@@ -1004,7 +1008,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.primary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
                 child: Text(
                   '$totalParticipations',
@@ -1069,7 +1073,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                   child: Text(
                     '+ ${participationHistory.length - 3} more programs',
@@ -1414,7 +1418,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.primary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                 ),
                 child: Text(
                   '₹${totalAmount.toStringAsFixed(0)}',
@@ -1479,7 +1483,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                   ),
                   child: Text(
                     '+ ${contributionHistory.length - 3} more contributions',
@@ -1580,13 +1584,12 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
                       InkWell(
                         onTap: () => _openWhatsApp(value),
                         borderRadius: BorderRadius.circular(16),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
                           child: FaIcon(
-                            // ✅ Just use FaIcon directly
                             FontAwesomeIcons.whatsapp,
                             size: 18,
-                            color: Colors.black,
+                            color: AppColors.textPrimary(context),
                           ),
                         ),
                       ),
@@ -1621,7 +1624,7 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
@@ -1680,38 +1683,42 @@ class _MemberDetailsScreenBodyState extends State<_MemberDetailsScreenBody> {
     required String title,
     required String message,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 56,
-            color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(context),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 56,
+              color: AppColors.textSecondary(context).withValues(alpha: 0.5),
             ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
+            const SizedBox(height: 12),
+            Text(
+              title,
               style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary(context),
-                height: 1.4,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary(context),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary(context),
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

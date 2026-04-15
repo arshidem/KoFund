@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/terms_of_service_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -80,7 +81,7 @@ Future<void> _loadAppInfo() async {
       title: 'Terms of Service',
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -88,10 +89,10 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.card(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
                       Icon(
@@ -152,7 +153,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: Colors.amber[50],
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                   side: BorderSide(
                     color: Colors.amber[300]!,
                     width: 1.5,
@@ -288,7 +289,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.surface(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: ListTile(
                   onTap: () => _launchSupportEmail(context),
@@ -331,7 +332,7 @@ color: Colors.blue.withValues(alpha: 0.1),                      borderRadius: Bo
 Card(
   color: AppColors.surface(context),
   shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(24),
   ),
   child: Padding(
     padding: const EdgeInsets.all(16),

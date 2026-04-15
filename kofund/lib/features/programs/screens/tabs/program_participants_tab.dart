@@ -6,7 +6,6 @@ import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../providers/program_provider.dart';
 import '../../../participants/models/participant_model.dart';
@@ -21,7 +20,6 @@ import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class SafeAsyncOperation {
   static Future<T?> execute<T>({
@@ -258,16 +256,8 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
               if (widget.program.isMonthlyPaymentProgram)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
+                    padding: const EdgeInsets.only(bottom: 8, left: AppDimensions.screenPaddingHorizontal, right: AppDimensions.screenPaddingHorizontal),
                     child: _buildMonthSelectorHeader(context),
-                  ),
-                ),
-
-              if (_showMonthSelector && widget.program.isMonthlyPaymentProgram)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _buildMonthGridSelector(context),
                   ),
                 ),
 
@@ -812,7 +802,7 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
 
   Widget _buildMonthSelectorHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -880,17 +870,11 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () {
-                      setState(() {
-                        _showMonthSelector = !_showMonthSelector;
-                      });
-                    },
+                    onTap: () => _showMonthSelectorDialog(context),
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: Icon(
-                        _showMonthSelector 
-                          ? Icons.keyboard_arrow_up_rounded 
-                          : Icons.keyboard_arrow_down_rounded,
+                        Icons.keyboard_arrow_down_rounded,
                         color: AppColors.primary(context),
                         size: 22,
                       ),
@@ -930,6 +914,208 @@ class _ProgramParticipantsTabState extends State<ProgramParticipantsTab> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showMonthSelectorDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          return Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                constraints: const BoxConstraints(maxWidth: 400),
+                decoration: BoxDecoration(
+                  color: AppColors.card(context),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Dialog Header
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded, color: AppColors.primary(context), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Select Month',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Year Navigator
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                          border: Border.all(color: AppColors.border(context)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.chevron_left, color: AppColors.primary(context), size: 20),
+                              onPressed: () => setDialogState(() => _currentDisplayYear--),
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
+                            Text(
+                              '$_currentDisplayYear',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.chevron_right, color: AppColors.primary(context), size: 20),
+                              onPressed: () => setDialogState(() => _currentDisplayYear++),
+                              padding: const EdgeInsets.all(4),
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Month Grid
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 6,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemCount: 12,
+                        itemBuilder: (context, index) {
+                          final monthNumber = index + 1;
+                          final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
+                          final paymentCount = _monthPaymentCounts[monthId] ?? 0;
+                          final hasPayments = paymentCount > 0;
+                          final isSelected = monthId == _selectedMonth;
+                          final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
+                          final isFutureMonth = DateTime.parse('$monthId-01').isAfter(DateTime.now());
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedMonth = monthId;
+                                _streamKey++;
+                              });
+                              Navigator.pop(dialogContext);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary(context)
+                                    : isFutureMonth
+                                        ? AppColors.surface(context)
+                                        : hasPayments
+                                            ? AppColors.success(context).withValues(alpha: 0.1)
+                                            : AppColors.card(context),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary(context)
+                                      : isCurrentMonth
+                                          ? AppColors.warning(context)
+                                          : AppColors.border(context),
+                                  width: isSelected ? 1.5 : 0.8,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _getShortMonthName(monthNumber),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : isFutureMonth
+                                              ? AppColors.textTertiary(context)
+                                              : AppColors.textPrimary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  if (hasPayments)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.white.withValues(alpha: 0.9)
+                                            : AppColors.success(context).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '$paymentCount',
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.success(context),
+                                        ),
+                                      ),
+                                    )
+                                  else if (isFutureMonth)
+                                    Icon(Icons.schedule, size: 8, color: AppColors.textTertiary(context))
+                                  else
+                                    const SizedBox(height: 10),
+                                  if (isCurrentMonth && !isSelected)
+                                    Icon(Icons.circle, size: 4, color: AppColors.warning(context)),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // Legend
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        children: [
+                          _buildLegendItem(AppColors.primary(context), 'Selected', context),
+                          _buildLegendItem(AppColors.success(context).withValues(alpha: 0.2), 'Has Payments', context),
+                          _buildLegendItem(AppColors.warning(context), 'Current', context),
+                          _buildLegendItem(AppColors.surface(context), 'Future', context),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1261,7 +1447,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                       ],
                     ),
                   ),
-                // Column 4: Three-dot menu - Use PopupMenuButton directly
+                // Column 4: Three-dot menu
                 PopupMenuButton<String>(
                   icon: Icon(
                     Icons.more_vert,
@@ -1269,10 +1455,13 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                     size: 20,
                   ),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  color: AppColors.card(context),
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                   ),
+                  offset: const Offset(-8, 40),
                   onSelected: (value) async {
                     if (value == 'toggle_payment') {
                       _togglePaymentStatus(participant, context);
@@ -1910,7 +2099,9 @@ Future<void> _removeContributions({
 }
 
 class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
   final double minExtent;
+  @override
   final double maxExtent;
   final Widget child;
 

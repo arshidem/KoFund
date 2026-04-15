@@ -568,7 +568,7 @@ Widget _buildBodyContent(ProgramProvider programProvider, List<ProgramModel> dis
   }
 
   return SliverPadding(
-    padding: const EdgeInsets.only(top: 16),
+    padding: const EdgeInsets.only(top: 8),
     sliver: SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
@@ -751,7 +751,7 @@ Widget _buildProgramCard(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: programColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                                    shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     ProgramTypes.getIconData(program.programType),
@@ -808,67 +808,69 @@ Widget _buildProgramCard(
                               ),
                               const SizedBox(height: 16),
                             ],
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Progress',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textSecondary(context),
+                            if (!program.isMonthlyPaymentProgram) ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Progress',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textSecondary(context),
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      '${(progress * 100).toInt()}%',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: programColor,
+                                      Text(
+                                        '${(progress * 100).toInt()}%',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: programColor,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    return Stack(
-                                      children: [
-                                        Container(
-                                          height: 8,
-                                          width: double.infinity,
-                                          decoration: BoxDecoration(
-                                            color: programColor.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(4),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return Stack(
+                                        children: [
+                                          Container(
+                                            height: 8,
+                                            width: double.infinity,
+                                            decoration: BoxDecoration(
+                                              color: programColor.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
                                           ),
-                                        ),
-                                        TweenAnimationBuilder<double>(
-                                          duration: const Duration(milliseconds: 1200),
-                                          curve: Curves.easeOutQuart,
-                                          tween: Tween<double>(begin: 0, end: progress),
-                                          builder: (context, animValue, child) {
-                                            return Container(
-                                              height: 8,
-                                              width: constraints.maxWidth * animValue,
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [programColor, programColor.withValues(alpha: 0.7)],
+                                          TweenAnimationBuilder<double>(
+                                            duration: const Duration(milliseconds: 1200),
+                                            curve: Curves.easeOutQuart,
+                                            tween: Tween<double>(begin: 0, end: progress),
+                                            builder: (context, animValue, child) {
+                                              return Container(
+                                                height: 8,
+                                                width: constraints.maxWidth * animValue,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [programColor, programColor.withValues(alpha: 0.7)],
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(4),
                                                 ),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -877,11 +879,6 @@ Widget _buildProgramCard(
                                     _buildCompactStat(
                                       Icons.people_outline_rounded,
                                       '$totalParticipants${maxParticipants > 0 ? "/$maxParticipants" : ""}',
-                                    ),
-                                    const SizedBox(width: 16),
-                                    _buildCompactStat(
-                                      Icons.account_balance_wallet_outlined,
-                                      '₹${collectedAmount.toInt()}',
                                     ),
                                   ],
                                 ),

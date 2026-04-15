@@ -8,6 +8,7 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/issues/screens/my_issues_screen.dart'; // Add this import
 // Add this import at the top
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 
 class ReportIssueScreen extends StatefulWidget {
   const ReportIssueScreen({super.key});
@@ -34,29 +35,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     {'value': 'other', 'label': 'Other', 'icon': Icons.more_horiz},
   ];
 
-  Widget _buildIssueTypeChip(Map<String, dynamic> type) {
-    final isSelected = _selectedIssueType == type['value'];
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(type['icon'], size: 18),
-          const SizedBox(width: 6),
-          Text(type['label']),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _selectedIssueType = type['value']);
-      },
-      backgroundColor: AppColors.card(context),
-      selectedColor: AppColors.primary(context).withValues(alpha: 0.2),
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-  }
+
 
 Future<void> _submitIssue() async {
   if (!_formKey.currentState!.validate()) return;
@@ -83,9 +62,11 @@ Future<void> _submitIssue() async {
     );
 
     // Show success dialog
+    if (!mounted) return;
     _showSuccessDialog(issueId);
     
   } catch (e) {
+    if (!mounted) return;
     SnackbarHelper.showError(context, 'Failed to submit issue: $e');
   }
 }
@@ -170,7 +151,7 @@ Future<void> _submitIssue() async {
       title: 'Report Issue',
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -179,11 +160,12 @@ Future<void> _submitIssue() async {
                 // Header Card
                 Card(
                   color: AppColors.card(context),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
                         Icon(
@@ -227,10 +209,81 @@ Future<void> _submitIssue() async {
                 ),
                 const SizedBox(height: 12),
 
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _issueTypes.map(_buildIssueTypeChip).toList(),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+                  ),
+                  child: PopupMenuButton<String>(
+                    offset: const Offset(0, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    color: AppColors.card(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _issueTypes.firstWhere((t) => t['value'] == _selectedIssueType)['icon'],
+                            color: AppColors.primary(context),
+                            size: 22,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _issueTypes.firstWhere((t) => t['value'] == _selectedIssueType)['label'],
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textTertiary(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    onSelected: (value) {
+                      setState(() => _selectedIssueType = value);
+                    },
+                    itemBuilder: (BuildContext context) => _issueTypes.map((type) {
+                      return PopupMenuItem<String>(
+                        value: type['value'],
+                        height: 48,
+                        child: Row(
+                          children: [
+                            Icon(
+                              type['icon'],
+                              color: _selectedIssueType == type['value'] 
+                                  ? AppColors.primary(context) 
+                                  : AppColors.textSecondary(context),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              type['label'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: _selectedIssueType == type['value'] 
+                                    ? FontWeight.bold 
+                                    : FontWeight.normal,
+                                color: _selectedIssueType == type['value'] 
+                                    ? AppColors.primary(context) 
+                                    : AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -243,7 +296,16 @@ Future<void> _submitIssue() async {
                     labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                     hintText: 'Briefly describe the issue',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
                     ),
                     filled: true,
                     fillColor: AppColors.card(context),
@@ -270,7 +332,16 @@ Future<void> _submitIssue() async {
                     labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                     hintText: 'Describe the issue in detail...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
                     ),
                     filled: true,
                     fillColor: AppColors.card(context),
@@ -298,7 +369,16 @@ Future<void> _submitIssue() async {
                     labelStyle: TextStyle(color: AppColors.textSecondary(context)),
                     hintText: '1. Go to...\n2. Click on...\n3. See error...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
                     ),
                     filled: true,
                     fillColor: AppColors.card(context),
@@ -347,7 +427,7 @@ Future<void> _submitIssue() async {
                       backgroundColor: AppColors.primary(context),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     child: issueProvider.isLoading
@@ -380,7 +460,7 @@ Future<void> _submitIssue() async {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: AppColors.border(context)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     child: Text(
@@ -420,7 +500,7 @@ GestureDetector(
   child: Card(
     color: AppColors.card(context),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(28),
     ),
     child: Padding(
       padding: const EdgeInsets.all(16),

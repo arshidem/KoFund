@@ -7,7 +7,6 @@ import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
-import 'package:flutter/services.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 
 class ContributionReceiptImage {
@@ -206,9 +205,11 @@ class _ReceiptImageDialogState extends State<ReceiptImageDialog> {
       
       await file.writeAsBytes(imageBytes);
 
-      await Share.shareXFiles(
-        [XFile(filePath, mimeType: 'image/png')],
-        text: 'Here is my contribution receipt from KoFund for ${widget.programName}.',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(filePath, mimeType: 'image/png')],
+          text: 'Here is my contribution receipt from KoFund for ${widget.programName}.',
+        ),
       );
     } catch (e) {
       if (mounted) {
@@ -369,17 +370,17 @@ class _ReceiptCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
+        color: Colors.white, // Strict white background for external sharing
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black12, 
+            blurRadius: 24,
+            offset: Offset(0, 12),
           )
         ],
         border: Border.all(
-          color: AppColors.border(context),
+          color: Colors.grey[300]!,
           width: 1,
         ),
       ),
@@ -388,10 +389,9 @@ class _ReceiptCard extends StatelessWidget {
         children: [
           // Header section
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.04),
-              borderRadius: const BorderRadius.only(
+            padding: const EdgeInsets.all(32),
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
               ),
@@ -401,10 +401,10 @@ class _ReceiptCard extends StatelessWidget {
                 Text(
                   communityName,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary(context),
+                    color: Colors.black87,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -418,20 +418,20 @@ class _ReceiptCard extends StatelessWidget {
                     letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 
                 // Tick Icon
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.15),
+                    color: primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Container(
-                      width: 48,
-                      height: 48,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: primaryColor,
                         shape: BoxShape.circle,
@@ -439,18 +439,18 @@ class _ReceiptCard extends StatelessWidget {
                       child: const Icon(
                         Icons.check_rounded,
                         color: Colors.white,
-                        size: 32,
+                        size: 36,
                       ),
                     ),
                   ),
                 ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Text(
                   'Amount Paid',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary(context),
+                    color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -458,7 +458,7 @@ class _ReceiptCard extends StatelessWidget {
                 Text(
                   '₹${amountFormat.format(contribution.amount)}',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 38,
                     fontWeight: FontWeight.w900,
                     color: primaryColor,
                     letterSpacing: -1.0,
@@ -474,7 +474,7 @@ class _ReceiptCard extends StatelessWidget {
               30,
               (index) => Expanded(
                 child: Container(
-                  color: index.isEven ? AppColors.border(context) : Colors.transparent,
+                  color: index.isEven ? Colors.grey[300] : Colors.transparent,
                   height: 1.5,
                 ),
               ),
@@ -505,32 +505,32 @@ class _ReceiptCard extends StatelessWidget {
                   _buildReceiptRow(context, 'Recorded By', addedBy!),
                 ],
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
                 
                 // KoFund Watermark
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(6),
+                        color: primaryColor, // Solid primary color
+                        shape: BoxShape.circle, // Circular shape
                       ),
-                      child: Image.asset(
-                        'assets/logos/KoFund.png',
-                        height: 14,
-                        width: 14,
-                        color: Colors.white,
+                      clipBehavior: Clip.antiAlias,
+                      child: Transform.scale(
+                        scale: 1.2, // Scale up to eliminate intrinsic transparent padding from the asset
+                        child: Image.asset('assets/logos/KoFund.png'),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Generated by KoFund',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary(context).withValues(alpha: 0.6),
+                        color: Colors.grey[800], // Explicit color since bg is always white
                       ),
                     ),
                   ],
@@ -553,7 +553,7 @@ class _ReceiptCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary(context),
+            color: Colors.grey[600], // Hardcoded grey for consistent white receipt background
           ),
         ),
         const SizedBox(width: 16),
@@ -561,10 +561,10 @@ class _ReceiptCard extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(context),
+              color: Colors.black87, // Hardcoded dark for consistent white receipt background
             ),
           ),
         ),

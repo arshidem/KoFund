@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/contact_support_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/services.dart';
@@ -210,79 +211,26 @@ Future<void> _launchEmail(BuildContext context) async {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: AppColors.card(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: AppColors.textSecondary(context),
-        ),
-      ),
-    );
-  }
-Widget _buildWhatsAppContactCard({
-  required BuildContext context,
-  required VoidCallback onTap,
-}) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 12),
-    color: AppColors.card(context),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: ListTile(
+    return ListTile(
       onTap: onTap,
       leading: Container(
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.circular(10),
+          color: color.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
         ),
-        child: Center(
-          child: FaIcon(
-            FontAwesomeIcons.whatsapp,
-            size: 24,
-            color: Colors.green,
-          ),
-        ),
+        child: Icon(icon, color: color),
       ),
       title: Text(
-        'WhatsApp Support',
+        title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary(context),
         ),
       ),
       subtitle: Text(
-        'Message us on WhatsApp',
+        subtitle,
         style: TextStyle(
           color: AppColors.textSecondary(context),
         ),
@@ -292,16 +240,57 @@ color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.
         size: 16,
         color: AppColors.textSecondary(context),
       ),
+    );
+  }
+Widget _buildWhatsAppContactCard({
+  required BuildContext context,
+  required VoidCallback onTap,
+}) {
+  return ListTile(
+    onTap: onTap,
+    leading: Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: FaIcon(
+          FontAwesomeIcons.whatsapp,
+          size: 24,
+          color: Colors.green,
+        ),
+      ),
+    ),
+    title: Text(
+      'WhatsApp Support',
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary(context),
+      ),
+    ),
+    subtitle: Text(
+      'Message us on WhatsApp',
+      style: TextStyle(
+        color: AppColors.textSecondary(context),
+      ),
+    ),
+    trailing: Icon(
+      Icons.arrow_forward_ios,
+      size: 16,
+      color: AppColors.textSecondary(context),
     ),
   );
 }
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GradientSheetScaffold(
       title: 'Contact Support',
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -309,10 +298,10 @@ color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.
               Card(
                 color: AppColors.card(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
                       Icon(
@@ -366,25 +355,38 @@ color: Colors.green.withValues(alpha: 0.1),          borderRadius: BorderRadius.
               const SizedBox(height: 16),
 
               // Contact Options
-              _buildContactCard(
-                context: context,
-                icon: Icons.email_outlined,
-                title: 'Email Support',
-                subtitle: 'kofundapp@gmail.com',
-                color: Colors.blue,
-                onTap: () => _launchEmail(context),
-              ),
-_buildWhatsAppContactCard( // Use the custom method
-  context: context,
-  onTap: () => _openWhatsApp(context),
-),
-              _buildContactCard(
-                context: context,
-                icon: Icons.phone_outlined,
-                title: 'Phone Support',
-                subtitle: '+91 815 787 5032',
-                color: Colors.orange,
-                onTap: () => _launchPhone(context),
+              Card(
+                color: AppColors.card(context),
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  children: [
+                    _buildContactCard(
+                      context: context,
+                      icon: Icons.email_outlined,
+                      title: 'Email Support',
+                      subtitle: 'kofundapp@gmail.com',
+                      color: Colors.blue,
+                      onTap: () => _launchEmail(context),
+                    ),
+                    Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+                    _buildWhatsAppContactCard(
+                      context: context,
+                      onTap: () => _openWhatsApp(context),
+                    ),
+                    Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+                    _buildContactCard(
+                      context: context,
+                      icon: Icons.phone_outlined,
+                      title: 'Phone Support',
+                      subtitle: '+91 815 787 5032',
+                      color: Colors.orange,
+                      onTap: () => _launchPhone(context),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 18),
@@ -393,7 +395,7 @@ _buildWhatsAppContactCard( // Use the custom method
               Card(
                 color: AppColors.surface(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),

@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
@@ -19,7 +18,6 @@ import 'package:kofund/features/programs/utils/contribution_receipt_image.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
 class ProgramContributionsTab extends StatefulWidget {
   final ProgramModel program;
 
@@ -318,7 +316,7 @@ Widget _buildContributionSummary(BuildContext context) {
     stream: _getContributionStatsStream(context),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
-        return _buildShimmerContributionStats();
+        return _buildShimmerContributionStats(context);
       }
 
       final data = snapshot.data ?? {
@@ -442,8 +440,8 @@ Widget _buildContributionSummary(BuildContext context) {
                   ),
                 ),
                 
-                // Target information
-                if (targetAmount > 0)
+                // Target information (only for non-monthly programs)
+                if (!widget.program.isMonthlyPaymentProgram && targetAmount > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
@@ -456,7 +454,7 @@ Widget _buildContributionSummary(BuildContext context) {
                       overflow: TextOverflow.ellipsis,
                     ),
                   )
-                else if (widget.program.suggestedContribution != null && participantCount > 0)
+                else if (!widget.program.isMonthlyPaymentProgram && widget.program.suggestedContribution != null && participantCount > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
@@ -472,8 +470,8 @@ Widget _buildContributionSummary(BuildContext context) {
 
                 const SizedBox(height: 12),
 
-                // Progress bar (only show if there's a target)
-                if (targetAmount > 0) ...[
+                // Progress bar (only show if there's a target and it's not a monthly program)
+                if (!widget.program.isMonthlyPaymentProgram && targetAmount > 0) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
@@ -493,7 +491,7 @@ Widget _buildContributionSummary(BuildContext context) {
                     children: [
                       Expanded(
                         child: Text(
-                          '${progressPercentage.toStringAsFixed(1)}% collected',
+                           '${progressPercentage.toStringAsFixed(1)}% collected',
                           style: TextStyle(
                             fontSize: 11,
                             color: AppColors.textCards(context).withValues(alpha: 0.85),
@@ -515,37 +513,6 @@ Widget _buildContributionSummary(BuildContext context) {
                         ),
                       ),
                     ],
-                  ),
-                ] else ...[
-                  // Alternative display when no target is set
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.textCards(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: AppColors.textCards(context),
-                          size: 14,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "No target amount set",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textCards(context).withValues(alpha: 0.85),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ],
@@ -578,14 +545,18 @@ Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) a
 }
 
 // Shimmer loading for contributions
-Widget _buildShimmerContributionStats() {
+Widget _buildShimmerContributionStats(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final baseColor = isDarkMode ? Colors.grey[850]! : Colors.grey[200]!;
+  final highlightColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+
   return Container(
     width: double.infinity,
     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(16),
-      color: Colors.grey[200],
+      color: baseColor,
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,13 +570,13 @@ Widget _buildShimmerContributionStats() {
                 Container(
                   width: 120,
                   height: 12,
-                  color: Colors.grey[300],
+                  color: highlightColor,
                   margin: const EdgeInsets.only(bottom: 4),
                 ),
                 Container(
                   width: 80,
                   height: 14,
-                  color: Colors.grey[300],
+                  color: highlightColor,
                 ),
               ],
             ),
@@ -614,13 +585,13 @@ Widget _buildShimmerContributionStats() {
                 Container(
                   width: 16,
                   height: 16,
-                  color: Colors.grey[300],
+                  color: highlightColor,
                 ),
                 const SizedBox(width: 4),
                 Container(
                   width: 30,
                   height: 16,
-                  color: Colors.grey[300],
+                  color: highlightColor,
                 ),
               ],
             ),
@@ -632,7 +603,7 @@ Widget _buildShimmerContributionStats() {
         Container(
           width: 150,
           height: 30,
-          color: Colors.grey[300],
+          color: highlightColor,
         ),
         
         const SizedBox(height: 8),
@@ -640,7 +611,7 @@ Widget _buildShimmerContributionStats() {
         Container(
           width: 100,
           height: 12,
-          color: Colors.grey[300],
+          color: highlightColor,
         ),
         
         const SizedBox(height: 12),
@@ -648,7 +619,7 @@ Widget _buildShimmerContributionStats() {
         Container(
           width: double.infinity,
           height: 6,
-          color: Colors.grey[300],
+          color: highlightColor,
         ),
         
         const SizedBox(height: 8),
@@ -656,13 +627,16 @@ Widget _buildShimmerContributionStats() {
         Container(
           width: double.infinity,
           height: 12,
-          color: Colors.grey[300],
+          color: highlightColor,
         ),
       ],
     ),
   );
 }
 Widget _buildSkeletonLoader(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  final highlightColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+
   return ListView.builder(
     itemCount: 5,
     itemBuilder: (context, index) {
@@ -676,7 +650,7 @@ Widget _buildSkeletonLoader(BuildContext context) {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: highlightColor,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -690,7 +664,7 @@ Widget _buildSkeletonLoader(BuildContext context) {
                     width: double.infinity,
                     height: 16,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: highlightColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     margin: const EdgeInsets.only(bottom: 8),
@@ -699,7 +673,7 @@ Widget _buildSkeletonLoader(BuildContext context) {
                     width: 100,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: highlightColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -711,7 +685,7 @@ Widget _buildSkeletonLoader(BuildContext context) {
               width: 60,
               height: 16,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: highlightColor,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),

@@ -6,6 +6,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
 import 'package:kofund/features/contributions/widgets/contribution_tile.dart';
+import 'package:kofund/core/skeleton/contribution_list_skeleton.dart';
 
 class AllContributionsScreen extends StatefulWidget {
   const AllContributionsScreen({super.key});
@@ -105,9 +106,7 @@ class _AllContributionsScreenState extends State<AllContributionsScreen> {
 
   Widget _buildContributionList(ContributionProvider provider) {
     if (provider.isLoading && provider.contributions.isEmpty) {
-      return const SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return ContributionListSkeleton.buildSliver(context);
     }
 
     final filteredList = provider.contributions.where((c) {

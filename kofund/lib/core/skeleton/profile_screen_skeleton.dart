@@ -1,6 +1,6 @@
-// lib/features/profile/skeleton/profile_screen_skeleton.dart
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:kofund/core/constants/app_colors.dart';
 
 class ProfileScreenSkeleton extends StatelessWidget {
   final bool isDarkMode;
@@ -14,9 +14,9 @@ class ProfileScreenSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color baseColor = isDarkMode ? const Color(0xFF1A2423) : Colors.grey[300]!;
-    final Color highlightColor = isDarkMode ? const Color(0xFF2A3433) : Colors.grey[100]!;
-    final Color backgroundColor = isDarkMode ? const Color(0xFF0F1716) : const Color(0xFFF8F9FA);
+    final Color baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
+    final Color highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
+    final Color backgroundColor = AppColors.background(context);
 
     return Scaffold(
       backgroundColor: backgroundColor,

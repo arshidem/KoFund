@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import '../../models/program_model.dart';
 import '../../../expenses/providers/expense_provider.dart';
 import '../../../expenses/models/expense_model.dart';
@@ -16,7 +15,6 @@ import '../../../../core/services/network_service.dart'; // Add this import
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
-import 'package:kofund/core/utils/snackbar_helper.dart';
 
 // Add this class at the top of your file, after the imports
 class ChangeEntry {
@@ -2512,7 +2510,7 @@ return AlertDialog(
 
                 // Payment Method Dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedPaymentMethod,
+                  initialValue: selectedPaymentMethod,
                   decoration: InputDecoration(
                     labelText: 'Payment Method *',
                     labelStyle: TextStyle(
@@ -2871,7 +2869,9 @@ Future<void> _createExpense({
 }
 
 class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
   final double minExtent;
+  @override
   final double maxExtent;
   final Widget child;
 

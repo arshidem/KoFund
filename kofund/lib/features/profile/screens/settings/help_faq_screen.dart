@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/help_faq_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/features/profile/screens/settings/contact_support_screen.dart';
@@ -69,7 +70,7 @@ Future<void> _loadAppInfo() async {
       title: 'Help & FAQ',
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -77,10 +78,10 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.card(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
                       Icon(
@@ -153,7 +154,7 @@ Future<void> _loadAppInfo() async {
     foregroundColor: Colors.white,
     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: AppStyles.radiusFull,
     ),
     minimumSize: const Size(double.infinity, 50), // ← Add this line
   ),
@@ -173,7 +174,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.surface(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(8),
@@ -209,7 +210,7 @@ Future<void> _loadAppInfo() async {
       margin: const EdgeInsets.only(bottom: 12),
       color: AppColors.card(context),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

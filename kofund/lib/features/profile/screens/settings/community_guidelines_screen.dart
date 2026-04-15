@@ -1,5 +1,6 @@
 // lib/features/profile/screens/settings/community_guidelines_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'privacy_policy_screen.dart';
@@ -47,7 +48,7 @@ Future<void> _loadAppInfo() async {
       title: 'Community Guidelines',
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -55,10 +56,10 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.card(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
                       Icon(
@@ -119,7 +120,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: Colors.green[50],
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                   side: BorderSide(
                     color: Colors.green[300]!,
                     width: 1.5,
@@ -272,7 +273,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.surface(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -365,7 +366,7 @@ Future<void> _loadAppInfo() async {
               Card(
                 color: AppColors.surface(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -450,7 +451,7 @@ Future<void> _loadAppInfo() async {
       child: Card(
         color: AppColors.card(context),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),

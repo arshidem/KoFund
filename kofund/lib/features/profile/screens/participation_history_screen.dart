@@ -23,7 +23,7 @@ class ParticipationHistoryScreen extends StatefulWidget {
 class _ParticipationHistoryScreenState
     extends State<ParticipationHistoryScreen> {
   // REMOVED: final RefreshController _refreshController = RefreshController();
-  bool _isRefreshing = false;
+  final bool _isRefreshing = false;
   bool _isInitialLoad = true;
   
   @override

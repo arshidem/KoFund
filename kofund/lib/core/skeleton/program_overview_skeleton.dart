@@ -27,7 +27,7 @@ class ProgramOverviewSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
@@ -228,7 +228,7 @@ class ProgramOverviewSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.border(context), width: 0.6),
       ),
       child: Column(

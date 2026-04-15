@@ -57,14 +57,11 @@ import '../features/auth/providers/app_auth_provider.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/notifications/screens/notification_detail_screen.dart';
 import '../features/notifications/screens/notification_settings_screen.dart';
-import '../features/notifications/models/notification_model.dart';
 import 'route_names.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
-      case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
       case RouteNames.splash:
   // Check if arguments contain invite code (from deep link)
   if (settings.arguments != null && settings.arguments is Map) {
@@ -252,7 +249,6 @@ case RouteNames.joinCommunity:
   return MaterialPageRoute(builder: (_) => const NotificationsScreen());
 
 case RouteNames.notificationDetail:
-  final notification = settings.arguments as AppNotification;
   return MaterialPageRoute(
     builder: (_) => NotificationDetailScreen(),
     settings: settings,

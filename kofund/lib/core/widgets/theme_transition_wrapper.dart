@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 
 class ThemeTransitionWrapper extends StatefulWidget {
   final Widget child;
