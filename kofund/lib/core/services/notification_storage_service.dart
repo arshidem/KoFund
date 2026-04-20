@@ -318,9 +318,10 @@ Future<void> saveNotification(AppNotification notification) async {
           .where('isRead', isEqualTo: false)
           .where('userId', isEqualTo: user.uid)
           .where('communityId', isEqualTo: communityId)
+          .count()
           .get();
 
-      return snapshot.docs.length;
+      return snapshot.count ?? 0;
     } catch (e) {
       debugPrint('❌ Error getting unread count by community: $e');
       return 0;
@@ -338,9 +339,10 @@ Future<void> saveNotification(AppNotification notification) async {
           .collection('notifications')
           .where('isRead', isEqualTo: false)
           .where('userId', isEqualTo: user.uid) // Extra safety filter
+          .count()
           .get();
 
-      return snapshot.docs.length;
+      return snapshot.count ?? 0;
     } catch (e) {
       debugPrint('❌ Error getting unread count: $e');
       return 0;

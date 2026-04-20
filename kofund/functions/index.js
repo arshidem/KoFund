@@ -27,6 +27,23 @@ console.log("✅ Firebase Cloud Functions v2 ready");
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+/**
+ * Helper to ensure all values in a Map are strings (required for FCM data)
+ */
+function ensureStringData(data) {
+  const sanitized = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === null || value === undefined) {
+      sanitized[key] = "";
+    } else if (typeof value === "object") {
+      sanitized[key] = JSON.stringify(value);
+    } else {
+      sanitized[key] = String(value);
+    }
+  }
+  return sanitized;
+}
+
 // ==================== TOKEN MANAGEMENT FUNCTIONS ====================
 
 /**
@@ -271,47 +288,9 @@ exports.handleJoinWeb = functions.https.onRequest((req, res) => {
   res.status(200).send(html);
 });
 
-// Remove duplicate 'api' function (you have two declarations)
-exports.api = functions.https.onRequest((req, res) => {
-  res.json({
-    status: 'ok',
-    message: 'KoFund API',
-    timestamp: new Date().toISOString()
-  });
-});
+// Unused 'api' function removed.
 
-// ===== ADD THIS NEW FUNCTION =====
-exports.join = functions.https.onRequest((req, res) => {
-  // Handle CORS
-  res.set('Access-Control-Allow-Origin', '*');
-  
-  if (req.method === 'OPTIONS') {
-    res.set('Access-Control-Allow-Methods', 'GET');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
-    res.status(204).send('');
-    return;
-  }
-
-  // Extract parameters from URL: /join/g5lik7kq4w2Tabza6Uwp?code=GH56F38H
-  const pathParts = req.path.split('/');
-  const inviteCode = pathParts[2]; // Gets "g5lik7kq4w2Tabza6Uwp"
-  const verificationCode = req.query.code; // Gets "GH56F38H"
-  
-  // Log for debugging
-  console.log('Join request:', { inviteCode, verificationCode });
-  
-  // Your business logic here
-  // Example: Check Firestore for valid invite
-  
-  res.json({
-    success: true,
-    message: 'Join endpoint working',
-    data: {
-      invite_code: inviteCode,
-      verification_code: verificationCode
-    }
-  });
-});
+// Unused 'join' function removed.
 /**
  * Unregister FCM token when user logs out
  */
@@ -453,59 +432,69 @@ exports.sendCommunityNotification = onCall(
       const communityData = communityDoc.data();
       const communityName = communityData.name || 'Community';
       
-      // 3. ✅ RELIABLE: Directly query users collection by communityId
-      // This uses a simple two-field compound query (communityId + isApproved)
-      // no composite index required, and works for ALL community members.
+      // 3. ✅ ROBUST: Get tokens from BOTH collection and user doc for maximum reliability
+      const tokensCollectionSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('isActive', '==', true)
+        .where('communityIds', 'array-contains', communityId)
+        .get();
+
+      console.log(`📱 Found ${tokensCollectionSnapshot.size} valid tokens in dedicated collection`);
+
       const communityMembersSnapshot = await db
         .collection('users')
         .where('communityId', '==', communityId)
         .where('isApproved', '==', true)
         .get();
 
-      console.log(`👥 Found ${communityMembersSnapshot.size} approved members in community ${communityId}`);
+      console.log(`👥 Found ${communityMembersSnapshot.size} approved members in users collection`);
 
       // Collect tokens and user info
       const allTokens = [];
       const tokenToUserMap = new Map();
       const usersToNotify = new Set(); // Track unique users
 
+      // First, add tokens from dedicated collection
+      for (const tokenDoc of tokensCollectionSnapshot.docs) {
+        const tData = tokenDoc.data();
+        const token = tData.token;
+        const userId = tData.userId;
+        
+        if (userId === auth.uid) continue; // Skip sender
+        
+        if (typeof token === 'string' && token.length >= 50) {
+          allTokens.push(token);
+          tokenToUserMap.set(token, userId);
+          usersToNotify.add(userId);
+        }
+      }
+
+      // Second, add tokens from user docs (fallback/sync)
       for (const userDoc of communityMembersSnapshot.docs) {
         const userId = userDoc.id;
         const userData = userDoc.data();
 
-        // Skip the sender (admin who created the program)
-        if (userId === auth.uid) continue;
-
-        // Skip virtual users
-        if (userData.isVirtualUser === true) continue;
+        // Skip handled or invalid cases
+        if (userId === auth.uid || userData.isVirtualUser === true) continue;
 
         // Collect all FCM tokens for this user
         const fcmTokens = userData.fcmTokens || [];
         for (const token of fcmTokens) {
-          if (typeof token === 'string' && token.length >= 50) {
+          if (typeof token === 'string' && token.length >= 50 && !tokenToUserMap.has(token)) {
             allTokens.push(token);
             tokenToUserMap.set(token, userId);
             usersToNotify.add(userId);
           }
         }
+        
+        // Ensure user is in notify list for in-app DB entry even if no tokens
+        usersToNotify.add(userId);
       }
 
-      // Remove duplicate tokens
+      // Unique tokens list
       const uniqueTokens = [...new Set(allTokens)];
       console.log(`📱 Unique tokens to notify: ${uniqueTokens.length}`);
-      console.log(`👥 Unique users to notify: ${usersToNotify.size}`);
-
-      if (uniqueTokens.length === 0) {
-        console.log(`⚠️ No FCM tokens found. Members may not have logged in or granted push permission.`);
-        // Still create in-app notifications for all approved, non-virtual members
-        for (const userDoc of communityMembersSnapshot.docs) {
-          const userId = userDoc.id;
-          const uData = userDoc.data();
-          if (userId !== auth.uid && uData.isVirtualUser !== true) {
-            usersToNotify.add(userId);
-          }
-        }
-      }
+      console.log(`👥 Total users for in-app notifications: ${usersToNotify.size}`);
       
       // 5. Create notification documents for each user
       const notificationsBatch = db.batch();
@@ -519,12 +508,8 @@ exports.sendCommunityNotification = onCall(
           .collection('notifications')
           .doc(notificationId);
         
-        // Check if notification already exists
-        const existingDoc = await notificationRef.get();
-        if (existingDoc.exists) {
-          console.log(`⚠️ Notification ${notificationId} already exists, skipping`);
-          continue;
-        }
+        // Removed redundant existence check to reduce reads. 'set' is idempotent here.
+
         
         const notification = {
           id: notificationId,
@@ -575,24 +560,36 @@ exports.sendCommunityNotification = onCall(
         for (let i = 0; i < uniqueTokens.length; i += chunkSize) {
           const tokenChunk = uniqueTokens.slice(i, i + chunkSize);
           
+          // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+          const sanitizedData = ensureStringData({
+            ...notificationData,
+            communityId,
+            type,
+            programId: programId || '',
+            senderId: auth.uid,
+            senderName: senderName || senderData.displayName || 'KoFund Member',
+            sentFromApp: 'true',
+            notificationId: baseNotificationId,
+            timestamp: now.toISOString(),
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            title: title,
+            body: body,
+          });
+
           const message = {
-            data: {
-              ...notificationData,
-              communityId,
-              type,
-              programId: programId || '',
-              senderId: auth.uid,
-              senderName: senderName || senderData.displayName || 'KoFund Member',
-              sentFromApp: 'true',
-              notificationId: baseNotificationId,
-              timestamp: now.toISOString(),
-              click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            notification: {
               title: title,
               body: body,
             },
+            data: sanitizedData,
             tokens: tokenChunk,
             android: {
               priority: 'high',
+              notification: {
+                icon: 'ic_notification',
+                color: '#764ba2',
+                tag: baseNotificationId,
+              },
             },
             apns: {
               payload: {
@@ -788,17 +785,8 @@ exports.sendUserNotification = onCall(
         throw new Error("Target user is not eligible for notifications");
       }
       
-      // 2. Check if notification already exists
-      const existingNotification = await db
-        .collection('users')
-        .doc(userId)
-        .collection('notifications')
-        .doc(notificationId)
-        .get();
-      
-      if (existingNotification.exists) {
-        console.log(`⚠️ Notification ${notificationId} already exists, skipping document creation`);
-      } else {
+      // Removed redundant existence check/read to reduce costs.
+      if (true) {
         // Create notification document
         const notificationRef = db
           .collection('users')
@@ -838,6 +826,7 @@ exports.sendUserNotification = onCall(
         await notificationRef.set(notification);
         console.log(`✅ Created notification document: ${notificationId}`);
       }
+
       
       // 3. Get user's active tokens
       const tokensSnapshot = await db
@@ -858,29 +847,36 @@ exports.sendUserNotification = onCall(
       let pushMessageId = null;
       
       if (uniqueTokens.length > 0) {
+        // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+        const sanitizedData = ensureStringData({
+          ...notificationData,
+          userId: userId,
+          communityId: communityId || userData.communityId || '',
+          type: type,
+          programId: programId || '',
+          senderId: auth.uid,
+          senderName: senderName || 'KoFund',
+          sentFromApp: 'true',
+          notificationId: notificationId,
+          timestamp: now.toISOString(),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          title: title,
+          body: body,
+        });
+
         const message = {
           notification: {
             title: title,
             body: body,
           },
-          data: {
-            ...notificationData,
-            userId: userId,
-            communityId: communityId || userData.communityId || '',
-            type: type,
-            programId: programId || '',
-            senderId: auth.uid,
-            senderName: senderName || 'KoFund',
-            sentFromApp: 'true',
-            notificationId: notificationId,
-            timestamp: now.toISOString(),
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
-            title: title,
-            body: body,
-          },
+          data: sanitizedData,
           tokens: uniqueTokens,
           android: {
             priority: 'high',
+            notification: {
+              icon: 'ic_notification',
+              color: '#764ba2',
+            },
           },
           apns: {
             payload: {
@@ -1166,7 +1162,37 @@ exports.sendProgramContributionReminders = onCall(
       let totalRemindersSent = 0;
       let totalNotificationsCreated = 0;
       
-      // 3. Process each program
+      // 3. ✅ OPTIMIZED: Fetch all community users once to avoid N reads
+      const communityUsersSnapshot = await db
+        .collection('users')
+        .where('communityId', '==', communityId)
+        .where('isApproved', '==', true)
+        .get();
+      
+      const userMap = new Map();
+      communityUsersSnapshot.forEach(doc => userMap.set(doc.id, doc.data()));
+      console.log(`👥 Loaded ${userMap.size} community users into memory`);
+
+      // 3.5 ✅ NEW: Fetch all active tokens for this community from dedicated collection
+      const communityTokensSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('isActive', '==', true)
+        .where('communityIds', 'arrayContains', communityId)
+        .get();
+      
+      const userTokensMap = new Map(); // userId -> Set of tokens
+      communityTokensSnapshot.forEach(doc => {
+        const tData = doc.data();
+        if (tData.userId && tData.token) {
+          if (!userTokensMap.has(tData.userId)) {
+            userTokensMap.set(tData.userId, new Set());
+          }
+          userTokensMap.get(tData.userId).add(tData.token);
+        }
+      });
+      console.log(`📱 Loaded ${communityTokensSnapshot.size} tokens for ${userTokensMap.size} users into memory`);
+
+      // 4. Process each program
       for (const programDoc of programsSnapshot) {
         const program = {
           id: programDoc.id,
@@ -1188,137 +1214,72 @@ exports.sendProgramContributionReminders = onCall(
           continue;
         }
         
-        console.log(`💰 Suggested contribution: ${suggestedContribution}`);
+        // 5. ✅ OPTIMIZED: Fetch all contributions for this program once
+        const allContributionsSnapshot = await db
+          .collection('contributions')
+          .where('programId', '==', program.id)
+          .where('status', '==', 'completed')
+          .get();
         
-        // 4. Get all participants for this program - FIXED: Participants in root 'participants' collection
+        const userContributionsMap = new Map();
+        allContributionsSnapshot.forEach(doc => {
+          const c = doc.data();
+          const amount = parseFloat(c.amount) || 0;
+          userContributionsMap.set(c.userId, (userContributionsMap.get(c.userId) || 0) + amount);
+        });
+        
+        // 6. Get participants
         const participantsSnapshot = await db
           .collection('participants')
           .where('programId', '==', program.id)
           .where('status', '==', 'joined')
           .get();
         
-        console.log(`👥 Found ${participantsSnapshot.size} participants in program ${program.id}`);
-        
-        if (participantsSnapshot.size === 0) {
-          continue;
-        }
-        
-        // 5. Get users who need reminders
         const participantsToRemind = [];
         const processedUserIds = new Set();
         
         for (const participantDoc of participantsSnapshot.docs) {
-          const participant = {
-            id: participantDoc.id,
-            ...participantDoc.data()
-          };
+          const participant = participantDoc.data();
+          const userId = participant.userId;
           
-          if (processedUserIds.has(participant.userId)) continue;
-          processedUserIds.add(participant.userId);
+          if (processedUserIds.has(userId)) continue;
+          processedUserIds.add(userId);
           
-          // Test mode filtering
-          if (sendTest && testUserId && participant.userId !== testUserId) {
-            continue;
-          }
+          if (sendTest && testUserId && userId !== testUserId) continue;
           
-          // Get user info
-          const userDoc = await db.collection('users').doc(participant.userId).get();
-          if (!userDoc.exists) {
-            console.log(`⏭️ Skipping - user ${participant.userId} not found`);
-            continue;
-          }
+          // Use pre-fetched user data
+          const userData = userMap.get(userId);
+          if (!userData || userData.isVirtualUser === true) continue;
           
-          const userData = userDoc.data();
-          
-          // Check eligibility - FIXED: Match your Flutter logic
-          if (!userData.isApproved || userData.isVirtualUser === true) {
-            console.log(`\u23EF\uFE0F Skipping - user ${participant.userId} not approved or is virtual`);
-            continue;
-          }
-          
-          if (userData.communityId !== communityId) {
-            console.log(`⏭️ Skipping - user ${participant.userId} not in community`);
-            continue;
-          }
-          
-          // Calculate total paid for this program
-          const contributionsSnapshot = await db
-            .collection('contributions')
-            .where('programId', '==', program.id)
-            .where('userId', '==', participant.userId)
-            .where('status', '==', 'completed') // Added status check
-            .get();
-          
-          let totalPaid = 0;
-          contributionsSnapshot.forEach((doc) => {
-            const contribution = doc.data();
-            const amount = parseFloat(contribution.amount) || 0;
-            if (amount > 0) {
-              totalPaid += amount;
-            }
-          });
-          
+          const totalPaid = userContributionsMap.get(userId) || 0;
           const amountRemaining = Math.max(0, suggestedContribution - totalPaid);
-          const isFullyPaid = amountRemaining <= 0;
           
-          if (!isFullyPaid) {
+          if (amountRemaining > 0) {
             participantsToRemind.push({
-              participantId: participant.id,
-              userId: participant.userId,
+              userId,
+              userData, // Carry user data for tokens
               userName: userData.displayName || participant.userName || 'User',
-              userEmail: userData.email,
-              totalPaid,
               amountRemaining,
               personalizedBody: `Hi ${userData.displayName || participant.userName || 'User'}, you have $${amountRemaining.toFixed(2)} remaining of your $${suggestedContribution.toFixed(2)} contribution for ${program.title}.`,
             });
-            
-            console.log(`🔔 User ${participant.userId} needs reminder: paid $${totalPaid.toFixed(2)}, remaining $${amountRemaining.toFixed(2)}`);
-          } else {
-            console.log(`✅ User ${participant.userId} already fully paid: $${totalPaid.toFixed(2)}`);
           }
         }
         
-        console.log(`🔔 ${participantsToRemind.length} participants need reminders for program ${program.id}`);
+        if (participantsToRemind.length === 0) continue;
         
-        if (participantsToRemind.length === 0) {
-          console.log(`⏭️ Skipping program - no participants need reminders`);
-          continue;
-        }
-        
-        // 6. Create notifications
+        // 7. Batch Create Notifications
         const reminderTitle = `⏰ Contribution Reminder: ${program.title}`;
         const batch = db.batch();
         let programNotificationsCreated = 0;
         
-        for (const participant of participantsToRemind) {
-          const { userId, userName, personalizedBody, amountRemaining } = participant;
+        for (const p of participantsToRemind) {
+          const notificationId = `${baseNotificationId}_rem_${program.id}_${p.userId}`;
+          const notificationRef = db.collection('users').doc(p.userId).collection('notifications').doc(notificationId);
           
-          const notificationId = `${baseNotificationId}_reminder_${program.id}_${userId}`;
-          
-          // Check if notification already exists
-          const existingNotification = await db
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .doc(notificationId)
-            .get();
-          
-          if (existingNotification.exists) {
-            console.log(`⏭️ Skipping - notification already exists for user ${userId}`);
-            continue;
-          }
-          
-          // Create notification
-          const notificationRef = db
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .doc(notificationId);
-          
-          const notification = {
+          batch.set(notificationRef, {
             id: notificationId,
             title: reminderTitle,
-            body: personalizedBody,
+            body: p.personalizedBody,
             type: 'reminder',
             subtype: 'contribution',
             priority: 'high',
@@ -1326,14 +1287,14 @@ exports.sendProgramContributionReminders = onCall(
               communityId,
               programId: program.id,
               programName: program.title,
-              amountRemaining,
+              amountRemaining: p.amountRemaining,
               suggestedContribution,
               senderId: auth.uid,
               sentFromApp: true,
               click_action: 'FLUTTER_NOTIFICATION_CLICK',
               notificationId: baseNotificationId,
             },
-            userId,
+            userId: p.userId,
             communityId,
             programId: program.id,
             senderName: 'KoFund Reminder',
@@ -1341,18 +1302,10 @@ exports.sendProgramContributionReminders = onCall(
             isRead: false,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             deepLink: `/programs/${program.id}/contribute`,
-            metadata: {
-              amountRemaining,
-              suggestedContribution,
-              userName,
-            },
-          };
-          
-          if (!sendTest) {
-            batch.set(notificationRef, notification);
-            programNotificationsCreated++;
-          }
+          });
+          programNotificationsCreated++;
         }
+
         
         // Commit notifications batch
         if (!sendTest && programNotificationsCreated > 0) {
@@ -1361,104 +1314,83 @@ exports.sendProgramContributionReminders = onCall(
           console.log(`✅ Created ${programNotificationsCreated} notifications in Firestore`);
         }
         
-        // 7. Send push notifications
+        // 8. Send push notifications
         let pushNotificationsSent = 0;
         const pushPromises = [];
         
-        for (const participant of participantsToRemind) {
-          const { userId, personalizedBody } = participant;
+        for (const p of participantsToRemind) {
+          // Merge tokens from user document and dedicated collection
+          const tokensFromDoc = p.userData.fcmTokens || [];
+          const tokensFromCollection = userTokensMap.get(p.userId) || new Set();
           
-          try {
-            // Get user document
-            const userDoc = await db.collection('users').doc(userId).get();
-            
-            if (!userDoc.exists) continue;
-            
-            const userData = userDoc.data();
-            const fcmTokens = userData.fcmTokens || [];
-            
-            if (fcmTokens.length === 0) {
-              console.log(`⚠️ No FCM tokens found for user ${userId}`);
-              continue;
-            }
-            
-            console.log(`📱 User ${userId} has ${fcmTokens.length} token(s)`);
-            
-            // Send to all tokens for this user
-            const message = {
+          const combinedTokens = [...new Set([
+            ...tokensFromDoc, 
+            ...Array.from(tokensFromCollection)
+          ])].filter(t => typeof t === 'string' && t.length >= 50);
+
+          if (combinedTokens.length === 0) continue;
+          
+          // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+          const sanitizedData = ensureStringData({
+            communityId,
+            programId: program.id,
+            type: 'reminder',
+            subtype: 'contribution',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            senderName: 'KoFund Reminder',
+            sentFromApp: 'true',
+            notificationId: baseNotificationId,
+          });
+
+          const message = {
+            notification: {
+              title: reminderTitle,
+              body: p.personalizedBody,
+            },
+            data: sanitizedData,
+            tokens: combinedTokens,
+            android: {
+              priority: 'high',
               notification: {
-                title: reminderTitle,
-                body: personalizedBody,
+                icon: 'ic_notification',
+                color: '#764ba2',
               },
-              data: {
-                communityId,
-                programId: program.id,
-                type: 'reminder',
-                subtype: 'contribution',
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-                senderName: 'KoFund Reminder',
-                sentFromApp: 'true',
-                notificationId: baseNotificationId,
-              },
-              tokens: fcmTokens,
-              android: {
-                priority: 'high',
-              },
-              apns: {
-                payload: {
-                  aps: {
-                    contentAvailable: true,
-                    badge: 1,
-                    sound: 'default',
-                  },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  contentAvailable: true,
+                  badge: 1,
+                  sound: 'default',
                 },
               },
-            };
-            
-            // Send push notification
-            const pushPromise = messaging.sendEachForMulticast(message)
-              .then(response => {
-                console.log(`✅ Sent to ${userId}: ${response.successCount} successful, ${response.failureCount} failed`);
-                pushNotificationsSent += response.successCount;
-                totalRemindersSent += response.successCount;
-                
-                // Clean invalid tokens
-                if (response.failureCount > 0) {
-                  const invalidTokens = [];
-                  response.responses.forEach((resp, idx) => {
-                    if (!resp.success) {
-                      const failedToken = fcmTokens[idx];
-                      console.log(`❌ Failed token ${failedToken.substring(0, 20)}...: ${resp.error?.message}`);
-                      
-                      if (resp.error?.code === 'messaging/registration-token-not-registered' ||
-                          resp.error?.code === 'messaging/invalid-registration-token') {
-                        invalidTokens.push(failedToken);
-                      }
-                    }
-                  });
-                  
-                  // Remove invalid tokens from user's document
-                  if (invalidTokens.length > 0) {
-                    return db.collection('users').doc(userId).update({
-                      fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens)
-                    }).then(() => {
-                      console.log(`🗑️ Removed ${invalidTokens.length} invalid tokens from ${userId}`);
-                    });
+            },
+          };
+          
+          const pushPromise = messaging.sendEachForMulticast(message)
+            .then(response => {
+              pushNotificationsSent += response.successCount;
+              totalRemindersSent += response.successCount;
+              
+              if (response.failureCount > 0) {
+                const invalidTokens = [];
+                response.responses.forEach((resp, idx) => {
+                  if (!resp.success && (resp.error?.code === 'messaging/registration-token-not-registered')) {
+                    invalidTokens.push(fcmTokens[idx]);
                   }
+                });
+                if (invalidTokens.length > 0) {
+                  return db.collection('users').doc(p.userId).update({
+                    fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens)
+                  });
                 }
-              })
-              .catch(error => {
-                console.error(`❌ Error sending to ${userId}:`, error.message);
-              });
-            
-            pushPromises.push(pushPromise);
-            
-          } catch (userError) {
-            console.error(`❌ Error processing user ${userId}:`, userError.message);
-          }
+              }
+            })
+            .catch(err => console.error(`❌ Push failed for ${p.userId}:`, err.message));
+          
+          pushPromises.push(pushPromise);
         }
-        
-        // Wait for all push notifications to be sent
+ 
         if (pushPromises.length > 0) {
           await Promise.all(pushPromises);
           console.log(`✅ Total push notifications sent: ${pushNotificationsSent}`);
@@ -1504,39 +1436,156 @@ exports.sendProgramContributionReminders = onCall(
   }
 );
 
-// ==================== HELPER FUNCTIONS ====================
+
+// ==================== GLOBAL NOTIFICATION FUNCTION ====================
 
 /**
- * Simple test function to verify Cloud Functions are working
+ * Send notification to ALL active users
+ * Use with caution - can be expensive for large user bases
  */
-exports.testKoFund = onCall(
+exports.sendGlobalNotification = onCall(
+  {
+    region: "us-central1",
+    cors: true,
+    timeoutSeconds: 120, // Longer timeout for large broadcast
+  },
+  async (request) => {
+    try {
+      const { data, auth } = request;
+      
+      if (!auth) throw new Error("Authentication required");
+      
+      // Verify sender is admin
+      const senderDoc = await db.collection('users').doc(auth.uid).get();
+      if (!senderDoc.exists || senderDoc.data().role !== 'admin') {
+        throw new Error("Admin access required for global broadcast");
+      }
+      
+      const { title, body, data: notificationData = {} } = data || {};
+      if (!title || !body) throw new Error("Missing title or body");
+
+      const now = new Date();
+      const baseNotificationId = `global_${now.getTime()}`;
+
+      // 1. Fetch ALL active tokens in batches
+      const tokensSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('isActive', '==', true)
+        .get();
+
+      const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
+      console.log(`📡 Broadcast: Sending to ${tokens.length} tokens`);
+
+      if (tokens.length === 0) return { success: true, sentCount: 0 };
+
+      // 2. Send in chunks of 500
+      let sentCount = 0;
+      for (let i = 0; i < tokens.length; i += 500) {
+        const chunk = tokens.slice(i, i + 500);
+        
+        // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+        const sanitizedData = ensureStringData({
+          ...notificationData,
+          type: 'global_announcement',
+          sentFromApp: 'true',
+          notificationId: baseNotificationId,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        });
+
+        const message = {
+          notification: { title, body },
+          data: sanitizedData,
+          tokens: chunk,
+          android: {
+            priority: 'high',
+            notification: { icon: 'ic_notification', color: '#764ba2' },
+          },
+        };
+        const response = await messaging.sendEachForMulticast(message);
+        sentCount += response.successCount;
+      }
+
+      return {
+        success: true,
+        sentCount,
+        message: `Global notification sent to ${sentCount} devices`,
+      };
+    } catch (error) {
+      console.error("❌ Error in sendGlobalNotification:", error);
+      throw new Error(`Failed: ${error.message}`);
+    }
+  }
+);
+
+// ==================== TARGETED NOTIFICATION FUNCTION ====================
+
+/**
+ * Send notification to a specific list of user IDs
+ */
+exports.sendTargetedNotifications = onCall(
   {
     region: "us-central1",
     cors: true,
   },
   async (request) => {
     try {
-      console.log("🧪 testKoFund called");
+      const { data, auth } = request;
+      if (!auth) throw new Error("Authentication required");
+
+      const { userIds, title, body, data: notificationData = {} } = data || {};
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        throw new Error("Missing userIds list");
+      }
+      if (!title || !body) throw new Error("Missing title or body");
+
+      const now = new Date();
+      const baseNotificationId = `target_${now.getTime()}`;
+
+      // 1. Fetch tokens for these specific users
+      const tokensSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('userId', 'in', userIds.slice(0, 30)) // Firestore 'in' limit is 30
+        .where('isActive', '==', true)
+        .get();
+
+      const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
       
-      return {
-        success: true,
-        message: "KoFund Cloud Functions v2 are working! 🎉",
-        functions: {
-          version: "2.0.0",
-          region: "us-central1",
-          status: "active",
-          timestamp: new Date().toISOString(),
-        },
-        notificationSystem: {
-          structure: "community-based",
-          tokenStorage: "user_notification_tokens collection",
-          features: ["community-targeting", "sender-exclusion", "token-cleanup"],
+      console.log(`🎯 Targeted: Sending to ${tokens.length} tokens for ${userIds.length} users`);
+
+      if (tokens.length === 0) return { success: true, sentCount: 0 };
+
+      // 2. Send the message
+      // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+      const sanitizedData = ensureStringData({
+        ...notificationData,
+        type: 'targeted_notification',
+        sentFromApp: 'true',
+        notificationId: baseNotificationId,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      });
+
+      const message = {
+        notification: { title, body },
+        data: sanitizedData,
+        tokens: tokens,
+        android: {
+          priority: 'high',
+          notification: { icon: 'ic_notification', color: '#764ba2' },
         },
       };
-      
+
+      const response = await messaging.sendEachForMulticast(message);
+
+      return {
+        success: true,
+        sentCount: response.successCount,
+        message: `Targeted notification sent to ${response.successCount} devices`,
+      };
     } catch (error) {
-      console.error("❌ testKoFund error:", error);
-      throw new Error(`Test failed: ${error.message}`);
+      console.error("❌ Error in sendTargetedNotifications:", error);
+      throw new Error(`Failed: ${error.message}`);
     }
   }
 );
+
+// Unused 'testKoFund' function removed.

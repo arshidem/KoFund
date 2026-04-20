@@ -13,6 +13,10 @@ class IssueProvider with ChangeNotifier {
   String _selectedFilter = 'all';
   bool _sortByNewest = true;
   String? _lastCreatedIssueId;
+  
+  // 🚀 OPTIMIZATION: In-memory cache with TTL
+  final Map<String, ({List<IssueModel> data, DateTime timestamp})> _cache = {};
+  final Duration _cacheTTL = const Duration(minutes: 5);
 
   // Getters
   List<IssueModel> get issues => _issues;
@@ -29,12 +33,23 @@ class IssueProvider with ChangeNotifier {
   int get resolvedIssues => _issues.where((i) => i.isResolved).length;
   int get closedIssues => _issues.where((i) => i.isClosed).length;
 
-  Future<void> loadMyIssues(String userId) async {
+  Future<void> loadMyIssues(String userId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _cache.containsKey('my_$userId')) {
+      final cached = _cache['my_$userId']!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _myIssues = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
     _setLoading(true);
     _setError(null);
     
     try {
       _myIssues = await _issueService.getUserIssues(userId);
+      _cache['my_$userId'] = (data: _myIssues, timestamp: DateTime.now());
       notifyListeners();
     } catch (e) {
       _setError('Failed to load your issues: $e');
@@ -87,7 +102,19 @@ class IssueProvider with ChangeNotifier {
   }
 
   // Load issues from Firestore
-  Future<void> loadIssues() async {
+  Future<void> loadIssues({bool forceRefresh = false}) async {
+    final cacheKey = 'all_${_selectedFilter}_$_sortByNewest';
+    
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _cache.containsKey(cacheKey)) {
+      final cached = _cache[cacheKey]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _issues = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
     _setLoading(true);
     _setError(null);
     
@@ -96,6 +123,7 @@ class IssueProvider with ChangeNotifier {
         statusFilter: _selectedFilter == 'all' ? null : _selectedFilter,
         sortByNewest: _sortByNewest,
       );
+      _cache[cacheKey] = (data: _issues, timestamp: DateTime.now());
       notifyListeners();
     } catch (e) {
       _setError(e.toString());

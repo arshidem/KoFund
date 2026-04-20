@@ -38,6 +38,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/members/providers/member_provider.dart';
+import 'package:kofund/features/notifications/providers/announcement_provider.dart';
+import 'package:kofund/features/notifications/widgets/announcement_bottom_sheet.dart';
+import 'package:kofund/features/notifications/widgets/announcement_on_open_modal.dart';
+import 'package:kofund/features/notifications/widgets/app_update_dialog.dart';
+import 'package:kofund/core/services/app_update_service.dart';
+import 'package:kofund/features/notifications/services/announcement_service.dart';
 
 // 🆕 ADD INVITE IMPORTS
 
@@ -74,7 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 Future<void> _onRefresh() async {
   HapticHelper.light();
-  debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
+  // debugPrint('🔄 DEBUG: Pull to refresh triggered in Dashboard');
   if (_isManualRefreshing) return;
 
   setState(() {
@@ -89,7 +95,7 @@ Future<void> _onRefresh() async {
       // Refresh all related providers
       await Future.wait([
         context.read<DashboardProvider>().refreshDashboard(cid),
-        context.read<ProgramProvider>().loadCommunityPrograms(cid),
+        context.read<ProgramProvider>().loadCommunityPrograms(cid, forceRefresh: true),
         context.read<ProgramProvider>().loadMyParticipations(user.uid, cid),
         context.read<UserProvider>().loadCommunityMembers(cid),
         _loadInviteInfo(cid),
@@ -157,9 +163,11 @@ void _resetWidgetProviders(String userId, String communityId) {
     
     // Check if user or community has changed
     if (currentUserId != _previousUserId || currentCommunityId != _previousCommunityId) {
+      /*
       debugPrint('👤 DEBUG: User/Community changed in DashboardScreen');
       debugPrint('   Previous user: $_previousUserId, community: $_previousCommunityId');
       debugPrint('   New user: $currentUserId, community: $currentCommunityId');
+      */
       
       _previousUserId = currentUserId;
       _previousCommunityId = currentCommunityId;
@@ -170,7 +178,7 @@ void _resetWidgetProviders(String userId, String communityId) {
   }
 
   void _resetDashboardForNewUser() {
-    debugPrint('🔄 DEBUG: Resetting dashboard for new user/community');
+    // debugPrint('🔄 DEBUG: Resetting dashboard for new user/community');
     
     if (mounted) {
       setState(() {
@@ -209,7 +217,7 @@ void _resetWidgetProviders(String userId, String communityId) {
       communityId = user?.communityId;
 
       if (communityId != null && communityId!.isNotEmpty && user != null) {
-        debugPrint('🔄 DEBUG: Initializing dashboard data for community: $communityId');
+        // debugPrint('🔄 DEBUG: Initializing dashboard data for community: $communityId');
         
         // ✅ Load dashboard data
         context.read<DashboardProvider>().loadDashboardData(communityId!);
@@ -228,6 +236,10 @@ void _resetWidgetProviders(String userId, String communityId) {
         
         // 🆕 Check admin permissions and load invite info
         _checkAdminPermissions(user.uid, communityId!);
+
+        // 🚀 Check for App Updates and Announcements
+        _checkForAppUpdate();
+        _checkAnnouncements();
         
         _hasLoadedData = true;
       } else {
@@ -325,6 +337,40 @@ void _initializeWidgetProviders(String userId, String communityId) {
       }
     } catch (e) {
       debugPrint('❌ Error loading invite info: $e');
+    }
+  }
+
+  // 🚀 Internal method to check for app updates
+  void _checkForAppUpdate() async {
+    // Small delay to ensure UI is ready
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final updateInfo = await AppUpdateService.checkForUpdate();
+    if (updateInfo != null && mounted) {
+      AppUpdateDialog.show(context, updateInfo);
+    }
+  }
+
+  // 🚀 Internal method to check for new announcements
+  void _checkAnnouncements() async {
+    final announcementProvider = context.read<AnnouncementProvider>();
+    await announcementProvider.refreshAnnouncements();
+    
+    if (!mounted) return;
+
+    // Check if any high-priority announcements should be shown as a modal
+    final popups = announcementProvider.unreadAnnouncements
+        .where((a) => a['show_on_open'] == true)
+        .toList();
+
+    if (popups.isNotEmpty) {
+      final announcement = popups.first;
+      AnnouncementOnOpenModal.show(
+        context,
+        announcement: announcement,
+        onDismiss: () => announcementProvider.markAsRead(announcement['id']),
+      );
     }
   }
 
@@ -703,6 +749,47 @@ void _initializeWidgetProviders(String userId, String communityId) {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Consumer<AnnouncementProvider>(
+            builder: (context, provider, child) {
+              if (!provider.hasAnyAnnouncements) return const SizedBox.shrink();
+              final hasUnread = provider.unreadCount > 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: FloatingActionButton(
+                  heroTag: 'announcement_fab',
+                  onPressed: () {
+                    HapticHelper.light();
+                    AnnouncementBottomSheet.show(context);
+                  },
+                  // Red when unread, neutral (same as invite FAB) when all read
+                  backgroundColor: hasUnread
+                      ? AppColors.error(context)
+                      : AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  child: hasUnread
+                      ? badges.Badge(
+                          showBadge: true,
+                          position: badges.BadgePosition.topEnd(top: -4, end: -4),
+                          badgeStyle: const badges.BadgeStyle(
+                            badgeColor: Colors.white,
+                            padding: EdgeInsets.all(4),
+                            elevation: 0,
+                          ),
+                          badgeContent: Text(
+                            provider.unreadCount > 9 ? '9+' : provider.unreadCount.toString(),
+                            style: TextStyle(
+                              color: AppColors.error(context),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          child: const Icon(Icons.campaign_outlined),
+                        )
+                      : const Icon(Icons.campaign_outlined),
+                ),
+              );
+            },
+          ),
           if (!_inviteLoading && (user?.isAdmin ?? false))
              Consumer<UserProvider>(
                builder: (context, userProvider, child) {

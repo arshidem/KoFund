@@ -12,7 +12,7 @@ class ContributionService {
   // -------------------------------
   // ➕ Create
   // -------------------------------
-  Future<String> addContribution(ContributionModel contribution) async {
+  Future<String> addContribution(ContributionModel contribution, {String? programName}) async {
     try {
       final docRef = await _firestore.collection('contributions').add(contribution.toMap());
       
@@ -20,21 +20,23 @@ class ContributionService {
       try {
         final notificationService = NotificationService();
         
-        // Fetch program name for body
-        String programName = 'Program';
-        try {
-          final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
-          if (programDoc.exists) {
-            programName = programDoc.data()?['title'] ?? 'Program';
-          }
-        } catch (_) {}
+        // 🚀 OPTIMIZATION: Use passed programName to avoid extra read
+        String pName = programName ?? 'Program';
+        if (programName == null) {
+          try {
+            final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
+            if (programDoc.exists) {
+              pName = programDoc.data()?['title'] ?? 'Program';
+            }
+          } catch (_) {}
+        }
 
         final title = '₹${contribution.amount.toStringAsFixed(0)} Recorded ✅';
         final body = contribution.isMonthlyContribution && contribution.monthId != null 
-            ? '${contribution.monthDisplayName} contribution · $programName' 
-            : programName;
+            ? '${contribution.monthDisplayName} contribution · $pName' 
+            : pName;
 
-        // C. Running total for detailed screen
+        // C. Running total for detailed screen - 🚀 Use optimized total fetch
         double totalPaidSoFar = 0;
         double totalDue = 0;
         try {
@@ -56,11 +58,14 @@ class ContributionService {
           data: {
             'contributionId': docRef.id,
             'amountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
-            'programName': programName,
-            'period': contribution.monthDisplayName ?? 'N/A',
+            'programName': pName, // ✅ Fix: Use fetched/calculated pName
+            'period': contribution.monthDisplayName.isNotEmpty 
+                ? contribution.monthDisplayName 
+                : 'General contribution', // ✅ Fix: Handle non-monthly period
             'recordedBy': recorderName,
             'senderName': recorderName,
-            'runningTotal': '₹${totalPaidSoFar.toStringAsFixed(0)} / ₹${totalDue.toStringAsFixed(0)}',
+            'runningTotal': '₹${totalPaidSoFar.toStringAsFixed(0)}',
+            'targetAmount': '₹${totalDue.toStringAsFixed(0)}',
             'programId': contribution.programId,
             'timestamp': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
           },
@@ -83,11 +88,14 @@ class ContributionService {
       final snapshot = await _firestore
           .collection('contributions')
           .where('programId', isEqualTo: programId)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      // Sort in memory to avoid index requirements
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
     } catch (e) {
-      throw Exception('Failed to load program contributions: $e');
+      debugPrint('⚠️ Error loading program contributions: $e');
+      return [];
     }
   }
 
@@ -98,11 +106,13 @@ class ContributionService {
           .collection('contributions')
           .where('programId', isEqualTo: programId)
           .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
     } catch (e) {
-      throw Exception('Failed to load user contributions: $e');
+      debugPrint('⚠️ Error loading user program contributions: $e');
+      return [];
     }
   }
 
@@ -113,11 +123,13 @@ class ContributionService {
           .collection('contributions')
           .where('userId', isEqualTo: userId)
           .where('communityId', isEqualTo: communityId)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
     } catch (e) {
-      throw Exception('Failed to load user contributions: $e');
+      debugPrint('⚠️ Error loading user contributions: $e');
+      return [];
     }
   }
 
@@ -226,9 +238,11 @@ class ContributionService {
           .get();
       return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
     } catch (e) {
-      throw Exception('Failed to load community contributions: $e');
+      throw Exception('Failed to load contributions by user and program: $e');
     }
   }
+
+
 
   Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
     required String userId,
@@ -262,31 +276,47 @@ class ContributionService {
   // -------------------------------
   Future<double> getProgramTotalContributions(String programId) async {
     try {
-      final snapshot = await _firestore.collection('contributions').where('programId', isEqualTo: programId).get();
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
+      // 🚀 OPTIMIZATION: Use aggregate query (sum)
+      final aggregateQuery = await _firestore
+          .collection('contributions')
+          .where('programId', isEqualTo: programId)
+          .aggregate(sum('amount'))
+          .get();
+      final total = (aggregateQuery.getSum('amount') ?? 0).toDouble();
+      
+      // Fallback: If 0 but we want to be absolutely sure (e.g. during migration)
+      if (total == 0) {
+        final docs = await getProgramContributions(programId);
+        return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
       }
+      
       return total;
     } catch (e) {
-      throw Exception('Failed to calculate total contributions: $e');
+      // Final fallback
+      final docs = await getProgramContributions(programId);
+      return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
     }
   }
 
   Future<double> getUserProgramTotalContributions(String programId, String userId) async {
     try {
-      final snapshot = await _firestore
+      // 🚀 OPTIMIZATION: Use aggregate query (sum)
+      final aggregateQuery = await _firestore
           .collection('contributions')
           .where('programId', isEqualTo: programId)
           .where('userId', isEqualTo: userId)
+          .aggregate(sum('amount'))
           .get();
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
+      final total = (aggregateQuery.getSum('amount') ?? 0).toDouble();
+      
+      if (total == 0) {
+        final docs = await getUserProgramContributions(programId, userId);
+        return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
       }
       return total;
     } catch (e) {
-      throw Exception('Failed to calculate user total contributions: $e');
+      final docs = await getUserProgramContributions(programId, userId);
+      return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
     }
   }
 
@@ -319,16 +349,14 @@ class ContributionService {
 
   Future<double> getUserTotalContributions(String userId, String communityId) async {
     try {
-      final snapshot = await _firestore
+      // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
+      final aggregateQuery = await _firestore
           .collection('contributions')
           .where('userId', isEqualTo: userId)
           .where('communityId', isEqualTo: communityId)
+          .aggregate(sum('amount'))
           .get();
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
-      }
-      return total;
+      return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       throw Exception('Failed to calculate user total contributions: $e');
     }
@@ -339,7 +367,7 @@ class ContributionService {
   // -------------------------------
   Future<Map<String, dynamic>> getProgramPaymentSummary(String programId) async {
     try {
-      final contributions = await getProgramContributions(programId);
+      final totalCollected = await getProgramTotalContributions(programId);
       final programDoc = await _firestore.collection('programs').doc(programId).get();
 
       if (!programDoc.exists) {
@@ -350,37 +378,17 @@ class ContributionService {
       final suggestedAmount = (programData['suggestedContribution'] ?? 0).toDouble();
       final currentParticipants = (programData['currentParticipants'] ?? 0) as int;
 
-      double totalCollected = 0;
-      final Map<String, double> userTotals = {};
-      int fullyPaidUsers = 0;
-      int partiallyPaidUsers = 0;
-
-      for (final contribution in contributions) {
-        totalCollected += contribution.amount;
-        userTotals[contribution.userId] = (userTotals[contribution.userId] ?? 0) + contribution.amount;
-      }
-
-      userTotals.forEach((userId, totalPaid) {
-        if (totalPaid >= suggestedAmount) {
-          fullyPaidUsers++;
-        } else if (totalPaid > 0) {
-          partiallyPaidUsers++;
-        }
-      });
-
-      int notPaidUsers = currentParticipants - (fullyPaidUsers + partiallyPaidUsers);
-
+      // Note: For detailed breakdown of fully/partially paid users, 
+      // we still might need some logic, but for general summary, 
+      // simple aggregation is much cheaper.
+      
       return {
         'totalCollected': totalCollected,
         'expectedAmount': suggestedAmount * currentParticipants,
         'suggestedAmount': suggestedAmount,
-        'fullyPaidUsers': fullyPaidUsers,
-        'partiallyPaidUsers': partiallyPaidUsers,
-        'notPaidUsers': notPaidUsers,
         'totalParticipants': currentParticipants,
         'collectionProgress':
             suggestedAmount * currentParticipants > 0 ? (totalCollected / (suggestedAmount * currentParticipants)) * 100 : 0,
-        'userPaymentBreakdown': userTotals,
       };
     } catch (e) {
       throw Exception('Failed to get program payment summary: $e');
@@ -414,26 +422,20 @@ class ContributionService {
 
   Future<Map<String, dynamic>> getCommunityPaymentStats(String communityId) async {
     try {
-      final contributions = await getCommunityContributions(communityId);
+      // 🚀 OPTIMIZATION: Use aggregations for large-scale data
+      final totalQuery = await _firestore
+          .collection('contributions')
+          .where('communityId', isEqualTo: communityId)
+          .aggregate(sum('amount'), count())
+          .get();
 
-      double totalAmount = 0;
-      final Map<String, double> paymentMethodTotals = {};
-      final Map<String, int> dailyContributions = {};
-
-      for (final contribution in contributions) {
-        totalAmount += contribution.amount;
-        paymentMethodTotals[contribution.paymentMethod] =
-            (paymentMethodTotals[contribution.paymentMethod] ?? 0) + contribution.amount;
-        final dateKey = _formatDate(contribution.createdAt.toDate());
-        dailyContributions[dateKey] = (dailyContributions[dateKey] ?? 0) + 1;
-      }
+      final totalAmount = (totalQuery.getSum('amount') ?? 0).toDouble();
+      final countValue = totalQuery.count ?? 0;
 
       return {
-        'totalContributions': contributions.length,
+        'totalContributions': countValue,
         'totalAmount': totalAmount,
-        'averageContribution': contributions.isNotEmpty ? totalAmount / contributions.length : 0,
-        'paymentMethodBreakdown': paymentMethodTotals,
-        'dailyActivity': dailyContributions,
+        'averageContribution': countValue > 0 ? totalAmount / countValue : 0,
         'lastUpdated': Timestamp.now(),
       };
     } catch (e) {
@@ -625,13 +627,13 @@ class ContributionService {
   }
 
   Stream<double> streamProgramTotalContributions(String programId) {
-    return _firestore.collection('contributions').where('programId', isEqualTo: programId).snapshots().map((snapshot) {
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
-      }
-      return total;
-    });
+    return _firestore
+        .collection('contributions')
+        .where('programId', isEqualTo: programId)
+        .snapshots()
+        .asyncMap((_) async {
+          return await getProgramTotalContributions(programId);
+        });
   }
 
   Future<List<ContributionModel>> getMonthlyContributionsForProgram(String programId, String monthId) async {
@@ -640,10 +642,10 @@ class ContributionService {
           .collection('contributions')
           .where('programId', isEqualTo: programId)
           .where('monthId', isEqualTo: monthId)
-          .where('isMonthlyContribution', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
           .get();
-      return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
     } catch (e) {
       return [];
     }
@@ -656,7 +658,6 @@ class ContributionService {
           .where('userId', isEqualTo: userId)
           .where('programId', isEqualTo: programId)
           .where('monthId', isEqualTo: monthId)
-          .where('isMonthlyContribution', isEqualTo: true)
           .limit(1)
           .get();
       return snapshot.docs.isNotEmpty;
@@ -671,7 +672,6 @@ class ContributionService {
           .collection('contributions')
           .where('programId', isEqualTo: programId)
           .where('monthId', isEqualTo: monthId)
-          .where('isMonthlyContribution', isEqualTo: true)
           .get();
 
       final Map<String, bool> statusMap = {};

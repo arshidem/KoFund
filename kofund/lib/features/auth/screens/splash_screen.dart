@@ -247,7 +247,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
         if (!emailVerified) {
           debugPrint("❌ Email not verified - navigate to verification screen");
-          _navigateToVerificationPending(user.email ?? '');
+          _navigateToVerificationPending(user.email);
           return;
         }
       } else {

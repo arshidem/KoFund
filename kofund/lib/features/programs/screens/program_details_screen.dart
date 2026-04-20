@@ -453,7 +453,7 @@ Widget build(BuildContext context) {
         programId: widget.programId,
         userId: currentUser.uid,
         userName: currentUser.displayName ?? 'User',
-        userEmail: currentUser.email ?? '',
+        userEmail: currentUser.email,
         communityId: program.communityId,
         joinedAt: DateTime.now(),
         status: 'joined',

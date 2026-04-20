@@ -519,33 +519,36 @@ Future<void> joinCommunityWithLink({
     }
   }
 
-  /// ✅ Get community invite statistics
+  /// ✅ Get community invite statistics (Optimized count)
   Future<Map<String, dynamic>> getInviteStats(String communityId) async {
     try {
       final communityDoc = await firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .get();
-
+ 
       if (!communityDoc.exists) {
         throw Exception('Community not found');
       }
-
+ 
       final communityData = communityDoc.data() as Map<String, dynamic>;
       
-      final pendingRequests = await firestore
+      // 🚀 OPTIMIZATION: Use count() aggregation instead of full query for pending requests
+      // Note: count() only charges 1 read per 1000 docs (or similar small amount)
+      final pendingAggregate = await firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .collection(FirebaseKeys.members)
           .where('isApproved', isEqualTo: false)
+          .count()
           .get();
-
+ 
       return {
         'inviteCode': communityData['inviteCode'] ?? '',
         'inviteLink': communityData['inviteLink'] ?? '',
         'totalMembers': communityData['totalMembers'] ?? 0,
         'pendingMembers': communityData['pendingMembers'] ?? 0,
-        'pendingRequests': pendingRequests.docs.length,
+        'pendingRequests': pendingAggregate.count,
         'lastRefreshed': communityData['lastActivityAt'],
       };
     } catch (e) {

@@ -150,7 +150,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         programId: programId,
         userId: currentUser.uid,
         userName: currentUser.displayName ?? 'User',
-        userEmail: currentUser.email ?? '',
+        userEmail: currentUser.email,
         communityId: program.communityId,
         joinedAt: DateTime.now(),
         status: 'joined',
@@ -319,12 +319,21 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             ],
 
             // Additional Details
-            if (notification.data.isNotEmpty &&
+            if (notification.type != NotificationType.contribution && 
+                notification.data.isNotEmpty &&
                 _hasViewableData(notification.data)) ...[
               const SizedBox(height: 32),
               _buildSectionHeader(context, 'Additional Details'),
               const SizedBox(height: 12),
               _buildRefinedDataCard(context, notification.data),
+            ],
+            
+            // 🆕 Contribution Detail (if type is contribution)
+            if (notification.type == NotificationType.contribution) ...[
+              const SizedBox(height: 32),
+              _buildSectionHeader(context, 'Contribution Details'),
+              const SizedBox(height: 12),
+              _buildContributionSummary(context, notification.data),
             ],
 
             const SizedBox(height: 48),
@@ -676,12 +685,85 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     return const SizedBox.shrink();
   }
 
+  // ── Contribution Summary Card ──────────────────────────────────────────
+  Widget _buildContributionSummary(BuildContext context, Map<String, dynamic> data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        children: [
+          _buildSummaryRow(context, Icons.account_balance_wallet_rounded, 'Program', data['programName']?.toString() ?? 'General'),
+          const Divider(height: 24, thickness: 0.5),
+          _buildSummaryRow(context, Icons.calendar_month_rounded, 'Period', data['period']?.toString() ?? 'General'),
+          const Divider(height: 24, thickness: 0.5),
+          _buildSummaryRow(context, Icons.payments_rounded, 'Amount', data['amountRecorded']?.toString() ?? '₹0'),
+          const Divider(height: 24, thickness: 0.5),
+          
+          if (data['targetAmount'] != null) ...[
+            _buildSummaryRow(
+              context, 
+              Icons.analytics_rounded, 
+              'Total Paid', 
+              '${data['runningTotal']?.toString() ?? '₹0'} of ${data['targetAmount']?.toString() ?? '₹0'}',
+              valueColor: AppColors.primary(context),
+            ),
+          ] else ...[
+            _buildSummaryRow(
+              context, 
+              Icons.analytics_rounded, 
+              'Running Total', 
+              data['runningTotal']?.toString() ?? '₹0',
+              valueColor: AppColors.primary(context),
+            ),
+          ],
+          
+          if (data['recordedBy'] != null) ...[
+            const Divider(height: 24, thickness: 0.5),
+            _buildSummaryRow(context, Icons.person_rounded, 'Recorded By', data['recordedBy'].toString()),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(BuildContext context, IconData icon, String label, String value, {Color? valueColor}) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.textSecondary(context).withValues(alpha: 0.7)),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: valueColor ?? AppColors.textPrimary(context),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
   bool _hasViewableData(Map<String, dynamic> data) {
     return data.keys.any((key) => !_isInternalKey(key));
   }
 
   bool _isInternalKey(String key) {
+    final lowerKey = key.toLowerCase();
     const internalKeys = {
       'type',
       'deepLink',
@@ -703,10 +785,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     };
     if (internalKeys.contains(key)) return true;
     
-    final lowerKey = key.toLowerCase();
     // 🆕 Hide specific ID fields or those ending/containing _id
-    if (lowerKey == 'id' || lowerKey.endsWith('id') || lowerKey.contains('_id') || lowerKey == 'pendinguserid') return true;
+    if (lowerKey == 'id' || lowerKey.endsWith('id') || lowerKey.contains('_id') || lowerKey == 'pendinguserid' || lowerKey == 'contributionid') return true;
     
+    // 🆕 Hide fields already in summary
+    if (lowerKey == 'programname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'amountrecorded' || lowerKey == 'targetamount' || lowerKey == 'recordedby') return true;
+
     return false;
   }
 

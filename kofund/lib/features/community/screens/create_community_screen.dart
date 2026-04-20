@@ -124,7 +124,7 @@ Future<void> _createCommunity() async {
     final success = await communityProvider.createCommunity(
       name: _nameController.text.trim(),
       adminId: authProvider.user!.uid,
-      adminEmail: authProvider.user!.email ?? '',
+      adminEmail: authProvider.user!.email,
       adminName: adminName,
       type: _selectedType!,
       description: _descriptionController.text.trim().isNotEmpty 

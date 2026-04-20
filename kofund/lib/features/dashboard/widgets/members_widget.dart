@@ -372,7 +372,7 @@ SizedBox(height: 4),
                 child: Center(
                   child: Text(
                     _getInitials(
-                      member.displayName ?? member.email ?? '?',
+                      member.displayName ?? member.email,
                     ),
                     style: TextStyle(
                       fontSize: 13,

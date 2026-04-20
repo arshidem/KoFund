@@ -119,7 +119,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     if (communityId != null && 
         !_initialLoadAttempted && 
         !programProvider.isLoading) {
-      debugPrint('🚀 DEBUG: Initial programs load triggered in AllProgramsScreen');
+      // debugPrint('🚀 DEBUG: Initial programs load triggered in AllProgramsScreen');
       _initialLoadAttempted = true;
       _loadPrograms();
     }
@@ -134,8 +134,8 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
     
     final communityId = authProvider.user?.communityId;
     if (communityId != null) {
-      debugPrint('📥 Loading programs for community: $communityId');
-      await programProvider.loadCommunityPrograms(communityId);
+      // debugPrint('📥 Loading programs for community: $communityId (forceRefresh: true)');
+      await programProvider.loadCommunityPrograms(communityId, forceRefresh: true);
       
       if (mounted) {
         await programProvider.loadMyParticipations(
@@ -155,7 +155,7 @@ class _AllProgramsScreenState extends State<AllProgramsScreen> {
 
   Future<void> _onRefresh() async {
     HapticHelper.light();
-    debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
+    // debugPrint('🔄 DEBUG: Pull to refresh triggered in Programs');
     
     try {
       await _loadPrograms();
@@ -710,36 +710,31 @@ Widget _buildProgramCard(
         child: InkWell(
           onTap: () => _viewProgramDetails(program),
           borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-          child: StreamBuilder<double>(
-                  stream: programProvider.streamProgramTotalContributions(program.programId),
-                  builder: (context, contribSnap) {
-                    final collectedAmount = contribSnap.data ?? 0.0;
-                    return StreamBuilder<List<ParticipantModel>>(
-                      stream: participantProvider.streamProgramParticipants(program.programId),
-                      builder: (context, participantSnapshot) {
-                        final participants = participantSnapshot.data ?? [];
-                        final totalParticipants = participants.length;
-                        final maxParticipants = program.maxParticipants ?? 0;
-                        
-                        double programAmount = 0.0;
-                        if (program.totalProgramAmount != null && program.totalProgramAmount! > 0) {
-                          programAmount = program.totalProgramAmount!;
-                        } else if (program.suggestedContribution != null && program.suggestedContribution! > 0) {
-                          final pCount = program.isFixedParticipants ? maxParticipants : totalParticipants;
-                          programAmount = program.suggestedContribution! * (pCount > 0 ? pCount : 1);
-                        }
-
-                        final progress = programAmount > 0 ? (collectedAmount / programAmount).clamp(0.0, 1.0) : 0.0;
-                        final now = DateTime.now();
-                        final daysLeft = (program.isMonthlyPaymentProgram || program.programDate == null)
-                            ? null 
-                            : program.programDate!.difference(now).inDays;
-                        final isEnding = daysLeft != null && daysLeft <= 3 && daysLeft >= 0;
-                        final hasEnded = daysLeft != null && daysLeft < 0;
-
-                        final canJoin = !hasJoined &&
-                            (!program.isFixedParticipants ||
-                                (program.maxParticipants > totalParticipants));
+          child: StreamBuilder<Map<String, dynamic>>(
+                  stream: programProvider.streamProgramProgress(program.programId),
+                  builder: (context, progressSnap) {
+                    final progressData = progressSnap.data ?? {
+                      'collected': 0.0,
+                      'target': 100.0,
+                      'percentage': 0.0,
+                      'participantCount': program.currentParticipants,
+                      'isMonthly': program.isMonthlyPaymentProgram,
+                    };
+                    
+                    final collectedAmount = (progressData['collected'] as num).toDouble();
+                    final targetAmount = (progressData['target'] as num).toDouble();
+                    final progress = (progressData['percentage'] as num).toDouble();
+                    final totalParticipants = progressData['participantCount'] as int;
+                    final maxParticipants = program.maxParticipants;
+                    
+                    final now = DateTime.now();
+                    final daysLeft = (program.isMonthlyPaymentProgram || program.programDate == null)
+                        ? null 
+                        : program.programDate!.difference(now).inDays;
+                    
+                    final canJoin = !hasJoined &&
+                        (!program.isFixedParticipants ||
+                            (program.maxParticipants > totalParticipants));
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -790,7 +785,7 @@ Widget _buildProgramCard(
                                 ),
                                 if (widget.isAdmin)
                                   _buildAdminMenu(program, programProvider)
-                                else
+                                else if (!program.isMonthlyPaymentProgram)
                                   _buildStatusBadge(program, progress, daysLeft ?? 0),
                               ],
                             ),
@@ -804,11 +799,12 @@ Widget _buildProgramCard(
                                   height: 1.5,
                                 ),
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            if (!program.isMonthlyPaymentProgram) ...[
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              
+                              // Progress Bar Section
+                              const SizedBox(height: 8),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -816,7 +812,7 @@ Widget _buildProgramCard(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Progress',
+                                        program.isMonthlyPaymentProgram ? 'Current Month' : 'Total Progress',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -867,10 +863,9 @@ Widget _buildProgramCard(
                                       );
                                     },
                                   ),
-                                ],
+                                 ],
                               ),
                               const SizedBox(height: 16),
-                            ],
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -926,10 +921,8 @@ Widget _buildProgramCard(
                             ),
                           ],
                         );
-                      },
-                    );
                   },
-              ),  // StreamBuilder<double>
+              ),
           ),  // InkWell child
         );  // Container return
       },  // Consumer builder
@@ -1086,7 +1079,7 @@ Widget _buildProgramCard(
         program,
         authProvider.user!.uid,
         authProvider.user!.displayName ?? 'Member',
-        authProvider.user!.email ?? '',
+        authProvider.user!.email,
         authProvider.user!.communityId!,
       );
       SnackbarHelper.showSuccess(context, 'Joined ${program.title}');

@@ -52,7 +52,8 @@ class PollService {
     Query query = pollsCollection
       .where('communityId', isEqualTo: communityId)
       .where('status', whereIn: [PollStatus.active.index, PollStatus.closed.index])
-      .orderBy('createdAt', descending: true);
+      .orderBy('createdAt', descending: true)
+      .limit(20);
     
     if (programId != null) {
       query = query.where('programId', isEqualTo: programId);
@@ -83,7 +84,8 @@ class PollService {
     Query query = pollsCollection
       .where('communityId', isEqualTo: communityId)
       .where('status', isEqualTo: PollStatus.active.index)
-      .orderBy('endDate');
+      .orderBy('endDate')
+      .limit(10);
     
     if (programId != null) {
       query = query.where('programId', isEqualTo: programId);

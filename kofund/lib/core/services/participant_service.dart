@@ -400,12 +400,13 @@ class ParticipantService {
 
   Future<int> getProgramParticipantCount(String programId) async {
     try {
-      final snapshot = await _firestore
+      final aggregateQuery = await _firestore
           .collection('participants')
           .where('programId', isEqualTo: programId)
           .where('status', isEqualTo: 'joined')
+          .count()
           .get();
-      return snapshot.docs.length;
+      return aggregateQuery.count ?? 0;
     } catch (e) {
       throw Exception('Failed to get participant count: $e');
     }
@@ -498,16 +499,14 @@ class ParticipantService {
 
   Future<void> updateParticipantContribution(String userId, String programId) async {
     try {
-      final contributionsSnapshot = await _firestore
+      final aggregateQuery = await _firestore
           .collection('contributions')
           .where('userId', isEqualTo: userId)
           .where('programId', isEqualTo: programId)
+          .aggregate(sum('amount'))
           .get();
 
-      double totalPaid = 0.0;
-      for (final doc in contributionsSnapshot.docs) {
-        totalPaid += (doc.data()['amount'] ?? 0).toDouble();
-      }
+      double totalPaid = (aggregateQuery.getSum('amount') ?? 0).toDouble();
 
       final programDoc = await _firestore.collection('programs').doc(programId).get();
       final suggestedContribution =

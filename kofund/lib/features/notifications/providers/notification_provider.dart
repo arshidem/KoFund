@@ -8,6 +8,7 @@ import 'package:kofund/core/constants/notification_types.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/user_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationStorageService _storage = NotificationStorageService();
@@ -99,19 +100,29 @@ class NotificationProvider extends ChangeNotifier {
       final user = _auth.currentUser;
       if (user == null) return;
       
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getStringList('cached_notification_communities');
       
-      if (userDoc.exists) {
-        final data = userDoc.data();
-        _userCommunities = (data?['notificationCommunities'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ?? [];
+      if (cached != null && cached.isNotEmpty) {
+        _userCommunities = cached;
+        debugPrint('🏘️ Loaded user communities from cache: ${_userCommunities.join(', ')}');
+        _applyFilters();
+      } else {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         
-        debugPrint('🏘️ Loaded user communities: ${_userCommunities.join(', ')}');
-        
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          _userCommunities = (data?['notificationCommunities'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+          
+          await prefs.setStringList('cached_notification_communities', _userCommunities);
+          debugPrint('🏘️ Loaded user communities from Firestore and cached: ${_userCommunities.join(', ')}');
+        }
+
         // ⭐ NEW: Subscribe to user communities changes
         _userCommunitiesSubscription = FirebaseFirestore.instance
             .collection('users')

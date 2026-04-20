@@ -209,7 +209,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-              color: AppColors.textSecondary(context).withOpacity(0.8),
+              color: AppColors.textSecondary(context).withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -224,10 +224,10 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-        border: Border.all(color: AppColors.border(context).withOpacity(0.5)),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -272,7 +272,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
             secondary: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (_enableReminders ? AppColors.primary(context) : Colors.grey).withOpacity(0.1),
+                color: (_enableReminders ? AppColors.primary(context) : Colors.grey).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -287,7 +287,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.05),
+                color: AppColors.primary(context).withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLarge)),
               ),
               child: Row(
@@ -299,7 +299,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                       'Next scheduled: ${DateFormat('MMMM dd, yyyy').format(_program.nextReminderDate!)}',
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textPrimary(context).withOpacity(0.8),
+                        color: AppColors.textPrimary(context).withValues(alpha: 0.8),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -352,7 +352,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
           setState(() => _selectedFrequency = value);
         }
       },
-      selectedColor: AppColors.primary(context).withOpacity(0.2),
+      selectedColor: AppColors.primary(context).withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary(context),
       labelStyle: TextStyle(
         color: isSelected ? AppColors.primary(context) : AppColors.textSecondary(context),
@@ -456,9 +456,9 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withOpacity(0.08),
+                    color: AppColors.primary(context).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    border: Border.all(color: AppColors.primary(context).withOpacity(0.3)),
+                    border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -551,7 +551,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _program.contributionReminderDates.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border(context).withOpacity(0.5)),
+              separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border(context).withValues(alpha: 0.5)),
               itemBuilder: (context, index) {
                 final date = _program.contributionReminderDates[index];
                 final isPast = date.isBefore(DateTime.now());
@@ -560,7 +560,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (isPast ? Colors.grey : Colors.orange).withOpacity(0.1),
+                      color: (isPast ? Colors.grey : Colors.orange).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -582,7 +582,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                   ),
                   trailing: IconButton(
-                    icon: Icon(Icons.delete_outline, color: AppColors.error(context).withOpacity(0.7)),
+                    icon: Icon(Icons.delete_outline, color: AppColors.error(context).withValues(alpha: 0.7)),
                     onPressed: () {
                       HapticHelper.light();
                       _removeReminderDate(date);
@@ -774,7 +774,7 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.success(context).withOpacity(0.1),
+                      color: AppColors.success(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.task_alt, color: AppColors.success(context)),
@@ -813,9 +813,9 @@ class _ProgramRemindersScreenState extends State<ProgramRemindersScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: const Row(
                     children: [

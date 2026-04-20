@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 
 class ProfileScreenSkeleton extends StatelessWidget {
   final bool isDarkMode;
@@ -20,57 +21,78 @@ class ProfileScreenSkeleton extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: Shimmer.fromColors(
-        baseColor: baseColor,
-        highlightColor: highlightColor,
-        child: CustomScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          slivers: [
-            // Dummy AppBar (Matches ProfileScreen expandedHeight)
+      body: NestedScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
             SliverAppBar(
               expandedHeight: 340,
-              backgroundColor: backgroundColor,
+              toolbarHeight: 90,
+              pinned: true,
+              stretch: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
               automaticallyImplyLeading: false,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Avatar Skeleton
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDarkMode ? const Color(0xFF1A2423) : Colors.white,
+              flexibleSpace: Shimmer.fromColors(
+                baseColor: baseColor,
+                highlightColor: highlightColor,
+                child: Container(
+                  color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      Container(
+                        width: 106,
+                        height: 106,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+                        ),
                       ),
+                      const SizedBox(height: 16),
+                      _buildInfoSkeleton(isDarkMode),
+                    ],
+                  ),
+                ),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(28),
+                child: Container(
+                  height: 28,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
+                      topRight: Radius.circular(AppDimensions.radiusExtraLarge),
                     ),
-                    const SizedBox(height: 16),
-                    // Profile Info Skeleton
-                    _buildInfoSkeleton(isDarkMode),
-                    const SizedBox(height: 30), // Match bottom margin
-                  ],
+                  ),
                 ),
               ),
             ),
-            
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    
-                    // Stats Skeleton
+          ];
+        },
+        body: Shimmer.fromColors(
+          baseColor: baseColor,
+          highlightColor: highlightColor,
+          child: CustomScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 24),
                     _buildStatsSkeleton(isDarkMode),
                     const SizedBox(height: 32),
-                    
-                    // Control Center Skeleton
                     _buildControlCenterSkeleton(isDarkMode),
-                  ],
+                    const SizedBox(height: 100),
+                  ]),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -111,11 +133,10 @@ class ProfileScreenSkeleton extends StatelessWidget {
 
   Widget _buildStatsSkeleton(bool isDark) {
     return Container(
-      height: 120,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -147,7 +168,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
         const SizedBox(height: 12),
         Container(
           width: 40,
-          height: 20,
+          height: 28,
           decoration: BoxDecoration(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
             borderRadius: BorderRadius.circular(4),
@@ -156,7 +177,7 @@ class ProfileScreenSkeleton extends StatelessWidget {
         const SizedBox(height: 4),
         Container(
           width: 60,
-          height: 10,
+          height: 11,
           decoration: BoxDecoration(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
             borderRadius: BorderRadius.circular(2),
@@ -166,37 +187,98 @@ class ProfileScreenSkeleton extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCardSkeleton(bool isDark) {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
-    );
-  }
-
   Widget _buildControlCenterSkeleton(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: 120,
-          height: 12,
+          height: 13,
           margin: const EdgeInsets.only(left: 4, bottom: 16),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-            borderRadius: BorderRadius.circular(4),
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
         Container(
-          height: 280,
           decoration: BoxDecoration(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+          ),
+          child: Column(
+            children: [
+              _buildControlItemSkeleton(isDark),
+              _buildDividerSkeleton(isDark),
+              _buildControlItemSkeleton(isDark),
+              _buildDividerSkeleton(isDark),
+              _buildControlItemSkeleton(isDark),
+              _buildDividerSkeleton(isDark),
+              _buildControlItemSkeleton(isDark),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildControlItemSkeleton(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 120,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 180,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDividerSkeleton(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70,
+      endIndent: 20,
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.1),
     );
   }
 }

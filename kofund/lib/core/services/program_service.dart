@@ -348,22 +348,19 @@ Future<void> updateProgramModel(ProgramModel program) async {
     }
   }
 
-  // 🆕 GET PARTICIPANTS WITH UNPAID CONTRIBUTIONS
   Future<List<ParticipantModel>> getParticipantsWithUnpaidContributions(String programId) async {
     try {
-      // Get all participants for the program
+      // 🚀 OPTIMIZATION: Filter for unpaid participants at the query level
       final participantsSnapshot = await _firestore
-          .collection('participants') // Adjust to your collection name
+          .collection('participants')
           .where('programId', isEqualTo: programId)
           .where('status', isEqualTo: 'joined')
+          .where('hasPaidContribution', isEqualTo: false)
           .get();
       
-      final participants = participantsSnapshot.docs
+      return participantsSnapshot.docs
           .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
           .toList();
-      
-      // Filter participants who haven't fully paid
-      return participants.where((participant) => !participant.hasPaidContribution).toList();
     } catch (e) {
       debugPrint('❌ Error getting unpaid participants: $e');
       return [];
@@ -693,6 +690,7 @@ Future<void> sendProgramContributionReminders({
           .where('nextReminderDate', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
           .where('nextReminderDate', isLessThanOrEqualTo: Timestamp.fromDate(weekFromNow))
           .orderBy('nextReminderDate')
+          .limit(30)
           .get();
       
       return snapshot.docs
@@ -712,19 +710,12 @@ Future<void> sendProgramContributionReminders({
   // -------------------------------------------------------------
   Future<double> getTotalContributions(String programId) async {
     try {
-      final snapshot = await _firestore
+      final aggregateQuery = await _firestore
           .collection('contributions')
           .where('programId', isEqualTo: programId)
-          .where('status', isEqualTo: 'completed')
+          .aggregate(sum('amount'))
           .get();
-
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final amount = (data['amount'] ?? 0);
-        total += (amount is num) ? amount.toDouble() : double.tryParse('$amount') ?? 0.0;
-      }
-      return total;
+      return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       rethrow;
     }
@@ -735,19 +726,13 @@ Future<void> sendProgramContributionReminders({
   // -------------------------------------------------------------
   Future<double> getTotalExpenses(String programId) async {
     try {
-      final snapshot = await _firestore
+      final aggregateQuery = await _firestore
           .collection('expenses')
           .where('programId', isEqualTo: programId)
           .where('status', isEqualTo: 'approved')
+          .aggregate(sum('amount'))
           .get();
-
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final amount = (data['amount'] ?? 0);
-        total += (amount is num) ? amount.toDouble() : double.tryParse('$amount') ?? 0.0;
-      }
-      return total;
+      return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       rethrow;
     }

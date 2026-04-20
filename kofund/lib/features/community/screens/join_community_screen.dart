@@ -208,7 +208,7 @@ Future<void> _joinCommunity() async {
   final success = await communityProvider.joinCommunityByCode(
     code: _codeController.text.trim().toUpperCase(),
     userId: user.uid,
-    userEmail: user.email ?? '',
+    userEmail: user.email,
     userName: userName,
   );
 

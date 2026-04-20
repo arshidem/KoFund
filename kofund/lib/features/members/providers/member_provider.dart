@@ -551,7 +551,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
     final searchTerm = query.toLowerCase();
     return _members.where((member) {
       final name = member.displayName?.toLowerCase() ?? '';
-      final email = member.email.toLowerCase() ?? '';
+      final email = member.email.toLowerCase();
       final phone = member.phoneNumber?.toLowerCase() ?? '';
       
       return name.contains(searchTerm) || 

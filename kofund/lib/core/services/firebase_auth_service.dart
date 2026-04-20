@@ -44,7 +44,6 @@ class FirebaseAuthService {
   // Save auth state locally for offline use
   Future<void> _saveAuthStateLocally(User user) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       
       // Save basic auth info
       final authState = {
@@ -175,7 +174,7 @@ class FirebaseAuthService {
         createdAt: Timestamp.now(),
       );
       
-      await _firestore.collection('users').doc(userModel.uid).set(userModel.toMap());
+      await _firestore.collection('users').doc(userModel.uid).set(userModel.toMap(), SetOptions(merge: true));
       
       return userCredential.user;
     } catch (e) {
@@ -318,7 +317,6 @@ Future<void> signOut() async {
 
     // 1. Cache user ID BEFORE sign out
     final user = _auth.currentUser;
-    final userId = user?.uid;
 
     // 2. Sign out from Google (only if user used Google)
     try {

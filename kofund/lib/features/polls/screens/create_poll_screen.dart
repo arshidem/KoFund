@@ -645,24 +645,24 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       children: [
         ListTile(
           title: const Text('Community-wide'),
-          leading: Radio<bool>(
-            value: true,
-            groupValue: _isCommunityWide,
-            onChanged: (value) => setState(() => _isCommunityWide = value!),
+          leading: Icon(
+            _isCommunityWide ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+            color: AppColors.primary(context),
           ),
+          onTap: () => setState(() => _isCommunityWide = true),
         ),
         ListTile(
           title: const Text('Program-specific'),
           subtitle: _programs.isEmpty
               ? const Text('No ongoing programs available')
               : null,
-          leading: Radio<bool>(
-            value: false,
-            groupValue: _isCommunityWide,
-            onChanged: _programs.isEmpty
-                ? null
-                : (value) => setState(() => _isCommunityWide = value!),
+          leading: Icon(
+            !_isCommunityWide ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+            color: _programs.isEmpty ? Colors.grey : AppColors.primary(context),
           ),
+          onTap: _programs.isEmpty
+              ? null
+              : () => setState(() => _isCommunityWide = false),
         ),
         if (!_isCommunityWide) ...[
           const SizedBox(height: 8),

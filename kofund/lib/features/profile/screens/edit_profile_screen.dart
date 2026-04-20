@@ -93,7 +93,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // Helper method to get avatar initials
   String _getAvatarInitials() {
-    final name = widget.user.displayName ?? widget.user.email ?? '?';
+    final name = widget.user.displayName ?? widget.user.email;
     if (name.isNotEmpty) {
       return name[0].toUpperCase();
     }
@@ -259,7 +259,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             filled: true,
             fillColor: AppColors.card(context).withValues(alpha: 0.5),
-            counterText: '${widget.user.email.length ?? 0}/100',
+            counterText: '${widget.user.email.length}/100',
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
           style: TextStyle(color: AppColors.textSecondary(context)),

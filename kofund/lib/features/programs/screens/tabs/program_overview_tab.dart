@@ -399,7 +399,7 @@ class _ProgramOverviewTabState extends State<ProgramOverviewTab> {
                   displayValue = 'Loading...';
                 } else if (snapshot.hasData && snapshot.data != null) {
                   final user = snapshot.data!;
-                  displayValue = user.displayName ?? user.email ?? widget.program.createdBy;
+                  displayValue = user.displayName ?? user.email;
                 }
                 return _buildDetailTile(
                   context,

@@ -54,68 +54,33 @@ class UserService {
     try {
       debugPrint('🔍 DEBUG: Fetching $filterType users for community $communityId (includeUnapproved: $includeUnapproved)');
       
-      if (filterType == 'real') {
-        debugPrint('🎯 REAL USERS STRATEGY: Getting users and filtering in code');
-        
-        Query query = usersCollection
-            .where('communityId', isEqualTo: communityId);
-        
-        // Only filter by isApproved if not including unapproved
-        if (!includeUnapproved) {
-          query = query.where('isApproved', isEqualTo: true);
-        }
-        
-        query = query.orderBy('displayName').limit(200);
-        
-        final snapshot = await query.get();
-        debugPrint('📥 DEBUG: Retrieved ${snapshot.docs.length} users from Firestore');
-        
-        final users = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['isVirtualUser'] = data['isVirtualUser'] ?? false;
-          data['isApproved'] = data['isApproved'] ?? true;
+      debugPrint('🎯 ${filterType.toUpperCase()} USERS: Querying directly');
+      
+      Query query = usersCollection
+          .where('communityId', isEqualTo: communityId);
           
-          return UserModel.fromMap(data);
-        }).where((user) {
-          final isReal = !user.isVirtualUser;
-          final isApprovedMatch = includeUnapproved || user.isApproved;
-          return isReal && isApprovedMatch;
-        }).toList();
-        
-        debugPrint('✅ DEBUG: After filtering - got ${users.length} users');
-        return users;
-        
-      } else {
-        debugPrint('🎯 ${filterType.toUpperCase()} USERS: Querying directly');
-        
-        Query query = usersCollection
-            .where('communityId', isEqualTo: communityId);
-            
-        // Only filter by isApproved if not including unapproved
-        if (!includeUnapproved) {
-          query = query.where('isApproved', isEqualTo: true);
-        }
-        
-        query = query.orderBy('displayName').limit(200);
-        
-        if (filterType == 'virtual') {
-          query = query.where('isVirtualUser', isEqualTo: true);
-          debugPrint('🎯 Added isVirtualUser = true filter');
-        }
-        
-        final snapshot = await query.get();
-        debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
-        
-        final users = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['isVirtualUser'] = data['isVirtualUser'] ?? false;
-          data['isApproved'] = data['isApproved'] ?? true;
-          
-          return UserModel.fromMap(data);
-        }).toList();
-        
-        return users;
+      if (!includeUnapproved) {
+        query = query.where('isApproved', isEqualTo: true);
       }
+      
+      if (filterType == 'virtual') {
+        query = query.where('isVirtualUser', isEqualTo: true);
+      } else if (filterType == 'real') {
+        // 🚀 OPTIMIZATION: Use direct filter for real users too
+        query = query.where('isVirtualUser', isEqualTo: false);
+      }
+      
+      query = query.orderBy('displayName').limit(200);
+      
+      final snapshot = await query.get();
+      debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['isVirtualUser'] = data['isVirtualUser'] ?? false;
+        data['isApproved'] = data['isApproved'] ?? true;
+        return UserModel.fromMap(data);
+      }).toList();
       
     } catch (e) {
       debugPrint('❌ DEBUG: Error fetching community members: $e');

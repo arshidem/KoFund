@@ -440,7 +440,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -474,7 +474,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                     "${selectedMembers.length} selected",
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
@@ -554,7 +554,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         ListTile(
           leading: CircleAvatar(
             radius: 20,
-            backgroundColor: iconColor.withOpacity(.12),
+            backgroundColor: iconColor.withValues(alpha: 0.12),
             child: Icon(icon, color: iconColor, size: 22),
           ),
           title: Text(
@@ -901,9 +901,9 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       height: 52,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Stack(
         children: [
@@ -924,7 +924,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -963,7 +963,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
               fontWeight: FontWeight.w800,
               color: isSelected
                   ? AppColors.primary(context)
-                  : Colors.white.withOpacity(0.8),
+                  : Colors.white.withValues(alpha: 0.8),
               letterSpacing: 0.5,
             ),
           ),
@@ -1102,7 +1102,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           Icon(
             Icons.person_outline,
             size: 64,
-            color: AppColors.textSecondary(context).withOpacity(0.3),
+            color: AppColors.textSecondary(context).withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -1254,7 +1254,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.18),
+              color: AppColors.primary(context).withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -1379,14 +1379,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
             child: Icon(
               Icons.search_off,
               size: 64,
-              color: AppColors.primary(context).withOpacity(0.5),
+              color: AppColors.primary(context).withValues(alpha: 0.5),
             ),
           )
         else
           Icon(
             Icons.people_outline,
             size: 64,
-            color: AppColors.primary(context).withOpacity(0.5),
+            color: AppColors.primary(context).withValues(alpha: 0.5),
           ),
         const SizedBox(height: 16),
         Center(
@@ -1396,7 +1396,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                 : 'No members available',
             style: TextStyle(
               fontSize: 18,
-              color: AppColors.primary(context).withOpacity(0.7),
+              color: AppColors.primary(context).withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1711,7 +1711,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -1807,7 +1807,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           border: Border.all(
             color: isActive
                 ? AppColors.primary(context)
-                : AppColors.textSecondary(context).withOpacity(0.2),
+                : AppColors.textSecondary(context).withValues(alpha: 0.2),
           ),
           borderRadius: BorderRadius.circular(20),
         ),

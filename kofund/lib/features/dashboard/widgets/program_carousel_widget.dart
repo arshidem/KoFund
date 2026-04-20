@@ -226,11 +226,10 @@ class _ProgramCarouselWidgetState extends State<ProgramCarouselWidget> {
         );
       }
 
-      return Container(
-      
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return RepaintBoundary(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             // Header with icon and "See all" link
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
@@ -481,17 +480,23 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
 
   @override
   Widget build(BuildContext context) {
-    final programProvider = context.watch<ProgramProvider>();
     final authProvider = context.watch<AppAuthProvider>();
     final user = authProvider.user;
     
-    final hasJoined = user != null 
-        ? programProvider.hasUserJoined(widget.program.programId, user.uid)
-        : false;
-    
-    final canJoin = widget.program.canJoin && !hasJoined;
+    return Selector<ProgramProvider, bool>(
+      selector: (_, p) => user != null ? p.hasUserJoined(widget.program.programId, user.uid) : false,
+      builder: (context, hasJoined, _) {
+        final programProvider = Provider.of<ProgramProvider>(context, listen: false);
+        final canJoin = widget.program.canJoin && !hasJoined;
+        
+        return _buildCardWrapper(context, user, hasJoined, canJoin, programProvider, authProvider);
+      },
+    );
+  }
 
-    return Container(
+  Widget _buildCardWrapper(BuildContext context, UserModel? user, bool hasJoined, bool canJoin, ProgramProvider programProvider, AppAuthProvider authProvider) {
+    return RepaintBoundary(
+      child: Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
@@ -658,40 +663,48 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
           
           // Financial stats
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Reduced vertical padding
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    'Collected',
-                    Icons.account_balance_wallet_rounded,
-                    AppColors.primary(context),
-                    (collected) => '₹${collected.toStringAsFixed(0)}',
-                    widget.program.programId,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildStatItem(
-                    'Expenses',
-                    Icons.money_off_rounded,
-                    AppColors.primary(context),
-                    (expenses) => '₹${expenses.toStringAsFixed(0)}',
-                    widget.program.programId,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildStatItem(
-                    'Balance',
-                    Icons.savings_rounded,
-                    AppColors.primary(context),
-                    (balance) => '₹${balance.toStringAsFixed(0)}',
-                    widget.program.programId,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: StreamBuilder<Map<String, dynamic>>(
+              stream: programProvider.streamProgramFinancialSummary(widget.program.programId),
+              builder: (context, snapshot) {
+                final stats = snapshot.data ?? {
+                  'collected': 0.0,
+                  'expenses': 0.0,
+                  'balance': 0.0,
+                };
+                
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _buildStatItemCompact(
+                        'Collected',
+                        Icons.account_balance_wallet_rounded,
+                        AppColors.primary(context),
+                        stats['collected'] ?? 0.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatItemCompact(
+                        'Expenses',
+                        Icons.money_off_rounded,
+                        AppColors.primary(context),
+                        stats['expenses'] ?? 0.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatItemCompact(
+                        'Balance',
+                        Icons.savings_rounded,
+                        AppColors.primary(context),
+                        stats['balance'] ?? 0.0,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           
@@ -703,76 +716,65 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
           
           // Progress bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Reduced vertical padding
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: StreamBuilder<Map<String, dynamic>>(
+              stream: programProvider.streamProgramProgress(widget.program.programId),
+              builder: (context, snapshot) {
+                final data = snapshot.data ?? {
+                  'collected': 0.0,
+                  'target': 100.0,
+                  'percentage': 0.0,
+                };
+                
+                final collected = (data['collected'] as num).toDouble();
+                final target = (data['target'] as num).toDouble();
+                final progress = (data['percentage'] as num).toDouble();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Progress',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    StreamBuilder<double>(
-                      stream: programProvider.streamProgramTotalContributions(widget.program.programId),
-                      builder: (context, contribSnap) {
-                        final collected = contribSnap.data ?? 0.0;
-                        final target = widget.program.totalProgramAmount ?? 0.0;
-                        final progress = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
-                        
-                        return Text(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Progress',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        Text(
                           '${(progress * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary(context),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6), // Reduced from 8
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  child: StreamBuilder<double>(
-                    stream: programProvider.streamProgramTotalContributions(widget.program.programId),
-                    builder: (context, contribSnap) {
-                      final collected = contribSnap.data ?? 0.0;
-                      final target = widget.program.totalProgramAmount ?? 0.0;
-                      final progress = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
-                      
-                      return LinearProgressIndicator(
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                      child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
                         backgroundColor: AppColors.progressBackground(context),
                         color: AppColors.progressFill(context),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 4),
-                StreamBuilder<double>(
-                  stream: programProvider.streamProgramTotalContributions(widget.program.programId),
-                  builder: (context, contribSnap) {
-                    final collected = contribSnap.data ?? 0.0;
-                    final target = widget.program.totalProgramAmount ?? 0.0;
-                    
-                    return Text(
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
                       '₹${collected.toStringAsFixed(0)} of ₹${target.toStringAsFixed(0)}',
                       style: TextStyle(
                         fontSize: 10,
                         color: AppColors.textSecondary(context),
                       ),
-                    );
-                  },
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           
@@ -882,154 +884,64 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
           ),
         ],
       ),
-    );
+    ));
   }
 
-  Widget _buildStatItem(
+  Widget _buildStatItemCompact(
     String label,
     IconData icon,
     Color color,
-    String Function(double) formatValue,
-    String programId,
+    double value,
   ) {
-    return StreamBuilder<double>(
-      stream: _getStreamForLabel(label, programId),
-      builder: (context, snapshot) {
-        final value = snapshot.data ?? 0.0;
-        
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: color.withValues(alpha: 0.25),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 13,
-                    color: color,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: color.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ),
-                ],
+              Icon(
+                icon,
+                size: 13,
+                color: color,
               ),
-              const SizedBox(height: 6),
-              Text(
-                formatValue(value),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: color,
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: color.withValues(alpha: 0.9),
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 6),
+          Text(
+            '₹${value.toStringAsFixed(0)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
-  }
-
-  Stream<double> _getStreamForLabel(String label, String programId) {
-    final programProvider = context.read<ProgramProvider>();
-    
-    switch (label) {
-      case 'Collected':
-        return programProvider.streamProgramTotalContributions(programId);
-      case 'Expenses':
-        return _getExpensesStream(programId);
-      case 'Balance':
-        return _getBalanceStream(programId);
-      default:
-        return Stream.value(0.0);
-    }
-  }
-
-  Stream<double> _getExpensesStream(String programId) async* {
-    while (true) {
-      await Future.delayed(const Duration(seconds: 5));
-      try {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('expenses')
-            .where('programId', isEqualTo: programId)
-            .get();
-
-        double total = 0.0;
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final status = data['status'] ?? 'pending';
-          if (status == 'approved' || status == 'completed') {
-            total += (data['amount'] ?? 0).toDouble();
-          }
-        }
-        yield total;
-      } catch (e) {
-        yield 0.0;
-      }
-    }
-  }
-
-  Stream<double> _getBalanceStream(String programId) async* {
-    final programProvider = context.read<ProgramProvider>();
-    
-    while (true) {
-      await Future.delayed(const Duration(seconds: 5));
-      try {
-        // Use streamProgramTotalContributions instead of getTotalContributionsForProgram
-        double contributions = 0.0;
-        final contributionsStream = programProvider.streamProgramTotalContributions(programId);
-        await for (final value in contributionsStream.take(1)) {
-          contributions = value;
-        }
-        
-        final expenses = await _getLatestExpenses(programId);
-        final balance = contributions - expenses;
-        yield balance > 0 ? balance : 0.0;
-      } catch (e) {
-        yield 0.0;
-      }
-    }
-  }
-
-  Future<double> _getLatestExpenses(String programId) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('expenses')
-          .where('programId', isEqualTo: programId)
-          .get();
-
-      double total = 0.0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final status = data['status'] ?? 'pending';
-        if (status == 'approved' || status == 'completed') {
-          total += (data['amount'] ?? 0).toDouble();
-        }
-      }
-      return total;
-    } catch (e) {
-      return 0.0;
-    }
   }
 
   Future<void> _joinProgram(ProgramProvider programProvider, AppAuthProvider authProvider) async {
@@ -1042,8 +954,8 @@ class __DashboardProgramCardState extends State<_DashboardProgramCard> {
       await programProvider.joinProgram(
         widget.program,
         user.uid,
-        user.displayName ?? user.email ?? 'Member',
-        user.email ?? '',
+        user.displayName ?? user.email,
+        user.email,
         widget.program.communityId,
       );
 

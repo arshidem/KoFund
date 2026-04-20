@@ -8,6 +8,10 @@ class ParticipantProvider with ChangeNotifier {
   List<ParticipantModel> _programParticipants = [];
   bool _isLoading = false;
 
+  // 🚀 OPTIMIZATION: List cache with TTL
+  final Map<String, ({List<ParticipantModel> data, DateTime timestamp})> _participantCache = {};
+  final Duration _cacheTTL = const Duration(minutes: 5);
+
   List<ParticipantModel> get programParticipants => _programParticipants;
   bool get isLoading => _isLoading;
 
@@ -15,12 +19,23 @@ class ParticipantProvider with ChangeNotifier {
       : _participantService = participantService;
 
   // ✅ Load program participants
-  Future<void> loadProgramParticipants(String programId) async {
+  Future<void> loadProgramParticipants(String programId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _participantCache.containsKey(programId)) {
+      final cached = _participantCache[programId]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _programParticipants = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
     _isLoading = true;
     notifyListeners();
     
     try {
       _programParticipants = await _participantService.getProgramParticipants(programId);
+      _participantCache[programId] = (data: _programParticipants, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading participants: $e');
     } finally {
@@ -33,7 +48,8 @@ class ParticipantProvider with ChangeNotifier {
   Future<void> joinProgram(ParticipantModel participant) async {
     try {
       await _participantService.joinProgram(participant);
-      await loadProgramParticipants(participant.programId);
+      _participantCache.remove(participant.programId); // Invalidate cache
+      await loadProgramParticipants(participant.programId, forceRefresh: true);
     } catch (e) {
       rethrow;
     }
@@ -42,20 +58,19 @@ class ParticipantProvider with ChangeNotifier {
 Future<void> addParticipant(ParticipantModel participant) async {
   try {
     await _participantService.addParticipant(participant);
-    await loadProgramParticipants(participant.programId);
+    _participantCache.remove(participant.programId); // Invalidate cache
+    await loadProgramParticipants(participant.programId, forceRefresh: true);
   } catch (e) {
     rethrow;
   }
 }
-// Add to ParticipantProvider class:
 
 /// Get participants for a program
 Future<List<ParticipantModel>> getProgramParticipants(String programId) async {
   await loadProgramParticipants(programId);
   return _programParticipants;
 }
-// Also add this helper method if needed:
-// ✅ Get participant by userId - FIXED VERSION
+
 ParticipantModel? getParticipantByUserId(String programId, String userId) {
   try {
     return _programParticipants.firstWhere(
@@ -65,34 +80,51 @@ ParticipantModel? getParticipantByUserId(String programId, String userId) {
     return null;
   }
 }
-// Add to ParticipantProvider class
+
 Stream<int> streamProgramParticipantCount(String programId) {
   return _participantService.streamProgramParticipantCount(programId);
 }
+
   // ✅ Leave program
   Future<void> leaveProgram(String programId, String userId) async {
     try {
       await _participantService.leaveProgram(programId, userId);
-      await loadProgramParticipants(programId);
+      _participantCache.remove(programId); // Invalidate cache
+      await loadProgramParticipants(programId, forceRefresh: true);
     } catch (e) {
       rethrow;
     }
   }
 
-  // ✅ Check if user joined
+  // ✅ Check if user joined (Cached)
   Future<bool> hasUserJoined(String programId, String userId) async {
+    // 🚀 OPTIMIZATION: Check cache first
+    if (_participantCache.containsKey(programId)) {
+      final cached = _participantCache[programId]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        return cached.data.any((p) => p.userId == userId && p.status == 'joined');
+      }
+    }
     return await _participantService.hasUserJoinedProgram(programId, userId);
   }
 
-  // ✅ Get participant count
+  // ✅ Get participant count (Cached)
   Future<int> getParticipantCount(String programId) async {
+    // 🚀 OPTIMIZATION: Check cache first
+    if (_participantCache.containsKey(programId)) {
+      final cached = _participantCache[programId]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        return cached.data.length;
+      }
+    }
     return await _participantService.getProgramParticipantCount(programId);
   }
 
   // ✅ Update payment status
   Future<void> updatePaymentStatus(String participantId, double amount, bool hasPaid) async {
-    // You'll need to add this method to your ParticipantService
-    // For now, we'll reload the data
+    await _participantService.updatePaymentStatus(participantId, amount, hasPaid);
+    // Note: We don't have programId here easily, so we might need to clear all caches or pass it in.
+    _participantCache.clear(); 
     notifyListeners();
   }
 
@@ -123,4 +155,3 @@ Stream<int> streamProgramParticipantCount(String programId) {
     }
   }
 }
-

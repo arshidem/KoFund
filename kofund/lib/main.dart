@@ -44,6 +44,7 @@ import 'features/members/providers/member_provider.dart';
 import 'features/dashboard/providers/dashboard_provider.dart';
 
 import 'features/notifications/providers/notification_provider.dart';
+import 'features/notifications/providers/announcement_provider.dart';
 import 'features/polls/providers/poll_provider.dart';
 import 'features/issues/providers/issue_provider.dart';
 // Add this import in your main.dart
@@ -522,6 +523,11 @@ class _AppProvidersState extends State<AppProviders> {
             communityFirestoreService,
             storageService,
           ),
+        ),
+
+        // 📣 Announcement Provider
+        ChangeNotifierProvider(
+          create: (_) => AnnouncementProvider(),
         ),
 
         // 👥 User Provider

@@ -17,12 +17,13 @@ class ExpenseService {
   }
 
   // Get expenses by program
-  Future<List<ExpenseModel>> getExpensesByProgram(String programId) async {
+  Future<List<ExpenseModel>> getExpensesByProgram(String programId, {int limit = 20}) async {
     try {
       final snapshot = await _firestore
           .collection('expenses')
           .where('programId', isEqualTo: programId)
           .orderBy('expenseDate', descending: true)
+          .limit(limit)
           .get();
 
       return snapshot.docs
@@ -65,6 +66,8 @@ Future<void> updateExpense(
         .collection('expenses')
         .doc(expense.expenseId);
     
+    // 🚀 OPTIMIZATION: We could skip the existence check if we use update() directly,
+    // but the business logic here requires change detection for the history log.
     final snapshot = await docRef.get();
     
     if (!snapshot.exists) {
@@ -245,17 +248,14 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   // Get total expenses for a program
   Future<double> getProgramTotalExpenses(String programId) async {
     try {
-      final snapshot = await _firestore
+      // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
+      final aggregateQuery = await _firestore
           .collection('expenses')
           .where('programId', isEqualTo: programId)
           .where('status', isEqualTo: 'approved')
+          .aggregate(sum('amount'))
           .get();
-
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
-      }
-      return total;
+      return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       throw Exception('Failed to calculate program expenses: $e');
     }
@@ -264,17 +264,14 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   // Get total expenses for a community
   Future<double> getCommunityTotalExpenses(String communityId) async {
     try {
-      final snapshot = await _firestore
+      // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
+      final aggregateQuery = await _firestore
           .collection('expenses')
           .where('communityId', isEqualTo: communityId)
           .where('status', isEqualTo: 'approved')
+          .aggregate(sum('amount'))
           .get();
-
-      double total = 0;
-      for (var doc in snapshot.docs) {
-        total += (doc.data()['amount'] ?? 0).toDouble();
-      }
-      return total;
+      return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       throw Exception('Failed to calculate community expenses: $e');
     }
@@ -341,4 +338,3 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     });
   }
 }
-

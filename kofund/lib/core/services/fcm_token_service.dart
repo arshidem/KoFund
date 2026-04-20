@@ -90,6 +90,19 @@ Future<void> storeCurrentUserToken({
     // ⭐ CRITICAL: Store current user ID for validation
     await _storeUserId(user.uid);
     
+    // 🚀 OPTIMIZATION: Only proceed if token or communities changed
+    final prefs = await SharedPreferences.getInstance();
+    final lastSyncedToken = prefs.getString('last_synced_fcm_token');
+    final lastSyncedCommunities = prefs.getStringList('last_synced_communities') ?? [];
+    
+    bool communitiesChanged = communityIds.length != lastSyncedCommunities.length ||
+        !communityIds.every((id) => lastSyncedCommunities.contains(id));
+        
+    if (token == lastSyncedToken && !communitiesChanged) {
+      debugPrint("🚀 [FCM] Token and communities already synced, skipping update");
+      return;
+    }
+    
     // Rest of your method stays the same...
       // ⭐ CRITICAL: Clean token from other users FIRST
       await _cleanTokenFromOtherUsers(token, user.uid);
@@ -124,6 +137,10 @@ Future<void> storeCurrentUserToken({
       
       // Also register with Cloud Function if available
       await _registerTokenWithCloudFunction(token, user.uid, communityIds);
+      
+      // Update sync state
+      await prefs.setString('last_synced_fcm_token', token);
+      await prefs.setStringList('last_synced_communities', communityIds);
       
     } catch (e) {
       debugPrint('❌ Error storing token: $e');
@@ -459,7 +476,6 @@ Future<bool> isNotificationForCurrentUser(Map<String, dynamic> notificationData)
   // ⭐ UPDATED: Remove invalid token
   Future<void> removeInvalidToken(String invalidToken) async {
     try {
-      final user = _auth.currentUser;
       
       // Mark as inactive in user_notification_tokens
       await _firestore

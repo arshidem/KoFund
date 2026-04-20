@@ -4,6 +4,7 @@ import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/program_model.dart';
+import '../../providers/program_provider.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../contributions/screens/program_deleted_contributions_screen.dart';
@@ -354,6 +355,11 @@ Widget _buildContributionSummary(BuildContext context) {
           
           final double progressPercentage = progress * 100;
 
+          // For monthly programs, we might want to show month-specific info
+          final String targetLabel = widget.program.isMonthlyPaymentProgram
+              ? "this month's goal"
+              : "target";
+
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Container(
@@ -441,11 +447,11 @@ Widget _buildContributionSummary(BuildContext context) {
                 ),
                 
                 // Target information (only for non-monthly programs)
-                if (!widget.program.isMonthlyPaymentProgram && targetAmount > 0)
+                if (targetAmount > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      "of ₹${targetAmount.toStringAsFixed(0)} target",
+                      "of ₹${targetAmount.toStringAsFixed(0)} $targetLabel",
                       style: TextStyle(
                         color: AppColors.textCards(context).withValues(alpha: 0.85),
                         fontSize: 11,
@@ -470,8 +476,8 @@ Widget _buildContributionSummary(BuildContext context) {
 
                 const SizedBox(height: 12),
 
-                // Progress bar (only show if there's a target and it's not a monthly program)
-                if (!widget.program.isMonthlyPaymentProgram && targetAmount > 0) ...[
+                // Progress bar (Enabled for all programs with a target)
+                if (targetAmount > 0) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
@@ -526,21 +532,17 @@ Widget _buildContributionSummary(BuildContext context) {
 }
 
 // Helper method to create stats stream
-Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) async* {
-  final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
+Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) {
+  final programProvider = Provider.of<ProgramProvider>(context, listen: false);
   
-  // Combine both streams
-  final contributionsStream = contributionProvider.streamProgramContributions(widget.program.programId);
-  final totalStream = contributionProvider.streamProgramTotalContributions(widget.program.programId);
-  
-  await for (final contributions in contributionsStream) {
-    final totalCollected = await totalStream.first;
-    final totalCount = contributions.length;
-    
-    yield {
-      'totalCollected': totalCollected,
-      'totalContributions': totalCount,
-    };
+  if (widget.program.isMonthlyPaymentProgram) {
+    // For monthly programs, we use a fixed month (defaulting to current)
+    // or we could use the selected month if we had one in this tab too.
+    // For now, looking at the logic, it seems it handles global/current month.
+    final currentMonthId = DateFormat('yyyy-MM').format(DateTime.now());
+    return programProvider.streamProgramMonthlyFinancialSummary(widget.program.programId, currentMonthId);
+  } else {
+    return programProvider.streamProgramFinancialSummary(widget.program.programId);
   }
 }
 

@@ -405,13 +405,28 @@ Future<bool> hasDeletedContributions(String communityId) async {
   // -------------------------------
 
   // Load contributions for a program
-  Future<void> loadProgramContributions(String programId) async {
+  Future<void> loadProgramContributions(String programId, {bool forceRefresh = false}) async {
+    final cacheKey = 'program_$programId';
+    final now = DateTime.now();
+
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && 
+        _cache.containsKey(cacheKey) && 
+        now.difference(_cache[cacheKey]!.timestamp) < const Duration(minutes: 5)) {
+      _contributions = _cache[cacheKey]!.data;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
 
     try {
       _contributions = await _contributionService.getProgramContributions(programId);
       _totalContributions = await _contributionService.getProgramTotalContributions(programId);
+      
+      // Update cache
+      _cache[cacheKey] = CacheEntry(data: _contributions, timestamp: now);
     } catch (e) {
       debugPrint('Error loading program contributions: $e');
     } finally {
@@ -431,12 +446,27 @@ Future<bool> hasDeletedContributions(String communityId) async {
   }
 
   // Load user's all contributions in community
-  Future<void> loadUserContributions(String userId, String communityId) async {
+  Future<void> loadUserContributions(String userId, String communityId, {bool forceRefresh = false}) async {
+    final cacheKey = 'user_${userId}_$communityId';
+    final now = DateTime.now();
+
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && 
+        _cache.containsKey(cacheKey) && 
+        now.difference(_cache[cacheKey]!.timestamp) < const Duration(minutes: 5)) {
+      _userContributions = _cache[cacheKey]!.data;
+      notifyListeners();
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
 
     try {
       _userContributions = await _contributionService.getUserContributions(userId, communityId);
+      
+      // Update cache
+      _cache[cacheKey] = CacheEntry(data: _userContributions, timestamp: now);
     } catch (e) {
       debugPrint('Error loading user contributions: $e');
     } finally {

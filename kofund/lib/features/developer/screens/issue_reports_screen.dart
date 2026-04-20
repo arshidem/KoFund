@@ -742,11 +742,13 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
             const Text('Filter by Status:'),
             Column(
               children: ['all', 'pending', 'in-progress', 'resolved', 'closed'].map((status) {
-                return RadioListTile<String>(
+                return ListTile(
                   title: Text(status.toUpperCase()),
-                  value: status,
-                  groupValue: _selectedFilter,
-                  onChanged: (value) => setState(() => _selectedFilter = value!),
+                  leading: Icon(
+                    _selectedFilter == status ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  onTap: () => setState(() => _selectedFilter = status),
                 );
               }).toList(),
             ),
@@ -754,11 +756,13 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
             const Text('Sort by:'),
             Column(
               children: ['newest', 'oldest'].map((sort) {
-                return RadioListTile<String>(
+                return ListTile(
                   title: Text(sort.toUpperCase()),
-                  value: sort,
-                  groupValue: _selectedSort,
-                  onChanged: (value) => setState(() => _selectedSort = value!),
+                  leading: Icon(
+                    _selectedSort == sort ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  onTap: () => setState(() => _selectedSort = sort),
                 );
               }).toList(),
             ),

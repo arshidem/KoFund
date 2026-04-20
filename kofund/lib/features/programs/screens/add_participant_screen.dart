@@ -102,7 +102,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     
     return _nonParticipants.where((user) {
       final name = user.displayName?.toLowerCase() ?? '';
-      final email = user.email.toLowerCase() ?? '';
+      final email = user.email.toLowerCase();
       final query = _searchQuery.toLowerCase();
       
       return name.contains(query) || email.contains(query);

@@ -84,7 +84,7 @@ class IssueService {
       query = query.where('status', isEqualTo: statusFilter);
     }
     
-    query = query.orderBy('createdAt', descending: sortByNewest);
+    query = query.orderBy('createdAt', descending: sortByNewest).limit(20);
     
     final snapshot = await query.get();
     return snapshot.docs
@@ -166,6 +166,7 @@ class IssueService {
         .collection('issues')
         .where('reporterId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
+        .limit(20)
         .get();
     
     return snapshot.docs

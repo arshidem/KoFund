@@ -81,9 +81,9 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.05),
+                  color: primaryColor.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
-                  border: Border.all(color: primaryColor.withOpacity(0.1), width: 1),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.1), width: 1),
                 ),
                 child: Center(
                   child: Icon(Icons.shield_moon_outlined, size: 48, color: primaryColor),
@@ -137,7 +137,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
   Widget _buildBigButton({required VoidCallback? onTap, required Widget child}) {
     return Material(
-      color: onTap == null ? primaryColor.withOpacity(0.5) : primaryColor,
+      color: onTap == null ? primaryColor.withValues(alpha: 0.5) : primaryColor,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,

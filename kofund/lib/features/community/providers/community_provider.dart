@@ -193,25 +193,32 @@ Future<void> regenerateInviteCode(String communityId) async {
   }
 
   /// 🔍 Check if current user can invite members
-  Future<void> checkInvitePermission(String communityId) async {
+  Future<void> checkInvitePermission(String communityId, {String? userId}) async {
     try {
-      // This should be called with the actual user ID from auth provider
-      // You'll need to pass the userId from the calling context
-      // For now, we'll check if user is in admin role in community members
-      
-      if (_currentCommunity != null && communityMembers.isNotEmpty) {
-        final currentUser = _getCurrentUserFromMembers();
-        if (currentUser != null) {
-          final role = currentUser['role'] ?? 'member';
+      // 🚀 OPTIMIZATION: Use communityMembers which is already in memory
+      if (_communityMembers.isNotEmpty && userId != null) {
+        final currentUserMember = _communityMembers.firstWhere(
+          (m) => m['userId'] == userId,
+          orElse: () => {},
+        );
+        
+        if (currentUserMember.isNotEmpty) {
+          final role = currentUserMember['role'] ?? 'member';
           _canInvite = role == 'admin';
           _isAdmin = _canInvite;
-        } else {
-          _canInvite = false;
-          _isAdmin = false;
+          notifyListeners();
+          return;
         }
+      }
+      
+      // Fallback - check using service only if absolutely necessary
+      if (userId != null) {
+        _canInvite = await _communityService.canUserInviteMembers(
+          userId: userId,
+          communityId: communityId,
+        );
+        _isAdmin = _canInvite;
       } else {
-        // Fallback - check using service if we have user ID
-        // This would require userId parameter
         _canInvite = false;
         _isAdmin = false;
       }
@@ -327,27 +334,46 @@ Future<void> regenerateInviteCode(String communityId) async {
   }
 
   // ✅ Load current community by ID
-  Future<void> loadCurrentCommunity(String communityId) async {
+  Future<void> loadCurrentCommunity(String communityId, {String? userId}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // 🚀 OPTIMIZATION: Fetch community once
       final community = await _communityService.getCommunityById(communityId);
+      if (community == null) {
+        _error = 'Community not found';
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      
       _currentCommunity = community;
       
-      // Get invite info
-      _inviteCode = community?.inviteCode;
-      _inviteLink = community?.inviteLink;
+      // Set invite info from the already loaded model
+      _inviteCode = community.inviteCode;
+      _inviteLink = community.inviteLink;
       
-      // 🆕 START REAL-TIME FINANCIAL STREAMS
+      // Start real-time streams
       _startRealTimeFinancials(communityId);
       
-      // Check invite permissions
-      await checkInvitePermission(communityId);
+      // 🚀 OPTIMIZATION: Use the data we already have to populate stats initially
+      _inviteStats = {
+        'inviteCode': community.inviteCode,
+        'inviteLink': community.inviteLink,
+        'totalMembers': community.totalMembers,
+        'pendingMembers': community.pendingMembers,
+        'lastRefreshed': community.createdAt,
+      };
       
-      // Get invite statistics
-      await getInviteStatistics(communityId);
+      // 🔥 Trigger member load which will then trigger permission check if userId provided
+      await loadCommunityMembers(communityId);
+      
+      if (userId != null) {
+        // This now uses in-memory member list if available
+        await checkInvitePermission(communityId, userId: userId);
+      }
       
       _isLoading = false;
       notifyListeners();

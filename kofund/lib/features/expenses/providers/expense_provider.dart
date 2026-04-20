@@ -20,6 +20,10 @@ class ExpenseProvider with ChangeNotifier {
   List<ExpenseModel> _programExpenses = [];
   bool _isLoading = false;
   final Map<String, double> _expenseTotalsCache = {};
+  
+  // 🚀 OPTIMIZATION: List cache with TTL
+  final Map<String, ({List<ExpenseModel> data, DateTime timestamp})> _listCache = {};
+  final Duration _cacheTTL = const Duration(minutes: 5);
 
   List<ExpenseModel> get expenses => _expenses;
   List<ExpenseModel> get programExpenses => _programExpenses;
@@ -40,7 +44,8 @@ class ExpenseProvider with ChangeNotifier {
       }
 
       await expenseService.createExpense(expense);
-      _expenseTotalsCache.clear(); // Invalidate cache
+      _expenseTotalsCache.clear();
+      _listCache.clear(); // Invalidate list cache
       notifyListeners();
     } catch (e) {
       rethrow;
@@ -48,11 +53,22 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   /// Load all expenses under a community
-  Future<void> loadCommunityExpenses(String communityId) async {
+  Future<void> loadCommunityExpenses(String communityId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _listCache.containsKey('community_$communityId')) {
+      final cached = _listCache['community_$communityId']!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _expenses = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
     _isLoading = true;
     notifyListeners();
     try {
       _expenses = await expenseService.getExpensesByCommunity(communityId);
+      _listCache['community_$communityId'] = (data: _expenses, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading community expenses: $e');
     } finally {
@@ -62,11 +78,22 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   /// Load expenses for a program
-  Future<void> loadProgramExpenses(String programId) async {
+  Future<void> loadProgramExpenses(String programId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _listCache.containsKey('program_$programId')) {
+      final cached = _listCache['program_$programId']!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _programExpenses = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
     _isLoading = true;
     notifyListeners();
     try {
       _programExpenses = await expenseService.getExpensesByProgram(programId);
+      _listCache['program_$programId'] = (data: _programExpenses, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading program expenses: $e');
     } finally {
@@ -74,6 +101,7 @@ class ExpenseProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
 // Add this method to your ExpenseProvider class
 Future<void> updateExpense(
   ExpenseModel expense, {
@@ -98,55 +126,7 @@ Future<void> updateExpense(
     );
     
     if (index != -1) {
-      // Get current version for comparison
-      final currentExpense = _expenses[index];
-      
-      // Detect changes locally
-      final Map<String, Map<String, dynamic>> changes = {};
-      
-      if (currentExpense.amount != expense.amount) {
-        changes['amount'] = {
-          'old': currentExpense.amount,
-          'new': expense.amount,
-        };
-      }
-      
-      if (currentExpense.title != expense.title) {
-        changes['title'] = {
-          'old': currentExpense.title,
-          'new': expense.title,
-        };
-      }
-      
-      if (currentExpense.description != expense.description) {
-        changes['description'] = {
-          'old': currentExpense.description,
-          'new': expense.description,
-        };
-      }
-      
-      if (currentExpense.programId != expense.programId) {
-        changes['program'] = {
-          'old': currentExpense.programId,
-          'new': expense.programId,
-        };
-      }
-      
-      if (currentExpense.category != expense.category) {
-        changes['category'] = {
-          'old': currentExpense.category,
-          'new': expense.category,
-        };
-      }
-      
-      if (currentExpense.paymentMethod != expense.paymentMethod) {
-        changes['paymentMethod'] = {
-          'old': currentExpense.paymentMethod ?? 'Not set',
-          'new': expense.paymentMethod ?? 'Not set',
-        };
-      }
-      
-      // Update program expenses list too
+      // Update logic...
       final programIndex = _programExpenses.indexWhere(
         (e) => e.expenseId == expense.expenseId
       );
@@ -156,6 +136,7 @@ Future<void> updateExpense(
       
       _expenses[index] = expense;
       _expenseTotalsCache.clear();
+      _listCache.clear(); // Clear list cache on change
       notifyListeners();
       
       debugPrint('✅ ExpenseProvider: Local update successful');
@@ -168,8 +149,7 @@ Future<void> updateExpense(
     rethrow;
   }
 }
-// Add this to your ExpenseProvider class
-// In your ExpenseProvider class
+
 Future<void> updateExpenseWithHistory(
   String expenseId,
   Map<String, dynamic> updates,
@@ -182,38 +162,35 @@ Future<void> updateExpenseWithHistory(
           ...updates,
           'updatedAt': Timestamp.now(),
         });
+    _listCache.clear(); // Invalidate list cache
   } catch (e) {
     debugPrint('Error updating expense with history: $e');
     rethrow;
   }
 }
-// Add this method to your ExpenseProvider class (after the existing methods)
+
 Future<ExpenseModel?> getExpenseById(String expenseId) async {
   try {
     debugPrint('🔄 Getting expense by ID: $expenseId');
-    
-    // Use the expenseService to fetch the expense
-    // If your expenseService doesn't have this method, you'll need to add it
     final expense = await expenseService.getExpenseById(expenseId);
-    
     if (expense == null) {
       debugPrint('❌ Expense not found with ID: $expenseId');
       return null;
     }
-    
     debugPrint('✅ Found expense: ${expense.expenseId}');
     return expense;
-    
   } catch (e) {
     debugPrint('❌ Error getting expense by ID: $e');
     return null;
   }
 }
+
   /// Update expense status (approved, pending, rejected)
   Future<void> updateExpenseStatus(String expenseId, String status) async {
     try {
       await expenseService.updateExpenseStatus(expenseId, status);
       _expenseTotalsCache.clear();
+      _listCache.clear(); // Clear list cache on change
 
       // Update local state
       final expenseIndex =
@@ -241,6 +218,7 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     try {
       await expenseService.deleteExpense(expenseId);
       _expenseTotalsCache.clear();
+      _listCache.clear(); // Clear list cache on change
       _expenses.removeWhere((expense) => expense.expenseId == expenseId);
       _programExpenses.removeWhere((expense) => expense.expenseId == expenseId);
       notifyListeners();
@@ -304,8 +282,11 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   List<ExpenseModel> getPendingProgramExpenses() =>
       _programExpenses.where((e) => e.status == 'pending').toList();
 
-  /// Clear all cached totals
-  void clearCache() => _expenseTotalsCache.clear();
+  /// Clear all cached data
+  void clearCache() {
+    _expenseTotalsCache.clear();
+    _listCache.clear();
+  }
 
   /// Real-time listeners
   Stream<List<ExpenseModel>> streamCommunityExpenses(String communityId) =>
@@ -317,4 +298,3 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   Stream<double> streamProgramTotalExpenses(String programId) =>
       expenseService.streamProgramTotalExpenses(programId);
 }
-

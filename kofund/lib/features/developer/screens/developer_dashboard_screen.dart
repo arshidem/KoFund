@@ -5,6 +5,11 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'add_developer_screen.dart';
 import 'manage_developers_screen.dart';
 import 'issue_reports_screen.dart';
+import 'update_config_screen.dart';
+import 'announcement_manager_screen.dart';
+import 'push_notification_tool_screen.dart';
+import 'database_tools_screen.dart';
+import 'app_analytics_screen.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 class DeveloperDashboardScreen extends StatelessWidget {
   static const routeName = '/developer-dashboard';
@@ -34,15 +39,15 @@ class DeveloperDashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Card
             Card(
               color: AppColors.card(context),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(28),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.developer_mode,
@@ -74,6 +79,92 @@ class DeveloperDashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            // Development Tools
+            Text(
+              'Development Tools',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              children: [
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.bug_report,
+                  title: 'Issue Reports',
+                  subtitle: 'View user reports',
+                  color: Colors.red,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const IssueReportsScreen(),
+                    ),
+                  ),
+                ),
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.analytics,
+                  title: 'App Analytics',
+                  subtitle: 'Usage statistics',
+                  color: Colors.green,
+                  onTap: () => _navigateToAnalytics(context),
+                ),
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.storage,
+                  title: 'Database',
+                  subtitle: 'Firestore tools',
+                  color: Colors.blue,
+                  onTap: () => _navigateToDatabase(context),
+                ),
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.settings,
+                  title: 'App Config',
+                  subtitle: 'Remote config',
+                  color: Colors.orange,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const UpdateConfigScreen()),
+                  ),
+                ),
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.campaign,
+                  title: 'Announcements',
+                  subtitle: 'Manage app news',
+                  color: Colors.purple,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AnnouncementManagerScreen()),
+                  ),
+                ),
+                _buildToolCard(
+                  context: context,
+                  icon: Icons.send_rounded,
+                  title: 'Push Tools',
+                  subtitle: 'Targeted notifications',
+                  color: Colors.teal,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PushNotificationToolScreen()),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
             // User Management Section
             Text(
               'Developer Management',
@@ -85,14 +176,14 @@ class DeveloperDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            Card(
+             Card(
               color: AppColors.card(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
-                  ListTile(
+                   ListTile(
                     leading: Icon(
                       Icons.person_add,
                       color: AppColors.primary(context),
@@ -151,68 +242,6 @@ class DeveloperDashboardScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Development Tools
-            Text(
-              'Development Tools',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-            // In GridView.count in developer_dashboard_screen.dart, update the first card:
-_buildToolCard(
-  context: context,
-  icon: Icons.bug_report,
-  title: 'Issue Reports',
-  subtitle: 'View user reports',
-  color: Colors.red,
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => IssueReportsScreen(),
-    ),
-  ),
-),
-                _buildToolCard(
-                  context: context, // Add context parameter
-                  icon: Icons.analytics,
-                  title: 'App Analytics',
-                  subtitle: 'Usage statistics',
-                  color: Colors.green,
-                  onTap: () => _navigateToAnalytics(context),
-                ),
-                _buildToolCard(
-                  context: context, // Add context parameter
-                  icon: Icons.storage,
-                  title: 'Database',
-                  subtitle: 'Firestore tools',
-                  color: Colors.blue,
-                  onTap: () => _navigateToDatabase(context),
-                ),
-                _buildToolCard(
-                  context: context, // Add context parameter
-                  icon: Icons.settings,
-                  title: 'App Config',
-                  subtitle: 'Remote config',
-                  color: Colors.orange,
-                  onTap: () => _navigateToConfig(context),
-                ),
-              ],
             ),
 
             const SizedBox(height: 24),
@@ -338,11 +367,17 @@ _buildToolCard(
   }
 
   void _navigateToAnalytics(BuildContext context) {
-    // TODO: Navigate to analytics
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AppAnalyticsScreen()),
+    );
   }
 
   void _navigateToDatabase(BuildContext context) {
-    // TODO: Navigate to database tools
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const DatabaseToolsScreen()),
+    );
   }
 
   void _navigateToConfig(BuildContext context) {

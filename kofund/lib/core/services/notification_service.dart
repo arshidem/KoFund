@@ -68,8 +68,16 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
         return; // Don't show notification for different user
       }
       
-      // Check if current user belongs to this community
-      if (currentUserId != null) {
+      // 🚀 OPTIMIZATION: Check local cache first
+      final cachedCommunities = prefs.getStringList('cached_notification_communities') ?? [];
+      
+      if (cachedCommunities.isNotEmpty) {
+        if (!cachedCommunities.contains(notificationCommunityId)) {
+          debugPrint("⚠️ Background: User not in cached notification community");
+          return;
+        }
+      } else if (currentUserId != null) {
+        // Fallback to Firestore only if cache is empty
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(currentUserId)
@@ -80,9 +88,7 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
             .toList() ?? [];
             
         if (!userCommunities.contains(notificationCommunityId)) {
-          debugPrint("⚠️ Background: User not in notification community");
-          debugPrint("   User communities: ${userCommunities.join(', ')}");
-          debugPrint("   Notification community: $notificationCommunityId");
+          debugPrint("⚠️ Background: User not in notification community (Firestore fallback)");
           return; // Don't show notification
         }
       }
@@ -254,6 +260,10 @@ void _setupFCMInBackground() {
         
         // ⭐ UPDATED: Store token with community context
         await _tokenService.storeCurrentUserToken(communityIds: communities);
+        
+        // 🚀 OPTIMIZATION: Cache communities for background/permission checks
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('cached_notification_communities', communities);
       }
       
       _tokenService.setupTokenRefreshListener();

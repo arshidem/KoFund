@@ -356,16 +356,12 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                   ),
                 ),
                 
-                // 3. Right column: Amount, status, three-dot menu (all in one row)
+                // 3. Right column: Amount, status, and consistently aligned menu
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Amount and status in a column
-                
-                    
-               
-    Column(
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -395,13 +391,8 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                         ),
                       ],
                     ),
-                         // Three-dot menu
-                    if (isAdmin || (_isUserPaidBy(expense, context)))
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: _buildThreeDotMenu(expense, context, isAdmin),
-                      ),
-                      
+                    const SizedBox(width: 4),
+                    _buildThreeDotMenu(expense, context, isAdmin),
                   ],
                 ),
               ],
@@ -1198,9 +1189,8 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
   final authProvider = context.read<AppAuthProvider>();
   final currentUser = authProvider.user;
   final isAdmin = _isAdmin(context);
-  
-  // Check if current user can see edit history
-  final canViewEditHistory = isAdmin || currentUser?.uid == expense.paidBy;
+  final isCreator = currentUser?.uid == expense.paidBy;
+  final canViewEditHistory = isAdmin || isCreator;
   
   // Get formatted edit history
   final formattedEditHistory = _getFormattedEditHistory(expense);
@@ -1654,7 +1644,101 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                   ],
                                 ],
                               ),
-                            
+                            // ───── MANAGE EXPENSE SECTION (Admins & Creators Only) ─────
+                            if (isAdmin || isCreator) ...[
+                              const SizedBox(height: 24),
+                              _buildSectionHeader(
+                                context,
+                                title: 'Manage Expense',
+                                icon: Icons.settings_rounded,
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Row 1: Primary Actions (Edit)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _navigateToEditExpense(expense, context);
+                                      },
+                                      icon: const Icon(Icons.edit_rounded, size: 18),
+                                      label: const Text('Edit Details'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary(context),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              // Row 2: Status Management (Admins Only)
+                              if (isAdmin) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    if (expense.status != 'approved')
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => _updateExpenseStatusWithHistory(expense, 'approved', context),
+                                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.green),
+                                          label: const Text('Approve', style: TextStyle(color: Colors.green)),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(color: Colors.green, width: 1),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                        ),
+                                      ),
+                                    if (expense.status != 'approved' && expense.status != 'rejected')
+                                      const SizedBox(width: 8),
+                                    if (expense.status != 'rejected')
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () => _updateExpenseStatusWithHistory(expense, 'rejected', context),
+                                          icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.red),
+                                          label: const Text('Reject', style: TextStyle(color: Colors.red)),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(color: Colors.red, width: 1),
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                              
+                              // Row 3: Dangerous Actions (Delete)
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _showDeleteConfirmation(expense, context);
+                                      },
+                                      icon: Icon(Icons.delete_forever_rounded, size: 18, color: Colors.red.shade400),
+                                      label: Text('Delete Expense Record', style: TextStyle(color: Colors.red.shade400)),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          side: BorderSide(color: Colors.red.withValues(alpha: 0.1)),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+
                             // Bottom Padding
                             const SizedBox(height: 40),
                           ],
@@ -1747,7 +1831,7 @@ Future<void> _updateExpenseStatusWithHistory(
     final editRecord = {
       'editedAt': Timestamp.now(),
       'editedByUserId': currentUser.uid,
-      'editedByUserName': currentUser.displayName ?? currentUser.email ?? 'Admin',
+      'editedByUserName': currentUser.displayName ?? currentUser.email,
       'changes': {
         'status': {
           'old': expense.status,
@@ -1770,7 +1854,7 @@ Future<void> _updateExpenseStatusWithHistory(
         'status': newStatus,
         'isEdited': true,
         'lastEditedByUserId': currentUser.uid,
-        'lastEditedByUserName': currentUser.displayName ?? currentUser.email ?? 'Admin',
+        'lastEditedByUserName': currentUser.displayName ?? currentUser.email,
         'lastEditedAt': Timestamp.now(),
         'editReason': reason ?? 'Status changed',
         'editHistory': updatedEditHistory,
@@ -2175,100 +2259,79 @@ String _formatPaymentMethod(String method) {
   }
 
   void _showAddExpenseDialog(BuildContext context, bool isAdmin) {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
-  String selectedCategory = _categories.first;
-  String selectedPaymentMethod = _paymentMethods.first;
-  DateTime selectedDate = DateTime.now();
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+    final TextEditingController amountController = TextEditingController();
+    String selectedCategory = _categories.first;
+    String selectedPaymentMethod = _paymentMethods.first;
+    DateTime selectedDate = DateTime.now();
 
-  // Input formatters
-  final titleInputFormatter = FilteringTextInputFormatter.allow(
-    RegExp(r'[a-zA-Z0-9\s]'), // Only allow letters, numbers, and spaces
-  );
+    final titleInputFormatter = FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s]'));
+    String? titleError;
+    String? amountError;
 
-  // Variables for error messages
-  String? titleError;
-  String? amountError;
+    // Capture providers and theme colors using the stable screen context
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final stableSuccessColor = AppColors.success(context);
+    final stableErrorColor = AppColors.error(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setDialogState) {
-        // Function to reset errors when user types
-        void clearTitleError() {
-          if (titleError != null) {
-            setDialogState(() {
-              titleError = null;
-            });
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => StatefulBuilder(
+        builder: (stateContext, setBottomSheetState) {
+          bool isLoading = false;
+
+          void clearTitleError() {
+            if (titleError != null) setBottomSheetState(() => titleError = null);
           }
-        }
-
-        void clearAmountError() {
-          if (amountError != null) {
-            setDialogState(() {
-              amountError = null;
-            });
-          }
-        }
-
-        // Validation function
-        Future<void> validateAndSubmit(bool isOnline) async {
-          // Check network first
-          if (!isOnline) {
-            setDialogState(() {
-              titleError = 'No internet connection';
-            });
-            return;
+          void clearAmountError() {
+            if (amountError != null) setBottomSheetState(() => amountError = null);
           }
 
-          // Reset errors
-          setDialogState(() {
-            titleError = null;
-            amountError = null;
-          });
-
-          bool hasError = false;
-
-          // Validate title
-          if (titleController.text.isEmpty) {
-            setDialogState(() {
-              titleError = 'Please enter expense title';
-              hasError = true;
-            });
-          } else if (titleController.text.length < 3) {
-            setDialogState(() {
-              titleError = 'Title must be at least 3 characters';
-              hasError = true;
-            });
-          }
-
-          // Validate amount
-          if (amountController.text.isEmpty) {
-            setDialogState(() {
-              amountError = 'Please enter amount';
-              hasError = true;
-            });
-          } else {
-            final amount = double.tryParse(amountController.text);
-            if (amount == null || amount <= 0) {
-              setDialogState(() {
-                amountError = 'Please enter a valid amount greater than 0';
-                hasError = true;
-              });
-            } else if (amount > 9999999.99) {
-              setDialogState(() {
-                amountError = 'Amount cannot exceed ₹ 99,99,999.99';
-                hasError = true;
-              });
+          Future<void> validateAndSubmit(bool isOnline) async {
+            if (!isOnline) {
+              setBottomSheetState(() => titleError = 'No internet connection');
+              return;
             }
-          }
 
-          // If no errors, proceed
-          if (!hasError) {
+            setBottomSheetState(() {
+              titleError = null;
+              amountError = null;
+              isLoading = true;
+            });
+
+            bool hasError = false;
+            if (titleController.text.isEmpty) {
+              setBottomSheetState(() { titleError = 'Enter expense title'; hasError = true; });
+            } else if (titleController.text.length < 3) {
+              setBottomSheetState(() { titleError = 'Title too short'; hasError = true; });
+            }
+
+            if (amountController.text.isEmpty) {
+              setBottomSheetState(() { amountError = 'Enter amount'; hasError = true; });
+            } else {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                setBottomSheetState(() { amountError = 'Invalid amount'; hasError = true; });
+              }
+            }
+
+            if (hasError) {
+              setBottomSheetState(() => isLoading = false);
+              return;
+            }
+
             try {
-              await _createExpense(
-                context: context,
+              final success = await _createExpense(
+                messenger: messenger,
+                authProvider: authProvider,
+                expenseProvider: expenseProvider,
+                successColor: stableSuccessColor,
+                errorColor: stableErrorColor,
                 title: titleController.text.trim(),
                 description: descriptionController.text.trim(),
                 amount: double.parse(amountController.text),
@@ -2277,472 +2340,265 @@ String _formatPaymentMethod(String method) {
                 expenseDate: selectedDate,
                 isAdmin: isAdmin,
               );
-
-              Navigator.pop(context);
+              
+              if (success && stateContext.mounted) {
+                try {
+                  Navigator.pop(modalContext);
+                } catch (navError) {
+                  debugPrint('Navigation error: $navError');
+                }
+              } else if (stateContext.mounted) {
+                setBottomSheetState(() => isLoading = false);
+              }
             } catch (e) {
-              setDialogState(() {
-                amountError = 'Failed to add expense: $e';
-              });
+              if (stateContext.mounted) {
+                setBottomSheetState(() {
+                  isLoading = false;
+                  amountError = 'Error: $e';
+                });
+              }
             }
           }
-        }
 
-return AlertDialog(
-  backgroundColor: AppColors.card(context),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
-  ),
-  contentPadding: const EdgeInsets.all(20),
-  insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-  title: Text(
-    'Add New Expense',
-    style: TextStyle(
-      color: AppColors.textPrimary(context),
-      fontSize: 16,
-    ),
-  ),
-  content: SizedBox(
-    width: MediaQuery.of(context).size.width * 0.8, // 70% width - good choice!
-    child: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title field with error
-          TextField(
-            controller: titleController,
-            inputFormatters: [titleInputFormatter],
-            maxLength: 50,
-            decoration: InputDecoration(
-              labelText: 'Expense Title *',
-              labelStyle: TextStyle(
-                color: AppColors.textSecondary(context),
-              ),
-              errorText: titleError, // Make sure you add this for inline validation
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                borderSide: BorderSide(
-                  color: AppColors.border(context),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context),
-                  width: 2,
-                ),
-              ),
-              filled: true,
-              fillColor: AppColors.surface(context),
-              counterText: '${titleController.text.length}/50',
-              counterStyle: TextStyle(
-                fontSize: 11,
-                color: titleController.text.length > 45 
-                    ? Colors.orange 
-                    : AppColors.textTertiary(context),
-              ),
+          return Container(
+            decoration: BoxDecoration(
+              color: AppColors.card(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 13,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(modalContext).viewInsets.bottom,
             ),
-            onChanged: (value) {
-              setDialogState(() {}); // Update counter
-              clearTitleError(); // Clear error when typing
-            },
-          ),
-                const SizedBox(height: 12),
-
-                // Description Field
-                TextField(
-                  controller: descriptionController,
-                  maxLength: 200,
-                  decoration: InputDecoration(
-                    labelText: 'Description (optional)',
-                    labelStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border(context).withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.primary(context),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface(context),
-                    counterText: '${descriptionController.text.length}/200',
-                    counterStyle: TextStyle(
-                      fontSize: 11,
-                      color: descriptionController.text.length > 190 
-                          ? Colors.orange 
-                          : AppColors.textTertiary(context),
                     ),
                   ),
-                  maxLines: 3,
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
-                  ),
-                  onChanged: (value) {
-                    setDialogState(() {}); // Update counter
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // Amount field with error
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  maxLength: 10,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: 'Amount (₹) *',
-                    labelStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                    ),
-                    errorText: amountError,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.primary(context),
-                        width: 2,
-                      ),
-                    ),
-                    prefixText: '₹ ',
-                    filled: true,
-                    fillColor: AppColors.surface(context),
-                    counterText: 'Max: 10 digits',
-                    counterStyle: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textTertiary(context),
+                  const SizedBox(height: 24),
+                  
+                  Text(
+                    'Add New Expense',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
                     ),
                   ),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
+                  const SizedBox(height: 24),
+
+                  // Content
+                  TextField(
+                    controller: titleController,
+                    inputFormatters: [titleInputFormatter],
+                    maxLength: 50,
+                    decoration: InputDecoration(
+                      labelText: 'Expense Title *',
+                      errorText: titleError,
+                      hintText: 'What was this for?',
+                      prefixIcon: const Icon(Icons.title_rounded, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface(context),
+                    ),
+                    onChanged: (_) {
+                      setBottomSheetState(() {});
+                      clearTitleError();
+                    },
                   ),
-                  onChanged: (value) {
-                    clearAmountError();
-                  },
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-                // Category Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: 'Category *',
-                    labelStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
+                  TextField(
+                    controller: descriptionController,
+                    maxLength: 200,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'Description (optional)',
+                      hintText: 'Additional details...',
+                      prefixIcon: const Icon(Icons.description_rounded, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
+                      filled: true,
+                      fillColor: AppColors.surface(context),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.primary(context),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface(context),
+                    onChanged: (_) => setBottomSheetState(() {}),
                   ),
-                  dropdownColor: AppColors.card(context),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                    decoration: InputDecoration(
+                      labelText: 'Amount (₹) *',
+                      errorText: amountError,
+                      hintText: '0.00',
+                      prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface(context),
+                    ),
+                    onChanged: (_) => clearAmountError(),
                   ),
-                  items: _categories.map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedCategory = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-                // Payment Method Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: selectedPaymentMethod,
-                  decoration: InputDecoration(
-                    labelText: 'Payment Method *',
-                    labelStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: InputDecoration(
+                      labelText: 'Category *',
+                      prefixIcon: Icon(_getCategoryIcon(selectedCategory), size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.border(context),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
+                      filled: true,
+                      fillColor: AppColors.surface(context),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      borderSide: BorderSide(
-                        color: AppColors.primary(context),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface(context),
+                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c.toUpperCase()))).toList(),
+                    onChanged: (v) => setBottomSheetState(() => selectedCategory = v!),
                   ),
-                  dropdownColor: AppColors.card(context),
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
-                  ),
-                  items: _paymentMethods.map((method) {
-                    return DropdownMenuItem(
-                      value: method,
-                      child: Text(method.toUpperCase()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedPaymentMethod = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-                // Date Picker
-                Row(
-                  children: [
-                    Text(
-                      'Expense Date:',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 13,
+                  DropdownButtonFormField<String>(
+                    value: selectedPaymentMethod,
+                    decoration: InputDecoration(
+                      labelText: 'Payment Method *',
+                      prefixIcon: const Icon(Icons.payment_rounded, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    TextButton(
-                      onPressed: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null && picked != selectedDate) {
-                          setDialogState(() {
-                            selectedDate = picked;
-                          });
-                        }
-                      },
-                      child: Text(
-                        DateFormat('dd MMM yyyy').format(selectedDate),
-                        style: TextStyle(
-                          color: AppColors.primary(context),
-                        ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        borderSide: BorderSide(color: AppColors.border(context)),
                       ),
+                      filled: true,
+                      fillColor: AppColors.surface(context),
                     ),
-                  ],
-                ),
-
-                // Info message for non-admin users
-                if (!isAdmin)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),  
-                    borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info,
-                          color: Colors.blue.shade600,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Your expense will be submitted for admin approval',
-                            style: TextStyle(
-                              color: Colors.blue.shade800,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    items: _paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m.toUpperCase()))).toList(),
+                    onChanged: (v) => setBottomSheetState(() => selectedPaymentMethod = v!),
                   ),
+                  const SizedBox(height: 16),
 
-                // Network status and submit button
-                FutureBuilder<bool>(
-                  future: NetworkService().isConnected,
-                        builder: (context, snapshot) {
-  if (snapshot.connectionState == ConnectionState.waiting) {
-    // Use skeleton loader instead of spinner
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return HistoryListSkeleton(isDarkMode: isDarkMode);
-  }
-
-                    final bool isOnline = snapshot.data ?? true;
-
-                    return StreamBuilder<bool>(
-                      stream: NetworkService().onConnectionChanged,
-                      initialData: isOnline,
-                      builder: (context, streamSnapshot) {
-                        final bool currentIsOnline = streamSnapshot.data ?? isOnline;
-
-                        return Column(
-                          children: [
-                            if (!currentIsOnline)
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(top: 16),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                                ),
-                                child: Row(
-                                  children: const [
-                                    Icon(
-                                      Icons.wifi_off,
-                                      size: 16,
-                                      color: Colors.red,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'No internet connection.',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: AppColors.textSecondary(context),
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            FutureBuilder<bool>(
-              future: NetworkService().isConnected,
-              builder: (context, snapshot) {
-                final bool isOnline = snapshot.data ?? true;
-
-                return StreamBuilder<bool>(
-                  stream: NetworkService().onConnectionChanged,
-                  initialData: isOnline,
-                  builder: (context, streamSnapshot) {
-                    final bool currentIsOnline = streamSnapshot.data ?? isOnline;
-
-                    return ElevatedButton(
-                      onPressed: currentIsOnline
-                          ? () => validateAndSubmit(currentIsOnline)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: currentIsOnline
-                            ? AppColors.primary(context)
-                            : Colors.grey[600],
-                        disabledBackgroundColor: Colors.grey.withValues(alpha: 0.5),
-                        disabledForegroundColor: Colors.white70,
+                  InkWell(
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: modalContext,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setBottomSheetState(() => selectedDate = picked);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface(context),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border(context)),
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            currentIsOnline ? Icons.add : Icons.wifi_off,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
+                          Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.textSecondary(context)),
+                          const SizedBox(width: 12),
                           Text(
-                            currentIsOnline ? 'Add Expense' : 'Offline',
-                            style: const TextStyle(fontSize: 13),
+                            DateFormat('dd MMM yyyy').format(selectedDate),
+                            style: TextStyle(color: AppColors.textPrimary(context)),
                           ),
+                          const Spacer(),
+                          Text('Change', style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
                         ],
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        );
-      },
-    ),
-  );
-}
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
 
-Future<void> _createExpense({
-  required BuildContext context,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: isLoading ? null : () => Navigator.pop(modalContext),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull)),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FutureBuilder<bool>(
+                          future: NetworkService().isConnected,
+                          builder: (fbContext, snapshot) {
+                            final isOnline = snapshot.data ?? true;
+                            return ElevatedButton(
+                              onPressed: (isOnline && !isLoading) ? () => validateAndSubmit(isOnline) : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary(context),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull)),
+                                elevation: 0,
+                              ),
+                              child: isLoading 
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Text('Add Expense'),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+Future<bool> _createExpense({
+  required ScaffoldMessengerState messenger,
+  required AppAuthProvider authProvider,
+  required ExpenseProvider expenseProvider,
+  required Color successColor,
+  required Color errorColor,
   required String title,
   required String description,
   required double amount,
@@ -2752,36 +2608,25 @@ Future<void> _createExpense({
   required bool isAdmin,
 }) async {
   try {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final currentUser = authProvider.user;
 
-    // Check if user is logged in
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('You must be logged in to add expenses')),
       );
-      return;
+      return false;
     }
 
     final status = isAdmin ? 'approved' : 'pending';
 
-    // ✅ FIX: Get user display name from UserModel
     String getUserDisplayName() {
-      // First try displayName
       if (currentUser.displayName != null && currentUser.displayName!.isNotEmpty) {
         return currentUser.displayName!;
       }
-      
-      // Then try email (extract name part)
       if (currentUser.email.isNotEmpty) {
         final emailParts = currentUser.email.split('@');
-        if (emailParts.isNotEmpty) {
-          return emailParts[0]; // Name before @
-        }
+        if (emailParts.isNotEmpty) return emailParts[0];
       }
-      
-      // Fallback: User + first 6 chars of UID
       return 'User ${currentUser.uid.substring(0, 6)}';
     }
 
@@ -2794,45 +2639,46 @@ Future<void> _createExpense({
       amount: amount,
       category: category,
       paymentMethod: paymentMethod,
-      paidBy: currentUser.uid, // User ID
-      paidByName: getUserDisplayName(), // ✅ FIXED: Pass String, not UserModel
+      paidBy: currentUser.uid,
+      paidByName: getUserDisplayName(),
       expenseDate: expenseDate,
       status: status,
       createdAt: Timestamp.now(),
-
     );
 
     await expenseProvider.createExpense(expense);
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
+    
+    // Show success snackbar
+    messenger.showSnackBar(
       SnackBar(
         content: Text(
           isAdmin 
             ? 'Expense added and approved successfully!' 
             : 'Expense submitted for admin approval!',
         ),
-        backgroundColor: AppColors.success(context),
+        backgroundColor: successColor,
       ),
     );
+    return true;
   } catch (e) {
-    if (e.toString().contains('must be a participant') || 
-        e.toString().contains('program participation')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('You must join this program before adding expenses'),
+    if (e.toString().contains('must be a participant')) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Join this program before adding expenses'),
           backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 3),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Log error but don't crash the UI if it's just a SnackBar failure
+      debugPrint('Error in _createExpense: $e');
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Failed to add expense: $e'),
-          backgroundColor: AppColors.error(context),
+          backgroundColor: errorColor,
         ),
       );
     }
+    return false;
   }
 }
 

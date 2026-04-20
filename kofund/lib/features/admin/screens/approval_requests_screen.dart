@@ -772,7 +772,7 @@ class _MemberCard extends StatelessWidget {
                     child: Stack(
                       children: [
                         Text(
-                          _getInitials(user.displayName ?? user.email ?? '?'),
+                          _getInitials(user.displayName ?? user.email),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
