@@ -24,13 +24,13 @@ class MemberListSkeleton extends StatelessWidget {
   static Widget buildSliver(BuildContext context, bool isDarkMode) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) => _buildShimmerItem(context, isDarkMode),
+        (context, index) => buildShimmerItem(context, isDarkMode),
         childCount: 8,
       ),
     );
   }
 
-  static Widget _buildShimmerItem(BuildContext context, bool isDarkMode) {
+  static Widget buildShimmerItem(BuildContext context, bool isDarkMode) {
     final baseColor = isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
     final highlightColor = isDarkMode ? Colors.grey[700]! : Colors.grey[100]!;
     final itemColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
@@ -38,11 +38,11 @@ class MemberListSkeleton extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: baseColor,
       highlightColor: highlightColor,
-      child: _buildMemberItemSkeleton(context, itemColor),
+      child: buildMemberItemSkeleton(context, itemColor),
     );
   }
 
-  static Widget _buildMemberItemSkeleton(BuildContext context, Color itemColor) {
+  static Widget buildMemberItemSkeleton(BuildContext context, Color itemColor) {
     return Column(
       children: [
         Padding(

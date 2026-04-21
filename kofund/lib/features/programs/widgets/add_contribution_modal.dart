@@ -14,6 +14,7 @@ import '../../../features/auth/models/user_model.dart';
 import '../../../features/contributions/providers/contribution_provider.dart'; // Add this
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/skeleton/member_list_skeleton.dart';
 class AddContributionModal extends StatefulWidget {
   final String? preSelectedProgramId;
   final String? preSelectedProgramName;
@@ -225,8 +226,9 @@ Widget build(BuildContext context) {
    
     body: Container(
       height: MediaQuery.of(context).size.height * 0.9,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.zero,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Drag handle
           Center(
@@ -242,70 +244,76 @@ Widget build(BuildContext context) {
           const SizedBox(height: 16),
           
           // Header with premium typography
-          Row(
-            children: [
-              IconButton(
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.surface(context),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.surface(context),
+                      ),
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Add Contribution',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (_currentStep > 0)
+                      TextButton.icon(
+                        onPressed: _goToPreviousStep,
+                        icon: const Icon(Icons.arrow_back_ios, size: 14),
+                        label: const Text('Back'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary(context),
+                        ),
+                      ),
+                  ],
                 ),
-                icon: const Icon(Icons.close, size: 20),
-                onPressed: () => Navigator.pop(context),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Add Contribution',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const Spacer(),
-              if (_currentStep > 0)
-                TextButton.icon(
-                  onPressed: _goToPreviousStep,
-                  icon: const Icon(Icons.arrow_back_ios, size: 14),
-                  label: const Text('Back'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary(context),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-          // Modern Pill Progress Indicator
-          Row(
-            children: List.generate(_totalSteps, (index) {
-              final isActive = _displayCurrentStep > index;
-              return Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: index == _totalSteps - 1 ? 0 : 8),
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isActive 
-                        ? AppColors.primary(context)
-                        : AppColors.primary(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                // Modern Pill Progress Indicator
+                Row(
+                  children: List.generate(_totalSteps, (index) {
+                    final isActive = _displayCurrentStep > index;
+                    return Expanded(
+                      child: Container(
+                        margin: EdgeInsets.only(right: index == _totalSteps - 1 ? 0 : 8),
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive 
+                              ? AppColors.primary(context)
+                              : AppColors.primary(context).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Step $_displayCurrentStep of $_totalSteps',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary(context),
+                    ),
                   ),
                 ),
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Step $_displayCurrentStep of $_totalSteps',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary(context),
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          const SizedBox(height: 20),
+          const SizedBox(height: 0),
 
          Expanded(
   child: Column(
@@ -481,7 +489,14 @@ Widget _buildProgramSelectionStep(String communityId) {
     future: _programService.getActiveProgramsByCommunity(communityId),
     builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: 8,
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) => MemberListSkeleton.buildShimmerItem(
+              context,
+              Theme.of(context).brightness == Brightness.dark,
+            ),
+          );
         }
 
         if (snapshot.hasError) {
@@ -495,62 +510,62 @@ Widget _buildProgramSelectionStep(String communityId) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Select Program',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose which program this contribution is for',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select Program',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose which program this contribution is for',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),
 
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
                 itemCount: programs.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.1),
+                ),
                 itemBuilder: (context, index) {
                   final program = programs[index];
                   final isMonthly = program.isMonthlyPaymentProgram;
-                  
-                  final isSelected = _selectedProgram?.programId == program.programId;
-                  
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.card(context),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                      border: Border.all(
-                        color: isSelected 
-                            ? AppColors.primary(context) 
-                            : AppColors.border(context),
-                        width: isSelected ? 2 : 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
+                  final isSelected =
+                      _selectedProgram?.programId == program.programId;
+
+                  return Material(
+                    color: isSelected
+                        ? AppColors.primary(context).withValues(alpha: 0.08)
+                        : Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                       onTap: () {
                         setState(() {
                           _selectedProgram = program;
                           _isMonthlyProgram = program.isMonthlyPaymentProgram;
-                          
+
                           if (_isMonthlyProgram) {
                             _availableMonths = _generateMonthOptions();
-                            _selectedMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+                            _selectedMonth =
+                                "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
                           } else {
                             _availableMonths = [];
                             _selectedMonth = null;
@@ -567,14 +582,21 @@ Widget _buildProgramSelectionStep(String communityId) {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: isMonthly 
+                                color: isMonthly
                                     ? Colors.green.withValues(alpha: 0.15)
-                                    : AppColors.primary(context).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                                    : AppColors.primary(context)
+                                        .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(
+                                  AppDimensions.radiusMedium,
+                                ),
                               ),
                               child: Icon(
-                                isMonthly ? Icons.calendar_today_rounded : Icons.event_rounded,
-                                color: isMonthly ? Colors.green : AppColors.primary(context),
+                                isMonthly
+                                    ? Icons.calendar_today_rounded
+                                    : Icons.event_rounded,
+                                color: isMonthly
+                                    ? Colors.green
+                                    : AppColors.primary(context),
                                 size: 24,
                               ),
                             ),
@@ -592,7 +614,8 @@ Widget _buildProgramSelectionStep(String communityId) {
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
-                                            color: AppColors.textPrimary(context),
+                                            color:
+                                                AppColors.textPrimary(context),
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -601,10 +624,16 @@ Widget _buildProgramSelectionStep(String communityId) {
                                       if (isMonthly)
                                         Container(
                                           margin: const EdgeInsets.only(left: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Colors.green.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                            color: Colors.green
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              AppDimensions.radiusSmall,
+                                            ),
                                           ),
                                           child: Text(
                                             'Monthly',
@@ -627,7 +656,8 @@ Widget _buildProgramSelectionStep(String communityId) {
                                       color: AppColors.textSecondary(context),
                                     ),
                                   ),
-                                  if (program.suggestedContribution != null && program.suggestedContribution! > 0)
+                                  if (program.suggestedContribution != null &&
+                                      program.suggestedContribution! > 0)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Text(
@@ -644,17 +674,17 @@ Widget _buildProgramSelectionStep(String communityId) {
                             ),
                             // Selection Indicator
                             if (isSelected)
-                              Container(
-                                margin: const EdgeInsets.only(left: 16),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.primary(context),
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
+                              Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary(context),
+                                size: 24,
+                              )
+                            else
+                              Icon(
+                                Icons.chevron_right,
+                                color: AppColors.textSecondary(context)
+                                    .withValues(alpha: 0.3),
+                                size: 20,
                               ),
                           ],
                         ),
@@ -679,47 +709,51 @@ Widget _buildProgramSelectionStep(String communityId) {
       return Column(
         children: [
           // Program info card
-          Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _isMonthlyProgram 
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _isMonthlyProgram
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _isMonthlyProgram ? Icons.calendar_month : Icons.event,
+                    color: _isMonthlyProgram
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                child: Icon(
-                  _isMonthlyProgram ? Icons.calendar_month : Icons.event,
-                  color: _isMonthlyProgram ? Colors.green : Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              title: Row(
-                children: [
-                  Text(_selectedProgram!.title),
-                  if (_isMonthlyProgram) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Monthly',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.green[800],
-                          fontWeight: FontWeight.bold,
+                title: Row(
+                  children: [
+                    Text(_selectedProgram!.title),
+                    if (_isMonthlyProgram) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Monthly',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.green[800],
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-        
-         
             ),
           ),
           
@@ -733,20 +767,28 @@ Widget _buildProgramSelectionStep(String communityId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Select Member',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Choose which member made this contribution',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Member',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choose which member made this contribution',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 20),
@@ -769,7 +811,14 @@ Widget _buildProgramSelectionStep(String communityId) {
       future: _usersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: 8,
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) => MemberListSkeleton.buildShimmerItem(
+              context,
+              Theme.of(context).brightness == Brightness.dark,
+            ),
+          );
         }
 
         if (snapshot.hasError) {
@@ -791,95 +840,87 @@ Widget _buildProgramSelectionStep(String communityId) {
         return Column(
           children: [
             // Modern Search bar
-            Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? AppColors.surface(context) 
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                border: Border.all(
-                  color: AppColors.border(context),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? AppColors.surface(context) 
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  border: Border.all(
+                    color: AppColors.border(context),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary(context),
-                  letterSpacing: 0.3,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                  hintText: 'Search members...',
-                  hintStyle: TextStyle(
-                    color: AppColors.textSecondary(context),
+                child: TextField(
+                  controller: _searchController,
+                  style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary(context),
+                    letterSpacing: 0.3,
                   ),
-                  prefixIcon: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary(context)),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                            FocusScope.of(context).unfocus();
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    hintText: 'Search members...',
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary(context),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    prefixIcon: Icon(Icons.search, color: AppColors.textSecondary(context), size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.close, size: 18, color: AppColors.textSecondary(context)),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                              FocusScope.of(context).unfocus();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.trim().toLowerCase();
+                    });
+                  },
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value.trim().toLowerCase();
-                  });
-                },
               ),
             ),
             const SizedBox(height: 16),
 
             Expanded(
-              child: ListView.builder(
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
                 itemCount: filteredUsers.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.1),
+                ),
                 itemBuilder: (context, index) {
                   final user = filteredUsers[index];
                   final isSelected = _selectedUser?.uid == user.uid;
                   
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.card(context),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                      border: Border.all(
-                        color: isSelected 
-                            ? AppColors.primary(context) 
-                            : AppColors.border(context),
-                        width: isSelected ? 2 : 1,
-                      ),
-                      boxShadow: isSelected 
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary(context).withValues(alpha: 0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
+                  return Material(
+                    color: isSelected 
+                        ? AppColors.primary(context).withValues(alpha: 0.08)
+                        : Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                       onTap: () {
                         setState(() {
                           _selectedUser = user;
@@ -890,6 +931,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
+                            // Avatar
                             Container(
                               width: 44,
                               height: 44,
@@ -911,6 +953,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                               ),
                             ),
                             const SizedBox(width: 16),
+                            // User Info
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -918,7 +961,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                                   Text(
                                     user.displayName ?? 'Unknown User',
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary(context),
                                     ),
@@ -928,7 +971,7 @@ Widget _buildProgramSelectionStep(String communityId) {
                                     user.email,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: AppColors.textSecondary(context),
+                                      color: AppColors.textSecondary(context).withValues(alpha: 0.7),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -936,21 +979,18 @@ Widget _buildProgramSelectionStep(String communityId) {
                                 ],
                               ),
                             ),
+                            // Selection Indicator
                             if (isSelected)
-                              Container(
-                                margin: const EdgeInsets.only(left: 12),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.primary(context),
-                                ),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(4.0),
-                                  child: Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
+                              Icon(
+                                Icons.check_circle,
+                                color: AppColors.primary(context),
+                                size: 22,
+                              )
+                            else
+                              Icon(
+                                Icons.chevron_right,
+                                color: AppColors.textSecondary(context).withValues(alpha: 0.3),
+                                size: 20,
                               ),
                           ],
                         ),
@@ -970,6 +1010,7 @@ Widget _buildContributionDetailsStep() {
   // auto-fill handled via controller when program is selected
 
   return SingleChildScrollView(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

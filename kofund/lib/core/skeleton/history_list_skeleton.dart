@@ -75,8 +75,6 @@ class HistoryListSkeleton extends StatelessWidget {
           height: 1,
           thickness: 1,
           color: AppColors.border(context),
-          indent: 16,
-          endIndent: 16,
         ),
       ],
     );

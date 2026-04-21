@@ -147,12 +147,7 @@ class _AllContributionsScreenState extends State<AllContributionsScreen> {
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           final contribution = filteredList[index];
-          return Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppDimensions.screenPaddingHorizontal,
-            ),
-            child: ContributionTile(contribution: contribution),
-          );
+          return ContributionTile(contribution: contribution);
         },
         childCount: filteredList.length,
       ),

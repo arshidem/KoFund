@@ -25,76 +25,77 @@ class ContributionListSkeleton extends StatelessWidget {
   }
 
   static Widget _buildItem(BuildContext context, Color itemColor) {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: AppDimensions.screenPaddingHorizontal,
-        vertical: 6,
-      ),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: itemColor.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
-      ),
-      child: Row(
-        children: [
-          // Circle avatar
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: itemColor),
-          ),
-          const SizedBox(width: 14),
-          // Text content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: itemColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 150,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: itemColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Amount
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
             children: [
+              // Circle avatar
               Container(
-                width: 60,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: itemColor,
-                  borderRadius: BorderRadius.circular(4),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: itemColor),
+              ),
+              const SizedBox(width: 14),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 140,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: itemColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 110,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: itemColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Container(
-                width: 40,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: itemColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              const SizedBox(width: 12),
+              // Amount
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: itemColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 40,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: itemColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: itemColor.withValues(alpha: 0.1),
+        ),
+      ],
     );
   }
 
