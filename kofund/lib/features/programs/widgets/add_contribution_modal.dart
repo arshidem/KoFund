@@ -1682,7 +1682,7 @@ Future<void> _submitContribution() async {
       amount: _amount,
       paymentMethod: _paymentMethod,
       addedByUserId: currentUser?.uid,
-      addedByUserName: currentUser?.displayName ?? 'Admin',
+      addedByUserName: auth.getUserDisplayName, // Use robust display name helper
       addedAt: Timestamp.now(),
       isMonthlyContribution: _isMonthlyProgram,
       monthId: _isMonthlyProgram ? _selectedMonth : null,

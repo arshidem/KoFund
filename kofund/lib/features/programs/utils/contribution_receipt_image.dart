@@ -9,6 +9,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 
+import 'package:kofund/core/skeleton/receipt_skeleton.dart';
+
 class ContributionReceiptImage {
   // Cache for user names (userId -> userName)
   static final Map<String, String> _userNameCache = {};
@@ -61,7 +63,8 @@ class ContributionReceiptImage {
           .get();
       
       if (userDoc.exists) {
-        final userName = userDoc.data()?['name'] ?? 
+        final userName = userDoc.data()?['displayName'] ??
+                        userDoc.data()?['name'] ?? 
                         userDoc.data()?['fullName'] ?? 
                         userDoc.data()?['username'] ?? 
                         'Unknown User';
@@ -89,7 +92,7 @@ class ContributionReceiptImage {
   static Future<void> generateAndShowReceipt({
     required BuildContext context,
     required ContributionModel contribution,
-    required String contributorName,
+    String? contributorName,
     required String programName,
     String? communityName,
   }) async {
@@ -98,18 +101,44 @@ class ContributionReceiptImage {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(),
+      builder: (_) => const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: ReceiptSkeleton(),
+          ),
+        ),
       ),
     );
-
     try {
       // Fetch required async data
-      String? addedByName;
-      if (contribution.addedByUserName != null && contribution.addedByUserName!.isNotEmpty) {
-        addedByName = contribution.addedByUserName;
-      } else if (contribution.addedByUserId != null && contribution.addedByUserId!.isNotEmpty) {
-        addedByName = await _getUserNameFromCacheOrFirestore(contribution.addedByUserId!);
+      // Step 1: Prioritize explicit contributorName passed to method
+      // Step 2: Use contributorName stored in the model
+      // Step 3: Fetch from Firestore as a final fallback
+      String actualContributorName = contributorName ?? contribution.contributorName;
+      if (actualContributorName.isEmpty || actualContributorName == 'Unknown User') {
+        actualContributorName = await _getUserNameFromCacheOrFirestore(contribution.userId);
+      }
+
+      // Determine "Recorded By" name
+      String addedByName = 'Admin';
+      
+      // If we have a stored name and it's NOT just the generic "Admin", use it
+      if (contribution.addedByUserName != null && 
+          contribution.addedByUserName!.isNotEmpty && 
+          contribution.addedByUserName != 'Admin') {
+        addedByName = contribution.addedByUserName!;
+      } 
+      // If the stored name is "Admin" (generic) but we HAVE an ID, try to get the real name
+      else if (contribution.addedByUserId != null && contribution.addedByUserId!.isNotEmpty) {
+        final fetchedName = await _getUserNameFromCacheOrFirestore(contribution.addedByUserId!);
+        if (fetchedName != 'Unknown User') {
+          addedByName = fetchedName;
+        } else if (contribution.addedByUserName != null) {
+          addedByName = contribution.addedByUserName!; // Fallback to whatever was stored
+        }
       }
       
       final communityNameFromId = await _getCommunityNameFromId(contribution.communityId);
@@ -136,7 +165,7 @@ class ContributionReceiptImage {
           barrierDismissible: true,
           builder: (context) => ReceiptImageDialog(
             contribution: contribution,
-            contributorName: contributorName,
+            contributorName: actualContributorName,
             programName: actualProgramName,
             communityName: communityNameFromId,
             paymentMethod: formattedPaymentMethod,
@@ -160,6 +189,7 @@ class ContributionReceiptImage {
       }
     }
   }
+
 }
 
 // Receipt Image Preview Dialog
@@ -279,16 +309,20 @@ class _ReceiptImageDialogState extends State<ReceiptImageDialog> {
               physics: const BouncingScrollPhysics(),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Screenshot(
-                  controller: _screenshotController,
-                  child: _ReceiptCard(
-                    contribution: widget.contribution,
-                    contributorName: widget.contributorName,
-                    programName: widget.programName,
-                    communityName: widget.communityName,
-                    paymentMethod: widget.paymentMethod,
-                    addedBy: widget.addedBy,
-                    monthDisplayName: widget.monthDisplayName,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  alignment: Alignment.topCenter,
+                  child: Screenshot(
+                    controller: _screenshotController,
+                    child: _ReceiptCard(
+                      contribution: widget.contribution,
+                      contributorName: widget.contributorName,
+                      programName: widget.programName,
+                      communityName: widget.communityName,
+                      paymentMethod: widget.paymentMethod,
+                      addedBy: widget.addedBy,
+                      monthDisplayName: widget.monthDisplayName,
+                    ),
                   ),
                 ),
               ),
@@ -364,176 +398,255 @@ class _ReceiptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd MMM yyyy • hh:mm a');
     final amountFormat = NumberFormat('#,##0.00');
-    final primaryColor = AppColors.primary(context);
+    const tealColor = Color(0xFF00BFA6);
+    const darkTextColor = Color(0xFF0D1B2A);
 
-    // Ensure the background is solid so the screenshot doesn't come out transparent
     return Container(
-      width: double.infinity,
+      width: 580,
       decoration: BoxDecoration(
-        color: Colors.white, // Strict white background for external sharing
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(48),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12, 
-            blurRadius: 24,
-            offset: Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 50,
+            offset: const Offset(0, 25),
           )
         ],
-        border: Border.all(
-          color: Colors.grey[300]!,
-          width: 1,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(48),
+        child: Stack(
+          children: [
+            // Decorative elements
+            Positioned(
+              top: -30,
+              left: -30,
+              child: _buildCornerDecoration(tealColor),
+            ),
+            Positioned(
+              top: 40,
+              right: 32,
+              child: _buildDotsGrid(),
+            ),
+            Positioned(
+              bottom: -50,
+              right: -50,
+              child: _buildBottomDecoration(tealColor),
+            ),            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Success Indicator
+                  _buildSuccessCheck(tealColor),
+                  const SizedBox(height: 8),
+
+                  // Organization Name
+                  Text(
+                    communityName.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: darkTextColor,
+                      letterSpacing: 1.5,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  
+                  // Receipt Title with lines
+                  _buildReceiptTitleLine(tealColor),
+                  const SizedBox(height: 12),
+
+                  // Amount Section (Nested Card)
+                  _buildAmountSection(amountFormat, tealColor),
+                  const SizedBox(height: 12),
+
+                  // Paid By Section
+                  _buildPaidBySection(contributorName, tealColor),
+                  const SizedBox(height: 12),
+
+                  // Details Section Header (Subtle)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 6),
+                      child: Text(
+                        'TRANSACTION DETAILS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.grey[400],
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Details List
+                  _buildDetailItem(Icons.calendar_month_rounded, 'Date', dateFormat.format(contribution.createdAt.toDate()), tealColor),
+                  
+                  if (monthDisplayName != null) ...[
+                    _buildDetailDivider(),
+                    _buildDetailItem(Icons.calendar_today_rounded, 'Month', monthDisplayName!, tealColor),
+                  ],
+
+                  _buildDetailDivider(),
+                  _buildDetailItem(Icons.card_membership_rounded, 'Program', programName, tealColor),
+                  _buildDetailDivider(),
+                  _buildDetailItem(Icons.account_balance_wallet_outlined, 'Payment Method', paymentMethod, tealColor),
+                  
+                  _buildDetailDivider(),
+                  _buildDetailItem(Icons.assignment_ind_rounded, 'Recorded By', addedBy ?? 'Admin', tealColor),
+                  
+                  const SizedBox(height: 16),
+
+                  // Footer
+                  _buildFooter(tealColor),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+
+  Widget _buildSuccessCheck(Color color) {
+    return Container(
+      width: 110,
+      height: 110,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Container(
+          width: 82,
+          height: 82,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              )
+            ],
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            color: Colors.white,
+            size: 52,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReceiptTitleLine(Color color) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: color.withValues(alpha: 0.3), thickness: 2)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'CONTRIBUTION RECEIPT',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: 4.0,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: color.withValues(alpha: 0.3), thickness: 2)),
+      ],
+    );
+  }
+
+  Widget _buildAmountSection(NumberFormat format, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.04),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          )
+        ],
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header section
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  communityName,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'CONTRIBUTION RECEIPT',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: primaryColor,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Tick Icon
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                Text(
-                  'Amount Paid',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹${amountFormat.format(contribution.amount)}',
-                  style: TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w900,
-                    color: primaryColor,
-                    letterSpacing: -1.0,
-                  ),
-                ),
-              ],
+          Text(
+            'AMOUNT PAID',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: Colors.grey[500],
+              letterSpacing: 2.0,
             ),
           ),
-
-          // Dashed Divider Line (Aesthetic)
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '₹${format.format(contribution.amount)}',
+              style: TextStyle(
+                fontSize: 68,
+                fontWeight: FontWeight.w900,
+                color: color,
+                letterSpacing: -2.0,
+                height: 1.0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Divider with dot
           Row(
-            children: List.generate(
-              30,
-              (index) => Expanded(
-                child: Container(
-                  color: index.isEven ? Colors.grey[300] : Colors.transparent,
-                  height: 1.5,
-                ),
+            children: [
+              Expanded(child: Divider(color: Colors.grey[100], thickness: 2)),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.6), shape: BoxShape.circle),
               ),
-            ),
+              Expanded(child: Divider(color: Colors.grey[100], thickness: 2)),
+            ],
           ),
-
-          // Details Section
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
+          
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: color.withValues(alpha: 0.1), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildReceiptRow(context, 'Date', dateFormat.format(contribution.createdAt.toDate())),
-                const SizedBox(height: 12),
-                _buildReceiptRow(context, 'Contributor', contributorName),
-                const SizedBox(height: 12),
-                _buildReceiptRow(context, 'Program', programName),
-                
-                if (monthDisplayName != null) ...[
-                  const SizedBox(height: 12),
-                  _buildReceiptRow(context, 'Month', monthDisplayName!),
-                ],
-                
-                const SizedBox(height: 12),
-                _buildReceiptRow(context, 'Payment Method', paymentMethod),
-                
-                if (addedBy != null) ...[
-                  const SizedBox(height: 12),
-                  _buildReceiptRow(context, 'Recorded By', addedBy!),
-                ],
-
-                const SizedBox(height: 16),
-                
-                // KoFund Watermark
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: primaryColor, // Solid primary color
-                        shape: BoxShape.circle, // Circular shape
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Transform.scale(
-                        scale: 1.2, // Scale up to eliminate intrinsic transparent padding from the asset
-                        child: Image.asset('assets/logos/KoFund.png'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Generated by KoFund',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.grey[800], // Explicit color since bg is always white
-                      ),
-                    ),
-                  ],
+                Icon(Icons.verified_rounded, size: 20, color: color),
+                const SizedBox(width: 10),
+                Text(
+                  'Contribution Recorded',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -543,32 +656,218 @@ class _ReceiptCard extends StatelessWidget {
     );
   }
 
-  Widget _buildReceiptRow(BuildContext context, String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[600], // Hardcoded grey for consistent white receipt background
+  Widget _buildPaidBySection(String name, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.person_rounded, color: color, size: 42),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87, // Hardcoded dark for consistent white receipt background
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PAID BY',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.grey[500],
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0D1B2A),
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Thank you for your generous contribution!',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 12),
+          Opacity(
+            opacity: 0.15,
+            child: Icon(Icons.volunteer_activism_outlined, size: 56, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 24, color: color),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[600],
+            ),
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0D1B2A),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailDivider() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 68, top: 4, bottom: 4),
+      child: Divider(color: Colors.grey[50], thickness: 2),
+    );
+  }
+
+  Widget _buildFooter(Color color) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: color.withValues(alpha: 0.15), thickness: 2)),
+            const SizedBox(width: 20),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Transform.scale(
+                scale: 1.3,
+                child: Image.asset('assets/logos/KoFund.png'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                children: [
+                  TextSpan(text: 'Generated by ', style: TextStyle(color: Colors.grey[700])),
+                  TextSpan(text: 'KoFund', style: TextStyle(color: color)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(child: Divider(color: color.withValues(alpha: 0.15), thickness: 2)),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildDotsGrid() {
+    return Opacity(
+      opacity: 0.08,
+      child: Column(
+        children: List.generate(8, (r) => Row(
+          children: List.generate(8, (c) => Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.all(5),
+            decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+          )),
+        )),
+      ),
+    );
+  }
+
+  Widget _buildCornerDecoration(Color color) {
+    return Container(
+      width: 220,
+      height: 150,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.4), color.withValues(alpha: 0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(bottomRight: Radius.circular(200)),
+      ),
+    );
+  }
+
+  Widget _buildBottomDecoration(Color color) {
+    return Container(
+      width: 250,
+      height: 120,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0), color.withValues(alpha: 0.25)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(200)),
+      ),
     );
   }
 }

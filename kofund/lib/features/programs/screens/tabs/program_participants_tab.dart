@@ -1725,6 +1725,7 @@ Future<void> _togglePaymentStatus(
 ) async {
   final scaffoldMessenger = ScaffoldMessenger.of(context);
   final contributionProvider = context.read<ContributionProvider>();
+  final authProvider = context.read<AppAuthProvider>();
   final errorColor = AppColors.error(context);
   final warningColor = AppColors.warning(context);
   
@@ -1808,6 +1809,7 @@ Future<void> _togglePaymentStatus(
           amount: remaining,
           monthId: _selectedMonth,
           isMonthlyProgram: true,
+          authProvider: authProvider,
         );
       }
       return;
@@ -1842,6 +1844,7 @@ Future<void> _togglePaymentStatus(
         amount: remaining,
         monthId: null,
         isMonthlyProgram: false,
+        authProvider: authProvider,
       );
     }
 
@@ -1872,6 +1875,7 @@ Future<void> _createContribution({
   required double amount,
   required String? monthId,
   required bool isMonthlyProgram,
+  required AppAuthProvider authProvider,
 }) async {
   try {
     final contributionId = '${DateTime.now().millisecondsSinceEpoch}_$userId';
@@ -1886,6 +1890,9 @@ Future<void> _createContribution({
       paymentMethod: 'cash',
       isMonthlyContribution: isMonthlyProgram,
       monthId: monthId,
+      addedByUserId: authProvider.user?.uid,
+      addedByUserName: authProvider.getUserDisplayName,
+      addedAt: Timestamp.now(),
       createdAt: Timestamp.now(),
     );
     

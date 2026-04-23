@@ -17,6 +17,7 @@ import '../../../../features/programs/widgets/add_contribution_modal.dart';
 import 'package:kofund/features/contributions/screens/edit_contribution_screen.dart';
 import 'package:kofund/features/programs/utils/contribution_receipt_image.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
+import '../../../../core/skeleton/receipt_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
 class ProgramContributionsTab extends StatefulWidget {
@@ -2064,36 +2065,14 @@ Future<void> _generateReceipt(
 ) async {
   if (!context.mounted) return;
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const Center(
-      child: CircularProgressIndicator(),
-    ),
-  );
-
   try {
-    // Get user name
-    final userName = await _getUserName(contribution.userId, context);
-    if (!mounted) return;
-
-    if (!context.mounted) return;
-
-    Navigator.of(context).pop();
-
-    // Generate and show receipt
+    // Generate and show receipt - it handles its own loading skeleton now
     await ContributionReceiptImage.generateAndShowReceipt(
       context: context,
       contribution: contribution,
-      contributorName: userName,
       programName: widget.program.title,
     );
-
   } catch (e, st) {
-    if (context.mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-
     debugPrint('Receipt error: $e\n$st');
 
     if (context.mounted) {

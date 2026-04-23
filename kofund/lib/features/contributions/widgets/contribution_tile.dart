@@ -7,6 +7,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../providers/contribution_provider.dart';
 import '../../../core/services/user_service.dart';
 import '../../programs/utils/contribution_receipt_image.dart';
+import '../../../core/skeleton/receipt_skeleton.dart';
 import '../screens/edit_contribution_screen.dart';
 
 class ContributionTile extends StatelessWidget {
@@ -226,23 +227,17 @@ class ContributionTile extends StatelessWidget {
   }
 
   Future<void> _generateReceipt(BuildContext context) async {
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     try {
-      final userService = UserService();
-      final user = await userService.getUserById(contribution.userId);
-      final contributorName = user?.displayName ?? user?.email ?? 'User';
-      
-      if (context.mounted) Navigator.pop(context);
-      
+      // Generate and show receipt - it handles its own loading skeleton now
       await ContributionReceiptImage.generateAndShowReceipt(
         context: context,
         contribution: contribution,
-        contributorName: contributorName,
         programName: contribution.programName,
       );
     } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
