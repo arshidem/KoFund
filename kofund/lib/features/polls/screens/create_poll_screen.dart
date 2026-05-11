@@ -371,25 +371,21 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
 
     return GradientSheetScaffold(
       title: widget.isEditing ? 'Edit Poll' : 'Create New Poll',
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
       actions: [
         if (!_isLoading)
           IconButton(
             onPressed: _submitPoll,
-            icon: const Icon(Icons.check, color: Colors.white),
+            icon: Icon(Icons.check, color: AppColors.textPrimary(context)),
           ),
         if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: AppColors.textPrimary(context),
               ),
             ),
           ),

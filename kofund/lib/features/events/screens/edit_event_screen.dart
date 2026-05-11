@@ -959,7 +959,7 @@ final update = widget.event.copyWith(
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                        valueColor: AlwaysStoppedAnimation(AppColors.textPrimary(context)),
                       ),
                     ),
                   )
@@ -973,8 +973,8 @@ final update = widget.event.copyWith(
 
                         return IconButton(
                           icon: isOnline
-                              ? const Icon(Icons.check, color: Colors.white, size: 26)
-                              : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                              ? Icon(Icons.check, color: AppColors.textPrimary(context), size: 26)
+                              : Icon(Icons.wifi_off, color: AppColors.textPrimary(context).withValues(alpha: 0.7), size: 26),
                           tooltip: isOnline
                               ? (widget.event.isCompleted || widget.event.isCancelled)
                                   ? 'Reactivate event'
@@ -988,10 +988,9 @@ final update = widget.event.copyWith(
           },
         ),
       ],
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: SingleChildScrollView(
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: SingleChildScrollView(
             child: Column(
               children: [
                 if (iCompleted || iCancelled)
@@ -1228,7 +1227,6 @@ final update = widget.event.copyWith(
             ),
           ),
         ),
-      ),
     );
   }
 }
