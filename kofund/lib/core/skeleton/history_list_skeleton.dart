@@ -45,7 +45,7 @@ class HistoryListSkeleton extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Title & subtitle
+              // Ttitle & subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,4 +100,9 @@ class HistoryListSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
 

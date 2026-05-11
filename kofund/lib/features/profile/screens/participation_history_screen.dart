@@ -7,7 +7,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
-import 'package:kofund/features/programs/constants/program_types.dart';
+import 'package:kofund/features/events/constants/event_Types.dart';
 import 'package:kofund/core/skeleton/participation_history_skeleton.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
@@ -60,7 +60,7 @@ class _ParticipationHistoryScreenState
     final participationHistory = profileProvider.participationHistory;
 
     return GradientSheetScaffold(
-      title: 'My Programs',
+      title: 'My Events',
       body: Column(
         children: [
           Expanded(
@@ -116,7 +116,7 @@ Widget _buildContent(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Participation History'),
+        _buildSectionHeader('Event Participation'),
         _buildSettingsGroup(
           children: List.generate(participationHistory.length, (index) {
             final participation = participationHistory[index];
@@ -186,8 +186,8 @@ Widget _buildContent(
   }
 
   Widget _buildParticipationItem(Map<String, dynamic> participation) {
-    final programTitle = participation['programTitle'] ?? 'Unnamed Program';
-    final programType = participation['programType'] ?? ProgramTypes.general;
+    final EventTitle = participation['EventTitle'] ?? 'Unnnamed Event';
+    final eventType = participation['eventType'] ?? EventTypes.general;
     final joinedAt = _parseDate(participation['joinedAt']);
     final hasPaid = participation['hasPaidContribution'] ?? false;
     final contributionPaid = (participation['contributionPaid'] ?? 0).toDouble();
@@ -210,7 +210,7 @@ Widget _buildContent(
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    ProgramTypes.getIconData(programType),
+                    EventTypes.getIconData(eventType),
                     size: 20,
                     color: AppColors.primary(context),
                   ),
@@ -221,7 +221,7 @@ Widget _buildContent(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        programTitle,
+                        EventTitle,
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -276,8 +276,8 @@ Widget _buildContent(
     );
   }
 
-  Widget _buildProgramIcon(String programType) {
-    final iconData = ProgramTypes.getIconData(programType);
+  Widget _buildEventIcon(String eventType) {
+    final iconData = EventTypes.getIconData(eventType);
 
     return CircleAvatar(
       radius: 20,
@@ -403,7 +403,7 @@ Widget _buildContent(
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'No contribution required for this program',
+              'No contribution required for this event',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary(context),
@@ -427,7 +427,7 @@ Widget _buildContent(
               Icon(Icons.event_note, size: 80, color: AppColors.textSecondary(context)),
               const SizedBox(height: 16),
               Text(
-                'No Program Participations',
+                'No Event Participations',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -438,7 +438,7 @@ Widget _buildContent(
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Text(
-                  'You haven\'t joined any programs yet. Start participating in community programs to see them here!',
+                  'You haven\'t joined any events yet. Start participating in community events to see them here!',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
@@ -447,11 +447,11 @@ Widget _buildContent(
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  // Navigate to programs screen
-                  // Navigator.pushNamed(context, '/programs');
+                  // Navigate to events screen
+                  // Navigator.pushNamed(context, '/events');
                 },
                 icon: const Icon(Icons.explore),
-                label: const Text('Browse Programs'),
+                label: const Text('Browse Events'),
               ),
             ],
           ),
@@ -509,4 +509,9 @@ Widget _buildContent(
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+
+
+
+
+
 

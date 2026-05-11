@@ -49,7 +49,7 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
 
   void _setupPollStream() {
     final pollProvider = context.read<PollProvider>();
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     
     // Cancel existing subscription
     _activePollsSubscription?.cancel();
@@ -81,14 +81,14 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
         });
     
     // Also load polls needing vote
-    if (authProvider.user != null) {
-      pollProvider.loadPollsNeedingVote(widget.communityId, authProvider.user!.uid);
+    if (_authProvider.user != null) {
+      pollProvider.loadPollsNeedingVote(widget.communityId, _authProvider.user!.uid);
     }
   }
 
   Future<void> _refreshPolls() async {
     final pollProvider = context.read<PollProvider>();
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     
     setState(() => _isLoading = true);
     
@@ -103,7 +103,7 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
     // Also refresh provider data
     await pollProvider.refreshPolls(
       widget.communityId, 
-      authProvider.user?.uid ?? '',
+      _authProvider.user?.uid ?? '',
     );
     
     if (mounted) {
@@ -201,7 +201,7 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
   }
 
   Widget _buildPollCarousel(bool isDarkMode) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final pollProvider = context.watch<PollProvider>();
 
     if (_isLoading) {
@@ -241,15 +241,15 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
         itemCount: activePolls.length,
         itemBuilder: (context, index) {
           final poll = activePolls[index];
-          final canUserVote = pollProvider.canUserVote(poll.pollId, authProvider.user?.uid ?? '');
-          final canUserChangeVote = pollProvider.canUserChangeVote(poll.pollId, authProvider.user?.uid ?? '');
+          final canUserVote = pollProvider.canUserVote(poll.pollId, _authProvider.user?.uid ?? '');
+          final canUserChangeVote = pollProvider.canUserChangeVote(poll.pollId, _authProvider.user?.uid ?? '');
           
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6.0),
             child: _InstagramPollCard(
               poll: poll,
               isDarkMode: isDarkMode,
-              userId: authProvider.user?.uid ?? '',
+              userId: _authProvider.user?.uid ?? '',
               canUserVote: canUserVote,
               canUserChangeVote: canUserChangeVote,
               onVote: (optionIndex) => _castVote(poll, optionIndex),
@@ -373,10 +373,10 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
   }
 
   Future<void> _castVote(PollModel poll, String optionIndex) async {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final pollProvider = context.read<PollProvider>();
     
-    if (authProvider.user == null) {
+    if (_authProvider.user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please login to vote'),
@@ -387,7 +387,7 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
     }
     
     // Check if user can vote
-    if (!pollProvider.canUserVote(poll.pollId, authProvider.user!.uid)) {
+    if (!pollProvider.canUserVote(poll.pollId, _authProvider.user!.uid)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('You cannot vote on this poll'),
@@ -400,7 +400,7 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
     try {
       final success = await pollProvider.castVote(
         pollId: poll.pollId,
-        userId: authProvider.user!.uid,
+        userId: _authProvider.user!.uid,
         optionIndex: optionIndex,
       );
       
@@ -1217,4 +1217,9 @@ class __AnimatedPollOptionState extends State<_AnimatedPollOption> {
     );
   }
 }
+
+
+
+
+
 

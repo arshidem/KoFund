@@ -34,7 +34,7 @@ class VirtualUserProvider extends ChangeNotifier {
 Future<void> createMultipleUsers(
   String communityId,
   String adminUid,
-  String adminName, // Add this parameter
+  String adminName, // Add this parnameter
   List<Map<String, dynamic>> users,
 ) async {
   _isLoading = true;
@@ -117,7 +117,7 @@ Future<bool> createVirtualUser({
   required String displayName,
   required String communityId,
   required String adminUid,
-  required String adminName, // Add this parameter
+  required String adminName, // Add this parnameter
   String? phoneNumber,
   String? email,
 }) async {
@@ -442,3 +442,8 @@ Future<bool> createVirtualUser({
     notifyListeners();
   }
 }
+
+
+
+
+

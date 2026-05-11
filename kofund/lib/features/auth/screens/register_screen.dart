@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _termsAccepted = false;
 
   String? _errorMessage;
-  String? _nameError;
+  String? _nnameError;
   String? _emailError;
   String? _phoneError;
   String? _passwordError;
@@ -110,7 +110,7 @@ Widget _buildInviteBanner() {
 Future<void> _register() async {
   // Clear previous errors
   setState(() {
-    _nameError = null;
+    _nnameError = null;
     _emailError = null;
     _phoneError = null;
     _passwordError = null;
@@ -153,16 +153,16 @@ Future<void> _register() async {
 
   // Name validation
   if (name.isEmpty) {
-    _nameError = 'Name is required';
+    _nnameError = 'Name is required';
     hasError = true;
   } else if (name.length < 2) {
-    _nameError = 'Name must be at least 2 characters';
+    _nnameError = 'Name must be at least 2 characters';
     hasError = true;
   } else if (name.length > 50) {
-    _nameError = 'Name cannot exceed 50 characters';
+    _nnameError = 'Name cannot exceed 50 characters';
     hasError = true;
   } else if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(name)) {
-    _nameError = 'Name can only contain letters and spaces';
+    _nnameError = 'Name can only contain letters and spaces';
     hasError = true;
   }
 
@@ -211,11 +211,11 @@ Future<void> _register() async {
   });
 
   try {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     // Clear any previous provider errors
-    authProvider.clearError();
+    _authProvider.clearError();
     
-    final success = await authProvider.signUp(
+    final success = await _authProvider.signUp(
       email: email,
       password: password,
       name: name,
@@ -244,18 +244,18 @@ Future<void> _register() async {
         ),
       );
     } else {
-      if (authProvider.user != null && authProvider.needsEmailVerification) {
+      if (_authProvider.user != null && _authProvider.needsEmailVerification) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => VerificationPendingScreen(
-              email: authProvider.currentUserEmail ?? email,
+              email: _authProvider.currentUserEmail ?? email,
               pendingInviteCode: widget.pendingInviteCode,
             ),
           ),
         );
       } else {
-        _showError(authProvider.error ?? 'Registration failed. Please try again.');
+        _showError(_authProvider.error ?? 'Registration failed. Please try again.');
       }
     }
   } catch (e) {
@@ -308,8 +308,8 @@ Future<void> _signInWithGoogle() async {
   });
 
   try {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final success = await authProvider.signInWithGoogle();
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final success = await _authProvider.signInWithGoogle();
 
     if (success && mounted) {
       _showSuccess('Welcome to KoFund!');
@@ -346,7 +346,7 @@ Future<void> _signInWithGoogle() async {
       }
     } else {
       // Check if it's a cancellation error
-      final providerError = authProvider.error ?? '';
+      final providerError = _authProvider.error ?? '';
       if (providerError.isNotEmpty && !_isCancellationError(providerError)) {
         _showError(providerError);
       }
@@ -507,7 +507,7 @@ String _getGoogleErrorMessage(dynamic error) {
       } else if (lowerMessage.contains('phone')) {
         _phoneError = message;
       } else if (lowerMessage.contains('name')) {
-        _nameError = message;
+        _nnameError = message;
       } else {
         _formError = message; // Show non-field errors in formError container
       }
@@ -610,7 +610,7 @@ Widget _buildInputField({
     ),
     onChanged: (_) {
       setState(() {
-        if (controller == _nameController) _nameError = null;
+        if (controller == _nameController) _nnameError = null;
         if (controller == _emailController) _emailError = null;
         if (controller == _phoneController) _phoneError = null;
         if (controller == _passwordController) _passwordError = null;
@@ -770,8 +770,8 @@ Widget _buildTermsCheckbox() {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AppAuthProvider>(context);
-    final isLoading = authProvider.isLoading || _isLoading;
+    final _authProvider = Provider.of<AppAuthProvider>(context);
+    final isLoading = _authProvider.isLoading || _isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -828,7 +828,7 @@ Widget _buildTermsCheckbox() {
 
               const SizedBox(height: 22),
 
-              // Form Title
+              // Form Ttitle
               Center(
                 child: Text(
                   'Create Account',
@@ -893,7 +893,7 @@ Widget _buildTermsCheckbox() {
                 label: 'Full Name *',
                 icon: Icons.person_outline,
                 maxLength: 25,
-                errorText: _nameError,
+                errorText: _nnameError,
               ),
               const SizedBox(height: 16),
 
@@ -1174,4 +1174,9 @@ Widget _buildTermsCheckbox() {
     );
   }
 }
+
+
+
+
+
 

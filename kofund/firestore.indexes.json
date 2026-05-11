@@ -4,7 +4,7 @@
       "collectionGroup": "contributions",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "eventId", "order": "ASCENDING"},
         {"fieldPath": "createdAt", "order": "DESCENDING"},
         {"fieldPath": "__name__", "order": "DESCENDING"}
       ]
@@ -28,11 +28,11 @@
       ]
     },
     {
-      "collectionGroup": "programs",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         {"fieldPath": "communityId", "order": "ASCENDING"},
-        {"fieldPath": "programDate", "order": "ASCENDING"},
+        {"fieldPath": "eventDate", "order": "ASCENDING"},
         {"fieldPath": "__name__", "order": "ASCENDING"}
       ]
     },
@@ -40,7 +40,7 @@
       "collectionGroup": "expenses",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "eventId", "order": "ASCENDING"},
         {"fieldPath": "expenseDate", "order": "DESCENDING"},
         {"fieldPath": "__name__", "order": "DESCENDING"}
       ]
@@ -49,7 +49,7 @@
       "collectionGroup": "participants",
       "queryScope": "COLLECTION", 
       "fields": [
-        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "eventId", "order": "ASCENDING"},
         {"fieldPath": "joinedAt", "order": "DESCENDING"},
         {"fieldPath": "__name__", "order": "DESCENDING"}
       ]
@@ -63,12 +63,12 @@
       ]
     },
      {
-      "collectionGroup": "programs",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "communityId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "programDate", "order": "ASCENDING" }
+        { "fieldPath": "eventDate", "order": "ASCENDING" }
       ]
     },
     {
@@ -132,7 +132,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "programId",
+          "fieldPath": "eventId",
           "order": "ASCENDING"
         },
         {
@@ -236,7 +236,7 @@
       "collectionGroup": "deleted_contributions",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "eventId", "order": "ASCENDING"},
         {"fieldPath": "deletedAt", "order": "DESCENDING"}
       ]
     },
@@ -254,7 +254,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {"fieldPath": "isRestored", "order": "ASCENDING"},
-        {"fieldPath": "programId", "order": "ASCENDING"},
+        {"fieldPath": "eventId", "order": "ASCENDING"},
         {"fieldPath": "deletedAt", "order": "DESCENDING"},
         {"fieldPath": "__name__", "order": "DESCENDING"}
       ]
@@ -284,7 +284,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
@@ -292,12 +292,12 @@
       "collectionGroup": "participants",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "programs",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "communityId", "order": "ASCENDING" },
@@ -307,7 +307,7 @@
       ]
     },
     {
-      "collectionGroup": "programs",
+      "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "enableAutoReminders", "order": "ASCENDING" },
@@ -318,7 +318,7 @@
       "collectionGroup": "contributions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -327,7 +327,7 @@
       "collectionGroup": "contributions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
@@ -336,7 +336,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "monthId", "order": "ASCENDING" },
         { "fieldPath": "isMonthlyContribution", "order": "ASCENDING" }
       ]
@@ -345,7 +345,7 @@
       "collectionGroup": "expenses",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
@@ -398,7 +398,7 @@
       "collectionGroup": "contributions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "amount", "order": "ASCENDING" }
       ]
     },
@@ -414,7 +414,7 @@
       "collectionGroup": "expenses",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programId", "order": "ASCENDING" },
+        { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "amount", "order": "ASCENDING" }
       ]

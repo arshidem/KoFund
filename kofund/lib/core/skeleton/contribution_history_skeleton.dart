@@ -118,7 +118,7 @@ class ContributionHistorySkeleton extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title skeleton
+                    // Ttitle skeleton
                     Container(
                       width: 140,
                       height: 16,
@@ -295,7 +295,7 @@ class ContributionDetailsSkeleton extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Amount card
-                    _buildAmountCardSkeleton(),
+                    _buildAamountCardSkeleton(),
                     const SizedBox(height: 24),
 
                     // Basic information header
@@ -366,7 +366,7 @@ class ContributionDetailsSkeleton extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountCardSkeleton() {
+  Widget _buildAamountCardSkeleton() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
@@ -550,3 +550,7 @@ class ContributionDetailsSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+

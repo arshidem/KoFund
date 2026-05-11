@@ -18,10 +18,10 @@ class DeveloperDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     
     // Security check
-    if (!authProvider.isDeveloper) {
+    if (!_authProvider.isDeveloper) {
       return Scaffold(
         appBar: AppBar(title: const Text('Access Denied')),
         body: const Center(child: Text('Developer access required')),
@@ -30,10 +30,6 @@ class DeveloperDashboardScreen extends StatelessWidget {
 
     return GradientSheetScaffold(
       title: 'Developer Dashboard',
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -77,8 +73,7 @@ class DeveloperDashboardScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
-
+            const SizedBox(height: 12),
             // Development Tools
             Text(
               'Development Tools',
@@ -88,9 +83,10 @@ class DeveloperDashboardScreen extends StatelessWidget {
                 color: AppColors.textPrimary(context),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             GridView.count(
+              padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
@@ -312,9 +308,9 @@ class DeveloperDashboardScreen extends StatelessWidget {
     );
   }
 
-  // Add BuildContext parameter to this method
+  // Add BuildContext parnameter to this method
   Widget _buildToolCard({
-    required BuildContext context, // Add this parameter
+    required BuildContext context, // Add this parnameter
     required IconData icon,
     required String title,
     required String subtitle,
@@ -413,3 +409,8 @@ class DeveloperDashboardScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

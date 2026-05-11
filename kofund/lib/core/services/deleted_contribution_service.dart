@@ -230,13 +230,13 @@ class DeletedContributionService {
       debugPrint('⚠️ Failed to create restoration notification: $e');
     }
   }
-  // 🔹 Get deleted contributions for a specific program
-Stream<List<DeletedContributionModel>> getProgramDeletedContributions({
-  required String programId,
+  // 🔹 Get deleted contributions for a specific event
+Stream<List<DeletedContributionModel>> getDeletedContributions({
+  required String eventId,
 }) {
   return _firestore
       .collection('deleted_contributions')
-      .where('programId', isEqualTo: programId)
+      .where('eventId', isEqualTo: eventId)
       .where('isRestored', isEqualTo: false)
       .orderBy('deletedAt', descending: true)
       .snapshots()
@@ -269,4 +269,9 @@ Stream<List<DeletedContributionModel>> getProgramDeletedContributions({
     }
   }
 }
+
+
+
+
+
 

@@ -5,10 +5,10 @@ import 'package:kofund/features/community/models/community_model.dart';
 import 'package:kofund/core/constants/firebase_keys.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 
 class CommunityFirestoreService {
-  FirebaseFirestore get firestore => FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   
   // ✅ CONSTANTS FOR CONSISTENT LINK FORMAT
   static const String _appScheme = 'kofund';
@@ -30,7 +30,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
     Map<String, dynamic>? settings,
     String? logoUrl,
   }) async {
-    final docRef = firestore.collection(FirebaseKeys.communities).doc();
+    final docRef = _firestore.collection(FirebaseKeys.communities).doc();
     final inviteCode = await _generateUniqueInviteCode();
     final inviteLink = _generateInviteLink(inviteCode, docRef.id); // ✅ Consistent format
 
@@ -52,7 +52,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
       logoUrl: logoUrl,
     );
 
-    final batch = firestore.batch();
+    final batch = _firestore.batch();
     
     // 1. Create community document
     batch.set(docRef, community.toMap());
@@ -70,7 +70,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
     });
     
     // 3. Update user document
-    final userRef = firestore.collection('users').doc(adminId);
+    final userRef = _firestore.collection('users').doc(adminId);
     batch.update(userRef, {
       'communityId': community.communityId,
       'communityCode': community.inviteCode,
@@ -103,7 +103,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
     final newCode = await _generateUniqueInviteCode();
     final newInviteLink = _generateInviteLink(newCode, communityId);
 
-    await firestore.collection(FirebaseKeys.communities).doc(communityId).update({
+    await _firestore.collection(FirebaseKeys.communities).doc(communityId).update({
       'inviteCode': newCode,
       'inviteLink': newInviteLink,
       'lastActivityAt': Timestamp.now(),
@@ -117,7 +117,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
     while (exists) {
       code = _generateRandomCode(8);
-      final query = await firestore
+      final query = await _firestore
           .collection(FirebaseKeys.communities)
           .where('inviteCode', isEqualTo: code)
           .limit(1)
@@ -136,7 +136,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
   /// ✅ Get community by invite code
   Future<CommunityModel?> getCommunityByCode(String code) async {
-    final query = await firestore
+    final query = await _firestore
         .collection(FirebaseKeys.communities)
         .where('inviteCode', isEqualTo: code)
         .limit(1)
@@ -159,7 +159,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
       final inviteLink = _generateInviteLink(community.inviteCode, communityId);
       
-      await firestore.collection(FirebaseKeys.communities).doc(communityId).update({
+      await _firestore.collection(FirebaseKeys.communities).doc(communityId).update({
         'inviteLink': inviteLink,
         'lastActivityAt': Timestamp.now(),
       });
@@ -173,8 +173,8 @@ String _generateInviteLink(String inviteCode, String communityId) {
   /// ✅ Regenerate both code and link
   Future<void> regenerateInviteCodeAndLink(String communityId) async {
     try {
-      final batch = firestore.batch();
-      final communityRef = firestore.collection(FirebaseKeys.communities).doc(communityId);
+      final batch = _firestore.batch();
+      final communityRef = _firestore.collection(FirebaseKeys.communities).doc(communityId);
 
       final newInviteCode = await _generateUniqueInviteCode();
       final newInviteLink = _generateInviteLink(newInviteCode, communityId);
@@ -188,7 +188,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
       // Update all members with new code
       final membersSnapshot = await communityRef.collection(FirebaseKeys.members).get();
       for (final memberDoc in membersSnapshot.docs) {
-        final userRef = firestore.collection('users').doc(memberDoc.id);
+        final userRef = _firestore.collection('users').doc(memberDoc.id);
         batch.update(userRef, {
           'communityCode': newInviteCode,
           'updatedAt': Timestamp.now(),
@@ -204,7 +204,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
   /// ✅ Get or create invite link
   Future<String> getOrCreateInviteLink(String communityId) async {
     try {
-      final doc = await firestore.collection(FirebaseKeys.communities).doc(communityId).get();
+      final doc = await _firestore.collection(FirebaseKeys.communities).doc(communityId).get();
       
       if (!doc.exists) {
         throw Exception('Community not found');
@@ -223,7 +223,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
 
       final newInviteLink = _generateInviteLink(inviteCode, communityId);
       
-      await firestore.collection(FirebaseKeys.communities).doc(communityId).update({
+      await _firestore.collection(FirebaseKeys.communities).doc(communityId).update({
         'inviteLink': newInviteLink,
         'lastActivityAt': Timestamp.now(),
       });
@@ -242,7 +242,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
     required String inviteCode,
   }) async {
     try {
-      final query = await firestore
+      final query = await _firestore
           .collection(FirebaseKeys.communities)
           .where('inviteCode', isEqualTo: inviteCode)
           .limit(1)
@@ -256,7 +256,7 @@ String _generateInviteLink(String inviteCode, String communityId) {
       final communityId = communityDoc.id;
       final communityData = communityDoc.data();
 
-      final existingMember = await firestore
+      final existingMember = await _firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .collection(FirebaseKeys.members)
@@ -267,10 +267,10 @@ String _generateInviteLink(String inviteCode, String communityId) {
         throw Exception('You are already a member of this community');
       }
 
-      final batch = firestore.batch();
-      final communityRef = firestore.collection(FirebaseKeys.communities).doc(communityId);
+      final batch = _firestore.batch();
+      final communityRef = _firestore.collection(FirebaseKeys.communities).doc(communityId);
       final memberRef = communityRef.collection(FirebaseKeys.members).doc(userId);
-      final userRef = firestore.collection('users').doc(userId);
+      final userRef = _firestore.collection('users').doc(userId);
 
       batch.set(memberRef, {
         'userId': userId,
@@ -365,7 +365,7 @@ Future<void> joinCommunityWithLink({
 }
   /// ✅ Get community by ID
   Future<CommunityModel?> getCommunityById(String communityId) async {
-    final doc = await firestore
+    final doc = await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .get();
@@ -375,7 +375,7 @@ Future<void> joinCommunityWithLink({
 
   /// ✅ Stream community updates
   Stream<CommunityModel?> getCommunityStream(String communityId) {
-    return firestore
+    return _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .snapshots()
@@ -384,7 +384,7 @@ Future<void> joinCommunityWithLink({
 
   /// ✅ Check if user is part of a community
   Future<bool> isUserInCommunity(String userId, String communityId) async {
-    final doc = await firestore
+    final doc = await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .collection(FirebaseKeys.members)
@@ -395,7 +395,7 @@ Future<void> joinCommunityWithLink({
 
   /// ✅ Get all communities for a user
   Future<List<CommunityModel>> getUserCommunities(String userId) async {
-    final membersQuery = await firestore
+    final membersQuery = await _firestore
         .collectionGroup(FirebaseKeys.members)
         .where('userId', isEqualTo: userId)
         .get();
@@ -405,7 +405,7 @@ Future<void> joinCommunityWithLink({
 
     if (communityIds.isEmpty) return [];
 
-    final communitiesQuery = await firestore
+    final communitiesQuery = await _firestore
         .collection(FirebaseKeys.communities)
         .where(FieldPath.documentId, whereIn: communityIds)
         .get();
@@ -436,7 +436,7 @@ Future<void> joinCommunityWithLink({
     if (settings != null) updates['settings'] = settings;
     if (logoUrl != null) updates['logoUrl'] = logoUrl;
 
-    await firestore
+    await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .update(updates);
@@ -444,12 +444,12 @@ Future<void> joinCommunityWithLink({
 
   /// ✅ Delete a community
   Future<void> deleteCommunity(String communityId) async {
-    await firestore.collection(FirebaseKeys.communities).doc(communityId).delete();
+    await _firestore.collection(FirebaseKeys.communities).doc(communityId).delete();
   }
 
   /// ✅ Stream all community members
   Stream<List<Map<String, dynamic>>> getCommunityMembers(String communityId) {
-    return firestore
+    return _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .collection(FirebaseKeys.members)
@@ -471,7 +471,7 @@ Future<void> joinCommunityWithLink({
 
   /// ✅ Remove member
   Future<void> removeMemberFromCommunity(String communityId, String userId) async {
-    await firestore
+    await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .collection(FirebaseKeys.members)
@@ -487,7 +487,7 @@ Future<void> joinCommunityWithLink({
     required String userId,
     required String role,
   }) async {
-    await firestore
+    await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .collection(FirebaseKeys.members)
@@ -501,7 +501,7 @@ Future<void> joinCommunityWithLink({
     required String communityId,
   }) async {
     try {
-      final memberDoc = await firestore
+      final memberDoc = await _firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .collection(FirebaseKeys.members)
@@ -522,7 +522,7 @@ Future<void> joinCommunityWithLink({
   /// ✅ Get community invite statistics (Optimized count)
   Future<Map<String, dynamic>> getInviteStats(String communityId) async {
     try {
-      final communityDoc = await firestore
+      final communityDoc = await _firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .get();
@@ -535,7 +535,7 @@ Future<void> joinCommunityWithLink({
       
       // 🚀 OPTIMIZATION: Use count() aggregation instead of full query for pending requests
       // Note: count() only charges 1 read per 1000 docs (or similar small amount)
-      final pendingAggregate = await firestore
+      final pendingAggregate = await _firestore
           .collection(FirebaseKeys.communities)
           .doc(communityId)
           .collection(FirebaseKeys.members)
@@ -560,7 +560,7 @@ Future<void> joinCommunityWithLink({
 
   Future<void> _addCommunityMember(
       String communityId, String userId, String email, String name, String role) async {
-    await firestore
+    await _firestore
         .collection(FirebaseKeys.communities)
         .doc(communityId)
         .collection(FirebaseKeys.members)
@@ -575,16 +575,21 @@ Future<void> joinCommunityWithLink({
   }
 
   Future<void> _incrementTotalMembers(String communityId) async {
-    await firestore.collection(FirebaseKeys.communities).doc(communityId).update({
+    await _firestore.collection(FirebaseKeys.communities).doc(communityId).update({
       'totalMembers': FieldValue.increment(1),
       'lastActivityAt': Timestamp.now(),
     });
   }
 
   Future<void> _decrementTotalMembers(String communityId) async {
-    await firestore.collection(FirebaseKeys.communities).doc(communityId).update({
+    await _firestore.collection(FirebaseKeys.communities).doc(communityId).update({
       'totalMembers': FieldValue.increment(-1),
       'lastActivityAt': Timestamp.now(),
     });
   }
 }
+
+
+
+
+

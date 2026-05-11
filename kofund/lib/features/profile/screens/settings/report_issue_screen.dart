@@ -41,10 +41,10 @@ Future<void> _submitIssue() async {
   if (!_formKey.currentState!.validate()) return;
 
   final issueProvider = Provider.of<IssueProvider>(context, listen: false);
-  final authProvider = Provider.of<AppAuthProvider>(context, listen: false); // Add this
+  final _authProvider = Provider.of<AppAuthProvider>(context, listen: false); // Add this
 
   // Check if user is logged in
-  if (authProvider.user == null) {
+  if (_authProvider.user == null) {
     SnackbarHelper.showError(context, 'Please log in to report an issue');
     return;
   }
@@ -58,7 +58,7 @@ Future<void> _submitIssue() async {
           ? _stepsController.text 
           : null,
       screenshotUrl: _includeScreenshot ? 'todo://upload-screenshot' : null,
-      userId: authProvider.user!.uid, // Add this line
+      userId: _authProvider.user!.uid, // Add this line
     );
 
     // Show success dialog
@@ -198,9 +198,9 @@ Future<void> _submitIssue() async {
 
                 const SizedBox(height: 24),
 
-                // Issue Type Selection
+                // Issue type Selection
                 Text(
-                  'Issue Type',
+                  'Issue type',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -288,7 +288,7 @@ Future<void> _submitIssue() async {
 
                 const SizedBox(height: 24),
 
-                // Issue Title
+                // Issue Ttitle
                 TextFormField(
                   controller: _titleController,
                   decoration: InputDecoration(
@@ -559,4 +559,9 @@ color: Colors.blue.withValues(alpha: 0.1),              borderRadius: BorderRadi
     );
   }
 }
+
+
+
+
+
 

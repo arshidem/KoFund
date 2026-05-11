@@ -17,6 +17,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/utils/app_info.dart';
 import 'package:kofund/core/widgets/premium_switch.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -71,7 +72,7 @@ Future<void> _loadAppInfo() async {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
@@ -95,13 +96,13 @@ Future<void> _loadAppInfo() async {
                     _buildSettingsSwitch(
                       context: context,
                       title: 'Push Notifications',
-                      subtitle: 'Receive program updates and reminders',
-                      value: authProvider.user?.notificationsEnabled ?? true,
+                      subtitle: 'Receive event updates and reminders',
+                      value: _authProvider.user?.notificationsEnabled ?? true,
                       onChanged: (value) async {
                         final success =
                             await profileProvider.updateNotificationSettings(value);
                         if (success) {
-                          await authProvider.refreshUserData();
+                          await _authProvider.refreshUserData();
                           setState(() {});
                         }
                       },
@@ -189,17 +190,11 @@ Future<void> _loadAppInfo() async {
                           _buildSectionHeader('Developer Tools'),
                           _buildSettingsGroup(
                             children: [
-                              _buildSettingsItem(
+                                _buildSettingsItem(
                                 context: context,
                                 title: 'Developer Dashboard',
                                 icon: Icons.developer_mode_rounded,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const DeveloperDashboardScreen(),
-                                  ),
-                                ),
+                                onTap: _showDeveloperPasswordDialog,
                                 color: Colors.blue,
                               ),
                             ],
@@ -267,21 +262,21 @@ Future<void> _loadAppInfo() async {
                       icon: Icons.exit_to_app_rounded,
                       title: 'Leave Community',
                       onTap: () => _showLeaveCommunityDialog(
-                          context, authProvider, profileProvider),
+                          context, _authProvider, profileProvider),
                     ),
                     _buildItemDivider(),
                     _buildDangerTile(
                       context: context,
                       icon: Icons.delete_forever_rounded,
                       title: 'Delete Account',
-                      onTap: () => _showDeleteAccountDialog(authProvider),
+                      onTap: () => _showDeleteAccountDialog(_authProvider),
                     ),
                     _buildItemDivider(),
                     _buildDangerTile(
                       context: context,
                       icon: Icons.logout_rounded,
                       title: 'Logout',
-                      onTap: () => _showLogoutDialog(authProvider),
+                      onTap: () => _showLogoutDialog(_authProvider),
                     ),
                   ],
                 ),
@@ -560,7 +555,7 @@ Widget _buildDangerTile({
           ),
           const SizedBox(height: 16),
           Text(
-            'A community fund management app for organizing programs and tracking contributions.',
+            'A community fund management app for organizing events and tracking contributions.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary(context), height: 1.4),
           ),
@@ -569,11 +564,11 @@ Widget _buildDangerTile({
     );
   }
 
-void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) async {
+void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider _authProvider, ProfileProvider profileProvider) async {
   final confirm = await DialogHelper.showConfirmationDialog(
     context,
     title: 'Leave Community?',
-    message: 'Are you sure you want to leave your current community? You will lose access to all community programs and data.',
+    message: 'Are you sure you want to leave your current community? You will lose access to all community events and data.',
     confirmLabel: 'Leave',
     icon: Icons.exit_to_app_rounded,
     isDestructive: true,
@@ -616,7 +611,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
     }
   }
 }
-void _showDeleteAccountDialog(AppAuthProvider authProvider) async {
+void _showDeleteAccountDialog(AppAuthProvider _authProvider) async {
   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
   final user = FirebaseAuth.instance.currentUser;
   
@@ -736,11 +731,11 @@ void _showDeleteAccountDialog(AppAuthProvider authProvider) async {
       return;
     }
     
-    final providerType = _getUserProvider(user);
+    final providerTeventType = _getUserProvider(user);
     
-    if (providerType == 'google') {
+    if (providerTeventType == 'google') {
       await _attemptAccountDeletion(profileProvider);
-    } else if (providerType == 'email') {
+    } else if (providerTeventType == 'email') {
       _showPasswordDialog(profileProvider);
     } else {
       await _attemptAccountDeletion(profileProvider);
@@ -936,7 +931,7 @@ void _showReauthenticationRequiredDialog() async {
   }
 }
 
-  void _showLogoutDialog(AppAuthProvider authProvider) async {
+  void _showLogoutDialog(AppAuthProvider _authProvider) async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final memberProvider = Provider.of<MemberProvider>(context, listen: false);
     
@@ -967,7 +962,7 @@ void _showReauthenticationRequiredDialog() async {
       memberProvider.clearDataForUserChange();
       
       // 2. Sign out from auth
-      await authProvider.signOut(context);
+      await _authProvider.signOut(context);
       if (!mounted) return;
       
       // 3. Show success message
@@ -981,6 +976,93 @@ void _showReauthenticationRequiredDialog() async {
       );
     }
   }
+
+  void _showDeveloperPasswordDialog() async {
+    final TextEditingController passwordController = TextEditingController();
+    final String correctPassword = dotenv.get('DEVELOPER_PASSWORD', fallback: 'Marshid@8157');
+    
+    final result = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Developer Access',
+      confirmLabel: 'Access Dashboard',
+      icon: Icons.lock_person_rounded,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Enter developer password to access dashboard',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Enter Password',
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 14,
+              ),
+              filled: true,
+              fillColor: AppColors.primary(context).withValues(alpha: 0.05),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context),
+                  width: 1.5,
+                ),
+              ),
+              prefixIcon: Icon(
+                Icons.password_rounded,
+                color: AppColors.primary(context),
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      if (passwordController.text == correctPassword) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const DeveloperDashboardScreen(),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        SnackbarHelper.showError(context, 'Incorrect developer password');
+      }
+    }
+  }
 }
+
+
+
+
+
 
 

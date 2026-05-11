@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../features/auth/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:intl/intl.dart';
 
 class UserService {
@@ -23,38 +23,38 @@ class UserService {
   }
 
   // In your UserService or ParticipantService
-  Future<bool> isUserInProgram(String userId, String programId) async {
+  Future<bool> isUserInEvent(String userId, String eventId) async {
     try {
-      debugPrint('🔍 DEBUG: Checking if user $userId is ACTIVE participant in program $programId');
+      debugPrint('🔍 DEBUG: Checking if user $userId is ACTIVE participant in event $eventId');
       
       final snapshot = await _firestore
           .collection('participants')
           .where('userId', isEqualTo: userId)
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'joined')
           .limit(1)
           .get();
       
       final isActiveParticipant = snapshot.docs.isNotEmpty;
-      debugPrint('📊 DEBUG: User $userId is ACTIVE participant in program $programId: $isActiveParticipant');
+      debugPrint('📊 DEBUG: User $userId is ACTIVE participant in event $eventId: $isActiveParticipant');
       
       return isActiveParticipant;
     } catch (e) {
-      debugPrint('❌ DEBUG: Error checking program participation: $e');
-      throw Exception('Failed to check program participation: $e');
+      debugPrint('❌ DEBUG: Error checking event participation: $e');
+      throw Exception('Failed to check event participation: $e');
     }
   }
 
   /// Fetch all users in a specific community
   Future<List<UserModel>> getUsersByCommunity(
     String communityId, {
-    String filterType = 'all', // 'all', 'real', 'virtual'
+    String filterTeventType = 'all', // 'all', 'real', 'virtual'
     bool includeUnapproved = false,
   }) async {
     try {
-      debugPrint('🔍 DEBUG: Fetching $filterType users for community $communityId (includeUnapproved: $includeUnapproved)');
+      debugPrint('🔍 DEBUG: Fetching $filterTeventType users for community $communityId (includeUnapproved: $includeUnapproved)');
       
-      debugPrint('🎯 ${filterType.toUpperCase()} USERS: Querying directly');
+      debugPrint('🎯 ${filterTeventType.toUpperCase()} USERS: Querying directly');
       
       Query query = usersCollection
           .where('communityId', isEqualTo: communityId);
@@ -63,9 +63,9 @@ class UserService {
         query = query.where('isApproved', isEqualTo: true);
       }
       
-      if (filterType == 'virtual') {
+      if (filterTeventType == 'virtual') {
         query = query.where('isVirtualUser', isEqualTo: true);
-      } else if (filterType == 'real') {
+      } else if (filterTeventType == 'real') {
         // 🚀 OPTIMIZATION: Use direct filter for real users too
         query = query.where('isVirtualUser', isEqualTo: false);
       }
@@ -73,7 +73,7 @@ class UserService {
       query = query.orderBy('displayName').limit(200);
       
       final snapshot = await query.get();
-      debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterType users');
+      debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterTeventType users');
       
       return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -370,3 +370,8 @@ class UserService {
     }
   }
 }
+
+
+
+
+

@@ -19,8 +19,13 @@ class _ThemeTransitionWrapperState extends State<ThemeTransitionWrapper> {
   @override
   Widget build(BuildContext context) {
     // Flutter's native MaterialApp automatically handles smooth interpolation
-    // between theme colors. Removing AnimatedSwitcher prevents the full-screen 
+    // between theme colors. Removing AnimatedSwitcher ps the full-screen 
     // flash and fade effect when toggling between light and dark modes.
     return widget.child;
   }
 }
+
+
+
+
+

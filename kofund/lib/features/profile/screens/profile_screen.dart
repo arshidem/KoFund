@@ -53,8 +53,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   void _checkUserAndLoadData() {
-    final authProvider = context.read<AppAuthProvider>();
-    final currentUserId = authProvider.user?.uid;
+    final _authProvider = context.read<AppAuthProvider>();
+    final currentUserId = _authProvider.user?.uid;
     
     if (currentUserId != null && currentUserId != _lastLoadedUserId) {
       debugPrint('🔄 User changed from $_lastLoadedUserId to $currentUserId');
@@ -71,9 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     
     try {
       final profileProvider = context.read<ProfileProvider>();
-      final authProvider = context.read<AppAuthProvider>();
+      final _authProvider = context.read<AppAuthProvider>();
       
-      final currentUser = authProvider.user;
+      final currentUser = _authProvider.user;
       if (currentUser == null) {
         debugPrint('❌ No user logged in');
         return;
@@ -210,21 +210,21 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final profileProvider = context.watch<ProfileProvider>();
 
     // No back button needed in profile screen main view
     final bool showBackButton = false;
 
    // With this:
-if (_isInitialLoad || authProvider.user == null) {
+if (_isInitialLoad || _authProvider.user == null) {
   return ProfileScreenSkeleton(
     isDarkMode: Theme.of(context).brightness == Brightness.dark,
     showBackButton: showBackButton,
   );
 }
 
-    final user = authProvider.user!;
+    final user = _authProvider.user!;
     
     // TEMPORARY FIX: Show loading only if we're actively loading
     // Remove the profileProvider.isDataForCurrentUser check for now
@@ -244,7 +244,7 @@ if (_isLoadingProfile) {
     final totalContributed = stats['totalContributed'] as double? ?? 0.0;
 
     // Get recent data for lists if needed later
-    // final recentPrograms = profileProvider.participationHistory.take(3).toList();
+    // final recentEvents = profileProvider.participationHistory.take(3).toList();
     // final recentContributions = profileProvider.contributionHistory.take(5).toList();
 
     return Scaffold(
@@ -285,13 +285,15 @@ if (_isLoadingProfile) {
         ? user.displayName!.trim()[0].toUpperCase()
         : 'U';
         
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+        
     return SliverAppBar(
-      expandedHeight: 340,
+      expandedHeight: 300,
       toolbarHeight: 90,
       pinned: true,
       stretch: true,
       elevation: 0,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
       actions: [
         Padding(
@@ -307,178 +309,156 @@ if (_isLoadingProfile) {
         builder: (context, constraints) {
           final double topPadding = MediaQuery.of(context).padding.top;
           final double collapsedHeight = 90 + topPadding + 28;
-          final double expandedHeight = 340.0;
+          final double expandedHeight = 280.0;
           
           final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
               (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
 
-          final double expandedOpacity = (expandRatio * 2 - 1).clamp(0.0, 1.0);
+          // Smoother linear cross-fade curves
+          final double expandedOpacity = expandRatio.clamp(0.0, 1.0);
+          final double collapsedOpacity = (1.0 - expandRatio).clamp(0.0, 1.0);
           
-          // Math for smooth Avatar sliding and scaling
-          final double currentAvatarSize = dart_ui.lerpDouble(52.0, 106.0, expandRatio)!;
-          final double currentAvatarX = dart_ui.lerpDouble(20.0, (constraints.maxWidth - currentAvatarSize) / 2, expandRatio)!;
-          final double currentAvatarY = dart_ui.lerpDouble(topPadding + 20.0, topPadding + 40.0, expandRatio)!;
-          final double currentFontSize = dart_ui.lerpDouble(24.0, 42.0, expandRatio)!;
-
-          // Math for smooth Swarm translating and scaling
-          final double arcOffset = (1 - (2 * expandRatio - 1).abs()); // Creates a 0->1->0 parabolic curve
-          final double dodgeAmount = 40.0 * arcOffset; // Pushes text down by 40px at intersection peak
-          
-          final double currentNameTop = dart_ui.lerpDouble(22.0 + topPadding, 150.0 + topPadding, expandRatio)! + dodgeAmount;
-          final double currentEmailTop = dart_ui.lerpDouble(50.0 + topPadding, 185.0 + topPadding, expandRatio)! + dodgeAmount;
-          final double currentBadgeTop = dart_ui.lerpDouble(80.0 + topPadding, 215.0 + topPadding, expandRatio)! + dodgeAmount;
-          
-          final double currentLeftPadding = dart_ui.lerpDouble(84.0, 0.0, expandRatio)!;
-          final double currentRightPadding = dart_ui.lerpDouble(70.0, 0.0, expandRatio)!;
-          final double currentAlignmentX = dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!;
+          final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
           return Container(
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
+              gradient: isDark
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF1A2E2E),
+                        Color(0xFF0D1B1A),
+                      ],
+                    )
+                  : null,
             ),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // 1. Sliding & Scaling Avatar (Always Visible)
+                // 1. COLLAPSED VERSION (Small Left Aligned)
                 Positioned(
-                  left: currentAvatarX,
-                  top: currentAvatarY,
-                  child: Container(
-                    width: currentAvatarSize,
-                    height: currentAvatarSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.2),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: dart_ui.lerpDouble(2.0, 3.0, expandRatio)!,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1 * expandRatio),
-                          blurRadius: 20 * expandRatio,
-                          offset: Offset(0, 10 * expandRatio),
+                  left: 20,
+                  top: topPadding + 20,
+                  child: Opacity(
+                    opacity: collapsedOpacity,
+                    child: Row(
+                      children: [
+                        _buildProfileAvatar(context, user, isDark, size: 52, initial: initial, fontSize: 24, expandRatio: 0),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              user.displayName ?? 'Unnnamed',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : AppColors.textPrimary(context),
+                              ),
+                            ),
+                            Text(
+                              user.email,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: (isDark ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        initial,
-                        style: TextStyle(
-                          fontSize: currentFontSize,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
                   ),
                 ),
 
-                // 2. SWARMING NAME
+                // 2. EXPANDED VERSION (Large Centered)
                 Positioned(
-                  top: currentNameTop,
                   left: 0,
                   right: 0,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
-                    child: Align(
-                      alignment: Alignment(currentAlignmentX, 0),
-                      child: Text(
-                        user.displayName ?? 'Unnamed Member',
-                        style: TextStyle(
-                          fontSize: dart_ui.lerpDouble(18.0, 26.0, expandRatio)!,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 3. SWARMING EMAIL
-                Positioned(
-                  top: currentEmailTop,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
-                    child: Align(
-                      alignment: Alignment(currentAlignmentX, 0),
-                      child: Text(
-                        user.email,
-                        style: TextStyle(
-                          fontSize: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
-                          color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 4. SWARMING BADGE
-                if (expandedOpacity > 0)
-                  Positioned(
-                    top: currentBadgeTop,
-                    left: 0,
-                    right: 0,
-                    child: Padding(
-                      padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
-                      child: Align(
-                        alignment: Alignment(currentAlignmentX, 0),
-                        child: Opacity(
-                          opacity: expandedOpacity,
-                          child: Transform.scale(
-                            scale: dart_ui.lerpDouble(0.8, 1.0, expandRatio)!,
-                            alignment: Alignment(dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!, 0),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.verified_user_rounded,
-                                    size: 14,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'COMMUNITY MEMBER',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                  top: topPadding + 20, // Moved up to prEvent overflow
+                  child: Opacity(
+                    opacity: expandedOpacity,
+                    child: Column(
+                      children: [
+                        _buildProfileAvatar(context, user, isDark, size: 100, initial: initial, fontSize: 40, expandRatio: expandRatio),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Welcome back,",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: (isDark ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.6),
+                            letterSpacing: 1.0,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 2),
+                        Text(
+                          user.displayName ?? 'Unnnamed Member',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : AppColors.textPrimary(context),
+                            letterSpacing: -0.8,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: (isDark ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                            border: Border.all(
+                              color: isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.primary(context).withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF00BFA6),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'COMMUNITY MEMBER',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: isDark ? Colors.white : Colors.black,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
               ],
             ),
           );
         },
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(28),
+        preferredSize: const Size.fromHeight(18),
         child: Container(
-          height: 28,
+          height: 18,
           width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.background(context),
@@ -486,6 +466,13 @@ if (_isLoadingProfile) {
               topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
               topRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
         ),
       ),
@@ -573,16 +560,13 @@ if (_isLoadingProfile) {
   }
 
   Widget _buildCircularIconButton(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 52,
       height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1,
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+        shape: BoxShape.circle,
       ),
       child: Material(
         color: Colors.transparent,
@@ -592,7 +576,7 @@ if (_isLoadingProfile) {
           child: Center(
             child: Icon(
               icon,
-              color: Colors.white,
+              color: isDark ? Colors.white : Colors.black,
               size: 20,
             ),
           ),
@@ -779,5 +763,78 @@ if (_isLoadingProfile) {
     final date = timestamp.toDate();
     return '${date.day}/${date.month}/${date.year}';
   }
+
+  Widget _buildProfileAvatar(BuildContext context, UserModel user, bool isDark, {required double size, required String initial, required double fontSize, required double expandRatio}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          if (expandRatio > 0.1)
+            BoxShadow(
+              color: AppColors.primary(context).withValues(alpha: 0.15 * expandRatio),
+              blurRadius: 20 * expandRatio,
+              spreadRadius: 5 * expandRatio,
+            ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.8) : AppColors.textPrimary(context).withValues(alpha: 0.6),
+                width: dart_ui.lerpDouble(1.5, 3.0, expandRatio)!,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: ClipOval(
+              child: _buildAvatarPlaceholder(isDark, initial, fontSize),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarPlaceholder(bool isDark, String initial, double fontSize) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  Colors.white.withValues(alpha: 0.15),
+                  Colors.white.withValues(alpha: 0.05),
+                ]
+              : [
+                  AppColors.primary(context).withValues(alpha: 0.1),
+                  AppColors.primary(context).withValues(alpha: 0.05),
+                ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : AppColors.textPrimary(context),
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+
+
+
+
 

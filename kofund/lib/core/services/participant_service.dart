@@ -48,35 +48,35 @@ class ParticipantService {
 
       debugPrint('💰 ParticipantService: Found ${contributionsSnapshot.docs.length} contribution documents');
 
-      // Group contributions by programId
-      final contributionsByProgram = <String, double>{};
+      // Group contributions by eventId
+      final contributionsB = <String, double>{};
       for (final doc in contributionsSnapshot.docs) {
         final contribution = doc.data();
-        final programId = contribution['programId'] as String?;
+        final eventId = contribution['eventId'] as String?;
         final amount = (contribution['amount'] ?? 0).toDouble();
 
-        if (programId != null && programId.isNotEmpty) {
-          contributionsByProgram[programId] = (contributionsByProgram[programId] ?? 0) + amount;
+        if (eventId != null && eventId.isNotEmpty) {
+          contributionsB[eventId] = (contributionsB[eventId] ?? 0) + amount;
         }
       }
 
-      // ✅ OPTIMIZED: Batch fetch all programs at once
-      final programIds = participationSnapshot.docs
-          .map((doc) => doc.data()['programId'] as String?)
+      // ✅ OPTIMIZED: Batch fetch all events at once
+      final ds = participationSnapshot.docs
+          .map((doc) => doc.data()['eventId'] as String?)
           .where((id) => id != null && id.isNotEmpty)
           .toSet()
           .toList();
 
-      final Map<String, Map<String, dynamic>> programDataMap = {};
-      if (programIds.isNotEmpty) {
-        for (var i = 0; i < programIds.length; i += 30) {
-          final chunk = programIds.sublist(i, (i + 30) > programIds.length ? programIds.length : (i + 30));
-          final programsQuery = await _firestore
-              .collection('programs')
+      final Map<String, Map<String, dynamic>> ataMap = {};
+      if (ds.isNotEmpty) {
+        for (var i = 0; i < ds.length; i += 30) {
+          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+          final eventsQuery = await _firestore
+              .collection('events')
               .where(FieldPath.documentId, whereIn: chunk)
               .get();
-          for (var doc in programsQuery.docs) {
-            programDataMap[doc.id] = doc.data();
+          for (var doc in eventsQuery.docs) {
+            ataMap[doc.id] = doc.data();
           }
         }
       }
@@ -85,25 +85,25 @@ class ParticipantService {
 
       for (final doc in participationSnapshot.docs) {
         final participation = doc.data();
-        final programId = participation['programId'] as String?;
+        final eventId = participation['eventId'] as String?;
 
-        if (programId == null || programId.isEmpty) {
-          debugPrint('⚠️ ParticipantService: Skipping participant without programId');
+        if (eventId == null || eventId.isEmpty) {
+          debugPrint('⚠️ ParticipantService: Skipping participant without d');
           continue;
         }
 
-        final programData = programDataMap[programId];
+        final data = ataMap[eventId];
 
-        if (programData != null) {
-          final suggestedContribution = (programData['suggestedContribution'] ?? 0).toDouble();
-          final totalPaid = contributionsByProgram[programId] ?? 0.0;
+        if (data != null) {
+          final suggestedContribution = (data['suggestedContribution'] ?? 0).toDouble();
+          final totalPaid = contributionsB[eventId] ?? 0.0;
           final hasFullyPaid = suggestedContribution > 0 && totalPaid >= suggestedContribution;
 
           participationHistory.add({
-            'programId': programId,
-            'programTitle': programData['title'] ?? 'Unknown Program',
-            'programDate': programData['programDate'],
-            'programType': programData['programType'] ?? 'general',
+            'eventId': eventId,
+            'title': data['title'] ?? 'Unknown event',
+            'eventDate': data['eventDate'],
+            'eventType': data['eventType'] ?? 'general',
             'joinedAt': participation['joinedAt'],
             'status': participation['status'] ?? 'joined',
             'hasPaidContribution': hasFullyPaid,
@@ -112,7 +112,7 @@ class ParticipantService {
             'communityId': communityId,
           });
         } else {
-          debugPrint('⚠️ ParticipantService: Program $programId not found');
+          debugPrint('⚠️ ParticipantService: event $eventId not found');
         }
       }
 
@@ -127,18 +127,18 @@ class ParticipantService {
     }
   }
 
-  // Get participant by programId and userId
-  Future<ParticipantModel> getParticipant(String programId, String userId) async {
+  // Get participant by eventId and userId
+  Future<ParticipantModel> getParticipant(String eventId, String userId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'joined')
           .limit(1)
           .get();
       if (snapshot.docs.isEmpty) {
-        throw Exception('Participant not found for program $programId and user $userId');
+        throw Exception('Participant not found for event $eventId and user $userId');
       }
       final doc = snapshot.docs.first;
       return ParticipantModel.fromMap(doc.data(), doc.id);
@@ -182,35 +182,35 @@ class ParticipantService {
           .where('communityId', isEqualTo: communityId)
           .get();
 
-      // Group contributions by programId
-      final contributionsByProgram = <String, double>{};
+      // Group contributions by eventId
+      final contributionsB = <String, double>{};
       for (final doc in contributionsSnapshot.docs) {
         final contribution = doc.data();
-        final programId = contribution['programId'] as String?;
+        final eventId = contribution['eventId'] as String?;
         final amount = (contribution['amount'] ?? 0).toDouble();
 
-        if (programId != null && programId.isNotEmpty) {
-          contributionsByProgram[programId] = (contributionsByProgram[programId] ?? 0) + amount;
+        if (eventId != null && eventId.isNotEmpty) {
+          contributionsB[eventId] = (contributionsB[eventId] ?? 0) + amount;
         }
       }
 
-      // ✅ OPTIMIZED: Batch fetch all programs at once
-      final programIds = participationSnapshot.docs
-          .map((doc) => doc.data()['programId'] as String?)
+      // ✅ OPTIMIZED: Batch fetch all events at once
+      final ds = participationSnapshot.docs
+          .map((doc) => doc.data()['eventId'] as String?)
           .where((id) => id != null && id.isNotEmpty)
           .toSet()
           .toList();
 
-      final Map<String, Map<String, dynamic>> programDataMap = {};
-      if (programIds.isNotEmpty) {
-        for (var i = 0; i < programIds.length; i += 30) {
-          final chunk = programIds.sublist(i, (i + 30) > programIds.length ? programIds.length : (i + 30));
-          final programsQuery = await _firestore
-              .collection('programs')
+      final Map<String, Map<String, dynamic>> ataMap = {};
+      if (ds.isNotEmpty) {
+        for (var i = 0; i < ds.length; i += 30) {
+          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+          final eventsQuery = await _firestore
+              .collection('events')
               .where(FieldPath.documentId, whereIn: chunk)
               .get();
-          for (var doc in programsQuery.docs) {
-            programDataMap[doc.id] = doc.data();
+          for (var doc in eventsQuery.docs) {
+            ataMap[doc.id] = doc.data();
           }
         }
       }
@@ -219,24 +219,24 @@ class ParticipantService {
 
       for (final doc in participationSnapshot.docs) {
         final participation = doc.data();
-        final programId = participation['programId'] as String?;
+        final eventId = participation['eventId'] as String?;
 
-        if (programId == null || programId.isEmpty) {
+        if (eventId == null || eventId.isEmpty) {
           continue;
         }
 
-        final programData = programDataMap[programId];
-        if (programData != null) {
-          final suggestedContribution = (programData['suggestedContribution'] ?? 0).toDouble();
-          final totalPaid = contributionsByProgram[programId] ?? 0.0;
+        final data = ataMap[eventId];
+        if (data != null) {
+          final suggestedContribution = (data['suggestedContribution'] ?? 0).toDouble();
+          final totalPaid = contributionsB[eventId] ?? 0.0;
           final hasFullyPaid = suggestedContribution > 0 && totalPaid >= suggestedContribution;
 
           participationHistory.add({
             'participationId': doc.id,
-            'programId': programId,
-            'programTitle': programData['title'] ?? 'Unknown Program',
-            'programDate': programData['programDate'],
-            'programType': programData['programType'] ?? 'general',
+            'eventId': eventId,
+            'title': data['title'] ?? 'Unknown event',
+            'eventDate': data['eventDate'],
+            'eventType': data['eventType'] ?? 'general',
             'joinedAt': participation['joinedAt'],
             'status': participation['status'] ?? 'joined',
             'hasPaidContribution': hasFullyPaid,
@@ -257,17 +257,17 @@ class ParticipantService {
     }
   }
 
-  Future<String> joinProgram(ParticipantModel participant) async {
+  Future<String> join(ParticipantModel participant) async {
     try {
       final existingSnapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: participant.programId)
+          .where('eventId', isEqualTo: participant.eventId)
           .where('userId', isEqualTo: participant.userId)
           .get();
       if (existingSnapshot.docs.isNotEmpty) {
         final alreadyJoined = existingSnapshot.docs.any((doc) => doc['status'] == 'joined');
         if (alreadyJoined) {
-          throw Exception('You have already joined this program');
+          throw Exception('You have already joined this event');
         }
         final cancelledDocs = existingSnapshot.docs.where((doc) => doc['status'] == 'cancelled').toList();
         if (cancelledDocs.isNotEmpty) {
@@ -292,15 +292,15 @@ class ParticipantService {
       
       return docRef.id;
     } catch (e) {
-      throw Exception('Failed to join program: $e');
+      throw Exception('Failed to join event: $e');
     }
   }
 
-  Future<void> leaveProgram(String programId, String userId) async {
+  Future<void> leave(String eventId, String userId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'joined')
           .get();
@@ -315,7 +315,7 @@ class ParticipantService {
         });
       }
     } catch (e) {
-      throw Exception('Failed to leave program: $e');
+      throw Exception('Failed to leave event: $e');
     }
   }
 
@@ -323,16 +323,16 @@ class ParticipantService {
     try {
       final existingSnapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: participant.programId)
+          .where('eventId', isEqualTo: participant.eventId)
           .where('userId', isEqualTo: participant.userId)
           .where('status', isEqualTo: 'joined')
           .get();
       if (existingSnapshot.docs.isNotEmpty) {
-        throw Exception('User is already a participant in this program');
+        throw Exception('User is already a participant in this event');
       }
       final cancelledSnapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: participant.programId)
+          .where('eventId', isEqualTo: participant.eventId)
           .where('userId', isEqualTo: participant.userId)
           .where('status', isEqualTo: 'cancelled')
           .get();
@@ -357,7 +357,7 @@ class ParticipantService {
     }
   }
 
-  Future<List<ParticipantModel>> getUserProgramParticipations(String userId, String communityId) async {
+  Future<List<ParticipantModel>> getUseParticipations(String userId, String communityId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
@@ -371,24 +371,24 @@ class ParticipantService {
     }
   }
 
-  Future<List<ParticipantModel>> getProgramParticipants(String programId) async {
+  Future<List<ParticipantModel>> getEventParticipants(String eventId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'joined')
           .get();
       return snapshot.docs.map((doc) => ParticipantModel.fromMap(doc.data(), doc.id)).toList();
     } catch (e) {
-      throw Exception('Failed to load program participants: $e');
+      throw Exception('Failed to load event participants: $e');
     }
   }
 
-  Future<bool> hasUserJoinedProgram(String programId, String userId) async {
+  Future<bool> hasUserJoinedEvent(String eventId, String userId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'joined')
           .get();
@@ -398,11 +398,11 @@ class ParticipantService {
     }
   }
 
-  Future<int> getProgramParticipantCount(String programId) async {
+  Future<int> getParticipantCount(String eventId) async {
     try {
       final aggregateQuery = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'joined')
           .count()
           .get();
@@ -412,16 +412,16 @@ class ParticipantService {
     }
   }
 
-  Stream<int> streamProgramParticipantCount(String programId) {
+  Stream<int> streamEventParticipantCount(String eventId) {
     return _firestore
         .collection('participants')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .where('status', isEqualTo: 'joined')
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
 
-  Stream<List<ParticipantModel>> streamUserProgramParticipations(String userId, String communityId) {
+  Stream<List<ParticipantModel>> streamUseParticipations(String userId, String communityId) {
     return _firestore
         .collection('participants')
         .where('userId', isEqualTo: userId)
@@ -431,10 +431,10 @@ class ParticipantService {
         .map((snapshot) => snapshot.docs.map((doc) => ParticipantModel.fromMap(doc.data(), doc.id)).toList());
   }
 
-  Stream<List<ParticipantModel>> streamProgramParticipants(String programId) {
+  Stream<List<ParticipantModel>> streamParticipants(String eventId) {
     return _firestore
         .collection('participants')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .where('status', isEqualTo: 'joined')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => ParticipantModel.fromMap(doc.data(), doc.id)).toList());
@@ -463,11 +463,11 @@ class ParticipantService {
     }
   }
 
-  Future<ParticipantModel?> getParticipantByProgramAndUser(String programId, String userId) async {
+  Future<ParticipantModel?> getParticipantBAndUser(String eventId, String userId) async {
     try {
       final snapshot = await _firestore
           .collection('participants')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .where('status', isEqualTo: 'joined')
           .get();
@@ -497,25 +497,25 @@ class ParticipantService {
     }
   }
 
-  Future<void> updateParticipantContribution(String userId, String programId) async {
+  Future<void> updateParticipantContribution(String userId, String eventId) async {
     try {
       final aggregateQuery = await _firestore
           .collection('contributions')
           .where('userId', isEqualTo: userId)
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .aggregate(sum('amount'))
           .get();
 
       double totalPaid = (aggregateQuery.getSum('amount') ?? 0).toDouble();
 
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
+      final doc = await _firestore.collection('events').doc(eventId).get();
       final suggestedContribution =
-          programDoc.exists ? (programDoc.data()!['suggestedContribution'] ?? 0).toDouble() : 0.0;
+          doc.exists ? (doc.data()!['suggestedContribution'] ?? 0).toDouble() : 0.0;
 
       final participantQuery = await _firestore
           .collection('participants')
           .where('userId', isEqualTo: userId)
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .get();
 
       if (participantQuery.docs.isNotEmpty) {
@@ -531,3 +531,7 @@ class ParticipantService {
     }
   }
 }
+
+
+
+

@@ -13,7 +13,7 @@ import './notification_storage_service.dart';
 import './fcm_token_service.dart';
 
 import 'package:kofund/core/utils/notification_channels.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:kofund/main.dart' show navigatorKey;
 
@@ -122,7 +122,7 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
       priority: _parsePriorityFromString(data['priority']),
       data: data,
       userId: currentUserId,
-      programId: data['programId'],
+      eventId: data['eventId'],
       communityId: data['communityId'],
       isRead: false,
       timestamp: now,
@@ -137,15 +137,15 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
     // Show local notification with actions in background
     final List<AndroidNotificationAction> actions = [];
     final type = _parseNotificationTypeFromString(data['type']);
-    final programId = data['programId'];
+    final eventId = data['eventId'];
 
     if (type == NotificationType.pendingUser) {
       actions.add(const AndroidNotificationAction('approve_user', 'Approve', showsUserInterface: true, cancelNotification: true));
       actions.add(const AndroidNotificationAction('reject_user', 'Reject', showsUserInterface: true, cancelNotification: true));
     }
     
-    if ((type == NotificationType.announcement || type == NotificationType.program) && programId != null) {
-      actions.add(const AndroidNotificationAction('join_program', 'Join Program 🎯', showsUserInterface: true, cancelNotification: true));
+    if ((type == NotificationType.announcement || type == NotificationType.event) && eventId != null) {
+      actions.add(const AndroidNotificationAction('join_event', 'Join event 🎯', showsUserInterface: true, cancelNotification: true));
     }
 
     final channelId = NotificationChannels.getChannelId(type);
@@ -469,7 +469,7 @@ AppNotification _createNotificationFromMessage(RemoteMessage message) {
     priority: _parsePriority(data['priority']),
     data: data,
     userId: userId,
-    programId: data['programId'],
+    eventId: data['eventId'],
     communityId: data['communityId'],
     isRead: false,
     timestamp: now,
@@ -540,13 +540,13 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
         ));
       }
 
-      // Add Join action for program announcements
+      // Add Join action for event announcements
       if ((notification.type == NotificationType.announcement || 
-           notification.type == NotificationType.program) && 
-          (notification.programId != null || notification.data['programId'] != null)) {
+           notification.type == NotificationType.event) && 
+          (notification.id != null || notification.data['eventId'] != null)) {
         actions.add(const AndroidNotificationAction(
-          'join_program',
-          'Join Program 🎯',
+          'join_event',
+          'Join event 🎯',
           showsUserInterface: true,
           cancelNotification: true,
         ));
@@ -612,7 +612,7 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
         } else if (response.actionId == 'reject_user') {
           _handleActionRejectUser(data);
           return;
-        } else if (response.actionId == 'join_program') {
+        } else if (response.actionId == 'join_event') {
           // Open detail screen first
           _navigateToDetailScreen(data);
           return;
@@ -637,7 +637,7 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
       'id': notification.id,
       'title': notification.title,
       'body': notification.body,
-      'programId': notification.programId,
+      'eventId': notification.eventId,
       'recipientId': notification.userId, // ✅ Avoid overwriting 'userId' in data
     });
   }
@@ -649,12 +649,12 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
     final nav = navigatorKey.currentState;
     if (nav == null) return;
 
-    final programId = data['programId'];
-    if (programId != null && programId.toString().isNotEmpty) {
-      debugPrint("🚀 Navigating directly to Program Details: $programId");
+    final eventId = data['eventId'];
+    if (eventId != null && eventId.toString().isNotEmpty) {
+      debugPrint("🚀 Navigating directly to event Details: $eventId");
       nav.pushNamed(
-        '/program-details',
-        arguments: programId.toString(),
+        '/event-details',
+        arguments: eventId.toString(),
       );
       return;
     }
@@ -685,7 +685,7 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
       priority: _parsePriority(data['priority']),
       data: data,
       userId: ownerId,
-      programId: data['programId'],
+      eventId: data['eventId'],
       communityId: data['communityId'],
       isRead: false,
       timestamp: now,
@@ -760,7 +760,7 @@ Future<void> sendCommunityNotification({
   required String body,
   required NotificationType type,
   Map<String, dynamic> data = const {},
-  String? programId,
+  String? eventId,
   String? senderName,
   bool skipPush = false, // 🆕 NEW: Option to skip push notification
   String? targetRole, // 🆕 NEW: Filter by role (e.g., 'admin')
@@ -805,7 +805,7 @@ Future<void> sendCommunityNotification({
       'title': title,
       'body': body,
       'type': type.name,
-      'programId': programId,
+      'eventId': eventId,
       'senderName': senderName ?? currentUserName,
       'senderId': currentUser.uid, // ⭐ ADD: For validation in Cloud Function
       'skipPush': skipPush, // 🆕 PASS SKIP PUSH FLAG
@@ -853,7 +853,7 @@ Future<void> sendCommunityNotification({
       body: body,
       type: type,
       data: data,
-      programId: programId,
+      eventId: eventId,
       senderName: senderName,
     );
   } catch (e, stackTrace) {
@@ -869,7 +869,7 @@ Future<void> _sendCommunityNotificationLocalFallback({
   required String body,
   required NotificationType type,
   Map<String, dynamic> data = const {},
-  String? programId,
+  String? eventId,
   String? senderName,
 }) async {
   try {
@@ -903,7 +903,7 @@ Future<void> _sendCommunityNotificationLocalFallback({
         data: { ...data, 'communityId': communityId },
         userId: userId,
         communityId: communityId,
-        programId: programId,
+        eventId: eventId,
         isRead: false,
         timestamp: now,
         senderName: senderName ?? 'KoFund Admin',
@@ -939,7 +939,7 @@ Future<void> sendUserNotification({
   required String body,
   required NotificationType type,
   Map<String, dynamic> data = const {},
-  String? programId,
+  String? eventId,
   String? communityId,
   String? senderName,
 }) async {
@@ -990,7 +990,7 @@ Future<void> sendUserNotification({
       'senderName': senderName, // ⭐ MOVE TO ROOT: Required by Cloud Function
       'data': {
         ...data,
-        'programId': programId,
+        'eventId': eventId,
         'communityId': communityId,
         'senderName': senderName, // Keep in data too for local parsing
         'notificationId': baseId, // ⭐ Passing ONLY baseId to avoid double-appending
@@ -1011,7 +1011,7 @@ Future<void> sendUserNotification({
       body: body,
       type: type,
       data: data,
-      programId: programId,
+      eventId: eventId,
       communityId: communityId,
       senderName: senderName,
     );
@@ -1027,7 +1027,7 @@ Future<void> sendUserNotification({
     required String body,
     required NotificationType type,
     Map<String, dynamic> data = const {},
-    String? programId,
+    String? eventId,
     String? communityId,
     String? senderName,
   }) async {
@@ -1044,7 +1044,7 @@ Future<void> sendUserNotification({
         data: data,
         userId: userId,
         communityId: communityId,
-        programId: programId,
+        eventId: eventId,
         isRead: false,
         timestamp: now,
         senderName: senderName,
@@ -1151,3 +1151,8 @@ static Future<void> unlinkDeviceTokenFromUser() async {
     return settings;
   }
 }
+
+
+
+
+

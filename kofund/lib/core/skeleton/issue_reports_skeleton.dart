@@ -63,7 +63,7 @@ class IssueReportsSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title
+                // Ttitle
                 Container(
                   width: double.infinity,
                   height: 14,
@@ -132,3 +132,8 @@ class IssueReportsSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => getSkeleton(context);
 }
+
+
+
+
+

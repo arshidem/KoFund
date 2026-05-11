@@ -23,9 +23,9 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
   }
 
   Future<void> _loadData() async {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final userProvider = context.read<UserProvider>();
-    final communityId = authProvider.user?.communityId;
+    final communityId = _authProvider.user?.communityId;
 
     if (communityId != null) {
       await userProvider.loadCommunityMembers(communityId);
@@ -223,3 +223,8 @@ class _PendingRequestsWidgetState extends State<PendingRequestsWidget> {
     );
   }
 }
+
+
+
+
+

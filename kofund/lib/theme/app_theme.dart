@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_dimensions.dart';
+import '../core/constants/app_colors.dart';
 
 class AppTheme {
   static ThemeData lightTheme() {
@@ -15,7 +16,10 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0, // Removes the tint on scroll for a pure clean look
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightTextPrimary,
+        iconTheme: IconThemeData(color: AppColors.lightTextPrimary),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -100,7 +104,10 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0, // Removes the tint on scroll for a pure clean look
+        backgroundColor: AppColors.darkBackground,
+        foregroundColor: AppColors.darkTextPrimary,
+        iconTheme: IconThemeData(color: AppColors.darkTextPrimary),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -175,3 +182,8 @@ class AppTheme {
     );
   }
 }
+
+
+
+
+

@@ -32,7 +32,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
   static const _trackedCollections = [
     'users',
     'communities',
-    'programs',
+    'events',
     'participants',
     'contributions',
     'expenses',
@@ -95,7 +95,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
     }
   }
 
-  /// Open a bottom sheet with a two-column grid of field names to choose from.
+  /// Open a bottom sheet with a two-column grid of field nnames to choose from.
   void _showFieldPicker(BuildContext context) {
     if (_discoveredFields.isEmpty) return;
 
@@ -235,7 +235,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
 
       final snap = await query.get();
       setState(() {
-        _queryResults = snap.docs.map((d) => {'__id__': d.id, ...d.data() as Map<String, dynamic>}).toList();
+        _queryResults = snap.docs.map((doc) => {'__id__': doc.id, ...doc.data() as Map<String, dynamic>}).toList();
       });
     } catch (e) {
       setState(() => _queryError = e.toString());
@@ -702,3 +702,8 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
     );
   }
 }
+
+
+
+
+

@@ -32,17 +32,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AppAuthProvider>();
-    authProvider.clearError();
+    final _authProvider = context.read<AppAuthProvider>();
+    _authProvider.clearError();
     
-    final success = await authProvider.sendPasswordResetEmail(_emailController.text.trim());
+    final success = await _authProvider.sendPasswordResetEmail(_emailController.text.trim());
 
     if (success && mounted) {
       setState(() {
         _emailSent = true;
       });
-    } else if (mounted && authProvider.error != null) {
-      final error = authProvider.error!;
+    } else if (mounted && _authProvider.error != null) {
+      final error = _authProvider.error!;
       if (error.toLowerCase().contains('email') || error.toLowerCase().contains('user')) {
         setState(() {
           _emailError = error;
@@ -137,18 +137,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           
           // Reset Button
           Consumer<AppAuthProvider>(
-            builder: (context, authProvider, child) {
+            builder: (context, _authProvider, child) {
               return SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: authProvider.isLoading ? null : _submitResetRequest,
+                  onPressed: _authProvider.isLoading ? null : _submitResetRequest,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                   ),
-                  child: authProvider.isLoading
+                  child: _authProvider.isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
@@ -203,7 +203,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         
         const SizedBox(height: 32),
         
-        // Success Title
+        // Success Ttitle
         const Text(
           'Check Your Email',
           style: TextStyle(
@@ -281,3 +281,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
+
+
+
+
+

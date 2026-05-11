@@ -56,14 +56,14 @@ class MemberProvider with ChangeNotifier {
 
   // ==================== LOAD ALL MEMBERS ====================
 /// Load all members at once (no pagination)
-Future<void> loadMembers({String filterType = 'all', bool reset = false}) async {
+Future<void> loadMembers({String filterTeventType = 'all', bool reset = false}) async {
   if (_isLoading) {
     developer.log('⏸️ MemberProvider: loadMembers skipped - already loading');
     return;
   }
 
   // ⭐ CACHE CHECK: Skip Firestore reads if data is already available
-  if (!reset && _members.isNotEmpty && _currentFilter == filterType) {
+  if (!reset && _members.isNotEmpty && _currentFilter == filterTeventType) {
     developer.log('⚡ MemberProvider: Returning ${_members.length} cached members');
     return;
   }
@@ -76,9 +76,9 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
     return;
   }
   
-  developer.log('🔄 MemberProvider: loadMembers called - filter: $filterType');
+  developer.log('🔄 MemberProvider: loadMembers called - filter: $filterTeventType');
   
-  _currentFilter = filterType;
+  _currentFilter = filterTeventType;
   _isLoading = true;
   _error = null;
   _safeNotifyListeners();
@@ -86,7 +86,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
   try {
     final users = await _userService.getUsersByCommunity(
       user.communityId!,
-      filterType: filterType,
+      filterTeventType: filterTeventType,
     );
     
     developer.log('📥 MemberProvider: Received ${users.length} users');
@@ -96,7 +96,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
     // Sort alphabetically
     _members.sort((a, b) => (a.displayName ?? '').compareTo(b.displayName ?? ''));
     
-    developer.log('✅ MemberProvider: Loaded ${_members.length} members (filter: $filterType)');
+    developer.log('✅ MemberProvider: Loaded ${_members.length} members (filter: $filterTeventType)');
     
   } catch (e, stackTrace) {
     _error = 'Failed to load members: $e';
@@ -159,7 +159,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
       
     } catch (e) {
       _error = 'Failed to delete virtual user: $e';
-      developer.log('❌ MemberProvider Error deleting virtual user: $e');
+      developer.log('❌ MemberProvider Error deleteing virtual user: $e');
       return false; // Return false on error
     } finally {
       _isLoading = false;
@@ -536,7 +536,7 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
       
       return true;
     } catch (e) {
-      debugPrint('❌ DEBUG: Error deleting virtual users: $e');
+      debugPrint('❌ DEBUG: Error deleteing virtual users: $e');
       _error = 'Failed to delete virtual users: $e';
       notifyListeners();
       return false;
@@ -634,4 +634,9 @@ Future<void> loadMembers({String filterType = 'all', bool reset = false}) async 
     super.dispose();
   }
 }
+
+
+
+
+
 

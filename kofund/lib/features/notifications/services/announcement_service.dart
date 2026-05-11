@@ -29,12 +29,12 @@ class AnnouncementService {
           .collection('read_announcements')
           .get();
 
-      final readIds = readSnap.docs.map((d) => d.id).toSet();
+      final readIds = readSnap.docs.map((eventId) => eventId.id).toSet();
 
       // 3. Filter out read announcements
       return announcementsSnap.docs
-          .where((d) => !readIds.contains(d.id))
-          .map((d) => {'id': d.id, ...d.data()})
+          .where((eventId) => !readIds.contains(eventId.id))
+          .map((eventId) => {'id': eventId.id, ...(eventId.data() as Map<String, dynamic>)})
           .toList();
     } catch (e) {
       debugPrint('❌ Error fetching unread announcements: $e');
@@ -62,10 +62,10 @@ class AnnouncementService {
           .collection('read_announcements')
           .get();
 
-      final readIds = readSnap.docs.map((d) => d.id).toSet();
+      final readIds = readSnap.docs.map((eventId) => eventId.id).toSet();
 
       return announcementsSnap.docs
-          .map((d) => {'id': d.id, 'isRead': readIds.contains(d.id), ...d.data()})
+          .map((eventId) => {'id': eventId.id, 'isRead': readIds.contains(eventId.id), ...(eventId.data() as Map<String, dynamic>)})
           .toList();
     } catch (e) {
       debugPrint('❌ Error fetching all announcements: $e');
@@ -153,3 +153,8 @@ class AnnouncementService {
     }
   }
 }
+
+
+
+
+

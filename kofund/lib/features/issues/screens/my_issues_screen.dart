@@ -43,11 +43,11 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
   }
 
   Future<void> _loadMyIssues() async {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final issueProvider = context.read<IssueProvider>();
     
-    if (authProvider.user != null) {
-      await issueProvider.loadMyIssues(authProvider.user!.uid);
+    if (_authProvider.user != null) {
+      await issueProvider.loadMyIssues(_authProvider.user!.uid);
     }
   }
 
@@ -75,7 +75,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
     );
   }
 
-  Widget _buildTypeChip(String type) {
+  Widget _buildTeventTypeChip(String type) {
     final typeIcons = {
       'bug': Icons.bug_report,
       'feature': Icons.lightbulb,
@@ -158,7 +158,7 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
               children: [
                 _buildStatusChip(issue.status),
                 const SizedBox(width: 8),
-                _buildTypeChip(issue.type),
+                _buildTeventTypeChip(issue.type),
               ],
             ),
           ],
@@ -355,18 +355,18 @@ String _getTimeAgo(Timestamp timestamp) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status & Type Chips
+                    // Status & type Chips
                     Row(
                       children: [
                         _buildStatusChip(issue.status),
                         const SizedBox(width: 10),
-                        _buildTypeChip(issue.type),
+                        _buildTeventTypeChip(issue.type),
                       ],
                     ),
                     const SizedBox(height: 24),
 
                     // Description Section
-                    _buildSectionTitle('DESCRIPTION'),
+                    _buildSectionTtitle('DESCRIPTION'),
                     const SizedBox(height: 8),
                     Container(
                       width: double.infinity,
@@ -388,7 +388,7 @@ String _getTimeAgo(Timestamp timestamp) {
                     // Steps to Reproduce
                     if (issue.stepsToReproduce != null && issue.stepsToReproduce!.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      _buildSectionTitle('STEPS TO REPRODUCE'),
+                      _buildSectionTtitle('STEPS TO REPRODUCE'),
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
@@ -410,7 +410,7 @@ String _getTimeAgo(Timestamp timestamp) {
                     ],
 
                     const SizedBox(height: 24),
-                    _buildSectionTitle('ISSUE INFORMATION'),
+                    _buildSectionTtitle('ISSUE INFORMATION'),
                     const SizedBox(height: 12),
                     _buildDetailRow(Icons.fingerprint, 'Issue ID', '#${issue.id.substring(0, 8)}'),
                     _buildDetailRow(Icons.calendar_month, 'Reported Date', DateFormat('MMM dd, yyyy').format(issue.createdAt.toDate())),
@@ -424,7 +424,7 @@ String _getTimeAgo(Timestamp timestamp) {
                     // Resolution Notes
                     if (issue.resolutionNotes != null && issue.resolutionNotes!.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      _buildSectionTitle('RESOLUTION NOTES'),
+                      _buildSectionTtitle('RESOLUTION NOTES'),
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
@@ -465,7 +465,7 @@ String _getTimeAgo(Timestamp timestamp) {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTtitle(String title) {
     return Text(
       title,
       style: TextStyle(
@@ -574,10 +574,10 @@ String _getTimeAgo(Timestamp timestamp) {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final issueProvider = context.watch<IssueProvider>();
     
-    if (authProvider.user == null) {
+    if (_authProvider.user == null) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Please log in to view your issues')),
@@ -846,3 +846,8 @@ String _getTimeAgo(Timestamp timestamp) {
     );
   }
 }
+
+
+
+
+

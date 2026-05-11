@@ -13,23 +13,23 @@ class CommunityGuard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AppAuthProvider>(context);
+    final _authProvider = Provider.of<AppAuthProvider>(context);
     
     // Quick check using cached data (NO network calls)
-    if (authProvider.isLoading) {
+    if (_authProvider.isLoading) {
       return _buildLoadingScreen('Loading user data...');
     }
     
-    if (!authProvider.canAccessApp) {
+    if (!_authProvider.canAccessApp) {
       return _redirectTo(context, RouteNames.login, 'Please sign in');
     }
     
-    if (authProvider.needsToJoinCommunity) {
+    if (_authProvider.needsToJoinCommunity) {
       return _redirectTo(context, RouteNames.joinCommunity, 'Join a community first');
     }
     
-    if (authProvider.isWaitingForApproval || 
-        authProvider.user?.isApproved == false) {
+    if (_authProvider.isWaitingForApproval || 
+        _authProvider.user?.isApproved == false) {
       return _redirectTo(context, RouteNames.pendingApproval, 'Waiting for admin approval');
     }
     
@@ -38,7 +38,7 @@ class CommunityGuard extends StatelessWidget {
   }
   
   Widget _redirectTo(BuildContext context, String route, String message) {
-    // Schedule navigation for next frame
+    // Schedule navigation for next frname
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
         Navigator.pushReplacementNamed(context, route);
@@ -67,3 +67,8 @@ class CommunityGuard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

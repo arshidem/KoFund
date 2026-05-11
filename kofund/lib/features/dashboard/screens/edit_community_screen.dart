@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
-import 'package:kofund/core/constants/community_types.dart';
+import 'package:kofund/core/constants/community_Types.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/community/providers/community_provider.dart';
 import 'package:kofund/features/community/models/community_model.dart';
@@ -70,10 +70,10 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     });
 
     final communityProvider = context.read<CommunityProvider>();
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     
     final community = communityProvider.currentCommunity;
-    final user = authProvider.user;
+    final user = _authProvider.user;
 
     if (community == null || user == null) {
       SnackbarHelper.showError(context, 'Community not found');
@@ -304,7 +304,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     );
   }
 
-  Widget _buildCommunityTypeDropdown() {
+  Widget _buildCommunityTeventTypeDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,9 +400,9 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final communityProvider = context.watch<CommunityProvider>();
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final community = communityProvider.currentCommunity;
-    final user = authProvider.user;
+    final user = _authProvider.user;
 
     final dashboardProvider = context.read<DashboardProvider>();
     final cid = user?.communityId ?? dashboardProvider.getDashboardStats()['communityId']?.toString();
@@ -537,7 +537,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                       validator: null,
                     ),
 
-                    _buildCommunityTypeDropdown(),
+                    _buildCommunityTeventTypeDropdown(),
 
                     // Location
                     _buildInputField(
@@ -614,3 +614,8 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     );
   }
 }
+
+
+
+
+

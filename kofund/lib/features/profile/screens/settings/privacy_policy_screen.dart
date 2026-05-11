@@ -208,7 +208,7 @@ Future<void> _loadAppInfo() async {
               _buildPrivacySection(
                 context,
                 '1. Information We Collect',
-                'We may collect the following types of data:\n\n'
+                'We may collect the following Types of data:\n\n'
                 'a) Personal Information\n'
                 '• Name, email address, or phone number (if provided during account creation)\n\n'
                 'b) Group & Activity Data\n'
@@ -534,4 +534,9 @@ Future<void> _loadAppInfo() async {
     );
   }
 }
+
+
+
+
+
 

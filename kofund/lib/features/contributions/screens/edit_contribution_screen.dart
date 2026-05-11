@@ -11,7 +11,7 @@ import '../../../core/utils/snackbar_helper.dart';
 import '../../contributions/models/contribution_model.dart';
 import '../../contributions/providers/contribution_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
-import '../../programs/models/program_model.dart';
+import '../../events/models/event_model.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
@@ -32,27 +32,27 @@ class EditContributionScreen extends StatefulWidget {
 class _EditContributionScreenState extends State<EditContributionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _editReasonController = TextEditingController();
-  final _amountController = TextEditingController();
+  final _aamountController = TextEditingController();
 
   // Form values
   String _paymentMethod = '';
   String? _monthId;
-  bool _isMonthly = false;
+  bool _isMonthlyy = false;
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
   bool _saving = false;
   bool get _hasAnyChanges {
   return '₹${_contribution!.amount.toStringAsFixed(2)}' != 
-         '₹${_amountController.text.isNotEmpty ? _amountController.text : "0.00"}' ||
+         '₹${_aamountController.text.isNotEmpty ? _aamountController.text : "0.00"}' ||
       _contribution!.paymentMethod != _paymentMethod ||
-      _contribution!.programId != _selectedProgramId ||
-      _isMonthly != _contribution!.isMonthlyContribution ||
-      (_isMonthly && _monthId != _contribution!.monthId);
+      _contribution!.eventId != _selecteId ||
+      _isMonthlyy != _contribution!.isMonthlyContribution ||
+      (_isMonthlyy && _monthId != _contribution!.monthId);
 }
-  // NEW: Program selection
-  String? _selectedProgramId;
-  List<ProgramModel> _availablePrograms = [];
+  // NEW: event selection
+  String? _selecteId;
+  List<EventModel> _availableEvents = [];
   
   // Store fetched contribution
   ContributionModel? _contribution;
@@ -82,10 +82,10 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
   void initState() {
     super.initState();
     _generateAvailableMonths();
-    _fetchContributionAndPrograms();
+    _fetchContributionAns();
   }
 
-  Future<void> _fetchContributionAndPrograms() async {
+  Future<void> _fetchContributionAns() async {
     try {
       debugPrint('🔄 Fetching contribution with ID: ${widget.contributionId}');
       
@@ -120,17 +120,17 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       debugPrint('✅ Contribution fetched successfully');
       debugPrint('   Amount: ${_contribution!.amount}');
       debugPrint('   Payment Method: ${_contribution!.paymentMethod}');
-      debugPrint('   Program ID: ${_contribution!.programId}');
+      debugPrint('   event ID: ${_contribution!.eventId}');
       debugPrint('   Community ID: ${_contribution!.communityId}');
       
-      // Fetch available programs for this community
-      await _fetchAvailablePrograms(_contribution!.communityId);
+      // Fetch available events for this community
+      await _fetchAvailabls(_contribution!.communityId);
       
       // Initialize form values
-      _amountController.text = _contribution!.amount.toStringAsFixed(2);
+      _aamountController.text = _contribution!.amount.toStringAsFixed(2);
       _paymentMethod = _contribution!.paymentMethod;
-      _selectedProgramId = _contribution!.programId;
-      _isMonthly = _contribution!.isMonthlyContribution;
+      _selecteId = _contribution!.eventId;
+      _isMonthlyy = _contribution!.isMonthlyContribution;
       _monthId = _contribution!.monthId;
       
       setState(() {
@@ -147,101 +147,101 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
     }
   }
 
-  Future<void> _fetchAvailablePrograms(String communityId) async {
+  Future<void> _fetchAvailabls(String communityId) async {
     try {
-      debugPrint('📋 Fetching programs for community: $communityId');
+      debugPrint('📋 Fetching events for community: $communityId');
       
       final querySnapshot = await FirebaseFirestore.instance
           .collection('communities')
           .doc(communityId)
-          .collection('programs')
+          .collection('events')
           .where('status', whereIn: ['active', 'ongoing'])
           .get();
       
-      _availablePrograms = querySnapshot.docs.map((doc) {
+      _availableEvents = querySnapshot.docs.map((doc) {
         final data = doc.data();
-        debugPrint('📝 Program data: $data');
-        return ProgramModel.fromMap(data, doc.id);
+        debugPrint('📝 event data: $data');
+        return EventModel.fromMap(data, doc.id);
       }).toList();
       
-      debugPrint('✅ Found ${_availablePrograms.length} programs');
+      debugPrint('✅ Found ${_availableEvents.length} events');
 
-      // If no programs found in subcollection, try root programs collection
-      if (_availablePrograms.isEmpty) {
-        debugPrint('⚠️ No programs in subcollection, trying root collection...');
+      // If no events found in subcollection, try root events collection
+      if (_availableEvents.isEmpty) {
+        debugPrint('⚠️ No events in subcollection, trying root collection...');
         final rootQuery = await FirebaseFirestore.instance
-            .collection('programs')
+            .collection('events')
             .where('communityId', isEqualTo: communityId)
             .where('status', whereIn: ['active', 'ongoing'])
             .get();
         
-        _availablePrograms = rootQuery.docs.map((doc) {
-          return ProgramModel.fromMap(doc.data(), doc.id);
+        _availableEvents = rootQuery.docs.map((doc) {
+          return EventModel.fromMap(doc.data(), doc.id);
         }).toList();
         
-        debugPrint('✅ Found ${_availablePrograms.length} programs in root collection');
+        debugPrint('✅ Found ${_availableEvents.length} events in root collection');
       }
       
-      // Ensure the current program is in the list
-      if (_contribution != null && !_availablePrograms.any((p) => p.programId == _contribution!.programId)) {
-        // Try to fetch the specific program to add to list
+      // Ensure the current event is in the list
+      if (_contribution != null && !_availableEvents.any((p) => p.eventId == _contribution!.eventId)) {
+        // Try to fetch the specific event to add to list
         try {
           // Try community subcollection first
-          final programDoc = await FirebaseFirestore.instance
+          final doc = await FirebaseFirestore.instance
               .collection('communities')
               .doc(communityId)
-              .collection('programs')
-              .doc(_contribution!.programId)
+              .collection('events')
+              .doc(_contribution!.eventId)
               .get();
           
-          if (programDoc.exists) {
-            final program = ProgramModel.fromMap(programDoc.data() as Map<String, dynamic>, programDoc.id);
-            _availablePrograms.add(program);
-            debugPrint('➕ Added current program from subcollection');
+          if (doc.exists) {
+            final event = EventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+            _availableEvents.add(event);
+            debugPrint('➕ Added current event from subcollection');
           } else {
             // Try root collection
-            final rootProgramDoc = await FirebaseFirestore.instance
-                .collection('programs')
-                .doc(_contribution!.programId)
+            final rooDoc = await FirebaseFirestore.instance
+                .collection('events')
+                .doc(_contribution!.eventId)
                 .get();
             
-            if (rootProgramDoc.exists) {
-              final program = ProgramModel.fromMap(rootProgramDoc.data() as Map<String, dynamic>, rootProgramDoc.id);
-              _availablePrograms.add(program);
-              debugPrint('➕ Added current program from root collection');
+            if (rooDoc.exists) {
+              final event = EventModel.fromMap(rooDoc.data() as Map<String, dynamic>, rooDoc.id);
+              _availableEvents.add(event);
+              debugPrint('➕ Added current event from root collection');
             }
           }
         } catch (e) {
-          debugPrint('⚠️ Could not fetch current program: $e');
+          debugPrint('⚠️ Could not fetch current event: $e');
         }
       }
       
-      // Sort programs by name
-      _availablePrograms.sort((a, b) => a.title.compareTo(b.title));
+      // Sort events by name
+      _availableEvents.sort((a, b) => a.title.compareTo(b.title));
       
-      // Debug: Print program types
-      for (var program in _availablePrograms) {
-        debugPrint('📋 Program: ${program.title}, Monthly: ${program.isMonthlyPaymentProgram}');
+      // Debug: Print event Types
+      for (var event in _availableEvents) {
+        debugPrint('📋 event: ${event.title}, Monthly: ${event.isMonthlyPayment}');
       }
       
     } catch (e) {
-      debugPrint('❌ Error fetching programs: $e');
-      _availablePrograms = [];
+      debugPrint('❌ Error fetching events: $e');
+      _availableEvents = [];
     }
   }
 
-  // Check if currently selected program is a monthly payment program
-  bool get _isSelectedProgramMonthly {
-    if (_selectedProgramId == null) return false;
+  // Check if currently selected event is a monthly payment event
+  bool get _isSelecteMonthly {
+    if (_selecteId == null) return false;
     
     try {
-      final program = _availablePrograms.firstWhere(
-        (p) => p.programId == _selectedProgramId,
+      final event = _availableEvents.firstWhere(
+        (p) => p.eventId == _selecteId,
       );
-      return program.isMonthlyPaymentProgram;
+      return event.isMonthlyPayment;
     } catch (e) {
-      // If program not found, check the contribution's original program
-      if (_contribution != null && _selectedProgramId == _contribution!.programId) {
+      // If event not found, check the contribution's original event
+      if (_contribution != null && _selecteId == _contribution!.eventId) {
         return _contribution!.isMonthlyContribution;
       }
       return false;
@@ -280,30 +280,30 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
     return monthId;
   }
 
-  // Helper function to get program name by ID
-  String _getProgramNameById(String programId) {
+  // Helper function to get event name by ID
+  String _geNnameById(String eventId) {
     try {
-      final program = _availablePrograms.firstWhere(
-        (p) => p.programId == programId,
-        orElse: () => ProgramModel(
-          programId: programId,
+      final event = _availableEvents.firstWhere(
+        (p) => p.eventId == eventId,
+        orElse: () => EventModel(
+          eventId: eventId,
           communityId: _contribution?.communityId ?? '',
-          title: 'Program $programId',
+          title: 'event $eventId',
           description: '',
-          programDate: DateTime.now(),
+          eventDate: DateTime.now(),
           location: '',
           maxParticipants: 0,
           participantType: 'fixed',
           status: 'active',
           createdBy: '',
           createdAt: Timestamp.now(),
-          programType: 'general',
-          isMonthlyPaymentProgram: false,
+          eventType: 'general',
+          isMonthlyPayment: false,
         ),
       );
-      return program.title;
+      return event.title;
     } catch (e) {
-      return 'Program $programId';
+      return 'event $eventId';
     }
   }
 
@@ -318,14 +318,14 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
     }
 
     // Parse amount
-    final amountText = _amountController.text;
-    final newAmount = double.tryParse(amountText) ?? 0.0;
+    final aamountText = _aamountController.text;
+    final newAamount = double.tryParse(aamountText) ?? 0.0;
 
     // Check if there are actual changes
-    bool hasChanges = newAmount != _contribution!.amount ||
+    bool hasChanges = newAamount != _contribution!.amount ||
         _paymentMethod != _contribution!.paymentMethod ||
-        _selectedProgramId != _contribution!.programId ||
-        _isMonthly != _contribution!.isMonthlyContribution ||
+        _selecteId != _contribution!.eventId ||
+        _isMonthlyy != _contribution!.isMonthlyContribution ||
         _monthId != _contribution!.monthId;
 
     if (!hasChanges) {
@@ -335,20 +335,20 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       return;
     }
 
-    // Show confirmation dialog if amount or program changed
-    if (newAmount != _contribution!.amount || _selectedProgramId != _contribution!.programId) {
+    // Show confirmation dialog if amount or event changed
+    if (newAamount != _contribution!.amount || _selecteId != _contribution!.eventId) {
       String changes = '';
       
-      if (newAmount != _contribution!.amount) {
-        final difference = newAmount - _contribution!.amount;
-        changes += 'Amount: ₹${_contribution!.amount.toStringAsFixed(2)} → ₹${newAmount.toStringAsFixed(2)} (${difference > 0 ? '+' : ''}₹${difference.abs().toStringAsFixed(2)})\n';
+      if (newAamount != _contribution!.amount) {
+        final difference = newAamount - _contribution!.amount;
+        changes += 'Amount: ₹${_contribution!.amount.toStringAsFixed(2)} → ₹${newAamount.toStringAsFixed(2)} (${difference > 0 ? '+' : ''}₹${difference.abs().toStringAsFixed(2)})\n';
       }
       
-      if (_selectedProgramId != _contribution!.programId) {
-        final oldProgramName = _getProgramNameById(_contribution!.programId);
-        final newProgramName = _getProgramNameById(_selectedProgramId!);
+      if (_selecteId != _contribution!.eventId) {
+        final olName = _geNnameById(_contribution!.eventId);
+        final neName = _geNnameById(_selecteId!);
         
-        changes += 'Program: $oldProgramName → $newProgramName\n';
+        changes += 'event: $olName → $neName\n';
       }
       
       final confirmed = await showDialog<bool>(
@@ -380,8 +380,8 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
 
     try {
       // Get current user info
-      final authProvider = context.read<AppAuthProvider>();
-      final currentUser = authProvider.user;
+      final _authProvider = context.read<AppAuthProvider>();
+      final currentUser = _authProvider.user;
       
       if (currentUser == null) {
         throw Exception('User not authenticated');
@@ -390,11 +390,11 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       // Create updated contribution model
       final updatedContribution = _contribution!.copyWith(
         contributionId: widget.contributionId,
-        amount: newAmount,
+        amount: newAamount,
         paymentMethod: _paymentMethod,
-        programId: _selectedProgramId ?? _contribution!.programId,
-        isMonthlyContribution: _isMonthly,
-        monthId: _isMonthly ? _monthId : null,
+        eventId: _selecteId ?? _contribution!.eventId,
+        isMonthlyContribution: _isMonthlyy,
+        monthId: _isMonthlyy ? _monthId : null,
         editReason: _editReasonController.text.trim(),
       );
 
@@ -742,7 +742,7 @@ Widget _buildChangeItem({
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
-                            onPressed: _fetchContributionAndPrograms,
+                            onPressed: _fetchContributionAns,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary(context),
                               foregroundColor: Colors.white,
@@ -764,12 +764,12 @@ Widget _buildChangeItem({
                             key: _formKey,
                             child: Column(
                               children: [
-                                // Program Selection Dropdown
+                                // event Selection Dropdown
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Program *',
+                                      'event *',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -779,7 +779,7 @@ Widget _buildChangeItem({
                                     const SizedBox(height: 8),
 
                                     DropdownButtonFormField<String>(
-                                      initialValue: _selectedProgramId,
+                                      initialValue: _selecteId,
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
@@ -803,9 +803,9 @@ Widget _buildChangeItem({
                                           vertical: 16,
                                         ),
                                       ),
-                                      items: _availablePrograms.map((program) {
+                                      items: _availableEvents.map((event) {
                                         return DropdownMenuItem<String>(
-                                          value: program.programId,
+                                          value: event.eventId,
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(vertical: 4),
                                             child: Row(
@@ -813,13 +813,13 @@ Widget _buildChangeItem({
                                               crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
                                                 Text(
-                                                  program.title,
+                                                  event.title,
                                                   overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(
                                                     color: AppColors.textPrimary(context),
                                                   ),
                                                 ),
-                                                if (program.isMonthlyPaymentProgram) ...[
+                                                if (event.isMonthlyPayment) ...[
                                                   const SizedBox(width: 8),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(
@@ -848,22 +848,22 @@ Widget _buildChangeItem({
 
                                       onChanged: (value) {
                                         setState(() {
-                                          _selectedProgramId = value;
+                                          _selecteId = value;
 
                                           if (value != null) {
                                             try {
-                                              final program = _availablePrograms.firstWhere(
-                                                (p) => p.programId == value,
+                                              final event = _availableEvents.firstWhere(
+                                                (p) => p.eventId == value,
                                               );
-                                              _isMonthly = program.isMonthlyPaymentProgram;
-                                              if (!_isMonthly) {
+                                              _isMonthlyy = event.isMonthlyPayment;
+                                              if (!_isMonthlyy) {
                                                 _monthId = null;
                                               }
                                             } catch (e) {
-                                              if (_contribution != null && value == _contribution!.programId) {
-                                                _isMonthly = _contribution!.isMonthlyContribution;
+                                              if (_contribution != null && value == _contribution!.eventId) {
+                                                _isMonthlyy = _contribution!.isMonthlyContribution;
                                               } else {
-                                                _isMonthly = false;
+                                                _isMonthlyy = false;
                                                 _monthId = null;
                                               }
                                             }
@@ -873,19 +873,19 @@ Widget _buildChangeItem({
 
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
-                                          return 'Please select a program';
+                                          return 'Please select a event';
                                         }
                                         return null;
                                       },
 
-                                      hint: const Text('Select Program'),
+                                      hint: const Text('Select event'),
                                     ),
 
-                                    if (_availablePrograms.isEmpty)
+                                    if (_availableEvents.isEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 8),
                                         child: Text(
-                                          'No active programs found in this community',
+                                          'No active events found in this community',
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.orange,
@@ -900,7 +900,7 @@ Widget _buildChangeItem({
 
                                 // Amount Field
                                 _buildInputField(
-                                  controller: _amountController,
+                                  controller: _aamountController,
                                   label: 'Amount',
                                   icon: Icons.currency_rupee,
                                   hint: 'e.g., 500, 1000, 2000',
@@ -989,8 +989,8 @@ Widget _buildChangeItem({
 
                                 const SizedBox(height: 16),
 
-                                // Month Selection (only for monthly programs)
-                                if (_isSelectedProgramMonthly) ...[
+                                // Month Selection (only for monthly events)
+                                if (_isSelecteMonthly) ...[
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -1012,7 +1012,7 @@ Widget _buildChangeItem({
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              'Monthly Program',
+                                              'Monthly event',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.green[700],
@@ -1066,8 +1066,8 @@ Widget _buildChangeItem({
                                           setState(() => _monthId = value);
                                         },
                                         validator: (value) {
-                                          if (_isSelectedProgramMonthly && (value == null || value.isEmpty)) {
-                                            return 'Please select month for monthly program';
+                                          if (_isSelecteMonthly && (value == null || value.isEmpty)) {
+                                            return 'Please select month for monthly event';
                                           }
                                           return null;
                                         },
@@ -1160,8 +1160,8 @@ Widget _buildChangeItem({
             _buildChangeItem(
               label: 'Amount',
               oldValue: '₹${_contribution!.amount.toStringAsFixed(2)}',
-              newValue: '₹${_amountController.text.isNotEmpty ? _amountController.text : "0.00"}',
-              hasChanged: '₹${_contribution!.amount.toStringAsFixed(2)}' != '₹${_amountController.text.isNotEmpty ? _amountController.text : "0.00"}',
+              newValue: '₹${_aamountController.text.isNotEmpty ? _aamountController.text : "0.00"}',
+              hasChanged: '₹${_contribution!.amount.toStringAsFixed(2)}' != '₹${_aamountController.text.isNotEmpty ? _aamountController.text : "0.00"}',
             ),
             
             const SizedBox(height: 8),
@@ -1176,27 +1176,27 @@ Widget _buildChangeItem({
             const SizedBox(height: 8),
             
             _buildChangeItem(
-              label: 'Program',
-              oldValue: _getProgramNameById(_contribution!.programId),
-              newValue: _selectedProgramId != null
-                  ? _getProgramNameById(_selectedProgramId!)
-                  : _getProgramNameById(_contribution!.programId),
-              hasChanged: _contribution!.programId != _selectedProgramId,
+              label: 'event',
+              oldValue: _geNnameById(_contribution!.eventId),
+              newValue: _selecteId != null
+                  ? _geNnameById(_selecteId!)
+                  : _geNnameById(_contribution!.eventId),
+              hasChanged: _contribution!.eventId != _selecteId,
             ),
             
-            if (_isMonthly != _contribution!.isMonthlyContribution) ...[
+            if (_isMonthlyy != _contribution!.isMonthlyContribution) ...[
               const SizedBox(height: 8),
               _buildChangeItem(
-                label: 'Type',
+                label: 'type',
                 oldValue: _contribution!.isMonthlyContribution
                     ? 'Monthly'
                     : 'One-time',
-                newValue: _isMonthly ? 'Monthly' : 'One-time',
+                newValue: _isMonthlyy ? 'Monthly' : 'One-time',
                 hasChanged: true,
               ),
             ],
             
-            if (_isMonthly && _monthId != _contribution!.monthId) ...[
+            if (_isMonthlyy && _monthId != _contribution!.monthId) ...[
               const SizedBox(height: 8),
               _buildChangeItem(
                 label: 'Month',
@@ -1282,9 +1282,14 @@ Widget _buildChangeItem({
   @override
   void dispose() {
     _editReasonController.dispose();
-    _amountController.dispose();
+    _aamountController.dispose();
     super.dispose();
   }
 }
+
+
+
+
+
 
 

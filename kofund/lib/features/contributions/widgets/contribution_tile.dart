@@ -5,9 +5,7 @@ import '../models/contribution_model.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/contribution_provider.dart';
-import '../../../core/services/user_service.dart';
-import '../../programs/utils/contribution_receipt_image.dart';
-import '../../../core/skeleton/receipt_skeleton.dart';
+import '../../events/utils/contribution_receipt_image.dart';
 import '../screens/edit_contribution_screen.dart';
 
 class ContributionTile extends StatelessWidget {
@@ -232,9 +230,10 @@ class ContributionTile extends StatelessWidget {
       await ContributionReceiptImage.generateAndShowReceipt(
         context: context,
         contribution: contribution,
-        programName: contribution.programName,
+        name: contribution.name,
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
@@ -268,10 +267,13 @@ class ContributionTile extends StatelessWidget {
     try {
       final provider = Provider.of<ContributionProvider>(context, listen: false);
       await provider.deleteContribution(contribution.contributionId, reason);
+      
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: const Text('Deleted successfully'), backgroundColor: AppColors.success(context)),
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
   }
@@ -298,7 +300,7 @@ class _ContributionDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Premium details sheet implementation (simplified version of the one in program_contributions_tab)
+    // Premium details sheet implementation (simplified version of the one in event_contributions_tab)
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -319,7 +321,7 @@ class _ContributionDetailsSheet extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text('Contribution Details', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
                 const SizedBox(height: 20),
-                _buildAmountCard(context),
+                _buildAamountCard(context),
                 const SizedBox(height: 20),
                 _buildInfoRow(context, Icons.payment, 'Payment Method', contribution.paymentMethod),
                 _buildInfoRow(context, Icons.event, 'Date', DateFormat('dd MMM yyyy').format(contribution.createdAt.toDate())),
@@ -347,7 +349,7 @@ class _ContributionDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountCard(BuildContext context) {
+  Widget _buildAamountCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -386,3 +388,8 @@ class _ContributionDetailsSheet extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

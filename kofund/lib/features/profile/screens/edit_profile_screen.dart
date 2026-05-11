@@ -47,7 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
 
     try {
       // ✅ Show loading in ProfileScreen via callback
@@ -75,7 +75,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
       // Refresh auth data in background
-      await authProvider.refreshUserData();
+      await _authProvider.refreshUserData();
       if (!mounted) return;
 
       // ✅ SHOW SUCCESS AFTER UPDATE COMPLETES
@@ -318,14 +318,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           validator: (value) {
             if (value != null && value.trim().isNotEmpty) {
               // Remove any non-digit characters for validation
-              final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+              final ddigitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
               
-              if (digitsOnly.length != 10) {
+              if (ddigitsOnly.length != 10) {
                 return 'Please enter a valid 10-digit phone number';
               }
               
               // Check if it's a realistic phone number (doesn't start with 0)
-              if (digitsOnly.startsWith('0')) {
+              if (ddigitsOnly.startsWith('0')) {
                 return 'Phone number cannot start with 0';
               }
             }
@@ -380,4 +380,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
 }
+
+
+
+
+
 

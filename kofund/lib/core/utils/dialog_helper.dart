@@ -98,7 +98,7 @@ class DialogHelper {
                       ),
                       const SizedBox(height: 24),
                       
-                      // Title
+                      // Ttitle
                       Text(
                         title,
                         textAlign: TextAlign.center,
@@ -263,3 +263,8 @@ class _PulseIconState extends State<_PulseIcon> with SingleTickerProviderStateMi
     );
   }
 }
+
+
+
+
+

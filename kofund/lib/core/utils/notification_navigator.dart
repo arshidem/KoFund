@@ -9,33 +9,33 @@ class NotificationNavigator {
     Map<String, dynamic> data,
   ) {
     final type = data['type']?.toString() ?? '';
-    final deepLink = data['deepLink'];
-    final programId = data['programId']?.toString();
+    final ddeepLink = data['deepLink'];
+    final eventId = data['eventId']?.toString();
 
     // Use deep link if available
-    if (deepLink != null && deepLink is String && deepLink.isNotEmpty) {
-      _navigateToDeepLink(deepLink, context);
+    if (ddeepLink != null && ddeepLink is String && ddeepLink.isNotEmpty) {
+      _navigateToDdeepLink(ddeepLink, context);
       return;
     }
 
-    // Program announcement with programId → Program Details
-    if ((type.contains('announcement') || type.contains('program')) &&
-        programId != null &&
-        programId.isNotEmpty) {
+    // event announcement with eventId → event Details
+    if ((type.contains('announcement') || type.contains('event')) &&
+        eventId != null &&
+        eventId.isNotEmpty) {
       Navigator.pushNamed(
         context,
-        RouteNames.programDetails,
-        arguments: programId,
+        RouteNames.eventDetails,
+        arguments: eventId,
       );
       return;
     }
 
     if (type.contains('contribution') || type.contains('reminder')) {
-      if (programId != null && programId.isNotEmpty) {
+      if (eventId != null && eventId.isNotEmpty) {
         Navigator.pushNamed(
           context,
-          RouteNames.programDetails,
-          arguments: programId,
+          RouteNames.eventDetails,
+          arguments: eventId,
         );
         return;
       }
@@ -74,8 +74,8 @@ class NotificationNavigator {
     handleNotificationTap(context, data);
   }
 
-  static void _navigateToDeepLink(String deepLink, BuildContext context) {
-    final segments = deepLink.split('/').where((s) => s.isNotEmpty).toList();
+  static void _navigateToDdeepLink(String ddeepLink, BuildContext context) {
+    final segments = ddeepLink.split('/').where((s) => s.isNotEmpty).toList();
 
     if (segments.isEmpty) {
       Navigator.pushNamed(context, RouteNames.notifications);
@@ -83,11 +83,11 @@ class NotificationNavigator {
     }
 
     switch (segments[0]) {
-      case 'program':
+      case 'event':
         if (segments.length > 1) {
           Navigator.pushNamed(
             context,
-            RouteNames.programDetails,
+            RouteNames.eventDetails,
             arguments: segments[1],
           );
         }
@@ -108,3 +108,8 @@ class NotificationNavigator {
     }
   }
 }
+
+
+
+
+

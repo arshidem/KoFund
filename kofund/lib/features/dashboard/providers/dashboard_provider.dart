@@ -1,45 +1,49 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:kofund/features/community/models/community_model.dart';
-import 'package:kofund/features/programs/models/program_model.dart';
+import 'package:kofund/features/events/models/event_model.dart';
 
 import 'package:kofund/core/services/community_firestore_service.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/contribution_service.dart';
-import 'package:kofund/core/services/program_service.dart';
+import 'package:kofund/core/services/event_service.dart';
 import 'package:kofund/core/services/expense_service.dart';
 
 class DashboardProvider with ChangeNotifier {
   final CommunityFirestoreService _communityService;
   final UserService _userService;
   final ContributionService _contributionService;
-  final ProgramService _programService;
+  final  EventService _eventService;
   final ExpenseService _expenseService;
 
   DashboardProvider({
     required CommunityFirestoreService communityService,
     required UserService userService,
     required ContributionService contributionService,
-    required ProgramService programService,
+    required EventService eventService,
     required ExpenseService expenseService,
   })  : _communityService = communityService,
         _userService = userService,
         _contributionService = contributionService,
-        _programService = programService,
+        _eventService = eventService,
         _expenseService = expenseService;
 
   // -------------------------
   // STATE
   // -------------------------
 
-  CommunityModel? _currentCommunity;
-  ProgramModel? _monthlyPaymentProgram;
+  // -------------------------
+  // STATE
+  // -------------------------
 
-  // 👉 ONLY FOR MONTHLY PAYMENT PROGRAM
-  double _monthlyProgramBalance = 0.0;
-  double _monthlyProgramCollected = 0.0;
-  double _monthlyProgramExpenses = 0.0;
-  int _monthlyProgramContributors = 0;
+  CommunityModel? _currentCommunity;
+  EventModel? _monthlyPayment;
+
+  // 👉 ONLY FOR MONTHLY PAYMENT event
+  double _monthlyBalance = 0.0;
+  double _monthlyCollected = 0.0;
+  double _monthlyExpenses = 0.0;
+  int _monthlyContributors = 0;
 
   // Other Data
   int _approvedMembersCount = 0;
@@ -52,13 +56,13 @@ class DashboardProvider with ChangeNotifier {
   // -------------------------
 
   CommunityModel? get currentCommunity => _currentCommunity;
-  ProgramModel? get monthlyPaymentProgram => _monthlyPaymentProgram;
+  EventModel? get monthlyPayment => _monthlyPayment;
 
-  // 👉 ONLY FOR MONTHLY PAYMENT PROGRAM
-  double get monthlyProgramBalance => _monthlyProgramBalance;
-  double get monthlyProgramCollected => _monthlyProgramCollected;
-  double get monthlyProgramExpenses => _monthlyProgramExpenses;
-  int get monthlyProgramContributors => _monthlyProgramContributors;
+  // 👉 ONLY FOR MONTHLY PAYMENT event
+  double get monthlyBalance => _monthlyBalance;
+  double get monthlyCollected => _monthlyCollected;
+  double get monthlyExpenses => _monthlyExpenses;
+  int get monthlyContributors => _monthlyContributors;
 
   // Other Getters
   int get approvedMembersCount => _approvedMembersCount;
@@ -70,7 +74,7 @@ class DashboardProvider with ChangeNotifier {
   // LOAD DASHBOARD
   // -------------------------
 Future<void> loadDashboardData(String communityId) async {
-  // ✅ SAFETY CHECK: Prevent multiple simultaneous loads
+  // ✅ SAFETY CHECK: P multiple simultaneous loads
   if (_isLoading) {
     debugPrint('⏳ DEBUG: Dashboard data load already in progress, skipping...');
     return;
@@ -88,15 +92,15 @@ Future<void> loadDashboardData(String communityId) async {
     // 2. APPROVED MEMBERS COUNT
     await _loadApprovedMembersCount(communityId);
 
-    // 3. 👉 MONTHLY PAYMENT PROGRAM & ITS FINANCIALS
-    await _loadMonthlyPaymentProgram(communityId);
+    // 3. 👉 MONTHLY PAYMENT event & ITS FINANCIALS
+    await _loadMonthlyPayment(communityId);
     
-    // 👉 ONLY load financials if monthly payment program exists
-    if (_monthlyPaymentProgram != null) {
-      await _loadMonthlyProgramFinancials(_monthlyPaymentProgram!.programId);
+    // 👉 ONLY load financials if monthly payment event exists
+    if (_monthlyPayment != null) {
+      await _loadMonthlyFinancials(_monthlyPayment!.eventId);
     } else {
-      // 👉 RESET financial data if no monthly program
-      _resetMonthlyProgramFinancials();
+      // 👉 RESET financial data if no monthly event
+      _resetMonthlyFinancials();
     }
 
     debugPrint('✅ DEBUG: Dashboard data loaded successfully');
@@ -122,21 +126,21 @@ Future<void> loadDashboardData(String communityId) async {
   }
 
   // -------------------------
-  // 👉 MONTHLY PAYMENT PROGRAM - ONLY THIS!
+  // 👉 MONTHLY PAYMENT event - ONLY THIS!
   // -------------------------
-  Future<void> _loadMonthlyPaymentProgram(String communityId) async {
-    final programs = await _programService.getProgramsByCommunity(communityId);
+  Future<void> _loadMonthlyPayment(String communityId) async {
+    final events = await _eventService.getEventsByCommunity(communityId);
 
     try {
-      // 👉 ONLY look for programs where isMonthlyPaymentProgram == true
-      _monthlyPaymentProgram = programs.firstWhere(
-        (p) => p.isMonthlyPaymentProgram == true
+      // 👉 ONLY look for events where isMonthlyPayment == true
+      _monthlyPayment = events.firstWhere(
+        (p) => p.isMonthlyPayment == true
       );
-      debugPrint('✅ Found monthly payment program: ${_monthlyPaymentProgram!.title}');
+      debugPrint('✅ Found monthly payment event: ${_monthlyPayment!.title}');
     } catch (_) {
-      // 👉 NO monthly payment program found
-      _monthlyPaymentProgram = null;
-      debugPrint('ℹ️ No monthly payment program found in this community');
+      // 👉 NO monthly payment event found
+      _monthlyPayment = null;
+      debugPrint('ℹ️ No monthly payment event found in this community');
     }
   }
 
@@ -149,36 +153,36 @@ Future<void> loadDashboardData(String communityId) async {
   }
 
   // -------------------------
-  // 👉 MONTHLY PROGRAM FINANCIALS - ONLY FOR MONTHLY PAYMENT PROGRAM
+  // 👉 MONTHLY event FINANCIALS - ONLY FOR MONTHLY PAYMENT event
   // -------------------------
-  Future<void> _loadMonthlyProgramFinancials(String programId) async {
+  Future<void> _loadMonthlyFinancials(String eventId) async {
     try {
-      debugPrint('💰 Loading financials for monthly payment program: $programId');
+      debugPrint('💰 Loading financials for monthly payment event: $eventId');
       
-      // 👉 ONLY get financial data for the monthly payment program
-      final contributions = await _contributionService.getProgramTotalContributions(programId);
-      final expenses = await _expenseService.getProgramTotalExpenses(programId);
-      final contributors = await _getMonthlyProgramContributorsCount(programId);
+      // 👉 ONLY get financial data for the monthly payment event
+      final contributions = await _contributionService.getTotalContributions(eventId);
+      final expenses = await _expenseService.getEventTotalExpenses(eventId);
+      final contributors = await _getMonthlyContributorsCount(eventId);
 
-      _monthlyProgramCollected = contributions;
-      _monthlyProgramExpenses = expenses;
-      _monthlyProgramBalance = contributions - expenses;
-      _monthlyProgramContributors = contributors;
+      _monthlyCollected = contributions;
+      _monthlyExpenses = expenses;
+      _monthlyBalance = contributions - expenses;
+      _monthlyContributors = contributors;
 
-      debugPrint('💰 Monthly Program Financials - Collected: $contributions, Expenses: $expenses, Balance: $_monthlyProgramBalance');
+      debugPrint('💰 Monthly event Financials - Collected: $contributions, Expenses: $expenses, Balance: $_monthlyBalance');
 
     } catch (e) {
-      debugPrint('❌ Error loading monthly program financials: $e');
-      _errorMessage = 'Failed to load monthly program financials: $e';
+      debugPrint('❌ Error loading monthly event financials: $e');
+      _errorMessage = 'Failed to load monthly event financials: $e';
       // Reset to defaults on error
-      _resetMonthlyProgramFinancials();
+      _resetMonthlyFinancials();
     }
   }
 
-  Future<int> _getMonthlyProgramContributorsCount(String programId) async {
+  Future<int> _getMonthlyContributorsCount(String eventId) async {
     try {
-      // Get all contributions for the monthly program and count unique users
-      final contributions = await _contributionService.getProgramContributions(programId);
+      // Get all contributions for the monthly event and count unique users
+      final contributions = await _contributionService.getContributions(eventId);
       final uniqueUserIds = <String>{};
       
       for (final contribution in contributions) {
@@ -191,36 +195,36 @@ Future<void> loadDashboardData(String communityId) async {
     }
   }
 
-  void _resetMonthlyProgramFinancials() {
-    _monthlyProgramCollected = 0.0;
-    _monthlyProgramExpenses = 0.0;
-    _monthlyProgramBalance = 0.0;
-    _monthlyProgramContributors = 0;
-    debugPrint('💰 Reset monthly program financials to zero');
+  void _resetMonthlyFinancials() {
+    _monthlyCollected = 0.0;
+    _monthlyExpenses = 0.0;
+    _monthlyBalance = 0.0;
+    _monthlyContributors = 0;
+    debugPrint('💰 Reset monthly event financials to zero');
   }
 
   // -------------------------
-  // 👉 FINANCIAL DETAILS GETTERS - ONLY FOR MONTHLY PAYMENT PROGRAM
+  // 👉 FINANCIAL DETAILS GETTERS - ONLY FOR MONTHLY PAYMENT event
   // -------------------------
 
-  // Get monthly program progress percentage
-  double get monthlyProgramProgressPercentage {
-    if (_monthlyPaymentProgram == null) return 0.0;
+  // Get monthly event progress percentage
+  double get monthlyProgressPercentage {
+    if (_monthlyPayment == null) return 0.0;
     
-    final target = _monthlyPaymentProgram!.suggestedContribution ?? 0.0;
+    final target = _monthlyPayment!.suggestedContribution ?? 0.0;
     if (target <= 0) return 0.0;
     
-    return (_monthlyProgramCollected / target) * 100;
+    return (_monthlyCollected / target) * 100;
   }
 
-  // Get monthly program target amount
-  double get monthlyProgramTarget {
-    return _monthlyPaymentProgram?.suggestedContribution ?? 0.0;
+  // Get monthly event target amount
+  double get monthlyTarget {
+    return _monthlyPayment?.suggestedContribution ?? 0.0;
   }
 
-  // 👉 Check if we have a monthly payment program
-  bool get hasMonthlyPaymentProgram {
-    return _monthlyPaymentProgram != null;
+  // 👉 Check if we have a monthly payment event
+  bool get hasMonthlyPayment {
+    return _monthlyPayment != null;
   }
 
   // -------------------------
@@ -231,19 +235,19 @@ Future<void> loadDashboardData(String communityId) async {
       // Community Info
       'clubName': _currentCommunity?.name ?? '',
       'clubLogo': _currentCommunity?.logoUrl,
-      'clubType': _currentCommunity?.type ?? '',
+      'clubTeventType': _currentCommunity?.type ?? '',
       'membersCount': _approvedMembersCount,
       
-      // 👉 MONTHLY PROGRAM FINANCIAL DATA - ONLY if monthly program exists
-      'monthlyBalance': _monthlyProgramBalance,
-      'monthlyCollected': _monthlyProgramCollected,
-      'monthlyExpenses': _monthlyProgramExpenses,
-      'monthlyContributors': _monthlyProgramContributors,
-      'monthlyProgress': monthlyProgramProgressPercentage,
-      'monthlyTarget': monthlyProgramTarget,
+      // 👉 MONTHLY event FINANCIAL DATA - ONLY if monthly event exists
+      'monthlyBalance': _monthlyBalance,
+      'monthlyCollected': _monthlyCollected,
+      'monthlyExpenses': _monthlyExpenses,
+      'monthlyContributors': _monthlyContributors,
+      'monthlyProgress': monthlyProgressPercentage,
+      'monthlyTarget': monthlyTarget,
       
-      // 👉 PROGRAM STATUS
-      'hasMonthlyProgram': _monthlyPaymentProgram != null,
+      // 👉 event STATUS
+      'hasMonthl': _monthlyPayment != null,
     };
   }
 
@@ -254,10 +258,10 @@ Future<void> loadDashboardData(String communityId) async {
     await loadDashboardData(communityId);
   }
 
-  // Refresh only monthly program financial data
-  Future<void> refreshMonthlyProgramFinancials() async {
-    if (_monthlyPaymentProgram != null) {
-      await _loadMonthlyProgramFinancials(_monthlyPaymentProgram!.programId);
+  // Refresh only monthly event financial data
+  Future<void> refreshMonthlyFinancials() async {
+    if (_monthlyPayment != null) {
+      await _loadMonthlyFinancials(_monthlyPayment!.eventId);
       notifyListeners();
     }
   }
@@ -278,11 +282,16 @@ Future<void> loadDashboardData(String communityId) async {
   // Clear all data (for logout)
   void clearData() {
     _currentCommunity = null;
-    _monthlyPaymentProgram = null;
-    _resetMonthlyProgramFinancials();
+    _monthlyPayment = null;
+    _resetMonthlyFinancials();
     _approvedMembersCount = 0;
     _errorMessage = '';
     notifyListeners();
   }
 }
+
+
+
+
+
 

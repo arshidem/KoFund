@@ -1,9 +1,10 @@
 // lib/features/community/screens/dashboard_screen.dart
 import 'package:kofund/core/skeleton/stats_card_skeleton.dart';
-import 'package:kofund/core/skeleton/program_card_skeleton.dart';
+import 'package:kofund/core/skeleton/event_card_skeleton.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
@@ -14,13 +15,13 @@ import '../widgets/members_widget.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/admin/screens/approval_requests_screen.dart';
 import 'package:kofund/core/widgets/admin_assistant_toast.dart';
-import '../../../features/programs/providers/program_provider.dart';
+import '../../../features/events/providers/event_provider.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
-import 'package:kofund/features/dashboard/widgets/program_carousel_widget.dart';
+import 'package:kofund/features/dashboard/widgets/event_carousel_widget.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/core/services/contribution_service.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -95,8 +96,8 @@ Future<void> _onRefresh() async {
       // Refresh all related providers
       await Future.wait([
         context.read<DashboardProvider>().refreshDashboard(cid),
-        context.read<ProgramProvider>().loadCommunityPrograms(cid, forceRefresh: true),
-        context.read<ProgramProvider>().loadMyParticipations(user.uid, cid),
+        context.read<EventProvider>().loadEvents(cid, forceRefresh: true),
+        context.read<EventProvider>().loadMyParticipations(user.uid, cid),
         context.read<UserProvider>().loadCommunityMembers(cid),
         _loadInviteInfo(cid),
       ]);
@@ -202,7 +203,7 @@ void _resetWidgetProviders(String userId, String communityId) {
       
 
       
-      // Load fresh data
+      // Load freshhh data
       _loadInitialData();
     }
   }
@@ -222,14 +223,14 @@ void _resetWidgetProviders(String userId, String communityId) {
         // ✅ Load dashboard data
         context.read<DashboardProvider>().loadDashboardData(communityId!);
         
-        // ✅ Load programs data  
-        context.read<ProgramProvider>().loadCommunityPrograms(communityId!);
+        // ✅ Load events data  
+        context.read<EventProvider>().loadEvents(communityId!);
         
         // ✅ CRITICAL: Load user participations
-        context.read<ProgramProvider>().loadMyParticipations(user.uid, communityId!);
+        context.read<EventProvider>().loadMyParticipations(user.uid, communityId!);
         
         // ✅ Set up participation listener
-        context.read<ProgramProvider>().watchUserParticipation(communityId!, user.uid);
+        context.read<EventProvider>().watchUserParticipation(communityId!, user.uid);
         
         // ✅ Initialize widget providers
         _initializeWidgetProviders(user.uid, communityId!);
@@ -293,8 +294,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
   // 🆕 Load invite information
   Future<void> _loadInviteInfo(String communityId) async {
     try {
-      final authProvider = context.read<AppAuthProvider>();
-      final user = authProvider.user;
+      final _authProvider = context.read<AppAuthProvider>();
+      final user = _authProvider.user;
       final userProvider = context.read<UserProvider>();
       final communityProvider = context.read<CommunityProvider>();
       
@@ -535,18 +536,15 @@ void _initializeWidgetProviders(String userId, String communityId) {
   }
 
   Widget _buildNotificationIconButton(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Consumer<NotificationProvider>(
       builder: (context, provider, child) {
         return Container(
           width: 52,
           height: 52,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 1,
-            ),
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
           ),
           child: Material(
             color: Colors.transparent,
@@ -573,11 +571,11 @@ void _initializeWidgetProviders(String userId, String communityId) {
                     elevation: 0,
                   ),
                   position: badges.BadgePosition.topEnd(top: -6, end: -6),
-                  child: const Icon(
-                    Icons.notifications_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                    child: Icon(
+                      Icons.notifications_outlined,
+                      color: isDark ? Colors.white : AppColors.textPrimary(context),
+                      size: 20,
+                    ),
                 ),
               ),
             ),
@@ -588,6 +586,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
   }
 
   Widget _buildCommunityAvatar(BuildContext context, Map<String, dynamic> stats, String? cid, bool isAdmin, UserModel? user, {double size = 46}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final String? logoUrl = stats['clubLogo'];
     final String clubName = (stats['clubName'] != null && stats['clubName'].toString().trim().isNotEmpty)
         ? stats['clubName']
@@ -598,10 +597,10 @@ void _initializeWidgetProviders(String userId, String communityId) {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: isDark ? Colors.white.withValues(alpha: 0.15) : AppColors.primary(context).withValues(alpha: 0.1),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1),
           width: 1.5,
         ),
       ),
@@ -621,11 +620,12 @@ void _initializeWidgetProviders(String userId, String communityId) {
   }
 
   Widget _buildInitialPlaceholder(String initial, double size) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Text(
         initial,
         style: TextStyle(
-          color: Colors.white,
+          color: isDark ? Colors.white : AppColors.textPrimary(context),
           fontSize: size * 0.45,
           fontWeight: FontWeight.bold,
         ),
@@ -671,7 +671,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         authProvider: auth,
         participantService: ParticipantService(),
         contributionService: ContributionService(),
-         virtualUserService: VirtualUserService(), // Add this
+        virtualUserService: VirtualUserService(),
       ),
     ),
     ChangeNotifierProvider(
@@ -683,7 +683,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     ChangeNotifierProvider(
       create: (_) => PollProvider(),
     ),
-    // ✅ FIXED: Pass UserService parameter
+    // ✅ FIXED: Pass UserService parnameter
     ChangeNotifierProvider(
       create: (_) => UserProvider(
         UserService(), // Add this
@@ -695,13 +695,23 @@ void _initializeWidgetProviders(String userId, String communityId) {
           final bool isRefreshing = provider.isLoading || _isManualRefreshing;
           final bool showSkeleton = isRefreshing && !_hasLoadedData;
           final stats = provider.getDashboardStats();
+          
+          // ✅ SYNC COMMUNITY NAME WITH USER PROFILE IF IT CHANGED
+          final String freshhhName = stats['clubName']?.toString() ?? '';
+          if (freshhhName.isNotEmpty && freshhhName != (user?.communityName ?? '')) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                context.read<AppAuthProvider>().syncCommunityName(freshhhName);
+              }
+            });
+          }
 
           return Scaffold(
       backgroundColor: AppColors.background(context),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
-            _buildDashboardSliverAppBar(stats, isDarkMode, cid, user),
+            _buildDashboardSliverAppBar(stats, isDarkMode, cid, user, showSkeleton),
           ];
         },
         body: CustomScrollView(
@@ -720,16 +730,16 @@ void _initializeWidgetProviders(String userId, String communityId) {
                   if (showSkeleton) ...[
                     StatsCardSkeleton(isDarkMode: isDarkMode),
                     const SizedBox(height: 24),
-                    ProgramCardSkeleton(isDarkMode: isDarkMode),
+                    EventCardSkeleton(isDarkMode: isDarkMode),
                     const SizedBox(height: 24),
                     MembersSkeleton(isDarkMode: isDarkMode),
                   ] else ...[
                     _buildStatsCard(stats, isDarkMode),
                     const SizedBox(height: AppDimensions.spaceMedium),
                     
-                    ProgramCarouselWidget(
+                    CarouselWidget(
                       isAdmin: user?.isAdmin ?? false,
-                      key: ValueKey('programs-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
+                      key: ValueKey('events-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
                     ),
                     const SizedBox(height: 16),
                     
@@ -817,7 +827,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
-  Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode, String? cid, UserModel? user) {
+  Widget _buildDashboardSliverAppBar(Map<String, dynamic> stats, bool isDarkMode, String? cid, UserModel? user, bool showSkeleton) {
     final bool isAdmin = user?.isAdmin ?? false;
     
     return SliverAppBar(
@@ -826,178 +836,12 @@ void _initializeWidgetProviders(String userId, String communityId) {
       pinned: true,
       stretch: true,
       elevation: 0,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 20.0),
-          child: _buildNotificationIconButton(context),
-        ),
-      ],
-      flexibleSpace: LayoutBuilder(
-        builder: (context, constraints) {
-          final double topPadding = MediaQuery.of(context).padding.top;
-          final double collapsedHeight = 90 + topPadding + 28;
-          final double expandedHeight = 280.0;
-          
-          final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
-              (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
-
-          final double expandedOpacity = (expandRatio * 2 - 1).clamp(0.0, 1.0);
-          
-          // Math for smooth Avatar sliding and scaling (EXACT Profile Screen Constants)
-          final double currentAvatarSize = dart_ui.lerpDouble(60.0, 96.0, expandRatio)!;
-          final double currentAvatarX = dart_ui.lerpDouble(20.0, (constraints.maxWidth - currentAvatarSize) / 2, expandRatio)!;
-          final double currentAvatarY = dart_ui.lerpDouble(topPadding + 15.0, topPadding + 40.0, expandRatio)!;
-          
-          // Math for smooth Swarm translating and scaling (EXACT Profile Screen Curve)
-          final double arcOffset = (1 - (2 * expandRatio - 1).abs()); 
-          final double dodgeAmount = 20.0 * (arcOffset > 0 ? arcOffset : 0); 
-          
-          final double currentNameTop = dart_ui.lerpDouble(26.0 + topPadding, 155.0 + topPadding, expandRatio)! + dodgeAmount;
-          final double currentMembersTop = dart_ui.lerpDouble(50.0 + topPadding, 185.0 + topPadding, expandRatio)! + dodgeAmount;
-          final double currentBadgeTop = dart_ui.lerpDouble(80.0 + topPadding, 212.0 + topPadding, expandRatio)! + dodgeAmount;
-          
-          final double currentLeftPadding = dart_ui.lerpDouble(90.0, 0.0, expandRatio)!;
-          final double currentRightPadding = dart_ui.lerpDouble(70.0, 0.0, expandRatio)!;
-          final double currentAlignmentX = dart_ui.lerpDouble(-1.0, 0.0, expandRatio)!;
-
-          return Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient(context),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // 1. Sliding & Scaling Avatar (Always Visible)
-                Positioned(
-                  left: currentAvatarX,
-                  top: currentAvatarY,
-                  child: _buildCommunityAvatar(
-                    context, 
-                    stats, 
-                    cid, 
-                    isAdmin, 
-                    user,
-                    size: currentAvatarSize,
-                  ),
-                ),
-
-                // 2. SWARMING CLUB NAME
-                Positioned(
-                  top: currentNameTop,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
-                    child: Align(
-                      alignment: Alignment(currentAlignmentX, 0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              (stats['clubName'] != null && stats['clubName'].toString().trim().isNotEmpty)
-                                  ? stats['clubName']
-                                  : (user?.communityName ?? ""),
-                              style: TextStyle(
-                                fontSize: dart_ui.lerpDouble(18.0, 26.0, expandRatio)!,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isAdmin) ...[
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: _navigateToEditCommunity,
-                              child: Icon(
-                                Icons.edit_rounded,
-                                size: 16,
-                                color: Colors.white.withValues(alpha: 0.85),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 3. SWARMING MEMBERS
-                Positioned(
-                  top: currentMembersTop,
-                  left: 0,
-                  right: 0,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: currentLeftPadding, right: currentRightPadding),
-                    child: Align(
-                      alignment: Alignment(currentAlignmentX, 0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.people_alt_rounded,
-                            size: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
-                            color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "${stats['membersCount'] ?? 0} Members",
-                            style: TextStyle(
-                              fontSize: dart_ui.lerpDouble(12.0, 14.0, expandRatio)!,
-                              color: Colors.white.withValues(alpha: dart_ui.lerpDouble(0.7, 0.8, expandRatio)!),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // 4. GREETING OVERLAY (Centered in expanded state)
-                if (expandedOpacity > 0 && _showGreeting)
-                  Positioned(
-                    top: currentBadgeTop,
-                    left: 0,
-                    right: 0,
-                    child: Opacity(
-                      opacity: expandedOpacity * _greetingOpacity,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                          ),
-                          child: Text(
-                            _getGreetingText(user?.displayName),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(28),
+        preferredSize: const Size.fromHeight(18),
         child: Container(
-          height: 28,
+          height: 18,
           width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.background(context),
@@ -1005,8 +849,198 @@ void _initializeWidgetProviders(String userId, String communityId) {
               topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
               topRight: Radius.circular(AppDimensions.radiusExtraLarge),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.15 : 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
         ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: _buildNotificationIconButton(context),
+        ),
+      ],
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final double topPadding = MediaQuery.of(context).padding.top;
+          final double collapsedHeight = 90 + topPadding + 28;
+          final double expandedHeight = 305.0;
+          
+          final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
+              (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+
+           // Smoother linear cross-fade curves
+          final double expandedOpacity = expandRatio.clamp(0.0, 1.0);
+          final double collapsedOpacity = (1.0 - expandRatio).clamp(0.0, 1.0);
+          
+          final String providerClubName = stats['clubName']?.toString().trim() ?? '';
+          final bool hasProviderName = providerClubName.isNotEmpty;
+          
+          // CRITICAL: If we are in the initial loading state (showSkeleton), 
+          // we don't want to show a potentially stale cached name from user profile.
+          // This ps the flicker between the old cached name and the freshhh server name.
+          final String clubName = hasProviderName 
+              ? providerClubName 
+              : (showSkeleton ? "" : (user?.communityName ?? ""));
+              
+          final bool showNameShimmer = showSkeleton && !hasProviderName;
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: isDarkMode
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF1A2E2E),
+                        Color(0xFF0D1B1A),
+                      ],
+                    )
+                  : null,
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. COLLAPSED VERSION (Small Left Aligned)
+                Positioned(
+                  left: 20,
+                  top: topPadding + 15,
+                  child: Opacity(
+                    opacity: collapsedOpacity,
+                    child: Row(
+                      children: [
+                        _buildCommunityAvatar(context, stats, cid, isAdmin, user, size: 60),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            showNameShimmer
+                                ? _buildShimmerText(isDarkMode, 120, 18)
+                                : Text(
+                                    clubName,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDarkMode ? Colors.white : AppColors.textPrimary(context),
+                                    ),
+                                  ),
+                            Text(
+                              "${stats['membersCount'] ?? 0} Members",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: (isDarkMode ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 2. EXPANDED VERSION (Large Centered)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: topPadding + 30, // Adjusted for safe fit
+                  child: Opacity(
+                    opacity: expandedOpacity,
+                    child: Column(
+                      children: [
+                        _buildCommunityAvatar(context, stats, cid, isAdmin, user, size: 90),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: showNameShimmer
+                                  ? _buildShimmerText(isDarkMode, 180, 24)
+                                  : Text(
+                                      clubName,
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDarkMode ? Colors.white : AppColors.textPrimary(context),
+                                        letterSpacing: -0.5,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                            ),
+                            if (isAdmin) ...[
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: _navigateToEditCommunity,
+                                child: Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                  color: isDarkMode 
+                                      ? Colors.white.withValues(alpha: 0.85) 
+                                      : AppColors.textPrimary(context).withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.people_alt_rounded,
+                              size: 14,
+                              color: (isDarkMode ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.8),
+                            ),
+
+                            const SizedBox(width: 6),
+                            Text(
+                              "${stats['membersCount'] ?? 0} Members",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: (isDarkMode ? Colors.white : AppColors.textPrimary(context)).withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_showGreeting) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                              border: Border.all(
+                                color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: Text(
+                              _getGreetingText(user?.displayName),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isDarkMode ? Colors.white : AppColors.textPrimary(context),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1028,24 +1062,44 @@ void _initializeWidgetProviders(String userId, String communityId) {
   Widget _buildStatsCard(Map<String, dynamic> stats, bool isDarkMode) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient(context),
+        gradient: isDarkMode
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+              ),
         borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+        border: Border.all(
+          color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+        ),
         boxShadow: [
           BoxShadow(
-            blurRadius: 6,
-            spreadRadius: 1,
-            color: Colors.black.withValues(alpha: 0.05),
+            color: isDarkMode
+                ? Colors.black.withValues(alpha: 0.3)
+                : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Monthly Program Balance",
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Text(
+            "Community Treasury",
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1053,7 +1107,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1,
             ),
           ),
           const SizedBox(height: 20),
@@ -1061,12 +1116,16 @@ void _initializeWidgetProviders(String userId, String communityId) {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildStatItem(
-                "Collected",
+                "Total Inflow",
                 "₹${(stats['monthlyCollected'] ?? 0.0).toStringAsFixed(2)}",
+                Colors.white,
+                Colors.white.withValues(alpha: 0.7),
               ),
               _buildStatItem(
-                "Expenses", 
+                "Total Outflow",
                 "₹${(stats['monthlyExpenses'] ?? 0.0).toStringAsFixed(2)}",
+                Colors.white,
+                Colors.white.withValues(alpha: 0.7),
               ),
             ],
           ),
@@ -1075,14 +1134,14 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(String label, String value, Color textPrimary, Color textSecondary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -1090,9 +1149,35 @@ void _initializeWidgetProviders(String userId, String communityId) {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+            color: textSecondary.withValues(alpha: 0.6),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
   }
+
+  // 🆕 Helper for text shimmer to p flickering
+  Widget _buildShimmerText(bool isDark, double width, double height) {
+    return Shimmer.fromColors(
+      baseColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[300]!,
+      highlightColor: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey[100]!,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(height / 4),
+        ),
+      ),
+    );
+  }
 }
+
+
+
+
+
+

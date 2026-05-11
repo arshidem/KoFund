@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 class ContributionModel {
   String contributionId;
-  String programId;
+  String eventId;
   String userId;
   String contributorName;
   String communityId;
@@ -34,7 +34,7 @@ class ContributionModel {
 
   ContributionModel({
     required this.contributionId,
-    required this.programId,
+    required this.eventId,
     required this.userId,
     required this.contributorName,
     required this.communityId,
@@ -59,7 +59,7 @@ class ContributionModel {
     this.lastEditedAt,
     this.editReason,
     
-    // ✅ ADD: Edit history parameter
+    // ✅ ADD: Edit history parnameter
     this.editHistory = const [],
     
     Timestamp? createdAt,
@@ -83,7 +83,7 @@ class ContributionModel {
     
     return ContributionModel(
       contributionId: id,
-      programId: map['programId'] ?? '',
+      eventId: map['eventId'] ?? '',
       userId: map['userId'] ?? '',
       contributorName: map['contributorName'] ?? '',
       communityId: map['communityId'] ?? '',
@@ -118,7 +118,7 @@ class ContributionModel {
   // ✅ UPDATE: toMap method with all new fields including editHistory
   Map<String, dynamic> toMap() {
     return {
-      'programId': programId,
+      'eventId': eventId,
       'userId': userId,
       'contributorName': contributorName,
       'communityId': communityId,
@@ -153,7 +153,7 @@ class ContributionModel {
   // ✅ UPDATE: copyWith method with all new fields
   ContributionModel copyWith({
     String? contributionId,
-    String? programId,
+    String? eventId,
     String? userId,
     String? contributorName,
     String? communityId,
@@ -181,7 +181,7 @@ class ContributionModel {
   }) {
     return ContributionModel(
       contributionId: contributionId ?? this.contributionId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       userId: userId ?? this.userId,
       contributorName: contributorName ?? this.contributorName,
       communityId: communityId ?? this.communityId,
@@ -220,7 +220,7 @@ class ContributionModel {
 
   // ✅ ADD: Migration helpers
   String get memberName => contributorName;
-  String get programName => 'Program $programId';
+  String get name => 'event $eventId';
 
   // ✅ ADD: Get formatted added by info
   String get addedByInfo {
@@ -343,13 +343,13 @@ class ContributionModel {
     return changeDescriptions.join(', ');
   }
 
-  // ✅ ADD: Helper method for field display names
+  // ✅ ADD: Helper method for field display nnames
   String _getFieldDisplayName(String field) {
     final displayNames = {
       'amount': 'Amount',
       'paymentMethod': 'Payment Method',
       'userId': 'Member',
-      'programId': 'Program',
+      'eventId': 'event',
       'monthId': 'Month',
       'isMonthlyContribution': 'Type',
     };
@@ -389,3 +389,8 @@ class ContributionStatus {
   static const String completed = 'completed';
   static List<String> get all => [completed];
 }
+
+
+
+
+

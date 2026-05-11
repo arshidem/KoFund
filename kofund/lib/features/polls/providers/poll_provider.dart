@@ -59,7 +59,7 @@ class PollProvider with ChangeNotifier {
   }
   
   // Load all polls for community
-  Future<void> loadCommunityPolls(String communityId, {String? programId}) async {
+  Future<void> loadCommunityPolls(String communityId, {String? eventId}) async {
     try {
       _isLoading = true;
       _error = null;
@@ -71,11 +71,11 @@ class PollProvider with ChangeNotifier {
       
       // Set up stream listeners for real-time updates
       _pollsSubscription = _pollService
-          .streamCommunityPolls(communityId, programId: programId)
+          .streamCommunityPolls(communityId, eventId: eventId)
           .listen(_updatePollsList, onError: _handleStreamError);
       
       _activePollsSubscription = _pollService
-          .streamActivePolls(communityId, programId: programId)
+          .streamActivePolls(communityId, eventId: eventId)
           .listen(_updateActivePollsList, onError: _handleStreamError);
       
       _isLoading = false;
@@ -174,10 +174,10 @@ class PollProvider with ChangeNotifier {
     }
   }
   
-  // Create poll - UPDATED with allowVoteChange parameter
+  // Create poll - UPDATED with allowVoteChange parnameter
   Future<PollModel?> createPoll({
     required String communityId,
-    String? programId,
+    String? eventId,
     required String title,
     required String description,
     required PollType type,
@@ -201,7 +201,7 @@ class PollProvider with ChangeNotifier {
       final poll = PollModel(
         pollId: pollId,
         communityId: communityId,
-        programId: programId,
+        eventId: eventId,
         title: title,
         description: description,
         type: type,
@@ -547,7 +547,7 @@ class PollProvider with ChangeNotifier {
   }
   
   // Refresh all polls
-  Future<void> refreshPolls(String communityId, String userId, {String? programId}) async {
+  Future<void> refreshPolls(String communityId, String userId, {String? eventId}) async {
     try {
       _isLoading = true;
       notifyListeners();
@@ -563,9 +563,9 @@ class PollProvider with ChangeNotifier {
       _pollsNeedingVote.clear();
       _pollCache.clear();
       
-      // Reload fresh data
+      // Reload freshhh data
       await Future.wait([
-        loadCommunityPolls(communityId, programId: programId),
+        loadCommunityPolls(communityId, eventId: eventId),
         loadPollsNeedingVote(communityId, userId),
       ]);
       
@@ -646,7 +646,7 @@ class PollProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Error deleting poll: $e');
+      debugPrint('Error deleteing poll: $e');
       return false;
     }
   }
@@ -715,3 +715,8 @@ class PollProvider with ChangeNotifier {
     super.dispose();
   }
 }
+
+
+
+
+

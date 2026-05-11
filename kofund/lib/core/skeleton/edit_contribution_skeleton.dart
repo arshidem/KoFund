@@ -24,8 +24,8 @@ class EditContributionSkeleton extends StatelessWidget {
             // Skeleton Form Fields
             Column(
               children: [
-                // Skeleton Program Dropdown
-                _buildSkeletonDropdown(label: 'Program'),
+                // Skeleton event Dropdown
+                _buildSkeletonDropdown(label: 'event'),
                 
                 const SizedBox(height: 16),
                 
@@ -282,3 +282,8 @@ class EditContributionSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

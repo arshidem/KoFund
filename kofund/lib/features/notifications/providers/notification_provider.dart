@@ -4,7 +4,7 @@ import 'package:kofund/core/services/notification_storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/services/fcm_token_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -25,7 +25,7 @@ class NotificationProvider extends ChangeNotifier {
   
   // ⭐ NEW: Current filter state
   String? _currentCommunityFilter;
-  NotificationType? _currentTypeFilter;
+  NotificationType? _currentTeventTypeFilter;
   bool _showUnreadOnly = false;
   
   // ⭐ NEW: User communities for filtering
@@ -42,7 +42,7 @@ class NotificationProvider extends ChangeNotifier {
   
   // ⭐ NEW: Getters for filter state
   String? get currentCommunityFilter => _currentCommunityFilter;
-  NotificationType? get currentTypeFilter => _currentTypeFilter;
+  NotificationType? get currentTeventTypeFilter => _currentTeventTypeFilter;
   bool get showUnreadOnly => _showUnreadOnly;
   List<String> get userCommunities => _userCommunities;
 
@@ -156,7 +156,7 @@ class NotificationProvider extends ChangeNotifier {
     _unreadCount = 0;
     _userCommunities.clear();
     _currentCommunityFilter = null;
-    _currentTypeFilter = null;
+    _currentTeventTypeFilter = null;
     _showUnreadOnly = false;
     _isLoading = false;
     _hasError = false;
@@ -190,12 +190,12 @@ class NotificationProvider extends ChangeNotifier {
       
       // ⭐ UPDATED: Use filtered stream if filters are active
       Stream<List<AppNotification>> notificationStream;
-      if (_currentCommunityFilter != null || _currentTypeFilter != null) {
+      if (_currentCommunityFilter != null || _currentTeventTypeFilter != null) {
         notificationStream = _storage.getNotificationsStream(
           filterByCommunity: _currentCommunityFilter,
-          filterByType: _currentTypeFilter,
+          filterByType: _currentTeventTypeFilter,
         );
-        debugPrint('🎯 Using filtered stream - Community: $_currentCommunityFilter, Type: $_currentTypeFilter');
+        debugPrint('🎯 Using filtered stream - Community: $_currentCommunityFilter, type: $_currentTeventTypeFilter');
       } else {
         notificationStream = _storage.getNotificationsStream();
       }
@@ -267,7 +267,7 @@ class NotificationProvider extends ChangeNotifier {
   // ⭐ NEW: Filter notifications by community
   Future<void> filterByCommunity(String? communityId) async {
     _currentCommunityFilter = communityId;
-    _currentTypeFilter = null; // Reset type filter when changing community
+    _currentTeventTypeFilter = null; // Reset type filter when changing community
     await _loadNotifications();
     await _loadUnreadCount();
     
@@ -280,7 +280,7 @@ class NotificationProvider extends ChangeNotifier {
 
   // ⭐ NEW: Filter notifications by type
   Future<void> filterByType(NotificationType? type) async {
-    _currentTypeFilter = type;
+    _currentTeventTypeFilter = type;
     await _loadNotifications();
     
     if (type != null) {
@@ -301,7 +301,7 @@ class NotificationProvider extends ChangeNotifier {
   // ⭐ NEW: Clear all filters
   void clearFilters() {
     _currentCommunityFilter = null;
-    _currentTypeFilter = null;
+    _currentTeventTypeFilter = null;
     _showUnreadOnly = false;
     _filteredNotifications.clear();
     _loadNotifications();
@@ -320,6 +320,7 @@ class NotificationProvider extends ChangeNotifier {
         (n) => n.id == notificationId,
         orElse: () => AppNotification(
           id: '',
+          eventId: '',
           title: '',
           body: '',
           type: NotificationType.announcement,
@@ -387,7 +388,7 @@ class NotificationProvider extends ChangeNotifier {
       _applyFilters(); // Reapply filters
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error deleting notification: $e');
+      debugPrint('❌ Error deleteing notification: $e');
     }
   }
 
@@ -484,7 +485,7 @@ class NotificationProvider extends ChangeNotifier {
     required String body,
     required NotificationType type,
     Map<String, dynamic> data = const {},
-    String? programId,
+    String? eventId,
     String? senderName,
   }) async {
     try {
@@ -494,7 +495,7 @@ class NotificationProvider extends ChangeNotifier {
         body: body,
         type: type,
         data: data,
-        programId: programId,
+        eventId: eventId,
         senderName: senderName,
       );
       debugPrint('✅ Community notification sent');
@@ -523,3 +524,8 @@ class NotificationProvider extends ChangeNotifier {
     super.dispose();
   }
 }
+
+
+
+
+

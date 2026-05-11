@@ -39,14 +39,14 @@ class ReminderService {
     }).toList();
   }
   
-  Future<Map<String, dynamic>> sendProgramContributionReminders({
+  Future<Map<String, dynamic>> sendContributionReminders({
     required String communityId,
-    required String programId,
+    required String eventId,
     bool sendTest = false,
     String? testUserId,
   }) async {
     try {
-      debugPrint("⏰ Calling Cloud Function: sendProgramContributionReminders");
+      debugPrint("⏰ Calling Cloud Function: sendContributionReminders");
       
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
@@ -59,7 +59,7 @@ class ReminderService {
       
       final callData = {
         'communityId': communityId,
-        'programId': programId,
+        'eventId': eventId,
         'sendTest': sendTest,
         'testUserId': testUserId,
         'data': {
@@ -72,7 +72,7 @@ class ReminderService {
       debugPrint("📦 Call data: ${jsonEncode(callData)}");
       
       final callable = _functions.httpsCallable(
-        'sendProgramContributionReminders',
+        'sendContributionReminders',
         options: HttpsCallableOptions(timeout: Duration(seconds: 60)),
       );
       
@@ -123,3 +123,8 @@ class ReminderService {
     }
   }
 }
+
+
+
+
+

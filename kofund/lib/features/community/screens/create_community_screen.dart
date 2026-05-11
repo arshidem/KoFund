@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
-import '../../../core/constants/community_types.dart';
+import '../../../core/constants/community_Types.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/widgets/gradient_sheet_scaffold.dart';
@@ -24,10 +24,10 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _locationController = TextEditingController();
 
   String? _selectedType;
-  String? _typeError; // Add this with your other error variables
+  String? _TypeError; // Add this with your other error variables
   bool _isLoading = false;
   
-void _scrollToCommunityType() {
+void _scrollToCommunityTeventType() {
   final BuildContext currentContext = context;
   // You might need to wrap the dropdown in a KeyedSubtree
   // or find another way to scroll to it
@@ -53,7 +53,7 @@ Future<void> _createCommunity() async {
   
   // Clear all previous errors
   setState(() {
-    _typeError = null;
+    _TypeError = null;
   });
 
   // Force validate all fields
@@ -72,7 +72,7 @@ Future<void> _createCommunity() async {
   // Check community type
   if (_selectedType == null || _selectedType!.isEmpty) {
     setState(() {
-      _typeError = 'Please select a community type';
+      _TypeError = 'Please select a community type';
     });
     hasErrors = true;
   }
@@ -111,20 +111,20 @@ Future<void> _createCommunity() async {
   });
 
   try {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final communityProvider = context.read<CommunityProvider>();
 
-    if (authProvider.user == null) {
+    if (_authProvider.user == null) {
       SnackbarHelper.showError(context, 'User not authenticated');
       return;
     }
 
-    final String adminName = authProvider.getUserDisplayName;
+    final String adminName = _authProvider.getUserDisplayName;
 
     final success = await communityProvider.createCommunity(
       name: _nameController.text.trim(),
-      adminId: authProvider.user!.uid,
-      adminEmail: authProvider.user!.email,
+      adminId: _authProvider.user!.uid,
+      adminEmail: _authProvider.user!.email,
       adminName: adminName,
       type: _selectedType!,
       description: _descriptionController.text.trim().isNotEmpty 
@@ -136,12 +136,12 @@ Future<void> _createCommunity() async {
     if (success && communityProvider.currentCommunity != null) {
       final community = communityProvider.currentCommunity!;
       
-      await authProvider.setUserAsCommunityAdmin(
+      await _authProvider.setUserAsCommunityAdmin(
         communityId: community.communityId,
         communityName: community.name,
       );
 
-      await authProvider.refreshUserData();
+      await _authProvider.refreshUserData();
       if (!mounted) return;
 
       if (mounted) {
@@ -264,7 +264,7 @@ Widget _buildInputField({
   );
 }
 
-Widget _buildCommunityTypeDropdown() {
+Widget _buildCommunityTeventTypeDropdown() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -274,7 +274,7 @@ Widget _buildCommunityTypeDropdown() {
           'Community Category *',
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: _typeError != null ? Colors.red : AppColors.textPrimary(context),
+            color: _TypeError != null ? Colors.red : AppColors.textPrimary(context),
             fontSize: 14,
             letterSpacing: 0.5,
           ),
@@ -284,10 +284,10 @@ Widget _buildCommunityTypeDropdown() {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
           border: Border.all(
-            color: _typeError != null 
+            color: _TypeError != null 
                 ? Colors.red.withValues(alpha: 0.8) 
                 : AppColors.border(context),
-            width: _typeError != null ? 1.5 : 1,
+            width: _TypeError != null ? 1.5 : 1,
           ),
           color: AppColors.surface(context),
         ),
@@ -297,7 +297,7 @@ Widget _buildCommunityTypeDropdown() {
             isExpanded: true,
             icon: Icon(
               Icons.arrow_drop_down_rounded,
-              color: _typeError != null 
+              color: _TypeError != null 
                   ? Colors.red 
                   : AppColors.primary(context),
             ),
@@ -338,13 +338,13 @@ Widget _buildCommunityTypeDropdown() {
             onChanged: (value) {
               setState(() {
                 _selectedType = value;
-                _typeError = null;
+                _TypeError = null;
               });
             },
           ),
         ),
       ),
-      if (_typeError != null)
+      if (_TypeError != null)
         Padding(
           padding: const EdgeInsets.only(left: 6, top: 8),
           child: Row(
@@ -352,7 +352,7 @@ Widget _buildCommunityTypeDropdown() {
               const Icon(Icons.error_outline, color: Colors.red, size: 14),
               const SizedBox(width: 4),
               Text(
-                _typeError!,
+                _TypeError!,
                 style: const TextStyle(color: Colors.red, fontSize: 12),
               ),
             ],
@@ -450,7 +450,7 @@ _buildInputField(
     return null;
   },
 ),
-                      _buildCommunityTypeDropdown(),
+                      _buildCommunityTeventTypeDropdown(),
 
 // Description - Detailed hint
 _buildInputField(
@@ -540,8 +540,8 @@ Container(
                 '• Auto-generated unique invite code\n'
                 '• You become the community admin\n'
                 '• Invite members with the generated code\n'
-                '• Manage programs and members\n'
-                '• Choose from ${CommunityType.allTypes.length} community types',
+                '• Manage events and members\n'
+                '• Choose from ${CommunityType.allTypes.length} community Types',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.blue.shade800,
@@ -710,3 +710,8 @@ FutureBuilder<bool>(
     );
   }
 }
+
+
+
+
+

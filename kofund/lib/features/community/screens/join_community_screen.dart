@@ -189,10 +189,10 @@ Future<void> _joinCommunity() async {
     _autoJoining = true;
   });
 
-  final authProvider = context.read<AppAuthProvider>();
+  final _authProvider = context.read<AppAuthProvider>();
   final communityProvider = context.read<CommunityProvider>();
 
-  final user = authProvider.user;
+  final user = _authProvider.user;
   if (user == null) {
     SnackbarHelper.showError(context, 'User not authenticated');
     setState(() {
@@ -680,3 +680,8 @@ Widget build(BuildContext context) {
     );
   }
 }
+
+
+
+
+

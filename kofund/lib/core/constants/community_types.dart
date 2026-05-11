@@ -13,7 +13,7 @@ class CommunityType {
   static const String friends = 'Friends';
   static const String other = 'Other';
   
-  // Get all types as list
+  // Get all Types as list
   static List<String> get allTypes => [
     apartment,
     residential,
@@ -109,3 +109,8 @@ class CommunityType {
     return allTypes.contains(type);
   }
 }
+
+
+
+
+

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
 import 'package:kofund/features/community/models/community_model.dart';
-import 'package:kofund/core/constants/community_types.dart';
+import 'package:kofund/core/constants/community_Types.dart';
 import 'package:kofund/core/services/storage_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -36,10 +36,10 @@ class CommunityProvider with ChangeNotifier {
   bool _canInvite = false;
   Map<String, dynamic> _inviteStats = {};
 
-  // Monthly Program Financial Stats
-  double _monthlyProgramBalance = 0;
-  int _monthlyProgramParticipants = 0;
-  double _monthlyProgramCollected = 0;
+  // Monthly event Financial Stats
+  double _monthlBalance = 0;
+  int _monthlParticipants = 0;
+  double _monthlCollected = 0;
 
   CommunityProvider(this._communityService, this._storageService);
 
@@ -56,10 +56,10 @@ class CommunityProvider with ChangeNotifier {
   double get totalExpenses => _totalExpenses;
   double get fundBalance => _fundBalance;
   
-  // Monthly program getters
-  double get monthlyProgramBalance => _monthlyProgramBalance;
-  int get monthlyProgramParticipants => _monthlyProgramParticipants;
-  double get monthlyProgramCollected => _monthlyProgramCollected;
+  // Monthly event getters
+  double get monthlBalance => _monthlBalance;
+  int get monthlParticipants => _monthlParticipants;
+  double get monthlCollected => _monthlCollected;
   
   // Invite functionality getters
   String? get inviteLink => _inviteLink;
@@ -314,7 +314,7 @@ Future<void> regenerateInviteCode(String communityId) async {
 
       _currentCommunity = community;
       
-      // Set admin permissions for the creator
+      // Set admin permissions for the createor
       _isAdmin = true;
       _canInvite = true;
       
@@ -576,72 +576,72 @@ Future<void> regenerateInviteCode(String communityId) async {
   // FINANCIAL METHODS (Existing - Keep as is)
   // ================================================================
 
-  // 🆕 Method to load monthly program stats
-  Future<void> loadMonthlyProgramStats(String communityId) async {
+  // 🆕 Method to load monthly event stats
+  Future<void> loadMonthlStats(String communityId) async {
     try {
-      // Get all programs for the community
-      final programs = await _firestore
-          .collection('programs')
+      // Get all events for the community
+      final events = await _firestore
+          .collection('events')
           .where('communityId', isEqualTo: communityId)
           .get();
 
-      // Find the monthly payment program
-      QueryDocumentSnapshot? monthlyProgram;
+      // Find the monthly payment event
+      QueryDocumentSnapshot? monthly;
       try {
-        monthlyProgram = programs.docs.firstWhere(
-          (doc) => doc.data()['isMonthlyPaymentProgram'] == true,
+        monthly = events.docs.firstWhere(
+          (doc) => doc.data()['isMonthlyPayment'] == true,
         );
       } catch (e) {
-        monthlyProgram = null;
+        monthly = null;
       }
 
-      if (monthlyProgram != null) {
-        final programData = monthlyProgram.data();
-        final programId = monthlyProgram.id;
+      if (monthly != null) {
+        final data = monthly.data();
+        final eventId = monthly.id;
 
         // Get participants count
         final participantsSnapshot = await _firestore
             .collection('participants')
-            .where('programId', isEqualTo: programId)
+            .where('eventId', isEqualTo: eventId)
             .where('status', isEqualTo: 'joined')
             .get();
 
-        _monthlyProgramParticipants = participantsSnapshot.docs.length;
+        _monthlParticipants = participantsSnapshot.docs.length;
 
         // Get total contributions
         final contributionsSnapshot = await _firestore
             .collection('contributions')
-            .where('programId', isEqualTo: programId)
+            .where('eventId', isEqualTo: eventId)
             .get();
 
-        _monthlyProgramCollected = contributionsSnapshot.docs.fold(0.0, (sum, doc) {
+        _monthlCollected = contributionsSnapshot.docs.fold(0.0, (sum, doc) {
           return sum + (doc.data()['amount'] ?? 0).toDouble();
         });
 
         // Get expenses
         final expensesSnapshot = await _firestore
             .collection('expenses')
-            .where('programId', isEqualTo: programId)
+            .where('eventId', isEqualTo: eventId)
             .where('status', isEqualTo: 'approved')
             .get();
 
-        final monthlyProgramExpenses = expensesSnapshot.docs.fold(0.0, (sum, doc) {
+        final monthlExpenses = expensesSnapshot.docs.fold(0.0, (sum, doc) {
           return sum + (doc.data()['amount'] ?? 0).toDouble();
         });
 
-        _monthlyProgramBalance = _monthlyProgramCollected - monthlyProgramExpenses;
+        _monthlBalance = _monthlCollected - monthlExpenses;
       } else {
-        _monthlyProgramBalance = 0;
-        _monthlyProgramParticipants = 0;
-        _monthlyProgramCollected = 0;
+        _monthlBalance = 0;
+        _monthlParticipants = 0;
+        _monthlCollected = 0;
       }
 
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error loading monthly program stats: $e');
-      _monthlyProgramBalance = 0;
-      _monthlyProgramParticipants = 0;
-      _monthlyProgramCollected = 0;
+      debugPrint('❌ Error loading monthly event stats: $e');
+      _monthlBalance = 0;
+      _monthlParticipants = 0;
+      _monthlCollected = 0;
       notifyListeners();
     }
   }
@@ -659,8 +659,8 @@ Future<void> regenerateInviteCode(String communityId) async {
         // Load community members
         await loadCommunityMembers(_currentCommunity!.communityId);
         
-        // Load monthly program stats
-        await loadMonthlyProgramStats(_currentCommunity!.communityId);
+        // Load monthly event stats
+        await loadMonthlStats(_currentCommunity!.communityId);
         
         // Load invite statistics
         await getInviteStatistics(_currentCommunity!.communityId);
@@ -913,4 +913,9 @@ Future<void> regenerateInviteCode(String communityId) async {
     super.dispose();
   }
 }
+
+
+
+
+
 

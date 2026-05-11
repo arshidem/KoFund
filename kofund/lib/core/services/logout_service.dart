@@ -16,8 +16,8 @@ class LogoutService {
       _clearAllProviderStates(context);
       
       // 2. Get auth provider and sign out from Firebase
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      await authProvider.signOut(context);
+      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      await _authProvider.signOut(context);
       
       // 3. Clear navigation stack completely
       Navigator.of(context).pushNamedAndRemoveUntil(
@@ -47,7 +47,7 @@ class LogoutService {
       Provider.of<MemberProvider>(context, listen: false).clearAllData();
       
       // Add other providers as needed
-      // Provider.of<ProgramProvider>(context, listen: false).clearAllData();
+      // Provider.of<EventProvider>(context, listen: false).clearAllData();
       // Provider.of<ContributionProvider>(context, listen: false).clearAllData();
       
       debugPrint('✅ All provider states cleared');
@@ -56,4 +56,9 @@ class LogoutService {
     }
   }
 }
+
+
+
+
+
 

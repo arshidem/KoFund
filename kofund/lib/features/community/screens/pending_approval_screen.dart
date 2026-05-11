@@ -31,8 +31,8 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   void _checkUserApprovalOnLoad() async {
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
-    final authProvider = context.read<AppAuthProvider>();
-    if (authProvider.user?.isApproved == true) {
+    final _authProvider = context.read<AppAuthProvider>();
+    if (_authProvider.user?.isApproved == true) {
       _navigateToDashboard();
     }
   }
@@ -46,11 +46,11 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   Future<void> _checkStatus() async {
     setState(() => _isCheckingStatus = true);
     try {
-      final authProvider = context.read<AppAuthProvider>();
-      await authProvider.refreshUserData();
+      final _authProvider = context.read<AppAuthProvider>();
+      await _authProvider.refreshUserData();
       if (!mounted) return;
       
-      if (authProvider.user?.isApproved == true) {
+      if (_authProvider.user?.isApproved == true) {
         _navigateToDashboard();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,3 +152,8 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     );
   }
 }
+
+
+
+
+

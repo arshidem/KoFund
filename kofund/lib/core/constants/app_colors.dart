@@ -6,10 +6,10 @@ class AppColors {
   static const lightPrimary = Color(0xFF00BFA6);
   static const lightPrimaryGradientStart = Color(0xFF00C6A2);
   static const lightPrimaryGradientEnd = Color(0xFF00E3C3);
-  static const lightBackground = Color(0xFFF0F8F5);
+  static const lightBackground = Color(0xFFF8F9FA);
   static const lightCard = Color(0xFFFFFFFF);
   static const lightSurface = Color(0xFFFDFDFD);
-  static const lightBorder = Color(0xFFE2E8F0);
+  static const lightBorder = Color(0xFFE9ECEF);
   static const lightTextPrimary = Color(0xFF1A2E2A);
   static const lightTextSecondary = Color(0xFF5F6B6B);
   static const lightTextTertiary = Color(0xFF8A9A9A);
@@ -26,12 +26,12 @@ class AppColors {
 
   /// 🌑 DARK THEME
   static const darkPrimary = Color(0xFF00E3C3);
-  static const darkPrimaryGradientStart = Color(0xFF00796B);
-  static const darkPrimaryGradientEnd = Color(0xFF004D40);
-  static const darkBackground = Color(0xFF0D1B1A);
-  static const darkCard = Color(0xFF162626);
-  static const darkSurface = Color(0xFF1B2E2E);
-  static const darkBorder = Color(0xFF2D3D3D);
+  static const darkPrimaryGradientStart = Color(0xFF1D2329);
+  static const darkPrimaryGradientEnd = Color(0xFF0B0E11);
+  static const darkBackground = Color(0xFF0B0E11);
+  static const darkCard = Color(0xFF151A1F);
+  static const darkSurface = Color(0xFF1D2329);
+  static const darkBorder = Color(0xFF262D35);
   static const darkTextPrimary = Color(0xFFE0F2EF);
   static const darkTextSecondary = Color(0xFF9EB6B4);
   static const darkTextTertiary = Color(0xFF6B8A87);
@@ -113,13 +113,16 @@ class AppColors {
       Theme.of(context).brightness == Brightness.dark 
           ? const LinearGradient(
               colors: [darkPrimaryGradientStart, darkPrimaryGradientEnd],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             )
           : const LinearGradient(
-              colors: [lightPrimaryGradientStart, lightPrimaryGradientEnd],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFE8F5F2), // Very light teal
+                Color(0xFFF4FAF9), // Almost white
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             );
 
   /// Static gradients for direct usage
@@ -135,3 +138,8 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 }
+
+
+
+
+

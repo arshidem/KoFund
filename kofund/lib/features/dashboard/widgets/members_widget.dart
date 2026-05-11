@@ -7,7 +7,7 @@ import 'package:kofund/features/members/providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/members/screens/all_members_screen.dart';
-import 'package:kofund/features/members/screens/member_details_screen.dart';
+import 'package:kofund/features/members/screens/member_profile_screen.dart';
 
 class MembersWidget extends StatefulWidget {
   const MembersWidget({
@@ -46,8 +46,8 @@ class _MembersWidgetState extends State<MembersWidget> {
     if (!_isInitialized) return;
     
     // Listen for auth changes - but only when actually different
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.read<AppAuthProvider>();
+    final user = _authProvider.user;
     
     final newUserId = user?.uid;
     final newCommunityId = user?.communityId;
@@ -106,8 +106,8 @@ class _MembersWidgetState extends State<MembersWidget> {
   void _checkAuthAndLoadData() {
     if (!mounted) return;
     
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.read<AppAuthProvider>();
+    final user = _authProvider.user;
     
     if (user == null) {
       debugPrint('❌ DEBUG: No user found in MembersWidget');
@@ -179,8 +179,8 @@ class _MembersWidgetState extends State<MembersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.watch<AppAuthProvider>();
+    final user = _authProvider.user;
     
     return _buildMembersContent(user);
   }
@@ -353,7 +353,7 @@ SizedBox(height: 4),
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => MemberDetailsScreen(member: member),
+              builder: (_) => MemberProfileScreen(member: member),
             ),
           );
         },
@@ -394,7 +394,7 @@ SizedBox(height: 4),
                       children: [
                         Expanded(
                           child: Text(
-                            member.displayName ?? 'Unnamed Member',
+                            member.displayName ?? 'Unnnamed Member',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -426,7 +426,7 @@ SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Admin badge (compact - matching programs widget)
+                  // Admin badge (compact - matching events widget)
                   if (member.isAdmin)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -693,4 +693,9 @@ SizedBox(height: 4),
     return '?';
   }
 }
+
+
+
+
+
 

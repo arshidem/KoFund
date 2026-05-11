@@ -9,7 +9,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import '../providers/member_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'member_details_screen.dart';
+import 'member_profile_screen.dart';
 import 'package:kofund/core/skeleton/member_list_skeleton.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:badges/badges.dart' as badges;
@@ -19,7 +19,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
 
-enum MemberTypeFilter { all, real, virtual }
+enum MemberTeventTypeFilter { all, real, virtual }
 
 // =================== MAIN SCREEN ===================
 class AllMembersScreen extends StatelessWidget {
@@ -49,6 +49,7 @@ class _AllMembersScreenBody extends StatefulWidget {
 class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final RefreshController _refreshController = RefreshController(
     initialRefresh: false,
   );
@@ -56,7 +57,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   int _selectedTab = 0; // 0 = All Members, 1 = Pending Approvals
   bool _isSelectionMode = false;
   final Set<String> _selectedMemberIds = {};
-  MemberTypeFilter _memberTypeFilter = MemberTypeFilter.all;
+  MemberTeventTypeFilter _memberTeventTypeFilter = MemberTeventTypeFilter.all;
 
   // Load tracking
   bool _isInitialLoad = true;
@@ -126,6 +127,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     _searchController.dispose();
     _refreshController.dispose();
     _tabAnimationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -134,8 +136,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     super.didChangeDependencies();
     print('🔄 DEBUG: didChangeDependencies called');
 
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.read<AppAuthProvider>();
+    final user = _authProvider.user;
 
     // Check if user has changed
     if (user != null && user.uid != _currentUserId) {
@@ -181,8 +183,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   void _checkAuthAndLoadMembers() {
     if (!mounted) return;
 
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.read<AppAuthProvider>();
+    final user = _authProvider.user;
 
     print(
       '🔍 DEBUG: Checking auth state - UID: ${user?.uid}, Community: ${user?.communityId}, Approved: ${user?.isApproved}',
@@ -718,7 +720,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   void _navigateToMemberDetails(UserModel member) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MemberDetailsScreen(member: member)),
+      MaterialPageRoute(builder: (_) => MemberProfileScreen(member: member)),
     );
 
     if (mounted) {
@@ -756,11 +758,11 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         : memberProvider.searchMembers(_searchQuery);
 
     // Apply type filter
-    if (_memberTypeFilter == MemberTypeFilter.real) {
+    if (_memberTeventTypeFilter == MemberTeventTypeFilter.real) {
       displayedMembers = displayedMembers
           .where((m) => m.isVirtualUser != true)
           .toList();
-    } else if (_memberTypeFilter == MemberTypeFilter.virtual) {
+    } else if (_memberTeventTypeFilter == MemberTeventTypeFilter.virtual) {
       displayedMembers = displayedMembers
           .where((m) => m.isVirtualUser == true)
           .toList();
@@ -769,6 +771,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     return Scaffold(
       backgroundColor: AppColors.background(context),
       body: NestedScrollView(
+        controller: _scrollController,
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [_buildSliverAppBar(context, isAdmin, displayedMembers)];
         },
@@ -785,68 +788,139 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     bool isAdmin,
     List<UserModel> displayedMembers,
   ) {
-    // Search row: 52, Padding bottom: 12 => 64 base height
-    // If admin, add gap (15) and filter bar (52) => 67 extra height
-    // Plus bottom rounded container: 24
-    final double bottomContentHeight = isAdmin ? (64.0 + 67.0) : 64.0;
-    final double totalBottomHeight = bottomContentHeight + 24.0;
-
-    // Dynamic collapsed/expanded calculation
-    const double toolbarHeight = 64.0;
-    final double collapsedHeight = toolbarHeight + totalBottomHeight;
-    final double expandedHeight = collapsedHeight + 36.0;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    final double expandedHeightConfig = isAdmin ? 220.0 : 160.0;
+    final double collapsedHeightConfig = 72.0 + 24.0 + (isAdmin ? 52.0 : 0.0); 
 
     return SliverAppBar(
-      expandedHeight: expandedHeight,
-      toolbarHeight: toolbarHeight,
+      expandedHeight: expandedHeightConfig,
+      toolbarHeight: collapsedHeightConfig,
       floating: false,
       pinned: true,
       stretch: true,
       elevation: 0,
-      centerTitle: true,
-      backgroundColor: Colors.transparent, // Let flexibleSpace handle color
+      backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
       leading: widget.forceBackButton == true
           ? IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
               onPressed: () => Navigator.pop(context),
             )
           : null,
-      // Dynamic Title using flexibleSpace for scaling effect
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
-          final double currentHeight = top;
-
-          final double progress =
-              ((currentHeight - collapsedHeight) /
-                      (expandedHeight - collapsedHeight))
-                  .clamp(0.0, 1.0);
-
-          // Font size: 20 at expanded, 18 at collapsed
-          final double fontSize = 18 + (2 * progress);
-
+          final double expandedHeight = expandedHeightConfig + statusBarHeight;
+          final double collapsedHeight = collapsedHeightConfig + statusBarHeight;
+          
+          final double rawProgress = (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+          final double progress = rawProgress.clamp(0.0, 1.0);
+          
+          final bool isDark = Theme.of(context).brightness == Brightness.dark;
+          
+          final double titleTop = statusBarHeight + 16 + (4 * progress);
+          final double titleFontSize = 24 + (4 * progress);
+          
           return Stack(
             fit: StackFit.expand,
             children: [
-              // 🔋 PERSISTENT GRADIENT BACKGROUND
               Container(
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient(context),
+                  gradient: isDark 
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF1A2E2E),
+                            Color(0xFF0D1B1A),
+                          ],
+                        )
+                      : null,
                 ),
               ),
-
-              FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground],
-                centerTitle: true,
-                titlePadding: EdgeInsets.only(bottom: totalBottomHeight + 10),
-                title: Text(
-                  'Members',
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: -0.5 - (0.5 * progress),
+              
+              
+              Positioned(
+                top: titleTop,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Members',
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.w800,
+                        color: isDark 
+                            ? Colors.white 
+                            : AppColors.textPrimary(context),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              
+              Positioned(
+                top: statusBarHeight + 10,
+                right: 24.0,
+                child: Opacity(
+                  opacity: (0.5 - progress).clamp(0.0, 0.5) * 2.0,
+                  child: IgnorePointer(
+                    ignoring: progress > 0.5,
+                    child: _buildCollapsedActionIcons(context),
+                  ),
+                ),
+              ),
+              
+              Positioned(
+                bottom: 30.0, 
+                left: 24.0,
+                right: 24.0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Opacity(
+                      opacity: (progress - 0.5).clamp(0.0, 0.5) * 2.0,
+                      child: IgnorePointer(
+                        ignoring: progress < 0.5,
+                        child: _buildExpandedSearchRow(context, displayedMembers, isAdmin),
+                      ),
+                    ),
+                    if (isAdmin) ...[
+                      const SizedBox(height: 15),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        child: _isSelectionMode
+                            ? _buildSelectionControls(displayedMembers, isAdmin)
+                            : _buildSegmentedFilterBar(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.background(context),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(50),
+                      topRight: Radius.circular(50),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -854,56 +928,190 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
           );
         },
       ),
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(totalBottomHeight),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppDimensions.screenPaddingHorizontal,
-                0,
-                AppDimensions.screenPaddingHorizontal,
-                12,
-              ),
-              child: Column(
-                children: [
-                  _buildModernSearchBar(),
-                  if (isAdmin) ...[
-                    const SizedBox(height: 15),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      child: _isSelectionMode
-                          ? _buildSelectionControls(displayedMembers, isAdmin)
-                          : _buildSegmentedFilterBar(),
-                    ),
-                  ],
-                ],
-              ),
+    );
+  }
+
+  Widget _buildCollapsedActionIcons(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildCircularIconButton(
+          context, 
+          icon: Icons.search, 
+          onTap: () {
+            _scrollController.animateTo(
+              0.0, 
+              duration: const Duration(milliseconds: 300), 
+              curve: Curves.easeOut,
+            );
+          }
+        ),
+        const SizedBox(width: 8),
+        _buildFilterIconButton(context, collapsed: true),
+      ],
+    );
+  }
+
+  Widget _buildCircularIconButton(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Center(
+            child: Icon(
+              icon,
+              color: AppColors.textSecondary(context),
+              size: 24,
             ),
-            Container(
-              height: 24,
-              decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-                  topRight: Radius.circular(AppDimensions.radiusExtraLarge),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildFilterIconButton(BuildContext context, {bool collapsed = false}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final int filterCount = _memberTeventTypeFilter != MemberTeventTypeFilter.all ? 1 : 0;
+    
+    return Container(
+      width: collapsed ? 44 : 52,
+      height: collapsed ? 44 : 52,
+      decoration: collapsed
+          ? null
+          : BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.card(context).withValues(alpha: 0.8),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.border(context),
+                width: 1,
+              ),
+            ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => _openFilterSheet(context),
+          child: Center(
+            child: badges.Badge(
+              showBadge: filterCount > 0,
+              badgeContent: Text(
+                filterCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+              badgeStyle: badges.BadgeStyle(
+                badgeColor: AppColors.error(context),
+                padding: const EdgeInsets.all(4),
+                elevation: 0,
+              ),
+              position: badges.BadgePosition.topEnd(top: -6, end: -6),
+              child: Icon(
+                Icons.tune,
+                color: collapsed 
+                    ? AppColors.textSecondary(context) 
+                    : (isDark ? Colors.white : Colors.black),
+                size: collapsed ? 24 : 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedSearchRow(BuildContext context, List<UserModel> displayedMembers, bool isAdmin) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color searchBg = isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.card(context).withValues(alpha: 0.8);
+    final Color searchBorder = isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.border(context);
+    final Color textColor = isDark ? Colors.white : AppColors.textPrimary(context);
+    final Color iconColorVal = isDark ? Colors.white70 : Colors.black;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 52,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: searchBg,
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: searchBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+                letterSpacing: 0.3,
+              ),
+              cursorColor: textColor,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                hintText: 'Search members...',
+                filled: false,
+                hintStyle: TextStyle(
+                  color: iconColorVal,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: iconColorVal,
+                  size: 20,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: iconColorVal,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        _buildFilterIconButton(context, collapsed: false),
+      ],
+    );
+  }
+
   Widget _buildSegmentedFilterBar() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 52,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.card(context).withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.border(context)),
       ),
       child: Stack(
         children: [
@@ -920,7 +1128,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                       width: width,
                       height: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : AppColors.primary(context),
                         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         boxShadow: [
                           BoxShadow(
@@ -949,7 +1157,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   }
 
   Widget _buildFilterTabItem(String label, int index) {
-    final isSelected = _selectedTab == index;
+    final bool isSelected = _selectedTab == index;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(
         onTap: () => _onTabTap(index),
@@ -962,8 +1171,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: isSelected
-                  ? AppColors.primary(context)
-                  : Colors.white.withValues(alpha: 0.8),
+                  ? (isDark ? AppColors.primary(context) : Colors.white)
+                  : (isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.textSecondary(context)),
               letterSpacing: 0.5,
             ),
           ),
@@ -979,7 +1188,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   ) {
     return Container(
       width: double.infinity,
-      color: AppColors.card(context),
+      color: AppColors.background(context),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -987,7 +1196,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         slivers: [
           CupertinoSliverRefreshControl(onRefresh: () async => _onRefresh()),
           SliverPadding(
-            padding: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.only(top: 0),
             sliver: _buildMembersListWithFade(isAdmin, currentUser, displayedMembers),
           ),
           const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
@@ -1017,11 +1226,11 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       }
 
       // ✅ APPLY FILTERS TO PENDING MEMBERS
-      if (_memberTypeFilter == MemberTypeFilter.real) {
+      if (_memberTeventTypeFilter == MemberTeventTypeFilter.real) {
         pendingMembers = pendingMembers
             .where((m) => m.isVirtualUser != true)
             .toList();
-      } else if (_memberTypeFilter == MemberTypeFilter.virtual) {
+      } else if (_memberTeventTypeFilter == MemberTeventTypeFilter.virtual) {
         pendingMembers = pendingMembers
             .where((m) => m.isVirtualUser == true)
             .toList();
@@ -1118,117 +1327,6 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     );
   }
 
-  Widget _buildModernSearchBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-                letterSpacing: 0.3,
-              ),
-              cursorColor: Colors.white,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                hintText: 'Search members...',
-                hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Colors.white70,
-                  size: 20,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.white70,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: () => _openFilterSheet(context),
-              child: Center(
-                child: badges.Badge(
-                  showBadge: false, // track count if needed
-                  child: const Icon(Icons.tune, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   // ✅ SEARCH HEADER
   Widget _buildSearchHeader(int resultCount) {
@@ -1405,7 +1503,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         Center(
           child: Text(
             _searchQuery.isNotEmpty
-                ? 'No matches for "$_searchQuery"'
+                ? 'No results matching your search for "$_searchQuery"'
                 : 'When members join and get approved,\nthey will appear here.',
             style: TextStyle(color: AppColors.textSecondary(context)),
             textAlign: TextAlign.center,
@@ -1443,7 +1541,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     return Material(
       color: isSelected
           ? AppColors.primary(context).withValues(alpha: 0.12)
-          : AppColors.card(context),
+          : AppColors.background(context),
       child: InkWell(
         onTap: () {
           if (_selectedTab == 1) {
@@ -1505,7 +1603,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                               : Colors.grey[400],
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.card(context),
+                            color: AppColors.background(context),
                             width: 2,
                           ),
                         ),
@@ -1736,30 +1834,30 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                     children: [
                       _buildFilterChip(
                         label: 'All Members',
-                        isActive: _memberTypeFilter == MemberTypeFilter.all,
+                        isActive: _memberTeventTypeFilter == MemberTeventTypeFilter.all,
                         onTap: () {
                           setState(
-                            () => _memberTypeFilter = MemberTypeFilter.all,
+                            () => _memberTeventTypeFilter = MemberTeventTypeFilter.all,
                           );
                           setModalState(() {});
                         },
                       ),
                       _buildFilterChip(
                         label: 'Real Users',
-                        isActive: _memberTypeFilter == MemberTypeFilter.real,
+                        isActive: _memberTeventTypeFilter == MemberTeventTypeFilter.real,
                         onTap: () {
                           setState(
-                            () => _memberTypeFilter = MemberTypeFilter.real,
+                            () => _memberTeventTypeFilter = MemberTeventTypeFilter.real,
                           );
                           setModalState(() {});
                         },
                       ),
                       _buildFilterChip(
                         label: 'Virtual Users',
-                        isActive: _memberTypeFilter == MemberTypeFilter.virtual,
+                        isActive: _memberTeventTypeFilter == MemberTeventTypeFilter.virtual,
                         onTap: () {
                           setState(
-                            () => _memberTypeFilter = MemberTypeFilter.virtual,
+                            () => _memberTeventTypeFilter = MemberTeventTypeFilter.virtual,
                           );
                           setModalState(() {});
                         },
@@ -1842,3 +1940,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     );
   }
 }
+
+
+
+
+

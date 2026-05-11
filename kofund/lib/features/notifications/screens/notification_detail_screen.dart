@@ -7,16 +7,16 @@ import 'package:kofund/core/utils/notification_navigator.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/features/participants/providers/participant_provider.dart';
 import 'package:kofund/features/participants/models/participant_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'package:kofund/features/programs/providers/program_provider.dart';
+import 'package:kofund/features/events/providers/event_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
-import 'package:kofund/features/programs/utils/contribution_receipt_image.dart';
+import 'package:kofund/features/events/utils/contribution_receipt_image.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
   const NotificationDetailScreen({super.key});
@@ -50,13 +50,13 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       provider.markAsRead(notification.id);
     }
 
-    // Check join status for program announcements
-    final programId =
-        notification.programId ?? notification.data['programId']?.toString();
+    // Check join status for event announcements
+    final eventId =
+        notification.eventId ?? notification.data['eventId']?.toString();
     if (notification.type == NotificationType.announcement &&
-        programId != null &&
-        programId.isNotEmpty) {
-      await _checkJoinStatus(programId);
+        eventId != null &&
+        eventId.isNotEmpty) {
+      await _checkJoinStatus(eventId);
     }
 
     // Check pending user status
@@ -95,7 +95,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     }
   }
 
-  Future<void> _checkJoinStatus(String programId) async {
+  Future<void> _checkJoinStatus(String eventId) async {
     final auth = context.read<AppAuthProvider>();
     final participantProvider = context.read<ParticipantProvider>();
     final uid = auth.user?.uid;
@@ -103,7 +103,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
     try {
       final participants =
-          await participantProvider.streamProgramParticipants(programId).first;
+          await participantProvider.streamEventParticipants(eventId).first;
       final joined =
           participants.any((p) => p.userId == uid && p.status == 'joined');
       if (mounted) setState(() => _hasAlreadyJoined = joined);
@@ -112,10 +112,10 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     }
   }
 
-  Future<void> _joinProgram(String programId) async {
+  Future<void> _joinEvent(String eventId) async {
     final auth = context.read<AppAuthProvider>();
     final participantProvider = context.read<ParticipantProvider>();
-    final programProvider = context.read<ProgramProvider>();
+    final eventProvider = context.read<EventProvider>();
     final currentUser = auth.user;
     if (currentUser == null) return;
 
@@ -123,46 +123,46 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     HapticHelper.medium();
 
     try {
-      final program =
-          await programProvider.getProgramById(programId).first;
-      if (program == null) throw Exception('Program not found');
+      final event =
+          await eventProvider.getEventById(eventId).first;
+      if (event == null) throw Exception('event not found');
 
       final participants =
-          await participantProvider.streamProgramParticipants(programId).first;
+          await participantProvider.streamEventParticipants(eventId).first;
 
-      final isFull = program.participantType == 'fixed' &&
-          participants.length >= program.maxParticipants;
+      final isFull = event.participantType == 'fixed' &&
+          participants.length >= event.maxParticipants;
       if (isFull) {
-        SnackbarHelper.showError(context, 'This program is full!');
+        SnackbarHelper.showError(context, 'This event is full!');
         return;
       }
 
       final alreadyJoined = participants
           .any((p) => p.userId == currentUser.uid && p.status == 'joined');
       if (alreadyJoined) {
-        SnackbarHelper.showWarning(context, 'You already joined this program');
+        SnackbarHelper.showWarning(context, 'You already joined this event');
         setState(() => _hasAlreadyJoined = true);
         return;
       }
 
       final participant = ParticipantModel(
         participantId: '',
-        programId: programId,
+        eventId: eventId,
         userId: currentUser.uid,
         userName: currentUser.displayName ?? 'User',
         userEmail: currentUser.email,
-        communityId: program.communityId,
+        communityId: event.communityId,
         joinedAt: DateTime.now(),
         status: 'joined',
-        contributionPaid: program.suggestedContribution != null ? 0 : null,
-        hasPaidContribution: program.suggestedContribution == null,
+        contributionPaid: event.suggestedContribution != null ? 0 : null,
+        hasPaidContribution: event.suggestedContribution == null,
       );
 
-      await participantProvider.joinProgram(participant);
+      await participantProvider.joinEvent(participant);
       HapticHelper.success();
       if (mounted) {
         setState(() => _hasAlreadyJoined = true);
-        SnackbarHelper.showSuccess(context, 'Successfully joined the program! 🎉');
+        SnackbarHelper.showSuccess(context, 'Successfully joined the event! 🎉');
       }
     } catch (e) {
       if (mounted) SnackbarHelper.showError(context, 'Failed to join: $e');
@@ -171,7 +171,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     }
   }
 
-  Future<void> _fetchContributionAndShowReceipt(String contributionId) async {
+  Future<void> _fetchContributionAndShowReceipt(String contributionId, String title) async {
     setState(() => _isFetchingReceipt = true);
     HapticHelper.light();
 
@@ -190,7 +190,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         context: context,
         contribution: contributionModel,
         contributorName: contributionModel.contributorName,
-        programName: contributionModel.programName ?? 'Program',
+        name: title,
       );
     } catch (e) {
       if (mounted) {
@@ -207,11 +207,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         ModalRoute.of(context)!.settings.arguments as AppNotification;
     final provider = context.read<NotificationProvider>();
 
-    final programId =
-        notification.programId ?? notification.data['programId']?.toString();
-    final isProgramAnnouncement = notification.type == NotificationType.announcement &&
-        programId != null &&
-        programId.isNotEmpty;
+    final eventId =
+        notification.eventId ?? notification.data['eventId']?.toString();
+    final isEventAnnouncement = notification.type == NotificationType.announcement &&
+        eventId != null &&
+        eventId.isNotEmpty;
 
     return GradientSheetScaffold(
       title: 'Notification',
@@ -265,7 +265,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Title & Time
+            // Ttitle & Time
             Text(
               notification.title,
               textAlign: TextAlign.center,
@@ -312,10 +312,10 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               ),
             ),
 
-            // Program Announcement Join Card
-            if (isProgramAnnouncement) ...[
+            // event Announcement Join Card
+            if (isEventAnnouncement) ...[
               const SizedBox(height: 28),
-              _buildProgramJoinCard(context, notification, programId),
+              _buildEventJoinCard(context, notification, eventId),
             ],
 
             // Additional Details
@@ -346,11 +346,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 
-  // ── Program Join Card ────────────────────────────────────────────────────
-  Widget _buildProgramJoinCard(
+  // ── event Join Card ────────────────────────────────────────────────────
+  Widget _buildEventJoinCard(
     BuildContext context,
     AppNotification notification,
-    String programId,
+    String eventId,
   ) {
     final primary = AppColors.primary(context);
 
@@ -385,7 +385,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'New Program Available!',
+                  'New event Available!',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -412,7 +412,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           else if (_hasAlreadyJoined == true)
             _buildJoinedBadge(context)
           else
-            _buildJoinButtons(context, programId),
+            _buildJoinButtons(context, eventId),
         ],
       ),
     );
@@ -433,7 +433,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
           const SizedBox(width: 8),
           Text(
-            'You\'ve joined this program',
+            'You\'ve joined this event',
             style: TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.w700,
@@ -445,18 +445,18 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 
-  Widget _buildJoinButtons(BuildContext context, String programId) {
+  Widget _buildJoinButtons(BuildContext context, String eventId) {
     final primary = AppColors.primary(context);
     return Row(
       children: [
-        // View Program button (outline)
+        // View event button (outline)
         Expanded(
           child: OutlinedButton(
             onPressed: () {
               HapticHelper.light();
               NotificationNavigator.handleNotificationTap(context, {
                 'type': 'announcement',
-                'programId': programId,
+                'eventId': eventId,
               });
             },
             style: OutlinedButton.styleFrom(
@@ -482,7 +482,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: _isJoining ? null : () => _joinProgram(programId),
+            onPressed: _isJoining ? null : () => _joinEvent(eventId),
             style: ElevatedButton.styleFrom(
               backgroundColor: primary,
               foregroundColor: Colors.white,
@@ -508,7 +508,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                       Icon(Icons.add_rounded, size: 18),
                       SizedBox(width: 6),
                       Text(
-                        'Join Program',
+                        'Join event',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 15,
@@ -593,16 +593,15 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       );
     }
 
-    // 2. For non-announcement types that have a programId → "View Program" button
+    // 2. For non-announcement Types that have a eventId → "View event" button
     // 🆕 Exclude approval type as per user request (no redundant "Open Community" button)
     if (notification.type != NotificationType.announcement &&
         notification.type != NotificationType.approval && 
         _canTakeAction(notification)) {
-      final programId = notification.programId ??
-          notification.data['programId']?.toString();
-      String buttonLabel = 'View Program →';
+      final eventId = notification.eventId ?? notification.data['eventId']?.toString();
+      String buttonLabel = 'View event →';
       if (notification.deepLink != null ||
-          (programId != null && programId.isNotEmpty)) {
+          (eventId != null && eventId.isNotEmpty)) {
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -611,7 +610,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               NotificationNavigator.handleNotificationTap(context, {
                 'type': notification.type.toString(),
                 'deepLink': notification.deepLink,
-                'programId': programId ?? '',
+                'eventId': eventId ?? '',
                 ...notification.data,
               });
             },
@@ -649,7 +648,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
           child: ElevatedButton.icon(
             onPressed: _isFetchingReceipt
                 ? null
-                : () => _fetchContributionAndShowReceipt(contributionId),
+                : () => _fetchContributionAndShowReceipt(contributionId, notification.title),
             icon: _isFetchingReceipt
                 ? const SizedBox(
                     width: 20,
@@ -697,11 +696,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       ),
       child: Column(
         children: [
-          _buildSummaryRow(context, Icons.account_balance_wallet_rounded, 'Program', data['programName']?.toString() ?? 'General'),
+          _buildSummaryRow(context, Icons.account_balance_wallet_rounded, 'event', data['eventName']?.toString() ?? 'General'),
           const Divider(height: 24, thickness: 0.5),
           _buildSummaryRow(context, Icons.calendar_month_rounded, 'Period', data['period']?.toString() ?? 'General'),
           const Divider(height: 24, thickness: 0.5),
-          _buildSummaryRow(context, Icons.payments_rounded, 'Amount', data['amountRecorded']?.toString() ?? '₹0'),
+          _buildSummaryRow(context, Icons.payments_rounded, 'Amount', data['aamountRecorded']?.toString() ?? '₹0'),
           const Divider(height: 24, thickness: 0.5),
           
           if (data['targetAmount'] != null) ...[
@@ -776,7 +775,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       'timestamp',
       'senderId',
       'communityId',
-      'programId',
+      'eventId',
       'senderName', // 🆕 Hide sender name if it's generic
       'title',
       'body',
@@ -789,19 +788,18 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (lowerKey == 'id' || lowerKey.endsWith('id') || lowerKey.contains('_id') || lowerKey == 'pendinguserid' || lowerKey == 'contributionid') return true;
     
     // 🆕 Hide fields already in summary
-    if (lowerKey == 'programname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'amountrecorded' || lowerKey == 'targetamount' || lowerKey == 'recordedby') return true;
+    if (lowerKey == 'eventname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'aamountrecorded' || lowerKey == 'targetaamount' || lowerKey == 'recordedby') return true;
 
     return false;
   }
 
   bool _canTakeAction(AppNotification notification) {
     final type = notification.type.toString();
-    final programId = notification.programId ??
-        notification.data['programId']?.toString();
+    final eventId = notification.eventId ?? notification.data['eventId']?.toString();
     return type.contains('contribution') ||
         type.contains('reminder') ||
         type.contains('approval') ||
-        (programId != null && programId.isNotEmpty);
+        (eventId != null && eventId.isNotEmpty);
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -926,3 +924,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 }
+
+
+
+
+

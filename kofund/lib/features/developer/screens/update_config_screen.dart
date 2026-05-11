@@ -111,7 +111,7 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('Version Control'),
+                  _buildSectionTtitle('Version Control'),
                   _buildTextField(
                     controller: _latestVersionController,
                     label: 'Latest Version (e.g., 1.2.0)',
@@ -129,7 +129,7 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
                     hint: 'Versions older than this will be FORCED to update',
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Download & Messaging'),
+                  _buildSectionTtitle('Download & Messaging'),
                   _buildTextField(
                     controller: _downloadUrlController,
                     label: 'Download URL (APK Link)',
@@ -165,7 +165,7 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTtitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
@@ -216,3 +216,8 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
     );
   }
 }
+
+
+
+
+

@@ -17,7 +17,7 @@ class ExpenseProvider with ChangeNotifier {
   });
 
   List<ExpenseModel> _expenses = [];
-  List<ExpenseModel> _programExpenses = [];
+  List<ExpenseModel> _EventExpenses = [];
   bool _isLoading = false;
   final Map<String, double> _expenseTotalsCache = {};
   
@@ -26,7 +26,7 @@ class ExpenseProvider with ChangeNotifier {
   final Duration _cacheTTL = const Duration(minutes: 5);
 
   List<ExpenseModel> get expenses => _expenses;
-  List<ExpenseModel> get programExpenses => _programExpenses;
+  List<ExpenseModel> get EventExpenses => _EventExpenses;
   bool get isLoading => _isLoading;
 
   /// Create new expense
@@ -37,10 +37,10 @@ class ExpenseProvider with ChangeNotifier {
         throw Exception('User must be logged in to add expenses');
       }
 
-      // ✅ Check if user is in the program
-      final isInProgram = await userService.isUserInProgram(currentUser.uid, expense.programId);
-      if (!isInProgram) {
-        throw Exception('You must be a participant in this program to add expenses');
+      // ✅ Check if user is in the event
+      final isInEvent = await userService.isUserInEvent(currentUser.uid, expense.eventId);
+      if (!isInEvent) {
+        throw Exception('You must be a participant in this event to add expenses');
       }
 
       await expenseService.createExpense(expense);
@@ -77,13 +77,13 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
-  /// Load expenses for a program
-  Future<void> loadProgramExpenses(String programId, {bool forceRefresh = false}) async {
+  /// Load expenses for a event
+  Future<void> loadEventExpenses(String eventId, {bool forceRefresh = false}) async {
     // 🚀 OPTIMIZATION: Check cache
-    if (!forceRefresh && _listCache.containsKey('program_$programId')) {
-      final cached = _listCache['program_$programId']!;
+    if (!forceRefresh && _listCache.containsKey('event_$eventId')) {
+      final cached = _listCache['event_$eventId']!;
       if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
-        _programExpenses = cached.data;
+        _EventExpenses = cached.data;
         notifyListeners();
         return;
       }
@@ -92,10 +92,10 @@ class ExpenseProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _programExpenses = await expenseService.getExpensesByProgram(programId);
-      _listCache['program_$programId'] = (data: _programExpenses, timestamp: DateTime.now());
+      _EventExpenses = await expenseService.getExpensesByEvent(eventId);
+      _listCache['event_$eventId'] = (data: _EventExpenses, timestamp: DateTime.now());
     } catch (e) {
-      debugPrint('Error loading program expenses: $e');
+      debugPrint('Error loading event expenses: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -127,11 +127,11 @@ Future<void> updateExpense(
     
     if (index != -1) {
       // Update logic...
-      final programIndex = _programExpenses.indexWhere(
+      final EventIndex = _EventExpenses.indexWhere(
         (e) => e.expenseId == expense.expenseId
       );
-      if (programIndex != -1) {
-        _programExpenses[programIndex] = expense;
+      if (EventIndex != -1) {
+        _EventExpenses[EventIndex] = expense;
       }
       
       _expenses[index] = expense;
@@ -200,11 +200,11 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
             _expenses[expenseIndex].copyWith(status: status);
       }
 
-      final programExpenseIndex =
-          _programExpenses.indexWhere((expense) => expense.expenseId == expenseId);
-      if (programExpenseIndex != -1) {
-        _programExpenses[programExpenseIndex] =
-            _programExpenses[programExpenseIndex].copyWith(status: status);
+      final EventExpenseIndex =
+          _EventExpenses.indexWhere((expense) => expense.expenseId == expenseId);
+      if (EventExpenseIndex != -1) {
+        _EventExpenses[EventExpenseIndex] =
+            _EventExpenses[EventExpenseIndex].copyWith(status: status);
       }
 
       notifyListeners();
@@ -220,25 +220,25 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
       _expenseTotalsCache.clear();
       _listCache.clear(); // Clear list cache on change
       _expenses.removeWhere((expense) => expense.expenseId == expenseId);
-      _programExpenses.removeWhere((expense) => expense.expenseId == expenseId);
+      _EventExpenses.removeWhere((expense) => expense.expenseId == expenseId);
       notifyListeners();
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Cached total for a program
-  Future<double> getProgramTotalExpenses(String programId) async {
-    final cacheKey = 'program_$programId';
+  /// Cached total for a event
+  Future<double> getEventTotalExpenses(String eventId) async {
+    final cacheKey = 'event_$eventId';
     if (_expenseTotalsCache.containsKey(cacheKey)) {
       return _expenseTotalsCache[cacheKey]!;
     }
     try {
-      final total = await expenseService.getProgramTotalExpenses(programId);
+      final total = await expenseService.getEventTotalExpenses(eventId);
       _expenseTotalsCache[cacheKey] = total;
       return total;
     } catch (e) {
-      debugPrint('Error getting program total expenses: $e');
+      debugPrint('Error getting event total expenses: $e');
       return 0;
     }
   }
@@ -260,9 +260,9 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   }
 
   /// Expenses by category
-  Future<Map<String, double>> getProgramExpensesByCategory(String programId) async {
+  Future<Map<String, double>> getEventExpensesByCategory(String eventId) async {
     try {
-      return await expenseService.getProgramExpensesByCategory(programId);
+      return await expenseService.getEventExpensesByCategory(eventId);
     } catch (e) {
       debugPrint('Error getting expenses by category: $e');
       return {};
@@ -276,11 +276,11 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   List<ExpenseModel> getPendingExpenses() =>
       _expenses.where((e) => e.status == 'pending').toList();
 
-  List<ExpenseModel> getApprovedProgramExpenses() =>
-      _programExpenses.where((e) => e.status == 'approved').toList();
+  List<ExpenseModel> getApprovedEventExpenses() =>
+      _EventExpenses.where((e) => e.status == 'approved').toList();
 
-  List<ExpenseModel> getPendingProgramExpenses() =>
-      _programExpenses.where((e) => e.status == 'pending').toList();
+  List<ExpenseModel> getPendingEventExpenses() =>
+      _EventExpenses.where((e) => e.status == 'pending').toList();
 
   /// Clear all cached data
   void clearCache() {
@@ -292,9 +292,18 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   Stream<List<ExpenseModel>> streamCommunityExpenses(String communityId) =>
       expenseService.streamCommunityExpenses(communityId);
 
-  Stream<List<ExpenseModel>> streamProgramExpenses(String programId) =>
-      expenseService.streamProgramExpenses(programId);
+  Stream<List<ExpenseModel>> streamEventExpenses(String eventId) =>
+      expenseService.streamEventExpenses(eventId);
 
-  Stream<double> streamProgramTotalExpenses(String programId) =>
-      expenseService.streamProgramTotalExpenses(programId);
+  Stream<double> streamEventTotalExpenses(String eventId) =>
+      expenseService.streamTotalExpenses(eventId);
+
+  Future<List<ExpenseModel>> getEventExpenses(String eventId) async {
+    return await expenseService.getExpensesByEvent(eventId);
+  }
 }
+
+
+
+
+

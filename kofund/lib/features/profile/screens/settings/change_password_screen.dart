@@ -36,8 +36,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AppAuthProvider>();
-    final success = await authProvider.changePassword(
+    final _authProvider = context.read<AppAuthProvider>();
+    final success = await _authProvider.changePassword(
       currentPassword: _currentPasswordController.text.trim(),
       newPassword: _newPasswordController.text.trim(),
     );
@@ -81,8 +81,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       actions: [
         if (!_passwordChanged)
           Consumer<AppAuthProvider>(
-            builder: (context, authProvider, child) {
-              return authProvider.isLoading
+            builder: (context, _authProvider, child) {
+              return _authProvider.isLoading
                   ? const Padding(
                       padding: EdgeInsets.only(right: 16),
                       child: SizedBox(
@@ -125,9 +125,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Widget _buildFormUI() {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
 
-    if (authProvider.isGoogleOnlyUser) {
+    if (_authProvider.isGoogleOnlyUser) {
       return _buildGoogleAuthMessage();
     }
 
@@ -175,7 +175,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Regularly updating your password helps prevent unauthorized access to your account data.',
+                      'Regularly updating your password helps prEvent unauthorized access to your account data.',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondary(context),
@@ -261,10 +261,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             const SizedBox(height: 32),
             
             Consumer<AppAuthProvider>(
-              builder: (context, authProvider, child) {
+              builder: (context, _authProvider, child) {
                 return Column(
                   children: [
-                    if (authProvider.error != null) ...[
+                    if (_authProvider.error != null) ...[
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -279,7 +279,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                authProvider.error!,
+                                _authProvider.error!,
                                 style: TextStyle(
                                   color: AppColors.error(context),
                                   fontSize: 13,
@@ -548,3 +548,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 }
+
+
+
+
+

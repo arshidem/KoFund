@@ -145,8 +145,8 @@ class UserModel {
 
   // Helper methods
   
-  // 🆕 ADD THIS: Get creator name with fallback
-  String get creatorDisplayName {
+  // 🆕 ADD THIS: Get createor name with fallback
+  String get createorDisplayName {
     if (createdByName != null && createdByName!.isNotEmpty) {
       return createdByName!;
     }
@@ -190,10 +190,15 @@ class UserModel {
   }
 
   // 🆕 ADD THIS: Get creation info for display
-  String get creationInfo {
+  String get createionInfo {
     if (!isVirtualUser || createdByName == null) {
       return 'Regular user';
     }
     return 'Created by $createdByName';
   }
 }
+
+
+
+
+

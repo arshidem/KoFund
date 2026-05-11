@@ -27,3 +27,8 @@ class AppInfo {
     return '${packageInfo.version} (${packageInfo.buildNumber})';
   }
 }
+
+
+
+
+

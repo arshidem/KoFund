@@ -3,7 +3,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -41,14 +41,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     setState(() => _settings[type] = value);
   }
 
-  String _getTypeLabel(NotificationType type) {
+  String _getTeventTypeLabel(NotificationType type) {
     switch (type) {
       case NotificationType.payment:
         return 'Payment Notifications';
-      case NotificationType.programUpdate:
-        return 'Program Updates';
-      case NotificationType.program:
-        return 'New Programs';
+      case NotificationType.update:
+        return 'event Updates';
+      case NotificationType.event:
+        return 'New events';
       case NotificationType.adminAlert:
         return 'Admin Alerts';
       case NotificationType.system:
@@ -72,13 +72,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
-  IconData _getTypeIcon(NotificationType type) {
+  IconData _getTeventTypeIcon(NotificationType type) {
     switch (type) {
       case NotificationType.payment:
         return Icons.payment;
-      case NotificationType.programUpdate:
+      case NotificationType.update:
         return Icons.update;
-      case NotificationType.program:
+      case NotificationType.event:
         return Icons.calendar_today;
       case NotificationType.adminAlert:
         return Icons.admin_panel_settings;
@@ -103,13 +103,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
-  Color _getTypeIconColor(NotificationType type) {
+  Color _getTeventTypeIconColor(NotificationType type) {
     switch (type) {
       case NotificationType.payment:
         return Colors.green;
-      case NotificationType.programUpdate:
+      case NotificationType.update:
         return Colors.blue;
-      case NotificationType.program:
+      case NotificationType.event:
         return Colors.deepPurple;
       case NotificationType.adminAlert:
         return Colors.red;
@@ -244,12 +244,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _getTypeIconColor(type).withValues(alpha: 0.1),
+              color: _getTeventTypeIconColor(type).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              _getTypeIcon(type),
-              color: _getTypeIconColor(type),
+              _getTeventTypeIcon(type),
+              color: _getTeventTypeIconColor(type),
               size: 20,
             ),
           ),
@@ -259,7 +259,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _getTypeLabel(type),
+                  _getTeventTypeLabel(type),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -292,10 +292,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     switch (type) {
       case NotificationType.payment:
         return 'Payment confirmations, failures, and receipts';
-      case NotificationType.programUpdate:
-        return 'Updates about programs you\'ve joined';
-      case NotificationType.program:
-        return 'Notifications when new programs are created';
+      case NotificationType.update:
+        return 'Updates about events you\'ve joined';
+      case NotificationType.event:
+        return 'Notifications when new events are created';
       case NotificationType.adminAlert:
         return 'Important alerts for administrators only';
       case NotificationType.system:
@@ -319,3 +319,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 }
+
+
+
+
+

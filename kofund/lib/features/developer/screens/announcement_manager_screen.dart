@@ -22,10 +22,6 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
   Widget build(BuildContext context) {
     return GradientSheetScaffold(
       title: 'Announcement Manager',
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -65,7 +61,7 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Title',
+                labelText: 'Ttitle',
                 hintText: 'Big News!',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(100),
@@ -202,3 +198,8 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
     }
   }
 }
+
+
+
+
+

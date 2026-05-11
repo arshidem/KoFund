@@ -13,8 +13,8 @@ class RouteNames {
   static const String editCommunity = '/edit-community';
   static const String pendingApproval = '/pending-approval';
   static const String approvalRequests = '/approval-requests';
-  static const String createProgram = '/create-program';
-  static const String programDetails = '/program-details';
+  static const String createEvent = '/create-event';
+  static const String eventDetails = '/event-details';
   
   // MEMBER ROUTES
   static const String allMembers = '/all-members';
@@ -47,3 +47,8 @@ class RouteNames {
   static const String notificationDetail = '/notification-detail';
   static const String notificationSettings = '/notification-settings';
 }
+
+
+
+
+

@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
-import 'package:kofund/features/programs/providers/program_provider.dart';
+import 'package:kofund/features/events/providers/event_provider.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:flutter/material.dart';
 class ProfileProvider with ChangeNotifier {
-  final ProgramProvider _programProvider;
+  final EventProvider _EventProvider;
   final ContributionProvider _contributionProvider;
   final UserService _userService;
   final ParticipantService _participantService;
@@ -26,12 +26,12 @@ class ProfileProvider with ChangeNotifier {
   List<Map<String, dynamic>> _contributionHistory = [];
 
   ProfileProvider({
-    required ProgramProvider programProvider,
+    required EventProvider eventProvider,
     required ContributionProvider contributionProvider,
     required ParticipantService participantService,
     required AppAuthProvider authProvider,
     required UserService userService,
-  })  : _programProvider = programProvider,
+  })  : _EventProvider = eventProvider,
         _contributionProvider = contributionProvider,
         _participantService = participantService,
         _authProvider = authProvider,
@@ -62,7 +62,7 @@ class ProfileProvider with ChangeNotifier {
   }
 
 // In ProfileProvider class
-String? getUserProviderType() {
+String? getUserProviderTeventType() {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null || user.providerData.isEmpty) return null;
   
@@ -213,12 +213,12 @@ Future<bool> deleteUserAccount({String? password}) async {
 
   try {
     final userId = user.uid;
-    final providerType = getUserProviderType();
+    final providerTeventType = getUserProviderTeventType();
     
-    debugPrint('👤 Provider type: $providerType');
+    debugPrint('👤 Provider type: $providerTeventType');
 
     // For email/password users, reauthenticate if password is provided
-    if (providerType == 'email' && password != null && password.isNotEmpty) {
+    if (providerTeventType == 'email' && password != null && password.isNotEmpty) {
       debugPrint('🔐 Reauthenticating email/password user...');
       try {
         final credential = EmailAuthProvider.credential(
@@ -241,7 +241,7 @@ Future<bool> deleteUserAccount({String? password}) async {
       }
     }
     // For Google users, we'll handle reauthentication differently
-    else if (providerType == 'google') {
+    else if (providerTeventType == 'google') {
       debugPrint('🔗 Google user detected - will require reauthentication');
     }
 
@@ -274,14 +274,14 @@ Future<bool> deleteUserAccount({String? password}) async {
     _setLoading(false);
     
     if (e.code == 'requires-recent-login') {
-      final providerType = getUserProviderType();
+      final providerTeventType = getUserProviderTeventType();
       
-      if (providerType == 'google') {
+      if (providerTeventType == 'google') {
         _setError(
           'For security, please sign out and sign in again with Google, '
           'then delete your account immediately.',
         );
-      } else if (providerType == 'email') {
+      } else if (providerTeventType == 'email') {
         _setError(
           'Please re-enter your password to confirm account deletion.',
         );
@@ -350,7 +350,7 @@ Future<void> _deleteUserFromCommunities(String userId) async {
     }
     
   } catch (e) {
-    debugPrint('Error deleting user from communities: $e');
+    debugPrint('Error deleteing user from communities: $e');
     // Don't throw error here, continue with account deletion
   }
 }
@@ -425,7 +425,7 @@ Future<bool> leaveCommunity() async {
     _setLoading(true);
     try {
       await Future.wait([
-        _programProvider.loadMyParticipations(targetUserId, targetCommunityId),
+        _EventProvider.loadMyParticipations(targetUserId, targetCommunityId),
         _contributionProvider.loadUserContributions(targetUserId, targetCommunityId),
       ]);
       
@@ -444,7 +444,7 @@ Future<bool> leaveCommunity() async {
       return;
     }
 
-    // Use the userId parameter if provided, otherwise use current user
+    // Use the userId parnameter if provided, otherwise use current user
     final targetUserId = userId ?? currentUser.uid;
     
     debugPrint('🎯 Getting participation history for: $targetUserId');
@@ -550,7 +550,7 @@ Future<bool> leaveCommunity() async {
   Map<String, dynamic> getUserContributionSummary() {
     final contributions = _contributionProvider.userContributions;
     final totalAmount = contributions.fold(0.0, (sum, c) => sum + c.amount);
-    final averageAmount = contributions.isNotEmpty ? totalAmount / contributions.length : 0.0;
+    final averageAamount = contributions.isNotEmpty ? totalAmount / contributions.length : 0.0;
     
     final paymentMethodBreakdown = <String, double>{};
     for (final contribution in contributions) {
@@ -568,7 +568,7 @@ Future<bool> leaveCommunity() async {
     return {
       'totalContributions': contributions.length,
       'totalAmount': totalAmount,
-      'averageAmount': averageAmount,
+      'averageAamount': averageAamount,
       'paymentMethodBreakdown': paymentMethodBreakdown,
       'monthlyBreakdown': monthlyBreakdown,
       'lastContributionDate': contributions.isNotEmpty 
@@ -582,13 +582,13 @@ Future<bool> leaveCommunity() async {
     final stats = getUserStatistics();
     final contributionSummary = getUserContributionSummary();
     
-    final totalPrograms = _programProvider.programs.length;
+    final totalEvents = _EventProvider.events.length;
     final userParticipations = _participationHistory.length;
-    final participationRate = totalPrograms > 0 ? userParticipations / totalPrograms : 0.0;
+    final participationRate = totalEvents > 0 ? userParticipations / totalEvents : 0.0;
 
     return {
       'participationRate': participationRate,
-      'totalProgramsJoined': userParticipations,
+      'totalEventsJoined': userParticipations,
       'totalContributions': stats['contributions'],
       'totalAmountContributed': stats['totalContributed'],
       'paidParticipations': stats['paidParticipations'],
@@ -657,7 +657,7 @@ Future<bool> leaveCommunity() async {
       // Run ALL requests in parallel with shared context
       await Future.wait([
         // Statistics (loads data into other providers)
-        _programProvider.loadMyParticipations(userId, communityId),
+        _EventProvider.loadMyParticipations(userId, communityId),
         _contributionProvider.loadUserContributions(userId, communityId),
         
         // Histories (loads data into this provider's local cache)
@@ -711,9 +711,9 @@ Future<bool> leaveCommunity() async {
         getUserContributionHistory(userId: targetUserId),
       ]);
       
-      // Also refresh program and contribution providers
+      // Also refresh event and contribution providers
       await Future.wait([
-        _programProvider.loadMyParticipations(targetUserId, communityId),
+        _EventProvider.loadMyParticipations(targetUserId, communityId),
         _contributionProvider.loadUserContributions(targetUserId, communityId),
       ]);
       
@@ -731,9 +731,9 @@ Future<bool> leaveCommunity() async {
     for (final participation in _participationHistory.take(limit ~/ 2)) {
       recentActivity.add({
         'type': 'participation',
-        'title': participation['programTitle'],
+        'title': participation['EventTitle'],
         'date': participation['joinedAt'],
-        'description': 'Joined program',
+        'description': 'Joined event',
         'icon': Icons.event_available,
       });
     }
@@ -741,7 +741,7 @@ Future<bool> leaveCommunity() async {
     for (final contribution in _contributionHistory.take(limit ~/ 2)) {
       recentActivity.add({
         'type': 'contribution',
-        'title': contribution['programTitle'],
+        'title': contribution['EventTitle'],
         'date': contribution['createdAt'],
         'description': 'Contributed ₹${contribution['amount']}',
         'icon': Icons.payments,
@@ -786,4 +786,9 @@ Future<bool> leaveCommunity() async {
     super.dispose();
   }
 }
+
+
+
+
+
 

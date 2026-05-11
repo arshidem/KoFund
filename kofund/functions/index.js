@@ -378,7 +378,7 @@ exports.sendCommunityNotification = onCall(
         title, 
         body, 
         type = "announcement",
-        programId = null,
+        eventId = null,
         senderName = "KoFund",
         skipPush = false, // 🆕 NEW: Option to skip push notification delivery
         targetRole = null, // 🆕 NEW: Filter by role (e.g., 'admin')
@@ -521,7 +521,7 @@ exports.sendCommunityNotification = onCall(
             ...notificationData,
             communityId,
             type,
-            programId: programId || '',
+            eventId: eventId || '',
             senderId: auth.uid,
             senderName: senderName || senderData.displayName || 'KoFund Member',
             sentFromApp: true,
@@ -531,7 +531,7 @@ exports.sendCommunityNotification = onCall(
           },
           userId: userId,
           communityId: communityId,
-          programId: programId || null,
+          eventId: eventId || null,
           isRead: false,
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
           deepLink: notificationData.deepLink || null,
@@ -565,7 +565,7 @@ exports.sendCommunityNotification = onCall(
             ...notificationData,
             communityId,
             type,
-            programId: programId || '',
+            eventId: eventId || '',
             senderId: auth.uid,
             senderName: senderName || senderData.displayName || 'KoFund Member',
             sentFromApp: 'true',
@@ -601,7 +601,7 @@ exports.sendCommunityNotification = onCall(
                   contentAvailable: true,
                   badge: 1,
                   sound: 'default',
-                  category: 'program_announcement',
+                  category: 'event_announcement',
                 },
               },
             },
@@ -721,7 +721,7 @@ exports.sendUserNotification = onCall(
         body, 
         type = "announcement",
         data: notificationData = {},
-        programId = null,
+        eventId = null,
         communityId = null,
         senderName = "KoFund",
       } = data || {};
@@ -805,7 +805,7 @@ exports.sendUserNotification = onCall(
             userId: userId,
             communityId: communityId || userData.communityId || null,
             type: type,
-            programId: programId || null,
+            eventId: eventId || null,
             senderId: auth.uid,
             senderName: senderName || userData.displayName || 'KoFund',
             sentFromApp: true,
@@ -815,7 +815,7 @@ exports.sendUserNotification = onCall(
           },
           userId: userId,
           communityId: communityId || userData.communityId || null,
-          programId: programId || null,
+          eventId: eventId || null,
           isRead: false,
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
           deepLink: notificationData.deepLink || null,
@@ -853,7 +853,7 @@ exports.sendUserNotification = onCall(
           userId: userId,
           communityId: communityId || userData.communityId || '',
           type: type,
-          programId: programId || '',
+          eventId: eventId || '',
           senderId: auth.uid,
           senderName: senderName || 'KoFund',
           sentFromApp: 'true',
@@ -1057,10 +1057,10 @@ exports.cleanupNotificationTokens = onCall(
 // ==================== CONTRIBUTION REMINDER FUNCTION ====================
 
 /**
- * Send contribution reminders to users in a community/program
+ * Send contribution reminders to users in a community/event
  * ⭐ UPDATED: Uses new token structure
  */
-exports.sendProgramContributionReminders = onCall(
+exports.sendeventContributionReminders = onCall(
   {
     region: "us-central1",
     cors: true,
@@ -1076,14 +1076,14 @@ exports.sendProgramContributionReminders = onCall(
       
       const { 
         communityId,
-        programId = null,
+        eventId = null,
         sendTest = false,
         testUserId = null,
       } = data || {};
       
-      console.log("⏰ sendProgramContributionReminders called");
+      console.log("⏰ sendeventContributionReminders called");
       console.log("Community:", communityId);
-      console.log("Program:", programId || "All programs");
+      console.log("event:", eventId || "All events");
       
       if (!communityId) {
         throw new Error("Missing required field: communityId");
@@ -1102,22 +1102,22 @@ exports.sendProgramContributionReminders = onCall(
       const communityData = communityDoc.data();
       const communityName = communityData.name || 'Community';
       
-      // 2. Get target programs - FIXED: Programs in root 'programs' collection
-      let programsSnapshot = [];
+      // 2. Get target events - FIXED: events in root 'events' collection
+      let eventsSnapshot = [];
       
-      if (programId) {
-        // FIXED: Query root 'programs' collection
-        const programDoc = await db.collection('programs').doc(programId).get();
+      if (eventId) {
+        // FIXED: Query root 'events' collection
+        const eventDoc = await db.collection('events').doc(eventId).get();
         
-        if (programDoc.exists) {
-          const programData = programDoc.data();
-          // Check if program belongs to this community
-          if (programData.communityId === communityId && programData.status === 'active') {
-            programsSnapshot = [programDoc];
+        if (eventDoc.exists) {
+          const eventData = eventDoc.data();
+          // Check if event belongs to this community
+          if (eventData.communityId === communityId && eventData.status === 'active') {
+            eventsSnapshot = [eventDoc];
           } else {
             return {
               success: true,
-              message: "Program not found or not active in this community",
+              message: "event not found or not active in this community",
               remindersSent: 0,
               communityId,
               communityName,
@@ -1127,7 +1127,7 @@ exports.sendProgramContributionReminders = onCall(
         } else {
           return {
             success: true,
-            message: "Program not found",
+            message: "event not found",
             remindersSent: 0,
             communityId,
             communityName,
@@ -1135,22 +1135,22 @@ exports.sendProgramContributionReminders = onCall(
           };
         }
       } else {
-        // FIXED: Query root 'programs' collection
-        const programsQuery = db
-          .collection('programs')
+        // FIXED: Query root 'events' collection
+        const eventsQuery = db
+          .collection('events')
           .where('communityId', '==', communityId)
           .where('status', '==', 'active');
         
-        const querySnapshot = await programsQuery.get();
-        programsSnapshot = querySnapshot.docs;
+        const querySnapshot = await eventsQuery.get();
+        eventsSnapshot = querySnapshot.docs;
       }
       
-      console.log(`📋 Found ${programsSnapshot.length} program(s) to process`);
+      console.log(`📋 Found ${eventsSnapshot.length} event(s) to process`);
       
-      if (programsSnapshot.length === 0) {
+      if (eventsSnapshot.length === 0) {
         return {
           success: true,
-          message: "No active programs found",
+          message: "No active events found",
           remindersSent: 0,
           communityId,
           communityName,
@@ -1192,32 +1192,32 @@ exports.sendProgramContributionReminders = onCall(
       });
       console.log(`📱 Loaded ${communityTokensSnapshot.size} tokens for ${userTokensMap.size} users into memory`);
 
-      // 4. Process each program
-      for (const programDoc of programsSnapshot) {
-        const program = {
-          id: programDoc.id,
-          ...programDoc.data()
+      // 4. Process each event
+      for (const eventDoc of eventsSnapshot) {
+        const event = {
+          id: eventDoc.id,
+          ...eventDoc.data()
         };
         
-        console.log(`\n🎯 Processing Program: ${program.title || program.id}`);
+        console.log(`\n🎯 Processing event: ${event.title || event.id}`);
         
-        // Check if program has reminder settings enabled
-        if (!program.enableAutoReminders) {
+        // Check if event has reminder settings enabled
+        if (!event.enableAutoReminders) {
           console.log(`⏭️ Skipping - auto reminders disabled`);
           continue;
         }
         
-        const suggestedContribution = parseFloat(program.suggestedContribution) || 0;
+        const suggestedContribution = parseFloat(event.suggestedContribution) || 0;
         
         if (suggestedContribution <= 0) {
           console.log(`⏭️ Skipping - no suggested contribution amount`);
           continue;
         }
         
-        // 5. ✅ OPTIMIZED: Fetch all contributions for this program once
+        // 5. ✅ OPTIMIZED: Fetch all contributions for this event once
         const allContributionsSnapshot = await db
           .collection('contributions')
-          .where('programId', '==', program.id)
+          .where('eventId', '==', event.id)
           .where('status', '==', 'completed')
           .get();
         
@@ -1231,7 +1231,7 @@ exports.sendProgramContributionReminders = onCall(
         // 6. Get participants
         const participantsSnapshot = await db
           .collection('participants')
-          .where('programId', '==', program.id)
+          .where('eventId', '==', event.id)
           .where('status', '==', 'joined')
           .get();
         
@@ -1260,7 +1260,7 @@ exports.sendProgramContributionReminders = onCall(
               userData, // Carry user data for tokens
               userName: userData.displayName || participant.userName || 'User',
               amountRemaining,
-              personalizedBody: `Hi ${userData.displayName || participant.userName || 'User'}, you have $${amountRemaining.toFixed(2)} remaining of your $${suggestedContribution.toFixed(2)} contribution for ${program.title}.`,
+              personalizedBody: `Hi ${userData.displayName || participant.userName || 'User'}, you have $${amountRemaining.toFixed(2)} remaining of your $${suggestedContribution.toFixed(2)} contribution for ${event.title}.`,
             });
           }
         }
@@ -1268,12 +1268,12 @@ exports.sendProgramContributionReminders = onCall(
         if (participantsToRemind.length === 0) continue;
         
         // 7. Batch Create Notifications
-        const reminderTitle = `⏰ Contribution Reminder: ${program.title}`;
+        const reminderTitle = `⏰ Contribution Reminder: ${event.title}`;
         const batch = db.batch();
-        let programNotificationsCreated = 0;
+        let eventNotificationsCreated = 0;
         
         for (const p of participantsToRemind) {
-          const notificationId = `${baseNotificationId}_rem_${program.id}_${p.userId}`;
+          const notificationId = `${baseNotificationId}_rem_${event.id}_${p.userId}`;
           const notificationRef = db.collection('users').doc(p.userId).collection('notifications').doc(notificationId);
           
           batch.set(notificationRef, {
@@ -1285,8 +1285,8 @@ exports.sendProgramContributionReminders = onCall(
             priority: 'high',
             data: {
               communityId,
-              programId: program.id,
-              programName: program.title,
+              eventId: event.id,
+              eventName: event.title,
               amountRemaining: p.amountRemaining,
               suggestedContribution,
               senderId: auth.uid,
@@ -1296,22 +1296,22 @@ exports.sendProgramContributionReminders = onCall(
             },
             userId: p.userId,
             communityId,
-            programId: program.id,
+            eventId: event.id,
             senderName: 'KoFund Reminder',
             senderId: auth.uid,
             isRead: false,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            deepLink: `/programs/${program.id}/contribute`,
+            deepLink: `/events/${event.id}/contribute`,
           });
-          programNotificationsCreated++;
+          eventNotificationsCreated++;
         }
 
         
         // Commit notifications batch
-        if (!sendTest && programNotificationsCreated > 0) {
+        if (!sendTest && eventNotificationsCreated > 0) {
           await batch.commit();
-          totalNotificationsCreated += programNotificationsCreated;
-          console.log(`✅ Created ${programNotificationsCreated} notifications in Firestore`);
+          totalNotificationsCreated += eventNotificationsCreated;
+          console.log(`✅ Created ${eventNotificationsCreated} notifications in Firestore`);
         }
         
         // 8. Send push notifications
@@ -1333,7 +1333,7 @@ exports.sendProgramContributionReminders = onCall(
           // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
           const sanitizedData = ensureStringData({
             communityId,
-            programId: program.id,
+            eventId: event.id,
             type: 'reminder',
             subtype: 'contribution',
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
@@ -1396,14 +1396,14 @@ exports.sendProgramContributionReminders = onCall(
           console.log(`✅ Total push notifications sent: ${pushNotificationsSent}`);
         }
         
-        // 8. Record result for this program
+        // 8. Record result for this event
         results.push({
-          programId: program.id,
-          programName: program.title,
+          eventId: event.id,
+          eventName: event.title,
           suggestedContribution,
           totalParticipants: participantsSnapshot.size,
           participantsNeedingReminders: participantsToRemind.length,
-          notificationsCreated: programNotificationsCreated,
+          notificationsCreated: eventNotificationsCreated,
           pushNotificationsSent,
         });
       }
@@ -1412,25 +1412,25 @@ exports.sendProgramContributionReminders = onCall(
       const result = {
         success: true,
         message: sendTest 
-          ? `Test completed for ${programId ? 'specific program' : 'all programs'}` 
-          : `Reminders sent for ${results.length} program(s)`,
+          ? `Test completed for ${eventId ? 'specific event' : 'all events'}` 
+          : `Reminders sent for ${results.length} event(s)`,
         remindersSent: totalRemindersSent,
         notificationsCreated: totalNotificationsCreated,
-        programsProcessed: results.length,
-        programResults: results,
+        eventsProcessed: results.length,
+        eventResults: results,
         communityId,
         communityName,
         isTest: sendTest,
         timestamp: now.toISOString(),
       };
       
-      console.log("✅ sendProgramContributionReminders completed successfully");
+      console.log("✅ sendeventContributionReminders completed successfully");
       console.log(`📊 Summary: ${totalNotificationsCreated} notifications created, ${totalRemindersSent} push notifications sent`);
       
       return result;
       
     } catch (error) {
-      console.error("❌ Error in sendProgramContributionReminders:", error);
+      console.error("❌ Error in sendeventContributionReminders:", error);
       throw new Error(`Failed to send contribution reminders: ${error.message}`);
     }
   }

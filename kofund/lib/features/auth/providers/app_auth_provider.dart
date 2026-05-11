@@ -289,7 +289,7 @@ class AppAuthProvider with ChangeNotifier {
               if (doc.exists) {
                 final userData = doc.data()!;
                 _user = UserModel.fromMap(userData);
-                _isOfflineMode = false; // We have fresh data
+                _isOfflineMode = false; // We have freshhh data
 
                 // Save locally for offline use
                 await _saveUserDataLocally(userData);
@@ -343,6 +343,27 @@ class AppAuthProvider with ChangeNotifier {
       return false;
     }
   }
+
+  /// Synchronize community name with user profile for better caching
+  Future<void> syncCommunityName(String communityName) async {
+    if (_user == null || _user!.communityName == communityName) return;
+
+    try {
+      debugPrint('🔄 Synchronizing community name for user: $communityName');
+      await _firestore.collection('users').doc(_user!.uid).update({
+        'communityName': communityName,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Local update is handled by the snapshot listener
+      _user = _user!.copyWith(communityName: communityName);
+      await _saveUserDataLocally(_user!.toMap());
+      notifyListeners();
+    } catch (e) {
+      debugPrint('⚠️ Failed to sync community name: $e');
+    }
+  }
+
 
   Future<void> saveFcmTokenForCurrentUser() async {
     try {
@@ -811,7 +832,7 @@ class AppAuthProvider with ChangeNotifier {
           context,
           listen: false,
         );
-        final storageService = Provider.of<NotificationStorageService>(
+        final _storageService = Provider.of<NotificationStorageService>(
           context,
           listen: false,
         );
@@ -821,7 +842,7 @@ class AppAuthProvider with ChangeNotifier {
         debugPrint("🔕 FCM token detached from user");
 
         // Cleanup notification storage
-        await storageService.cleanupForUserLogout();
+        await _storageService.cleanupForUserLogout();
         debugPrint("🗑️ Notification storage cleaned up");
       } catch (e) {
         debugPrint("⚠️ Notification service cleanup error: $e");
@@ -862,7 +883,7 @@ class AppAuthProvider with ChangeNotifier {
         await prefs.remove('cached_community');
         await prefs.remove('last_profile_sync');
 
-        // ⭐ CRITICAL: Clear notification user ID to prevent cross-user notifications
+        // ⭐ CRITICAL: Clear notification user ID to p cross-user notifications
         await prefs.remove('current_notification_user_id');
 
         // Clear notification settings
@@ -1037,3 +1058,8 @@ class AppAuthProvider with ChangeNotifier {
     super.dispose();
   }
 }
+
+
+
+
+

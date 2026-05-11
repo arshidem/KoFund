@@ -8,7 +8,7 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/admin/providers/user_provider.dart';
-import 'package:kofund/features/members/screens/member_details_screen.dart';
+import 'package:kofund/features/members/screens/member_profile_screen.dart';
 import 'package:kofund/core/skeleton/approval_requests_skeleton.dart';
 import 'dart:ui';
 
@@ -46,11 +46,11 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   }
 
   Future<void> _loadMembers() async {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     final userProvider = context.read<UserProvider>();
-    final communityId = authProvider.user?.communityId;
+    final communityId = _authProvider.user?.communityId;
     
-    _currentUser = authProvider.user; // Store current user
+    _currentUser = _authProvider.user; // Store current user
 
     if (communityId != null) {
       await userProvider.loadCommunityMembers(communityId);
@@ -335,11 +335,11 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final authProvider = context.read<AppAuthProvider>();
-    final communityId = authProvider.user?.communityId;
+    final _authProvider = context.read<AppAuthProvider>();
+    final communityId = _authProvider.user?.communityId;
     
     // Get current user for comparison
-    _currentUser = authProvider.user;
+    _currentUser = _authProvider.user;
 
     if (communityId == null) {
       return Scaffold(
@@ -746,11 +746,11 @@ class _MemberCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          // Navigate to MemberDetailsScreen when user is clicked
+          // Navigate to MemberProfileScreen when user is clicked
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MemberDetailsScreen(member: user),
+              builder: (context) => MemberProfileScreen(member: user),
             ),
           );
         },
@@ -799,7 +799,7 @@ class _MemberCard extends StatelessWidget {
                             child: Row(
                               children: [
                                 Text(
-                                  user.displayName ?? 'Unnamed Member',
+                                  user.displayName ?? 'Unnnamed Member',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -967,3 +967,8 @@ class _PillButton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

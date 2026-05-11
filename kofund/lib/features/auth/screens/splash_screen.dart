@@ -1,5 +1,6 @@
 // lib/features/auth/screens/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +37,15 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Configure system UI immediately to match splash aesthetic
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // For dark bg
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
     _handleInviteCode();
     _startSplashTimer();
   }
@@ -173,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       _updateStatus('');
 
-      final authProvider = Provider.of<app_auth.AppAuthProvider>(
+      final _authProvider = Provider.of<app_auth.AppAuthProvider>(
         context,
         listen: false,
       );
@@ -183,14 +193,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // ⭐ WAIT for auth provider to be initialized
       debugPrint("⏳ Waiting for auth provider initialization...");
-      await authProvider.waitForInitialization();
+      await _authProvider.waitForInitialization();
       debugPrint("✅ Auth provider initialized");
 
       // ⭐ Ensure we wait at least for the 1-second shimmer to finish
       await splashTimer;
 
       // Now perform navigation
-      await _performInitialization(authProvider);
+      await _performInitialization(_authProvider);
     } catch (e) {
       debugPrint("❌ Splash initialization error: $e");
       if (mounted) _navigateToLogin();
@@ -202,25 +212,25 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _performInitialization(
-    app_auth.AppAuthProvider authProvider,
+    app_auth.AppAuthProvider _authProvider,
   ) async {
     // Artificial delay removed as it's handled by the splashTimer in _initializeAppWithTimeout
 
     debugPrint("=== SPLASH SCREEN INITIALIZATION ===");
     debugPrint("Auth Provider Status:");
-    debugPrint("  - isLoading: ${authProvider.isLoading}");
-    debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
-    debugPrint("  - user exists: ${authProvider.user != null}");
+    debugPrint("  - isLoading: ${_authProvider.isLoading}");
+    debugPrint("  - isOfflineMode: ${_authProvider.isOfflineMode}");
+    debugPrint("  - user exists: ${_authProvider.user != null}");
     debugPrint("  - pending invite code: $_pendingInviteCode");
 
     // Start notification system in BACKGROUND (non-blocking)
     unawaited(_initializeNotificationSystemInBackground());
 
     // Check if user can access app (online OR offline)
-    if (authProvider.canAccessApp) {
-      final user = authProvider.user;
+    if (_authProvider.canAccessApp) {
+      final user = _authProvider.user;
 
-      if (authProvider.isOfflineMode) {
+      if (_authProvider.isOfflineMode) {
         debugPrint("📱 OFFLINE MODE: Using cached data");
         _updateStatus('');
         await Future.delayed(const Duration(milliseconds: 300));
@@ -305,7 +315,7 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToDashboard();
   }
 
-  // ⭐ UPDATED: Remove UserModel parameter
+  // ⭐ UPDATED: Remove UserModel parnameter
   Future<bool> _isUserEmailVerified() async {
     try {
       // Reload user to get latest email verification status FROM FIREBASE AUTH
@@ -455,67 +465,116 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<app_auth.AppAuthProvider>(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = AppColors.background(context);
+    final primaryColor = isDarkMode ? AppColors.darkPrimary : AppColors.lightPrimary;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(gradient: AppColors.primaryGradient(context)),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Animated Logo only (transparent background)
-              const AnimatedLogo(
-                size: 140, // Reduced from 200
-                showBackground: false,
-                loopAnimation: true,
-              ),
-
-              const SizedBox(height: 20),
-
-              // Status text only when loading
-              if (_isInitializing && _status.isNotEmpty)
-                Column(
-                  children: [
-                    Text(
-                      _status,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
-
-              // Show invite code indicator if exists
-              if (_pendingInviteCode != null)
+      backgroundColor: backgroundColor,
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Premium Wave Logo Loader (XL Size - Tighter Padding)
                 Container(
-                  margin: const EdgeInsets.only(top: 30),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  width: 220,
+                  height: 220,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
+                    color: primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.link, color: Colors.white, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Invite code saved',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                  child: Center(
+                    child: Container(
+                      width: 170,
+                      height: 170,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withValues(alpha: 0.4),
+                            blurRadius: 50,
+                            spreadRadius: 6,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: const AnimatedLogo(
+                        size: 90,
+                        loopAnimation: true,
+                      ),
+                    ),
                   ),
                 ),
-            ],
+                
+                const SizedBox(height: 100), // More breathing room without spinner
+              ],
+            ),
           ),
-        ),
+
+          // Status & Info (Positioned at bottom for minimalism)
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                if (_isInitializing && _status.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Text(
+                      _status.toUpperCase(),
+                      style: TextStyle(
+                        color: primaryColor.withValues(alpha: 0.7),
+                        fontSize: 12,
+                        letterSpacing: 3.0,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                
+                if (_pendingInviteCode != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: primaryColor.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.link_rounded, color: primaryColor, size: 16),
+                        const SizedBox(width: 10),
+                        Text(
+                          'INVITE ACTIVE',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+
+
+
+

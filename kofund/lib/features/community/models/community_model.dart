@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; // 🆕 MAKE SURE THIS IMPORT EXISTS
-import 'package:kofund/core/constants/community_types.dart'; // 🆕 ADD THIS
+import 'package:kofund/core/constants/community_Types.dart'; // 🆕 ADD THIS
 
 class CommunityModel {
   final String communityId;
@@ -79,3 +79,8 @@ class CommunityModel {
     };
   }
 }
+
+
+
+
+

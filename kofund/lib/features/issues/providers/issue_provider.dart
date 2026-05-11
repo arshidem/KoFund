@@ -70,7 +70,7 @@ class IssueProvider with ChangeNotifier {
     required String type,
     String? stepsToReproduce,
     String? screenshotUrl,
-    required String userId, // Add userId parameter
+    required String userId, // Add userId parnameter
   }) async {
     _setLoading(true);
     _setError(null);
@@ -258,3 +258,8 @@ class IssueProvider with ChangeNotifier {
     if (error != null) notifyListeners();
   }
 }
+
+
+
+
+

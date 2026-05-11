@@ -8,7 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../expenses/models/expense_model.dart';
 import '../../auth/providers/app_auth_provider.dart';
-import '../../programs/models/program_model.dart';
+import '../../events/models/event_model.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
@@ -33,7 +33,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   final _editReasonController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _titleController = TextEditingController();
-  final _amountController = TextEditingController();
+  final _aamountController = TextEditingController();
 
   bool _isLoading = true;
   bool _hasError = false;
@@ -41,8 +41,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   bool _isSaving = false;
 
   ExpenseModel? _expense;
-  String? _selectedProgramId;
-  List<ProgramModel> _availablePrograms = [];
+  String? _selectedeventId;
+  List<EventModel> _availableEvents = [];
   String? _selectedCategory;
   String? _selectedPaymentMethod;
   DateTime _selectedDate = DateTime.now();
@@ -68,8 +68,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     if (_expense == null) return false;
     return _expense!.title != _titleController.text.trim() ||
            _expense!.description != _descriptionController.text.trim() ||
-           _expense!.amount != (double.tryParse(_amountController.text) ?? 0.0) ||
-           _expense!.programId != _selectedProgramId ||
+           _expense!.amount != (double.tryParse(_aamountController.text) ?? 0.0) ||
+           _expense!.eventId != _selectedeventId ||
            _expense!.category != _selectedCategory ||
            _expense!.paymentMethod != _selectedPaymentMethod ||
            _expense!.expenseDate != _selectedDate;
@@ -78,10 +78,10 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchExpenseAndPrograms();
+    _fetchExpenseAndEvents();
   }
 
-  Future<void> _fetchExpenseAndPrograms() async {
+  Future<void> _fetchExpenseAndEvents() async {
     try {
       setState(() {
         _isLoading = true;
@@ -99,22 +99,22 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
       _expense = ExpenseModel.fromMap(expenseDoc.data()!, expenseDoc.id);
       
-      // Load programs
+      // Load events
       final communityId = _expense!.communityId;
-      final programsSnapshot = await FirebaseFirestore.instance
-          .collection('programs')
+      final eventsSnapshot = await FirebaseFirestore.instance
+          .collection('events')
           .where('communityId', isEqualTo: communityId)
           .get();
 
-      _availablePrograms = programsSnapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data(), doc.id))
+      _availableEvents = eventsSnapshot.docs
+          .map((doc) => EventModel.fromMap(doc.data(), doc.id))
           .toList();
 
       // Set initial values
       _titleController.text = _expense!.title;
       _descriptionController.text = _expense!.description;
-      _amountController.text = _expense!.amount.toString();
-      _selectedProgramId = _expense!.programId;
+      _aamountController.text = _expense!.amount.toString();
+      _selectedeventId = _expense!.eventId;
       _selectedCategory = _expense!.category;
       _selectedPaymentMethod = _expense!.paymentMethod;
       _selectedDate = _expense!.expenseDate;
@@ -137,14 +137,14 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final currentUser = authProvider.user;
+      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final currentUser = _authProvider.user;
 
       final updatedExpense = _expense!.copyWith(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        amount: double.parse(_amountController.text),
-        programId: _selectedProgramId,
+        amount: double.parse(_aamountController.text),
+        eventId: _selectedeventId,
         category: _selectedCategory,
         paymentMethod: _selectedPaymentMethod,
         expenseDate: _selectedDate,
@@ -174,11 +174,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  String _getProgramNameById(String id) {
+  String _geteventNameById(String id) {
     try {
-      return _availablePrograms.firstWhere((p) => p.programId == id).title;
+      return _availableEvents.firstWhere((p) => p.eventId == id).title;
     } catch (_) {
-      return 'Unknown Program';
+      return 'Unknown event';
     }
   }
 
@@ -447,7 +447,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                           const SizedBox(height: 8),
                           Text(_errorMessage, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14)),
                           const SizedBox(height: 24),
-                          ElevatedButton(onPressed: _fetchExpenseAndPrograms, child: const Text('Try Again')),
+                          ElevatedButton(onPressed: _fetchExpenseAndEvents, child: const Text('Try Again')),
                         ],
                       ),
                     )
@@ -459,15 +459,15 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                             key: _formKey,
                             child: Column(
                               children: [
-                                // Program Selection
+                                // event Selection
                                 DropdownButtonFormField<String>(
-                                  initialValue: (_selectedProgramId != null && _availablePrograms.any((p) => p.programId == _selectedProgramId)) 
-                                      ? _selectedProgramId 
+                                  initialValue: (_selectedeventId != null && _availableEvents.any((p) => p.eventId == _selectedeventId)) 
+                                      ? _selectedeventId 
                                       : null,
                                   dropdownColor: AppColors.surface(context),
                                   style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
                                   decoration: InputDecoration(
-                                    labelText: 'Program *',
+                                    labelText: 'event *',
                                     labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
                                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
@@ -476,17 +476,17 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                     prefixIcon: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 20),
                                   ),
-                                  items: _availablePrograms.map((program) {
-                                    return DropdownMenuItem<String>(value: program.programId, child: Text(program.title, style: TextStyle(color: AppColors.textPrimary(context))));
+                                  items: _availableEvents.map((event) {
+                                    return DropdownMenuItem<String>(value: event.eventId, child: Text(event.title, style: TextStyle(color: AppColors.textPrimary(context))));
                                   }).toList(),
-                                  onChanged: (value) => setState(() => _selectedProgramId = value),
-                                  validator: (value) => value == null ? 'Please select a program' : null,
-                                  hint: const Text('Select Program'),
+                                  onChanged: (value) => setState(() => _selectedeventId = value),
+                                  validator: (value) => value == null ? 'Please select a event' : null,
+                                  hint: const Text('Select event'),
                                 ),
                                 const SizedBox(height: 16),
                                 _buildInputField(
                                   controller: _titleController,
-                                  label: 'Expense Title',
+                                  label: 'Expense Ttitle',
                                   icon: Icons.title,
                                   hint: 'Enter expense title',
                                   maxLength: 50,
@@ -497,7 +497,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 const SizedBox(height: 16),
                                 _buildInputField(controller: _descriptionController, label: 'Description', icon: Icons.description, hint: 'Add details...', maxLines: 3, maxLength: 200),
                                 const SizedBox(height: 16),
-                                _buildInputField(controller: _amountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
+                                _buildInputField(controller: _aamountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
                                 const SizedBox(height: 16),
                                 // Category Selection
                                 DropdownButtonFormField<String>(
@@ -572,8 +572,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
                                   children: [
-                                    _buildChangeItem(label: 'Title', oldValue: _expense!.title, newValue: _titleController.text, hasChanged: _expense!.title != _titleController.text),
-                                    _buildChangeItem(label: 'Amount', oldValue: _expense!.amount.toString(), newValue: _amountController.text, hasChanged: _expense!.amount != double.tryParse(_amountController.text)),
+                                    _buildChangeItem(label: 'Ttitle', oldValue: _expense!.title, newValue: _titleController.text, hasChanged: _expense!.title != _titleController.text),
+                                    _buildChangeItem(label: 'Amount', oldValue: _expense!.amount.toString(), newValue: _aamountController.text, hasChanged: _expense!.amount != double.tryParse(_aamountController.text)),
                                   ],
                                 ),
                               ),
@@ -598,7 +598,12 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     _editReasonController.dispose();
     _descriptionController.dispose();
     _titleController.dispose();
-    _amountController.dispose();
+    _aamountController.dispose();
     super.dispose();
   }
 }
+
+
+
+
+

@@ -20,7 +20,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
   // Overview stats
   int _totalUsers = 0;
   int _totalCommunities = 0;
-  int _totalPrograms = 0;
+  int _totas = 0;
   int _totalContributions = 0;
   int _totalExpenses = 0;
   int _totalNotifications = 0;
@@ -34,9 +34,9 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
   int _developerUsers = 0;
   int _virtualUsers = 0;
 
-  // Program breakdown
-  int _activePrograms = 0;
-  int _completedPrograms = 0;
+  // event breakdown
+  int _activs = 0;
+  int _completes = 0;
 
   // Contribution breakdown
   int _pendingContributions = 0;
@@ -61,7 +61,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
         // Overview counts (0-7)
         _fs.collection('users').count().get(),
         _fs.collection('communities').count().get(),
-        _fs.collection('programs').count().get(),
+        _fs.collection('events').count().get(),
         _fs.collection('contributions').count().get(),
         _fs.collection('expenses').count().get(),
         _fs.collection('notifications').count().get(),
@@ -75,9 +75,9 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
         _fs.collection('users').where('isDeveloper', isEqualTo: true).count().get(),
         _fs.collection('users').where('isVirtualUser', isEqualTo: true).count().get(),
 
-        // Program breakdowns (13-14)
-        _fs.collection('programs').where('status', isEqualTo: 'active').count().get(),
-        _fs.collection('programs').where('status', isEqualTo: 'completed').count().get(),
+        // event breakdowns (13-14)
+        _fs.collection('events').where('status', isEqualTo: 'active').count().get(),
+        _fs.collection('events').where('status', isEqualTo: 'completed').count().get(),
 
         // Contribution breakdowns (15-17)
         _fs.collection('contributions').where('status', isEqualTo: 'pending').count().get(),
@@ -89,7 +89,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
         setState(() {
           _totalUsers = results[0].count ?? 0;
           _totalCommunities = results[1].count ?? 0;
-          _totalPrograms = results[2].count ?? 0;
+          _totas = results[2].count ?? 0;
           _totalContributions = results[3].count ?? 0;
           _totalExpenses = results[4].count ?? 0;
           _totalNotifications = results[5].count ?? 0;
@@ -102,8 +102,8 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
           _developerUsers = results[11].count ?? 0;
           _virtualUsers = results[12].count ?? 0;
 
-          _activePrograms = results[13].count ?? 0;
-          _completedPrograms = results[14].count ?? 0;
+          _activs = results[13].count ?? 0;
+          _completes = results[14].count ?? 0;
 
           _pendingContributions = results[15].count ?? 0;
           _confirmedContributions = results[16].count ?? 0;
@@ -174,7 +174,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
                           children: [
                             _buildStatCard(context, 'Users', _totalUsers, Icons.people_rounded, Colors.blue),
                             _buildStatCard(context, 'Communities', _totalCommunities, Icons.groups_rounded, Colors.purple),
-                            _buildStatCard(context, 'Programs', _totalPrograms, Icons.account_balance_wallet_rounded, Colors.green),
+                            _buildStatCard(context, 'events', _totas, Icons.account_balance_wallet_rounded, Colors.green),
                             _buildStatCard(context, 'Contributions', _totalContributions, Icons.payments_rounded, Colors.orange),
                             _buildStatCard(context, 'Expenses', _totalExpenses, Icons.receipt_long_rounded, Colors.red),
                             _buildStatCard(context, 'Participants', _totalParticipants, Icons.how_to_reg_rounded, Colors.teal),
@@ -211,8 +211,8 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
 
                         const SizedBox(height: 28),
 
-                        // — Program Breakdown —
-                        _buildSectionHeader(context, icon: Icons.account_balance_wallet_rounded, title: 'Program Breakdown', color: Colors.green),
+                        // — event Breakdown —
+                        _buildSectionHeader(context, icon: Icons.account_balance_wallet_rounded, title: 'event Breakdown', color: Colors.green),
                         const SizedBox(height: 12),
                         Card(
                           color: AppColors.card(context),
@@ -221,11 +221,11 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               children: [
-                                _buildBarRow(context, 'Active', _activePrograms, _totalPrograms, Colors.green),
+                                _buildBarRow(context, 'Active', _activs, _totas, Colors.green),
                                 const SizedBox(height: 12),
-                                _buildBarRow(context, 'Completed', _completedPrograms, _totalPrograms, Colors.blue),
+                                _buildBarRow(context, 'Completed', _completes, _totas, Colors.blue),
                                 const SizedBox(height: 12),
-                                _buildBarRow(context, 'Other', _totalPrograms - _activePrograms - _completedPrograms, _totalPrograms, Colors.grey),
+                                _buildBarRow(context, 'Other', _totas - _activs - _completes, _totas, Colors.grey),
                               ],
                             ),
                           ),
@@ -372,3 +372,8 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
     );
   }
 }
+
+
+
+
+

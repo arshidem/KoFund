@@ -46,7 +46,7 @@ class ReceiptSkeleton extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Title Line
+            // Ttitle Line
             Container(
               width: 240,
               height: 18,
@@ -93,7 +93,7 @@ class ReceiptSkeleton extends StatelessWidget {
               ),
             ),
 
-            // Details Rows (5 items: Date, Month, Program, Method, Recorded By)
+            // Details Rows (5 items: Date, Month, event, Method, Recorded By)
             ...List.generate(5, (index) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
@@ -145,3 +145,8 @@ class ReceiptSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

@@ -1,6 +1,6 @@
 // kofund/lib/features/polls/constants/poll_constants.dart
 class PollConstants {
-  static const List<String> pollTypeLabels = [
+  static const List<String> pollTeventTypeLabels = [
     'Decision',
     'Suggestion', 
     'Planning',
@@ -8,7 +8,7 @@ class PollConstants {
     'Expense Approval',
   ];
 
-  static const List<String> pollTypeDescriptions = [
+  static const List<String> pollTeventTypeDescriptions = [
     'Make community decisions',
     'Gather ideas and suggestions',
     'Plan schedules and dates',
@@ -28,3 +28,8 @@ class PollConstants {
     'Results visible only after voting',
   ];
 }
+
+
+
+
+

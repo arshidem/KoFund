@@ -7,7 +7,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/foundation.dart';
-import '../../../core/constants/notification_types.dart';
+import '../../../core/constants/notification_Types.dart';
 import '../../../core/services/notification_service.dart';
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -68,7 +68,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         hoverColor: Colors.transparent,
       ),
       child: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 22),
+        icon: Icon(Icons.more_vert_rounded, color: AppColors.textPrimary(context), size: 22),
         padding: EdgeInsets.zero,
         offset: const Offset(0, 48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -120,6 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildSearchBarArea(BuildContext context, NotificationProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Expanded(
@@ -127,15 +128,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.textPrimary(context).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.textPrimary(context).withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.notifications_none,
-                  color: Colors.white70,
+                  color: AppColors.textPrimary(context).withValues(alpha: 0.7),
                   size: 18,
                 ),
                 const SizedBox(width: 10),
@@ -144,8 +145,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     provider.unreadCount > 0 
                       ? '${provider.unreadCount} New notifications'
                       : 'No new notifications',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.2,
@@ -158,7 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         const SizedBox(width: 8),
         Material(
-          color: Colors.white.withValues(alpha: 0.12),
+          color: isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.textPrimary(context).withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(24),
           child: InkWell(
             borderRadius: BorderRadius.circular(24),
@@ -169,9 +170,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : AppColors.textPrimary(context).withValues(alpha: 0.1)),
               ),
-              child: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+              child: Icon(Icons.tune_rounded, color: AppColors.textPrimary(context), size: 20),
             ),
           ),
         ),
@@ -194,7 +195,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   provider.filterByCommunity(null);
                 }),
               if (_selectedType != null)
-                _buildFilterChip('Type: ${_selectedType!.name}', () {
+                _buildFilterChip('type: ${_selectedType!.name}', () {
                   setState(() => _selectedType = null);
                   provider.filterByType(null);
                 }),
@@ -574,11 +575,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ],
                       ),
                       const SizedBox(width: 12),
-                      // Type Column
+                      // type Column
                       buildFilterColumn(
                         'TYPE',
                         [
-                          buildFilterItem('All Types', Icons.category_outlined, _selectedType == null, () {
+                          buildFilterItem('All TeventTypes', Icons.category_outlined, _selectedType == null, () {
                             setSheetState(() => _selectedType = null);
                             provider.filterByType(null);
                             setState(() {});
@@ -902,11 +903,11 @@ class NotificationSkeleton extends StatelessWidget {
             children: [
               Text('ID: ${notification.id}'),
               const SizedBox(height: 8),
-              Text('Title: ${notification.title}'),
+              Text('Ttitle: ${notification.title}'),
               const SizedBox(height: 8),
               Text('Body: ${notification.body}'),
               const SizedBox(height: 8),
-              Text('Type: ${notification.type.name}'),
+              Text('type: ${notification.type.name}'),
               const SizedBox(height: 8),
               Text('User ID: ${notification.userId ?? "null"}'),
               const SizedBox(height: 8),
@@ -932,4 +933,9 @@ class NotificationSkeleton extends StatelessWidget {
     );
   
 }
+
+
+
+
+
 

@@ -44,8 +44,8 @@ Future<void> _loadAppInfo() async {
   Widget build(BuildContext context) {
     final List<FAQItem> faqItems = [
       FAQItem(
-        question: 'How do I join a program?',
-        answer: 'Go to the Programs tab, browse available programs, and tap "Join Program". You may need to pay a contribution fee if required.',
+        question: 'How do I join a event?',
+        answer: 'Go to the events tab, browse available events, and tap "Join event". You may need to pay a contribution fee if required.',
       ),
     
       FAQItem(
@@ -114,7 +114,7 @@ Future<void> _loadAppInfo() async {
 
               const SizedBox(height: 24),
 
-              // FAQ Section Title
+              // FAQ Section Ttitle
               Text(
                 'Frequently Asked Questions',
                 style: TextStyle(
@@ -274,4 +274,9 @@ class FAQItem {
     required this.answer,
   });
 }
+
+
+
+
+
 

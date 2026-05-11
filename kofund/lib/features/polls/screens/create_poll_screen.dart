@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/polls/models/poll_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
-import 'package:kofund/features/programs/providers/program_provider.dart';
-import 'package:kofund/features/programs/models/program_model.dart';
+import 'package:kofund/features/events/providers/event_provider.dart';
+import 'package:kofund/features/events/models/event_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
@@ -13,14 +13,14 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class CreatePollScreen extends StatefulWidget {
   final String communityId;
-  final String? programId;
+  final String? eventId;
   final PollModel? pollToEdit;
   final bool isEditing;
 
   const CreatePollScreen({
     super.key,
     required this.communityId,
-    this.programId,
+    this.id,
     this.pollToEdit,
     this.isEditing = false,
   });
@@ -45,16 +45,16 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   bool _isAnonymous = false;
   int? _minParticipationPercent;
   bool _isCommunityWide = true;
-  String? _selectedProgramId;
+  String? _selectedeventId;
   bool _isLoading = false;
-  bool _loadingPrograms = false;
+  bool _loadingEvents = false;
 
-  List<ProgramModel> _programs = [];
+  List<EventModel> _events = [];
 
   @override
   void initState() {
     super.initState();
-    _loadPrograms();
+    _loadEvents();
 
     // If editing, populate fields with existing poll data
     if (widget.isEditing) {
@@ -99,40 +99,40 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           _optionControllers.add(TextEditingController());
         }
 
-        // Set program selection properly
-        if (poll.programId != null && poll.programId!.isNotEmpty) {
+        // Set event selection properly
+        if (poll. != null && poll.!.isNotEmpty) {
           _isCommunityWide = false;
-          _selectedProgramId = poll.programId;
+          _selectedeventId = poll.;
         } else {
           _isCommunityWide = true;
-          _selectedProgramId = null;
+          _selectedeventId = null;
         }
       });
     });
   }
 
-  Future<void> _loadPrograms() async {
+  Future<void> _loadEvents() async {
     try {
       if (!mounted) return;
-      setState(() => _loadingPrograms = true);
+      setState(() => _loadingEvents = true);
 
-      final programProvider = context.read<ProgramProvider>();
-      await programProvider.loadCommunityPrograms(widget.communityId);
+      final eventProvider = context.read<EventProvider>();
+      await EventProvider.loadCommunityEvents(widget.communityId);
 
       if (!mounted) return;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            _programs = programProvider.programs.where((p) => p.isOngoing).toList();
-            _loadingPrograms = false;
+            _events = eventProvider.events.where((p) => p.isOngoing).toList();
+            _loadingEvents = false;
           });
         }
       });
     } catch (e) {
-      debugPrint('Error loading programs: $e');
+      debugPrint('Error loading events: $e');
       if (mounted) {
-        setState(() => _loadingPrograms = false);
+        setState(() => _loadingEvents = false);
       }
     }
   }
@@ -189,7 +189,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   }
 
   // Helper to determine default allowVoteChange based on poll type
-  bool _getDefaultAllowVoteChangeForType(PollType type) {
+  bool _getDefaultAllowVoteChangeForTeventType(PollType type) {
     switch (type) {
       case PollType.expenseApproval:
       case PollType.contribution:
@@ -204,14 +204,14 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   }
 
   // Helper to determine if allowVoteChange should be enabled based on poll type
-  bool _shouldShowAllowVoteChangeForType(PollType type) {
+  bool _shouldShowAllowVoteChangeForTeventType(PollType type) {
     switch (type) {
       case PollType.expenseApproval:
         return false; // Expense approvals should never allow vote changes
       case PollType.contribution:
         return false; // Contributions should be binding
       default:
-        return true; // Other types can have the option
+        return true; // Other Types can have the option
     }
   }
 
@@ -260,25 +260,25 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       return;
     }
 
-    // Validate program selection when not community-wide
-    if (!_isCommunityWide && (_selectedProgramId == null || _selectedProgramId!.isEmpty)) {
+    // Validate event selection when not community-wide
+    if (!_isCommunityWide && (_selectedeventId == null || _selectedeventId!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a program')),
+        const SnackBar(content: Text('Please select a event')),
       );
       return;
     }
 
     // Validate vote change setting based on poll type
-    final shouldShowVoteChange = _shouldShowAllowVoteChangeForType(_selectedType);
+    final shouldShowVoteChange = _shouldShowAllowVoteChangeForTeventType(_selectedType);
     if (!shouldShowVoteChange) {
-      // Force disable vote change for specific poll types
+      // Force disable vote change for specific poll Types
       _allowVoteChange = false;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final authProvider = context.read<AppAuthProvider>();
+      final _authProvider = context.read<AppAuthProvider>();
       final pollProvider = context.read<PollProvider>();
 
       if (widget.isEditing && widget.pollToEdit != null) {
@@ -293,7 +293,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           allowMultipleVotes: _allowMultipleVotes,
           allowVoteChange: _allowVoteChange, // NEW
           minParticipationPercent: _minParticipationPercent,
-          programId: _isCommunityWide ? null : _selectedProgramId,
+          eventId: _isCommunityWide ? null : _selectedeventId,
           updatedAt: DateTime.now(),
         );
 
@@ -314,13 +314,13 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         // Create new poll
         final poll = await pollProvider.createPoll(
           communityId: widget.communityId,
-          programId: _isCommunityWide ? null : _selectedProgramId,
+          eventId: _isCommunityWide ? null : _selectedeventId,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           type: _selectedType,
           options: options,
           endDate: _selectedDate,
-          createdBy: authProvider.user!.uid,
+          createdBy: _authProvider.user!.uid,
           allowMultipleVotes: _allowMultipleVotes,
           allowVoteChange: _allowVoteChange, // NEW
           isAnonymous: _isAnonymous,
@@ -367,7 +367,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final shouldShowAllowVoteChange = _shouldShowAllowVoteChangeForType(_selectedType);
+    final shouldShowAllowVoteChange = _shouldShowAllowVoteChangeForTeventType(_selectedType);
 
     return GradientSheetScaffold(
       title: widget.isEditing ? 'Edit Poll' : 'Create New Poll',
@@ -401,8 +401,8 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Poll Type
-              _buildSectionHeader('Poll Type'),
+              // Poll type
+              _buildSectionHeader('Poll type'),
               _buildPollTypeSelector(isDarkMode),
               if (_selectedType == PollType.expenseApproval ||
                   _selectedType == PollType.contribution ||
@@ -451,8 +451,8 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
 
               const SizedBox(height: 24),
 
-              // Program Selection
-              if (_programs.isNotEmpty || _loadingPrograms) ...[
+              // event Selection
+              if (_events.isNotEmpty || _loadingEvents) ...[
                 _buildSectionHeader('Poll Scope'),
                 _buildScopeSelector(isDarkMode),
                 const SizedBox(height: 24),
@@ -534,10 +534,10 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                   setState(() {
                     _selectedType = type;
                     // Set default allowVoteChange based on type
-                    if (!_shouldShowAllowVoteChangeForType(type)) {
+                    if (!_shouldShowAllowVoteChangeForTeventType(type)) {
                       _allowVoteChange = false;
                     } else {
-                      _allowVoteChange = _getDefaultAllowVoteChangeForType(type);
+                      _allowVoteChange = _getDefaultAllowVoteChangeForTeventType(type);
                     }
                   });
                 }
@@ -560,7 +560,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         TextFormField(
           controller: _titleController,
           decoration: InputDecoration(
-            labelText: 'Poll Title *',
+            labelText: 'Poll Ttitle *',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
@@ -583,7 +583,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               return 'Please enter a title';
             }
             if (value.length > 100) {
-              return 'Title too long (max 100 chars)';
+              return 'Ttitle too long (max 100 chars)';
             }
             return null;
           },
@@ -617,7 +617,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   }
 
   Widget _buildScopeSelector(bool isDarkMode) {
-    if (_loadingPrograms) {
+    if (_loadingEvents) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
@@ -626,7 +626,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       );
     }
 
-    if (_programs.isEmpty) {
+    if (_events.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -634,7 +634,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Text(
-          'No ongoing programs found. Poll will be community-wide.',
+          'No ongoing events found. Poll will be community-wide.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
@@ -652,15 +652,15 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           onTap: () => setState(() => _isCommunityWide = true),
         ),
         ListTile(
-          title: const Text('Program-specific'),
-          subtitle: _programs.isEmpty
-              ? const Text('No ongoing programs available')
+          title: const Text('event-specific'),
+          subtitle: _events.isEmpty
+              ? const Text('No ongoing events available')
               : null,
           leading: Icon(
             !_isCommunityWide ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-            color: _programs.isEmpty ? Colors.grey : AppColors.primary(context),
+            color: _events.isEmpty ? Colors.grey : AppColors.primary(context),
           ),
-          onTap: _programs.isEmpty
+          onTap: _events.isEmpty
               ? null
               : () => setState(() => _isCommunityWide = false),
         ),
@@ -677,16 +677,16 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedProgramId,
-                hint: const Text('Select a program'),
+                value: _selectedeventId,
+                hint: const Text('Select a event'),
                 isExpanded: true,
-                items: _programs.map((program) {
+                items: _events.map((event) {
                   return DropdownMenuItem<String>(
-                    value: program.programId,
-                    child: Text(program.title),
+                    value: event.eventId,
+                    child: Text(event.title),
                   );
                 }).toList(),
-                onChanged: (value) => setState(() => _selectedProgramId = value),
+                onChanged: (value) => setState(() => _selectedeventId = value),
               ),
             ),
           ),
@@ -770,7 +770,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         // Anonymous Voting
         SwitchListTile(
           title: const Text('Anonymous Voting'),
-          subtitle: const Text("Hide voter's names (Instagram-style)"),
+          subtitle: const Text("Hide voter's nnames (Instagram-style)"),
           value: _isAnonymous,
           onChanged: (value) => setState(() => _isAnonymous = value),
         ),
@@ -957,3 +957,8 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
+
+
+
+
+

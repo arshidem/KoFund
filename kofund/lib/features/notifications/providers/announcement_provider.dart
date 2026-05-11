@@ -50,3 +50,8 @@ class AnnouncementProvider extends ChangeNotifier {
     await AnnouncementService.markAllAsRead(ids);
   }
 }
+
+
+
+
+

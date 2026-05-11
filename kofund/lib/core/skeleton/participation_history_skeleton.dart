@@ -56,7 +56,7 @@ class ParticipationHistorySkeleton extends StatelessWidget {
             // Header
             Row(
               children: [
-                // Program Icon
+                // event Icon
                 Container(
                   width: 40,
                   height: 40,
@@ -103,7 +103,7 @@ class ParticipationHistorySkeleton extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Program Type
+            // event type
             Row(
               children: [
                 SizedBox(
@@ -204,3 +204,8 @@ class ParticipationHistorySkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

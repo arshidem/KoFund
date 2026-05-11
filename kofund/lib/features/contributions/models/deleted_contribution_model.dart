@@ -12,7 +12,7 @@ class DeletedContributionModel {
   String originalContributionId;
   
   // 🔹 COPY of ALL Original Contribution Data
-  String programId;
+  String eventId;
   String userId;
   String contributorName;
   String communityId;
@@ -64,7 +64,7 @@ class DeletedContributionModel {
     required this.originalContributionId,
     
     // Original Contribution Data
-    required this.programId,
+    required this.eventId,
     required this.userId,
     required this.contributorName,
     required this.communityId,
@@ -131,7 +131,7 @@ class DeletedContributionModel {
       originalContributionId: contribution.contributionId,
       
       // Copy all original contribution data
-      programId: contribution.programId,
+      eventId: contribution.eventId,
       userId: contribution.userId,
       contributorName: contribution.contributorName,
       communityId: contribution.communityId,
@@ -201,7 +201,7 @@ class DeletedContributionModel {
       originalContributionId: map['originalContributionId'] ?? '',
       
       // Original contribution data
-      programId: map['programId'] ?? '',
+      eventId: map['eventId'] ?? '',
       userId: map['userId'] ?? '',
       contributorName: map['contributorName'] ?? '',
       communityId: map['communityId'] ?? '',
@@ -253,7 +253,7 @@ class DeletedContributionModel {
       'originalContributionId': originalContributionId,
       
       // Original contribution data
-      'programId': programId,
+      'eventId': eventId,
       'userId': userId,
       'contributorName': contributorName,
       'communityId': communityId,
@@ -302,7 +302,7 @@ class DeletedContributionModel {
   ContributionModel toContributionModel() {
     return ContributionModel(
       contributionId: originalContributionId, // Use original ID
-      programId: programId,
+      eventId: eventId,
       userId: userId,
       contributorName: contributorName,
       communityId: communityId,
@@ -390,7 +390,7 @@ class DeletedContributionModel {
     return DeletedContributionModel(
       deletedContributionId: deletedContributionId,
       originalContributionId: originalContributionId,
-      programId: programId,
+      eventId: eventId,
       userId: userId,
       contributorName: contributorName,
       communityId: communityId,
@@ -439,7 +439,7 @@ class DeletedContributionModel {
   DeletedContributionModel copyWith({
     String? deletedContributionId,
     String? originalContributionId,
-    String? programId,
+    String? eventId,
     String? userId,
     String? contributorName,
     String? communityId,
@@ -474,7 +474,7 @@ class DeletedContributionModel {
     return DeletedContributionModel(
       deletedContributionId: deletedContributionId ?? this.deletedContributionId,
       originalContributionId: originalContributionId ?? this.originalContributionId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       userId: userId ?? this.userId,
       contributorName: contributorName ?? this.contributorName,
       communityId: communityId ?? this.communityId,
@@ -533,3 +533,8 @@ class TTLConfig {
     );
   }
 }
+
+
+
+
+

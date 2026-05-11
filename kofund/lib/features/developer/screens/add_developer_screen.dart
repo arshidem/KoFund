@@ -26,7 +26,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCommunities();
+    _loadEvents();
   }
 
   @override
@@ -120,11 +120,11 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
     }
   }
 
-  Future<void> _loadCommunities() async {
+  Future<void> _loadEvents() async {
     try {
       final snapshot = await _fs.collection('communities').get();
       for (var doc in snapshot.docs) {
-        _communityNames[doc.id] = doc.data()['name']?.toString() ?? 'Unnamed';
+        _communityNames[doc.id] = doc.data()['name']?.toString() ?? 'Unnnamed';
       }
     } catch (e) {
       debugPrint('Error loading communities: $e');
@@ -288,9 +288,9 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     
-    if (!authProvider.isDeveloper) {
+    if (!_authProvider.isDeveloper) {
       return const Scaffold(
         body: Center(child: Text('Access denied')),
       );
@@ -439,3 +439,8 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
     );
   }
 }
+
+
+
+
+

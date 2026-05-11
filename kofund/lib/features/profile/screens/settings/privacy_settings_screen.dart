@@ -28,8 +28,8 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   }
 
   void _loadCurrentSettings() {
-    final authProvider = context.read<AppAuthProvider>();
-    final user = authProvider.user;
+    final _authProvider = context.read<AppAuthProvider>();
+    final user = _authProvider.user;
     
     if (user != null) {
       setState(() {
@@ -41,7 +41,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   Future<void> _updatePrivacySetting(bool newValue) async {
     final profileProvider = context.read<ProfileProvider>();
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
 
     try {
       final success = await profileProvider.updatePrivacySettings(newValue);
@@ -53,7 +53,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
         SnackbarHelper.showSuccess(context, 'Privacy settings updated!');
 
         // Refresh the user data in AppAuthProvider using the captured provider
-        await authProvider.refreshUserData();
+        await _authProvider.refreshUserData();
         if (!mounted) return;
       } else {
         SnackbarHelper.showError(context, profileProvider.error ?? 'Failed to update privacy settings');
@@ -68,9 +68,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final profileProvider = context.watch<ProfileProvider>();
-    final user = authProvider.user;
+    final user = _authProvider.user;
 
     if (user == null || !_initialized) {
       return GradientSheetScaffold(
@@ -125,7 +125,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         Expanded(
                           child: Text(
                             _showDetailedProfile
-                                ? 'Others can see your contributions and program details'
+                                ? 'Others can see your contributions and event details'
                                 : 'Others can only see your basic profile information',
                             style: TextStyle(
                               fontSize: 12,
@@ -152,7 +152,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 _buildItemDivider(),
                 _buildVisibilityItem('📱', 'Your phone number', true),
                 _buildItemDivider(),
-                _buildVisibilityItem('💰', 'Contribution amounts', _showDetailedProfile),
+                _buildVisibilityItem('💰', 'Contribution aamounts', _showDetailedProfile),
                 _buildItemDivider(),
                 _buildVisibilityItem('📊', 'Contribution history', _showDetailedProfile),
               ],
@@ -325,3 +325,8 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     );
   }
 }
+
+
+
+
+

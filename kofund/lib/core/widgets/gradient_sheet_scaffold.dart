@@ -48,7 +48,10 @@ class GradientSheetScaffold extends StatelessWidget {
     final Widget? effectiveLeading = leading ??
         (automaticallyImplyLeading && canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary(context),
+                ),
                 onPressed: onPop ?? () => Navigator.of(context).pop(),
               )
             : null);
@@ -56,8 +59,8 @@ class GradientSheetScaffold extends StatelessWidget {
     final Widget centerTitle = titleWidget ??
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -66,8 +69,12 @@ class GradientSheetScaffold extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: Theme.of(context).brightness == Brightness.dark
+            ? Brightness.dark
+            : Brightness.light,
         systemNavigationBarColor: AppColors.background(context),
         systemNavigationBarIconBrightness:
             Theme.of(context).brightness == Brightness.dark
@@ -83,7 +90,18 @@ class GradientSheetScaffold extends StatelessWidget {
           width: double.infinity,
           height: double.infinity,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient(context),
+            color: Theme.of(context).brightness == Brightness.dark ? null : AppColors.background(context),
+            gradient: Theme.of(context).brightness == Brightness.dark
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    stops: [0.0, 0.3], // Forces the gradient to finish transitioning within the header 
+                    colors: [
+                      Color(0xFF1A2E2E),
+                      Color(0xFF0D1B1A),
+                    ],
+                  )
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,9 +142,11 @@ class GradientSheetScaffold extends StatelessWidget {
                     borderRadius: sheetRadius,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        offset: const Offset(0, -2),
-                        blurRadius: 8,
+                        color: Colors.black.withValues(
+                          alpha: Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.08,
+                        ),
+                        offset: const Offset(0, -4),
+                        blurRadius: 10,
                       ),
                     ],
                   ),
@@ -143,3 +163,8 @@ class GradientSheetScaffold extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

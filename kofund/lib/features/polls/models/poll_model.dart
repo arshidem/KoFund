@@ -17,7 +17,7 @@ enum PollStatus {
 class PollModel {
   final String pollId;
   final String communityId;
-  final String? programId;
+  final String? eventId;
   final String title;
   final String description;
   final PollType type;
@@ -46,7 +46,7 @@ class PollModel {
   PollModel({
     required this.pollId,
     required this.communityId,
-    this.programId,
+    this.eventId,
     required this.title,
     required this.description,
     required this.type,
@@ -74,7 +74,7 @@ class PollModel {
     return PollModel(
       pollId: doc.id,
       communityId: data['communityId'] as String,
-      programId: data['programId'] as String?,
+      eventId: data['eventId'] as String?,
       title: data['title'] as String,
       description: data['description'] as String? ?? '',
       type: PollType.values[data['type'] as int? ?? 0],
@@ -214,6 +214,7 @@ class PollModel {
     return PollModel(
       pollId: '',
       communityId: '',
+      eventId: null,
       title: '',
       description: '',
       type: PollType.decision,
@@ -236,7 +237,7 @@ class PollModel {
   PollModel copyWith({
     String? pollId,
     String? communityId,
-    String? programId,
+    String? eventId,
     String? title,
     String? description,
     PollType? type,
@@ -259,7 +260,7 @@ class PollModel {
     return PollModel(
       pollId: pollId ?? this.pollId,
       communityId: communityId ?? this.communityId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       title: title ?? this.title,
       description: description ?? this.description,
       type: type ?? this.type,
@@ -285,7 +286,7 @@ class PollModel {
   Map<String, dynamic> toFirestore() {
     return {
       'communityId': communityId,
-      'programId': programId,
+      'eventId': eventId,
       'title': title,
       'description': description,
       'type': type.index,
@@ -331,3 +332,8 @@ class PollModel {
            (!hasUserVoted(userId) || allowMultipleVotes || allowVoteChange);
   }
 }
+
+
+
+
+

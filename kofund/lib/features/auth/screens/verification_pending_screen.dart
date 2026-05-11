@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart'; // Add AppColors
 import '../../../core/utils/snackbar_helper.dart'; // Consistent with other screens
-import '../../../routing/route_names.dart'; // Use route names
+import '../../../routing/route_names.dart'; // Use route nnames
 import '../providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -148,8 +148,8 @@ Future<void> _checkForPendingInvite() async {
   Future<void> _resendVerification() async {
     setState(() => _isResending = true);
     
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final success = await authProvider.resendVerificationEmail();
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final success = await _authProvider.resendVerificationEmail();
     if (!mounted) return;
     
     if (success && mounted) {
@@ -163,7 +163,7 @@ Future<void> _checkForPendingInvite() async {
     } else if (mounted) {
       SnackbarHelper.showError(
         context, 
-        authProvider.error ?? 'Failed to resend email'
+        _authProvider.error ?? 'Failed to resend email'
       );
     }
     
@@ -173,8 +173,8 @@ Future<void> _checkForPendingInvite() async {
   }
 
   Future<void> _signOut() async {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    await authProvider.signOut(context);
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    await _authProvider.signOut(context);
     if (!mounted) return;
     
     if (mounted) {
@@ -342,7 +342,7 @@ Future<void> _checkForPendingInvite() async {
                       ),
                       const SizedBox(height: 30),
 
-                      // Status Title
+                      // Status Ttitle
                       Text(
                         'Verify Your Email Address',
                         style: TextStyle(
@@ -650,3 +650,8 @@ Container(
     );
   }
 }
+
+
+
+
+

@@ -20,21 +20,21 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
   Map<String, dynamic>? _selectedUser;
   final Map<String, String> _communityNames = {};
   
-  String _targetType = 'Global'; // 'Global', 'Targeted', 'Community'
+  String _targetTeventType = 'Global'; // 'Global', 'Targeted', 'Community'
   Map<String, dynamic>? _selectedCommunity;
   bool _isSending = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCommunities();
+    _loadEvents();
   }
 
-  Future<void> _loadCommunities() async {
+  Future<void> _loadEvents() async {
     try {
       final snapshot = await _fs.collection('communities').get();
       for (var doc in snapshot.docs) {
-        _communityNames[doc.id] = doc.data()['name']?.toString() ?? 'Unnamed';
+        _communityNames[doc.id] = doc.data()['name']?.toString() ?? 'Unnnamed';
       }
       if (mounted) setState(() {});
     } catch (e) {
@@ -97,13 +97,13 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
                 ButtonSegment(value: 'Community', label: Text('Group'), icon: Icon(Icons.groups)),
                 ButtonSegment(value: 'Targeted', label: Text('Specific'), icon: Icon(Icons.person)),
               ],
-              selected: {_targetType},
-              onSelectionChanged: (set) => setState(() => _targetType = set.first),
+              selected: {_targetTeventType},
+              onSelectionChanged: (set) => setState(() => _targetTeventType = set.first),
             ),
             const SizedBox(height: 16),
-            if (_targetType == 'Targeted') 
+            if (_targetTeventType == 'Targeted') 
               _buildTargetUserPicker(),
-            if (_targetType == 'Community')
+            if (_targetTeventType == 'Community')
               _buildCommunityPicker(),
           ],
         ),
@@ -143,7 +143,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
           onEditingComplete: onEditingComplete,
           decoration: InputDecoration(
             labelText: 'Search Target User',
-            hintText: 'Type to search users...',
+            hintText: 'type to search users...',
             prefixIcon: const Icon(Icons.person_search),
             isDense: true,
             border: OutlineInputBorder(
@@ -215,7 +215,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
 
   Widget _buildCommunityPicker() {
     return Autocomplete<Map<String, dynamic>>(
-      displayStringForOption: (option) => option['name']?.toString() ?? 'Unnamed Community',
+      displayStringForOption: (option) => option['name']?.toString() ?? 'Unnnamed Community',
       optionsBuilder: (textEditingValue) async {
         if (textEditingValue.text.isEmpty) {
           return const Iterable<Map<String, dynamic>>.empty();
@@ -245,7 +245,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
           onEditingComplete: onEditingComplete,
           decoration: InputDecoration(
             labelText: 'Search Community',
-            hintText: 'Type to search communities...',
+            hintText: 'type to search communities...',
             prefixIcon: const Icon(Icons.groups),
             isDense: true,
             border: OutlineInputBorder(
@@ -287,7 +287,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
                   shrinkWrap: true,
                   itemBuilder: (BuildContext context, int index) {
                     final option = options.elementAt(index);
-                    final name = option['name']?.toString() ?? 'Unnamed Community';
+                    final name = option['name']?.toString() ?? 'Unnnamed Community';
                     
                     return ListTile(
                       leading: CircleAvatar(
@@ -321,7 +321,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Title',
+                labelText: 'Ttitle',
                 hintText: 'New Update Available',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(100),
@@ -393,16 +393,16 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
 
   Future<void> _confirmAndSend() async {
     if (_titleController.text.isEmpty || _bodyController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title and Body are required')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ttitle and Body are required')));
       return;
     }
 
-    if (_targetType == 'Targeted' && _selectedUser == null) {
+    if (_targetTeventType == 'Targeted' && _selectedUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target user is required')));
       return;
     }
 
-    if (_targetType == 'Community' && _selectedCommunity == null) {
+    if (_targetTeventType == 'Community' && _selectedCommunity == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a community')));
       return;
     }
@@ -411,7 +411,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Send?'),
-        content: Text('Send "$_targetType" notification to your audience?'),
+        content: Text('Send "$_targetTeventType" notification to your audience?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes, Send')),
@@ -430,7 +430,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
       final title = _titleController.text.trim();
       final body = _bodyController.text.trim();
       
-      switch (_targetType) {
+      switch (_targetTeventType) {
         case 'Global':
           await _functions.httpsCallable('sendGlobalNotification').call({
             'title': title,
@@ -468,3 +468,8 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
     }
   }
 }
+
+
+
+
+

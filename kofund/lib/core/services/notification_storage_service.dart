@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -271,6 +271,7 @@ Future<void> saveNotification(AppNotification notification) async {
             debugPrint('❌ Error parsing notification ${doc.id}: $e');
             return AppNotification(
               id: 'error',
+              eventId: '',
               title: 'Error',
               body: 'Could not load notification',
               type: NotificationType.announcement,
@@ -355,7 +356,7 @@ Future<void> saveNotification(AppNotification notification) async {
     if (user == null) return;
 
     try {
-      // ⭐ NEW: Verify ownership before deleting
+      // ⭐ NEW: Verify ownership before deleteing
       final notificationDoc = await _firestore
           .collection('users')
           .doc(user.uid)
@@ -383,7 +384,7 @@ Future<void> saveNotification(AppNotification notification) async {
           
       debugPrint('✅ Notification deleted: $notificationId');
     } catch (e) {
-      debugPrint('❌ Error deleting notification: $e');
+      debugPrint('❌ Error deleteing notification: $e');
     }
   }
 
@@ -523,12 +524,12 @@ Future<void> saveNotification(AppNotification notification) async {
       for (final doc in snapshot.docs) {
         final data = doc.data();
         debugPrint('\n📋 ID: ${doc.id}');
-        debugPrint('   Title: ${data['title']}');
+        debugPrint('   Ttitle: ${data['title']}');
         debugPrint('   userId in data: ${data['userId']}');
         debugPrint('   Is for current user? ${data['userId'] == user.uid}');
         debugPrint('   Matches stored ID? ${data['userId'] == storedUserId}');
         debugPrint('   Community: ${data['communityId'] ?? "N/A"}');
-        debugPrint('   Type: ${data['type']}');
+        debugPrint('   type: ${data['type']}');
         debugPrint('   isRead: ${data['isRead']}');
         debugPrint('   timestamp: ${data['timestamp']}');
       }
@@ -537,3 +538,8 @@ Future<void> saveNotification(AppNotification notification) async {
     }
   }
 }
+
+
+
+
+

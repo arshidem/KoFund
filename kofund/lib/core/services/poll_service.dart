@@ -48,15 +48,15 @@ class PollService {
   }
   
   // Get polls for a community
-  Stream<List<PollModel>> streamCommunityPolls(String communityId, {String? programId}) {
+  Stream<List<PollModel>> streamCommunityPolls(String communityId, {String? eventId}) {
     Query query = pollsCollection
       .where('communityId', isEqualTo: communityId)
       .where('status', whereIn: [PollStatus.active.index, PollStatus.closed.index])
       .orderBy('createdAt', descending: true)
       .limit(20);
     
-    if (programId != null) {
-      query = query.where('programId', isEqualTo: programId);
+    if (eventId != null) {
+      query = query.where('eventId', isEqualTo: eventId);
     }
     
     return query.snapshots().map((snapshot) {
@@ -80,15 +80,15 @@ class PollService {
   }
   
   // Get active polls for a community
-  Stream<List<PollModel>> streamActivePolls(String communityId, {String? programId}) {
+  Stream<List<PollModel>> streamActivePolls(String communityId, {String? eventId}) {
     Query query = pollsCollection
       .where('communityId', isEqualTo: communityId)
       .where('status', isEqualTo: PollStatus.active.index)
       .orderBy('endDate')
       .limit(10);
     
-    if (programId != null) {
-      query = query.where('programId', isEqualTo: programId);
+    if (eventId != null) {
+      query = query.where('eventId', isEqualTo: eventId);
     }
     
     return query.snapshots().map((snapshot) {
@@ -213,9 +213,9 @@ class PollService {
   Stream<List<PollModel>> streamPollsNeedingVote(
     String communityId, 
     String userId, 
-    {String? programId}
+    {String? eventId}
   ) {
-    return streamActivePolls(communityId, programId: programId).map((polls) {
+    return streamActivePolls(communityId, eventId: eventId).map((polls) {
       return polls.where((poll) => !poll.hasUserVoted(userId)).toList();
     });
   }
@@ -224,9 +224,9 @@ class PollService {
   Stream<List<PollModel>> streamPollsUserCanVote(
     String communityId, 
     String userId, 
-    {String? programId}
+    {String? eventId}
   ) {
-    return streamActivePolls(communityId, programId: programId).map((polls) {
+    return streamActivePolls(communityId, eventId: eventId).map((polls) {
       return polls.where((poll) => poll.canUserVote(userId)).toList();
     });
   }
@@ -249,7 +249,7 @@ class PollService {
   Stream<QuerySnapshot> getPollsStream({
     required String communityId,
     PollStatus? status,
-    String? programId,
+    String? eventId,
     bool orderByEndDate = false,
   }) {
     Query query = pollsCollection.where('communityId', isEqualTo: communityId);
@@ -258,8 +258,8 @@ class PollService {
       query = query.where('status', isEqualTo: status.index);
     }
     
-    if (programId != null) {
-      query = query.where('programId', isEqualTo: programId);
+    if (eventId != null) {
+      query = query.where('eventId', isEqualTo: eventId);
     }
     
     if (orderByEndDate) {
@@ -297,7 +297,7 @@ class PollService {
     required String communityId,
     bool? allowMultipleVotes,
     bool? allowVoteChange,
-    String? programId,
+    String? eventId,
   }) async {
     Query query = pollsCollection.where('communityId', isEqualTo: communityId);
     
@@ -309,8 +309,8 @@ class PollService {
       query = query.where('allowVoteChange', isEqualTo: allowVoteChange);
     }
     
-    if (programId != null) {
-      query = query.where('programId', isEqualTo: programId);
+    if (eventId != null) {
+      query = query.where('eventId', isEqualTo: eventId);
     }
     
     final snapshot = await query.get();
@@ -357,3 +357,8 @@ class PollService {
     };
   }
 }
+
+
+
+
+

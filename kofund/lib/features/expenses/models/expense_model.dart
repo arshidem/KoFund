@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ExpenseModel {
   String expenseId;
-  String programId;
+  String eventId;
   String communityId;
   String title;
   String description;
@@ -40,7 +40,7 @@ class ExpenseModel {
 
   ExpenseModel({
     required this.expenseId,
-    required this.programId,
+    required this.eventId,
     required this.communityId,
     required this.title,
     required this.description,
@@ -71,7 +71,7 @@ class ExpenseModel {
   factory ExpenseModel.fromMap(Map<String, dynamic> map, String documentId) {
     return ExpenseModel(
       expenseId: documentId,
-      programId: map['programId'] ?? '',
+      eventId: map['eventId'] ?? '',
       communityId: map['communityId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
@@ -102,7 +102,7 @@ class ExpenseModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'programId': programId,
+      'eventId': eventId,
       'communityId': communityId,
       'title': title,
       'description': description,
@@ -133,7 +133,7 @@ class ExpenseModel {
 
   ExpenseModel copyWith({
     String? expenseId,
-    String? programId,
+    String? eventId,
     String? communityId,
     String? title,
     String? description,
@@ -160,7 +160,7 @@ class ExpenseModel {
   }) {
     return ExpenseModel(
       expenseId: expenseId ?? this.expenseId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       communityId: communityId ?? this.communityId,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -187,3 +187,8 @@ class ExpenseModel {
     );
   }
 }
+
+
+
+
+

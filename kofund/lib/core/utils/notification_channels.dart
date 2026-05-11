@@ -1,5 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../constants/notification_types.dart';
+import '../constants/notification_Types.dart';
 
 class NotificationChannels {
   static const Map<String, Map<String, String>> _channels = {
@@ -7,13 +7,13 @@ class NotificationChannels {
       'name': 'Payments',
       'description': 'Payment notifications and updates',
     },
-    'programs_channel': {
-      'name': 'Programs',
-      'description': 'Program updates and announcements',
+    'events_channel': {
+      'name': 'events',
+      'description': 'event updates and announcements',
     },
-    'new_programs_channel': { // 🆕 ADDED
-      'name': 'New Programs',
-      'description': 'Notifications when new programs are created',
+    'new_events_channel': { // 🆕 ADDED
+      'name': 'New events',
+      'description': 'Notifications when new events are created',
     },
     'admin_channel': {
       'name': 'Admin Alerts',
@@ -61,10 +61,10 @@ class NotificationChannels {
     switch (type) {
       case NotificationType.payment:
         return 'payments_channel';
-      case NotificationType.programUpdate:
-        return 'programs_channel';
-      case NotificationType.program: // 🆕 ADDED
-        return 'new_programs_channel';
+      case NotificationType.update:
+        return 'events_channel';
+      case NotificationType.event: // 🆕 ADDED
+        return 'new_events_channel';
       case NotificationType.adminAlert:
         return 'admin_channel';
       case NotificationType.system:
@@ -117,3 +117,8 @@ class NotificationChannels {
     }
   }
 }
+
+
+
+
+

@@ -113,8 +113,8 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
   }
 
   Future<void> _createVirtualUsers() async {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = authProvider.user;
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = _authProvider.user;
     
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -901,3 +901,8 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     );
   }
 }
+
+
+
+
+

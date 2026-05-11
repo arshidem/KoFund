@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 
 class AppNotification {
   final String id;
@@ -10,7 +10,7 @@ class AppNotification {
   final NotificationPriority priority;
   final Map<String, dynamic> data;
   final String? userId;
-  final String? programId;
+  final String? eventId;
   final String? communityId;
   final String? communityName; // 🆕 ADD THIS FIELD
   final bool isRead;
@@ -20,16 +20,16 @@ class AppNotification {
   final String? imageUrl;
 
   AppNotification({
-    required this.id,
+    required this.id, // ✅ MADE REQUIRED
+    required this.eventId,
     required this.title,
     required this.body,
     required this.type,
     this.priority = NotificationPriority.normal,
     this.data = const {},
     this.userId,
-    this.programId,
     this.communityId,
-    this.communityName, // 🆕 ADD THIS
+    this.communityName,
     this.isRead = false,
     required this.timestamp,
     this.deepLink,
@@ -47,7 +47,7 @@ class AppNotification {
       priority: _stringToPriority(data['priority']),
       data: Map<String, dynamic>.from(data['data'] ?? {}),
       userId: data['userId'],
-      programId: data['programId'],
+      eventId: data['eventId'],
       communityId: data['communityId'],
       communityName: data['communityName'], // 🆕 ADD THIS
       isRead: data['isRead'] ?? false,
@@ -91,7 +91,7 @@ class AppNotification {
       'priority': priority.toString().split('.').last,
       'data': data, // This should be Map<String, dynamic>
       'userId': userId,
-      'programId': programId,
+      'eventId': eventId,
       'communityId': communityId,
       'communityName': communityName, // 🆕 ADD THIS
       'isRead': isRead,
@@ -112,7 +112,7 @@ class AppNotification {
     NotificationPriority? priority,
     Map<String, dynamic>? data,
     String? userId,
-    String? programId,
+    String? eventId,
     String? communityId,
     String? communityName, // 🆕 ADD THIS
     bool? isRead,
@@ -129,7 +129,7 @@ class AppNotification {
       priority: priority ?? this.priority,
       data: data ?? this.data,
       userId: userId ?? this.userId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       communityId: communityId ?? this.communityId,
       communityName: communityName ?? this.communityName, // 🆕 ADD THIS
       isRead: isRead ?? this.isRead,
@@ -158,9 +158,9 @@ class AppNotification {
     switch (type) {
       case NotificationType.payment:
         return Icons.payment;
-      case NotificationType.programUpdate:
+      case NotificationType.update:
         return Icons.update;
-      case NotificationType.program: // 🆕 ADDED THIS CASE
+      case NotificationType.event: // 🆕 ADDED THIS CASE
         return Icons.calendar_today;
       case NotificationType.adminAlert:
         return Icons.admin_panel_settings;
@@ -218,3 +218,8 @@ class AppNotification {
   @override
   int get hashCode => id.hashCode;
 }
+
+
+
+
+

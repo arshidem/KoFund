@@ -51,8 +51,8 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
   }
 
   Future<void> _assignToMe(String issueId) async {
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = authProvider.user;
+    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = _authProvider.user;
     
     if (currentUser == null) return;
 
@@ -366,7 +366,7 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status & Type
+                    // Status & type
                     Row(
                       children: [
                         _buildBadge(issue.status.toUpperCase(), _statusColors[issue.status]!),
@@ -376,40 +376,40 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
                     ),
                     
                     const SizedBox(height: 24),
-                    _buildSectionTitle('DESCRIPTION'),
+                    _buildSectionTtitle('DESCRIPTION'),
                     const SizedBox(height: 8),
                     _buildContentBox(issue.description, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.03)),
 
                     if (issue.stepsToReproduce != null && issue.stepsToReproduce!.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      _buildSectionTitle('STEPS TO REPRODUCE'),
+                      _buildSectionTtitle('STEPS TO REPRODUCE'),
                       const SizedBox(height: 8),
                       _buildContentBox(issue.stepsToReproduce!, color: Colors.orange.withValues(alpha: 0.05), borderColor: Colors.orange.withValues(alpha: 0.1)),
                     ],
 
                     const SizedBox(height: 24),
-                    _buildSectionTitle('REPORTER INFORMATION'),
+                    _buildSectionTtitle('REPORTER INFORMATION'),
                     const SizedBox(height: 12),
                     _buildDetailRow(Icons.person_outline, 'Name', issue.reporterName),
                     _buildDetailRow(Icons.email_outlined, 'Email', issue.reporterEmail),
                     _buildDetailRow(Icons.calendar_today_outlined, 'Reported On', DateFormat('MMM dd, yyyy - hh:mm a').format(issue.createdAt.toDate())),
                     
                     const SizedBox(height: 20),
-                    _buildSectionTitle('SYSTEM DETAILS'),
+                    _buildSectionTtitle('SYSTEM DETAILS'),
                     const SizedBox(height: 12),
                     _buildDetailRow(Icons.info_outline, 'App Version', 'v${issue.appVersion}'),
                     _buildDetailRow(Icons.devices, 'Platform', issue.platform.toUpperCase()),
                     
                     if (issue.assignedDeveloperName != null) ...[
                       const SizedBox(height: 20),
-                      _buildSectionTitle('ASSIGNMENT'),
+                      _buildSectionTtitle('ASSIGNMENT'),
                       const SizedBox(height: 12),
                       _buildDetailRow(Icons.engineering_rounded, 'Developer', issue.assignedDeveloperName!, valueColor: Colors.blue),
                     ],
 
                     if (issue.resolutionNotes != null && issue.resolutionNotes!.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      _buildSectionTitle('RESOLUTION NOTES'),
+                      _buildSectionTtitle('RESOLUTION NOTES'),
                       const SizedBox(height: 8),
                       _buildContentBox(issue.resolutionNotes!, color: Colors.green.withValues(alpha: 0.05), borderColor: Colors.green.withValues(alpha: 0.1)),
                     ],
@@ -485,7 +485,7 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTtitle(String title) {
     return Text(
       title,
       style: TextStyle(
@@ -547,9 +547,9 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     
-    if (!authProvider.isDeveloper) {
+    if (!_authProvider.isDeveloper) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Developer access required')),
@@ -778,3 +778,8 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
     );
   }
 }
+
+
+
+
+

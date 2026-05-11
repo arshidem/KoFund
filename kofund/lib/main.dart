@@ -18,7 +18,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 // 🧩 Services
 import 'core/services/firebase_auth_service.dart';
 import 'core/services/community_firestore_service.dart';
-import 'core/services/program_service.dart';
+import 'core/services/event_service.dart';
 import 'core/services/participant_service.dart';
 import 'core/services/contribution_service.dart';
 import 'core/services/expense_service.dart';
@@ -34,7 +34,7 @@ import 'core/services/storage_service.dart';
 // 🧠 Providers
 import 'features/auth/providers/app_auth_provider.dart';
 import 'features/community/providers/community_provider.dart';
-import 'features/programs/providers/program_provider.dart';
+import 'features/events/providers/event_provider.dart';
 import 'features/participants/providers/participant_provider.dart';
 import 'features/expenses/providers/expense_provider.dart';
 import 'features/admin/providers/user_provider.dart';
@@ -52,6 +52,7 @@ import 'package:kofund/features/virtual_users/providers/virtual_user_provider.da
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
 import 'core/widgets/theme_transition_wrapper.dart';
+import 'core/widgets/global_theme_toggle.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
@@ -63,7 +64,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 String? extractWebInviteCode() {
   if (!kIsWeb) return null;
   try {
-    // Query parameter: ?code=XXXX
+    // Query parnameter: ?code=XXXX
     final qp = Uri.base.queryParameters['code'];
     if (qp != null && qp.isNotEmpty) {
       debugPrint('🎯 Web Invite Code (query): $qp');
@@ -264,16 +265,16 @@ class FirebaseInitializationWrapper extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: Scaffold(
-              backgroundColor: Colors.blue,
+              backgroundColor: const Color(0xFFF8F9FA),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(color: Colors.white),
+                    const CircularProgressIndicator(),
                     const SizedBox(height: 20),
                     const Text(
                       'Initializing app...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(color: Colors.black87, fontSize: 16),
                     ),
                     const SizedBox(height: 10),
                     if (snapshot.hasError)
@@ -293,16 +294,16 @@ class FirebaseInitializationWrapper extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: Scaffold(
-              backgroundColor: Colors.blue,
+              backgroundColor: const Color(0xFFF8F9FA),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error, color: Colors.white, size: 64),
+                    const Icon(Icons.error, color: Colors.red, size: 64),
                     const SizedBox(height: 20),
                     const Text(
                       'Firebase Initialization Failed',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                      style: TextStyle(color: Colors.black87, fontSize: 18),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -359,16 +360,16 @@ class AppProviders extends StatefulWidget {
 class _AppProvidersState extends State<AppProviders> {
   late final FirebaseAuthService authService;
   late final CommunityFirestoreService communityFirestoreService;
-  late final ProgramService programService;
-  late final ParticipantService participantService;
-  late final ContributionService contributionService;
-  late final ExpenseService expenseService;
-  late final UserService userService;
+  late final EventService _eventService;
+  late final ParticipantService _participantService;
+  late final ContributionService _contributionService;
+  late final ExpenseService _expenseService;
+  late final UserService _userService;
   late final IssueService issueService;
   late final NotificationStorageService notificationStorageService;
   late final FCMTokenService fcmTokenService;
   late final NotificationService notificationService;
-  late final StorageService storageService;
+  late final StorageService _storageService;
   
   String? _webInviteCode;
   
@@ -390,16 +391,16 @@ class _AppProvidersState extends State<AppProviders> {
     // Initialize services
     authService = FirebaseAuthService();
     communityFirestoreService = CommunityFirestoreService();
-    programService = ProgramService();
-    participantService = ParticipantService();
-    contributionService = ContributionService();
-    expenseService = ExpenseService();
+    _eventService = EventService();
+    _participantService = ParticipantService();
+    _contributionService = ContributionService();
+    _expenseService = ExpenseService();
     issueService = IssueService();
-    userService = UserService();
+    _userService = UserService();
     notificationStorageService = NotificationStorageService();
     fcmTokenService = FCMTokenService();
     notificationService = NotificationService();
-    storageService = StorageService();
+    _storageService = StorageService();
     
     
     // Create auth provider
@@ -478,7 +479,7 @@ class _AppProvidersState extends State<AppProviders> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          backgroundColor: AppColors.primary(context),
+          backgroundColor: const Color(0xFFF8F9FA), // Match system light bg
           body: Container(),
         ),
       );
@@ -489,11 +490,11 @@ class _AppProvidersState extends State<AppProviders> {
         // 🧩 Core service providers
         Provider<FirebaseAuthService>.value(value: authService),
         Provider<CommunityFirestoreService>.value(value: communityFirestoreService),
-        Provider<ProgramService>.value(value: programService),
-        Provider<ParticipantService>.value(value: participantService),
-        Provider<ContributionService>.value(value: contributionService),
-        Provider<ExpenseService>.value(value: expenseService),
-        Provider<UserService>.value(value: userService),
+        Provider<EventService>.value(value: _eventService),
+        Provider<ParticipantService>.value(value: _participantService),
+        Provider<ContributionService>.value(value: _contributionService),
+        Provider<ExpenseService>.value(value: _expenseService),
+        Provider<UserService>.value(value: _userService),
         Provider<IssueService>.value(value: issueService),
         
         // 🔔 Notification Services
@@ -521,7 +522,7 @@ class _AppProvidersState extends State<AppProviders> {
         ChangeNotifierProvider(
           create: (_) => CommunityProvider(
             communityFirestoreService,
-            storageService,
+            _storageService,
           ),
         ),
 
@@ -532,22 +533,21 @@ class _AppProvidersState extends State<AppProviders> {
 
         // 👥 User Provider
         ChangeNotifierProvider(
-          create: (_) => UserProvider(userService),
+          create: (_) => UserProvider(_userService),
         ),
 
-        // 📋 Program Provider
         ChangeNotifierProvider(
-          create: (_) => ProgramProvider(
-            programService: programService,
-            participantService: participantService,
-            contributionService: contributionService,
+          create: (_) => EventProvider(
+            eventService: _eventService,
+            participantService: _participantService,
+            contributionService: _contributionService,
           ),
         ),
 
         // 👤 Participant Provider
         ChangeNotifierProvider(
           create: (_) => ParticipantProvider(
-            participantService: participantService,
+            participantService: _participantService,
           ),
         ),
 
@@ -559,15 +559,15 @@ class _AppProvidersState extends State<AppProviders> {
         // 💸 Expense Provider - FIXED: Use the existing auth provider
         ChangeNotifierProxyProvider<AppAuthProvider, ExpenseProvider>(
           create: (_) => ExpenseProvider(
-            expenseService: expenseService,
-            userService: userService,
+            expenseService: _expenseService,
+            userService: _userService,
             appAuthProvider: _authProvider,
           ),
-          update: (_, authProvider, previousExpenseProvider) {
+          update: (_, _authProvider, previousExpenseProvider) {
             return previousExpenseProvider ?? ExpenseProvider(
-              expenseService: expenseService,
-              userService: userService,
-              appAuthProvider: authProvider,
+              expenseService: _expenseService,
+              userService: _userService,
+              appAuthProvider: _authProvider,
             );
           },
         ),
@@ -577,29 +577,29 @@ class _AppProvidersState extends State<AppProviders> {
         // 👤 Profile Provider - FIXED
         ChangeNotifierProxyProvider4<
             AppAuthProvider,
-            ProgramProvider,
+            EventProvider,
             ContributionProvider,
             ParticipantService,
             ProfileProvider>(
           create: (_) => ProfileProvider(
-            programProvider: ProgramProvider(
-              programService: programService,
-              participantService: participantService,
-              contributionService: contributionService,
+            eventProvider: EventProvider(
+              eventService: _eventService,
+              participantService: _participantService,
+              contributionService: _contributionService,
             ),
             contributionProvider: ContributionProvider(),
-            participantService: participantService,
+            participantService: _participantService,
             authProvider: _authProvider,
-            userService: userService,
+            userService: _userService,
           ),
-          update: (_, authProvider, programProvider, contributionProvider, 
-                  participantService, previousProfileProvider) {
+          update: (_, _authProvider, eventProvider, contributionProvider, 
+                  _participantService, previousProfileProvider) {
             return previousProfileProvider ?? ProfileProvider(
-              programProvider: programProvider,
+              eventProvider: eventProvider,
               contributionProvider: contributionProvider,
-              participantService: participantService,
-              authProvider: authProvider,
-              userService: userService,
+              participantService: _participantService,
+              authProvider: _authProvider,
+              userService: _userService,
             );
           },
         ),
@@ -608,18 +608,18 @@ class _AppProvidersState extends State<AppProviders> {
     // In main.dart - Update the ChangeNotifierProxyProvider2
 ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
   create: (_) => MemberProvider(
-    userService: userService,
+    userService: _userService,
     authProvider: _authProvider,
-    participantService: participantService,
-    contributionService: contributionService,
+    participantService: _participantService,
+    contributionService: _contributionService,
     virtualUserService: VirtualUserService(), // Add this
   ),
-  update: (_, authProvider, userService, previousMemberProvider) {
+  update: (_, _authProvider, _userService, previousMemberProvider) {
     return previousMemberProvider ?? MemberProvider(
-      userService: userService,
-      authProvider: authProvider,
-      participantService: participantService,
-      contributionService: contributionService,
+      userService: _userService,
+      authProvider: _authProvider,
+      participantService: _participantService,
+      contributionService: _contributionService,
       virtualUserService: VirtualUserService(), // Add this
     );
   },
@@ -629,10 +629,10 @@ ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
         ChangeNotifierProvider(
           create: (_) => DashboardProvider(
             communityService: communityFirestoreService,
-            userService: userService,
-            contributionService: contributionService,
-            programService: programService,
-            expenseService: expenseService,
+            userService: _userService,
+            contributionService: _contributionService,
+            eventService: _eventService,
+            expenseService: _expenseService,
           ),
         ),
         
@@ -679,24 +679,24 @@ class _MyAppState extends State<MyApp> {
     // ✅ CORRECT: Returns Uri?
     final Uri? initialUri = await _appLinks.getInitialLink();
     if (initialUri != null) {
-      _handleDeepLink(initialUri);
+      _handleDdeepLink(initialUri);
     }
     
     // ✅ CORRECT: uriLinkStream returns Stream<Uri?>
     _linkSubscription = _appLinks.uriLinkStream.listen((Uri? uri) {
       if (uri != null) {
-        _handleDeepLink(uri);
+        _handleDdeepLink(uri);
       }
     });
   }
   
-void _handleDeepLink(Uri uri) {
+void _handleDdeepLink(Uri uri) {
   debugPrint('📱 Deep link received: $uri');
   debugPrint('Full URI parse - Scheme: ${uri.scheme}, Host: "${uri.host}", Path: "${uri.path}", Query: ${uri.queryParameters}');
   
   String? inviteCode;
   
-  // Handle ANY kofund:// URL with a code parameter
+  // Handle ANY kofund:// URL with a code parnameter
   // Supports both: kofund:///join-community?code=... and kofund://join?code=...
   if (uri.scheme == 'kofund') {
     inviteCode = uri.queryParameters['code'];
@@ -780,7 +780,12 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
       builder: (context, child) {
         return ThemeTransitionWrapper(
           isDarkMode: themeProvider.isDarkMode,
-          child: child ?? const SizedBox.shrink(),
+          child: Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              const GlobalThemeToggle(),
+            ],
+          ),
         );
       },
       

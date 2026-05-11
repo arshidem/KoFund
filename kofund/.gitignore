@@ -46,3 +46,42 @@ app.*.map.json
 
 # Environment variables
 .env
+service-account.json
+
+# Local Logs and Temporary Files
+*.txt
+*.log
+cycle*_errors.txt
+cycle*_top50.txt
+build_log*.txt
+pending_errors.txt
+analysis_output.txt
+current_errors.txt
+notification_setup_prompt.txt
+tmp_keys.txt
+
+# Migration Scripts
+migrate_programs.js
+fix_dead.dart
+rmdir
+firebase
+
+# Node.js dependencies (root level)
+node_modules/
+package-lock.json
+package.json
+
+# Firebase related (if you prefer to keep config in GIT, uncomment these)
+# .firebase/
+# .firebaserc
+# firebase.json
+# firestore.indexes.json
+# firestore.rules
+# storage.rules
+# public/
+
+# IDE/System
+.gemini/
+.idea/
+.vscode/
+*.iml

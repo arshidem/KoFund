@@ -96,8 +96,8 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final success = await authProvider.updateUserPhoneNumber(phone);
+      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final success = await _authProvider.updateUserPhoneNumber(phone);
 
       if (success && mounted) {
         _showSuccess('Phone number saved successfully!');
@@ -198,7 +198,7 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
   Widget build(BuildContext context) {
     // WillPopScope equivalent is PopScope in modern Flutter
     return PopScope(
-      canPop: false, // Prevent going back until phone number is provided
+      canPop: false, // P going back until phone number is provided
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _showError('Please provide your phone number to continue.');
@@ -314,3 +314,8 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
     );
   }
 }
+
+
+
+
+

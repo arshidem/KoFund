@@ -112,7 +112,7 @@ class _AllContributionsScreenState extends State<AllContributionsScreen> {
     final filteredList = provider.contributions.where((c) {
       final query = _searchQuery.toLowerCase();
       return c.memberName.toLowerCase().contains(query) ||
-          c.programName.toLowerCase().contains(query) ||
+          c.name.toLowerCase().contains(query) ||
           c.paymentMethod.toLowerCase().contains(query);
     }).toList();
 
@@ -154,3 +154,8 @@ class _AllContributionsScreenState extends State<AllContributionsScreen> {
     );
   }
 }
+
+
+
+
+

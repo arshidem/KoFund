@@ -1,6 +1,6 @@
 enum NotificationType {
   payment,
-  programUpdate,
+  update,
   adminAlert,
   system,
   announcement,
@@ -10,7 +10,7 @@ enum NotificationType {
   account,
   community,
   contribution,
-  program,
+  event,
   pendingUser,
 }
 
@@ -20,3 +20,8 @@ enum NotificationPriority {
   normal,     // Blue - Regular notifications
   low,        // Gray - Informational
 }
+
+
+
+
+

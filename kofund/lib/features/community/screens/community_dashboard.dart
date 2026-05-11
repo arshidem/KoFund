@@ -6,7 +6,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/routing/route_names.dart';
 import './tabs/dashboard_tab.dart';
-import './tabs/programs_tab.dart';
+import './tabs/events_tab.dart';
 
 import './tabs/members_tab.dart';
 import './tabs/profile_tab.dart';
@@ -28,7 +28,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
 
   final List<Widget> _tabs = [
     const DashboardTab(),
-    const ProgramsTab(),
+    const eventsTab(),
     const MembersTab(),
     const ProfileTab(),
   ];
@@ -59,7 +59,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // 🧩 1️⃣ Show Skeleton while checking auth status
@@ -68,7 +68,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 2️⃣ If the user is logged out
-    if (authProvider.user == null) {
+    if (_authProvider.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -82,8 +82,8 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 3️⃣ If the user hasn't joined a community
-    if (authProvider.user?.communityId == null || 
-        authProvider.user!.communityId!.isEmpty) {
+    if (_authProvider.user?.communityId == null || 
+        _authProvider.user!.communityId!.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushReplacementNamed(
@@ -96,7 +96,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 4️⃣ If user is not yet approved
-    if (authProvider.user?.isApproved == false) {
+    if (_authProvider.user?.isApproved == false) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushReplacementNamed(
@@ -134,12 +134,12 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, authProvider),
+      bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, _authProvider),
     );
   }
 
   // Bottom Navigation Bar (unchanged)
-  Widget _buildBottomNavigationBar(bool isDarkMode, AppAuthProvider authProvider) {
+  Widget _buildBottomNavigationBar(bool isDarkMode, AppAuthProvider _authProvider) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -182,13 +182,13 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           const BottomNavigationBarItem(
             icon: Icon(Icons.event_outlined),
             activeIcon: Icon(Icons.event),
-            label: 'Programs',
+            label: 'events',
           ),
           BottomNavigationBarItem(
             icon: Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 final pendingCount = userProvider.pendingMembers.length;
-                final isAdmin = authProvider.user?.isAdmin ?? false;
+                final isAdmin = _authProvider.user?.isAdmin ?? false;
                 
                 if (isAdmin && pendingCount > 0) {
                   return Badge(
@@ -203,7 +203,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
             activeIcon: Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 final pendingCount = userProvider.pendingMembers.length;
-                final isAdmin = authProvider.user?.isAdmin ?? false;
+                final isAdmin = _authProvider.user?.isAdmin ?? false;
                 
                 if (isAdmin && pendingCount > 0) {
                   return Badge(
@@ -227,3 +227,8 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     );
   }
 }
+
+
+
+
+

@@ -2,19 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ParticipantModel {
   String participantId;
-  String programId;
+  String eventId;
   String userId;
   String userName;
   String userEmail;
   String communityId;
   DateTime joinedAt;
   String status; // 'joined', 'cancelled'
-  double? contributionPaid; // Amount paid for this program
+  double? contributionPaid; // Amount paid for this event
   bool hasPaidContribution; // Whether user paid the suggested contribution
 
   ParticipantModel({
     required this.participantId,
-    required this.programId,
+    required this.eventId,
     required this.userId,
     required this.userName,
     required this.userEmail,
@@ -28,7 +28,7 @@ class ParticipantModel {
   // ✅ ADD THIS: copyWith method
   ParticipantModel copyWith({
     String? participantId,
-    String? programId,
+    String? eventId,
     String? userId,
     String? userName,
     String? userEmail,
@@ -40,7 +40,7 @@ class ParticipantModel {
   }) {
     return ParticipantModel(
       participantId: participantId ?? this.participantId,
-      programId: programId ?? this.programId,
+      eventId: eventId ?? this.eventId,
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userEmail: userEmail ?? this.userEmail,
@@ -55,7 +55,7 @@ class ParticipantModel {
   factory ParticipantModel.fromMap(Map<String, dynamic> map, String documentId) {
     return ParticipantModel(
       participantId: documentId,
-      programId: map['programId'] ?? '',
+      eventId: map['eventId'] ?? '',
       userId: map['userId'] ?? '',
       userName: map['userName'] ?? '',
       userEmail: map['userEmail'] ?? '',
@@ -71,7 +71,7 @@ class ParticipantModel {
 factory ParticipantModel.empty() {
   return ParticipantModel(
     participantId: '',
-    programId: '',
+    eventId: '',
     userId: '',
     userName: '',
     userEmail: '',
@@ -84,7 +84,7 @@ factory ParticipantModel.empty() {
 }
   Map<String, dynamic> toMap() {
     return {
-      'programId': programId,
+      'eventId': eventId,
       'userId': userId,
       'userName': userName,
       'userEmail': userEmail,
@@ -96,3 +96,8 @@ factory ParticipantModel.empty() {
     };
   }
 }
+
+
+
+
+

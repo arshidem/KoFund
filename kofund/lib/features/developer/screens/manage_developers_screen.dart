@@ -57,10 +57,10 @@ Future<void> _loadDevelopers() async {
 }
 
   Future<void> _removeDeveloper(String userId, String email) async {
-    final authProvider = context.read<AppAuthProvider>();
+    final _authProvider = context.read<AppAuthProvider>();
     
-    // Prevent removing yourself
-    if (userId == authProvider.user?.uid) {
+    // P removing yourself
+    if (userId == _authProvider.user?.uid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('You cannot remove yourself as developer'),
@@ -189,8 +189,8 @@ Future<void> _loadDevelopers() async {
   }
 
   Widget _buildDeveloperCard(Map<String, dynamic> developer) {
-    final authProvider = context.read<AppAuthProvider>();
-    final isCurrentUser = developer['id'] == authProvider.user?.uid;
+    final _authProvider = context.read<AppAuthProvider>();
+    final isCurrentUser = developer['id'] == _authProvider.user?.uid;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -323,9 +323,9 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
+    final _authProvider = context.watch<AppAuthProvider>();
     
-    if (!authProvider.isDeveloper) {
+    if (!_authProvider.isDeveloper) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Access denied')),
@@ -386,7 +386,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
                             children: [
                               Text(
                                 _developers
-                                    .where((d) => d['isAdmin'])
+                                    .where((eventId) => eventId['isAdmin'])
                                     .length
                                     .toString(),
                                 style: const TextStyle(
@@ -519,4 +519,9 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
     );
   }
 }
+
+
+
+
+
 

@@ -16,12 +16,12 @@ class ExpenseService {
     }
   }
 
-  // Get expenses by program
-  Future<List<ExpenseModel>> getExpensesByProgram(String programId, {int limit = 20}) async {
+  // Get expenses by event
+  Future<List<ExpenseModel>> getExpensesByEvent(String eventId, {int limit = 20}) async {
     try {
       final snapshot = await _firestore
           .collection('expenses')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .orderBy('expenseDate', descending: true)
           .limit(limit)
           .get();
@@ -30,7 +30,7 @@ class ExpenseService {
           .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
-      throw Exception('Failed to load program expenses: $e');
+      throw Exception('Failed to load event expenses: $e');
     }
   }
 
@@ -106,10 +106,10 @@ Future<void> updateExpense(
       };
     }
     
-    if (currentExpense.programId != expense.programId) {
-      changes['programId'] = {
-        'old': currentExpense.programId,
-        'new': expense.programId,
+    if (currentExpense.eventId != expense.eventId) {
+      changes['eventId'] = {
+        'old': currentExpense.eventId,
+        'new': expense.eventId,
       };
     }
     
@@ -153,7 +153,7 @@ Future<void> updateExpense(
         'title': expense.title,
         'description': expense.description,
         'amount': expense.amount,
-        'programId': expense.programId,
+        'eventId': expense.eventId,
         'category': expense.category,
         'paymentMethod': expense.paymentMethod,
         'expenseDate': Timestamp.fromDate(expense.expenseDate),
@@ -245,19 +245,19 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
   }
 
-  // Get total expenses for a program
-  Future<double> getProgramTotalExpenses(String programId) async {
+  // Get total expenses for a event
+  Future<double> getEventTotalExpenses(String eventId) async {
     try {
       // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
       final aggregateQuery = await _firestore
           .collection('expenses')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'approved')
           .aggregate(sum('amount'))
           .get();
       return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
-      throw Exception('Failed to calculate program expenses: $e');
+      throw Exception('Failed to calculate event expenses: $e');
     }
   }
 
@@ -277,12 +277,12 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
   }
 
-  // Get expenses by category for a program
-  Future<Map<String, double>> getProgramExpensesByCategory(String programId) async {
+  // Get expenses by category for a event
+  Future<Map<String, double>> getEventExpensesByCategory(String eventId) async {
     try {
       final snapshot = await _firestore
           .collection('expenses')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'approved')
           .get();
 
@@ -299,10 +299,10 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   }
 
   // Stream expenses for real-time updates
-  Stream<List<ExpenseModel>> streamProgramExpenses(String programId) {
+  Stream<List<ExpenseModel>> streamEventExpenses(String eventId) {
     return _firestore
         .collection('expenses')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .orderBy('expenseDate', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -323,10 +323,10 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   }
 
   // Stream total expenses amount for real-time updates
-  Stream<double> streamProgramTotalExpenses(String programId) {
+  Stream<double> streamTotalExpenses(String eventId) {
     return _firestore
         .collection('expenses')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .where('status', isEqualTo: 'approved')
         .snapshots()
         .map((snapshot) {
@@ -338,3 +338,8 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     });
   }
 }
+
+
+
+
+

@@ -211,7 +211,7 @@ Future<void> _loadAppInfo() async {
               _buildTermSection(
                 context,
                 '2. Purpose of KoFund',
-                'KoFund is a record-keeping and transparency tool for groups and communities to track contributions and expenses for activities such as trips, tournaments, or programs.\n\n'
+                'KoFund is a record-keeping and transparency tool for groups and communities to track contributions and expenses for activities such as trips, tournnaments, or events.\n\n'
                 'KoFund does not handle, store, transfer, or process real money or payments. All financial transactions occur outside the app.',
               ),
 
@@ -506,5 +506,10 @@ Card(
     );
   }
 }
+
+
+
+
+
 
 

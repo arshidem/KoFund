@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../features/contributions/models/contribution_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
-import 'package:kofund/core/constants/notification_types.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:intl/intl.dart';
 
 class ContributionService {
@@ -12,7 +12,7 @@ class ContributionService {
   // -------------------------------
   // ➕ Create
   // -------------------------------
-  Future<String> addContribution(ContributionModel contribution, {String? programName}) async {
+  Future<String> addContribution(ContributionModel contribution, {String? name}) async {
     try {
       final docRef = await _firestore.collection('contributions').add(contribution.toMap());
       
@@ -20,13 +20,13 @@ class ContributionService {
       try {
         final notificationService = NotificationService();
         
-        // 🚀 OPTIMIZATION: Use passed programName to avoid extra read
-        String pName = programName ?? 'Program';
-        if (programName == null) {
+        // 🚀 OPTIMIZATION: Use passed name to avoid extra read
+        String pName = name ?? 'event';
+        if (name == null) {
           try {
-            final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
-            if (programDoc.exists) {
-              pName = programDoc.data()?['title'] ?? 'Program';
+            final doc = await _firestore.collection('events').doc(contribution.eventId).get();
+            if (doc.exists) {
+              pName = doc.data()?['title'] ?? 'event';
             }
           } catch (_) {}
         }
@@ -40,10 +40,10 @@ class ContributionService {
         double totalPaidSoFar = 0;
         double totalDue = 0;
         try {
-          totalPaidSoFar = await getUserProgramTotalContributions(contribution.programId, contribution.userId);
-          final programDoc = await _firestore.collection('programs').doc(contribution.programId).get();
-          if (programDoc.exists) {
-            totalDue = (programDoc.data()?['suggestedContribution'] ?? 0).toDouble();
+          totalPaidSoFar = await getUseTotalContributions(contribution.eventId, contribution.userId);
+          final doc = await _firestore.collection('events').doc(contribution.eventId).get();
+          if (doc.exists) {
+            totalDue = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
           }
         } catch (_) {}
 
@@ -57,8 +57,8 @@ class ContributionService {
           senderName: recorderName,
           data: {
             'contributionId': docRef.id,
-            'amountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
-            'programName': pName, // ✅ Fix: Use fetched/calculated pName
+            'aamountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
+            'name': pName, // ✅ Fix: Use fetched/calculated pName
             'period': contribution.monthDisplayName.isNotEmpty 
                 ? contribution.monthDisplayName 
                 : 'General contribution', // ✅ Fix: Handle non-monthly period
@@ -66,7 +66,7 @@ class ContributionService {
             'senderName': recorderName,
             'runningTotal': '₹${totalPaidSoFar.toStringAsFixed(0)}',
             'targetAmount': '₹${totalDue.toStringAsFixed(0)}',
-            'programId': contribution.programId,
+            'eventId': contribution.eventId,
             'timestamp': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
           },
         );
@@ -81,37 +81,37 @@ class ContributionService {
   }
 
   // -------------------------------
-  // 🔍 Read (Program-based)
+  // 🔍 Read (event-based)
   // -------------------------------
-  Future<List<ContributionModel>> getProgramContributions(String programId) async {
+  Future<List<ContributionModel>> getContributions(String eventId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .get();
       final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
       // Sort in memory to avoid index requirements
       docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return docs;
     } catch (e) {
-      debugPrint('⚠️ Error loading program contributions: $e');
+      debugPrint('⚠️ Error loading event contributions: $e');
       return [];
     }
   }
 
-  // 👤 Read (User-based for specific program)
-  Future<List<ContributionModel>> getUserProgramContributions(String programId, String userId) async {
+  // 👤 Read (User-based for specific event)
+  Future<List<ContributionModel>> getUseContributions(String eventId, String userId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .get();
       final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
       docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return docs;
     } catch (e) {
-      debugPrint('⚠️ Error loading user program contributions: $e');
+      debugPrint('⚠️ Error loading user event contributions: $e');
       return [];
     }
   }
@@ -160,21 +160,21 @@ class ContributionService {
           .orderBy('createdAt', descending: true)
           .get();
 
-      // ✅ OPTIMIZED: Batch fetch all programs at once
-      final programIds = contributionSnapshot.docs
-          .map((doc) => doc.data()['programId'] as String?)
+      // ✅ OPTIMIZED: Batch fetch all events at once
+      final ds = contributionSnapshot.docs
+          .map((doc) => doc.data()['eventId'] as String?)
           .where((id) => id != null && id.isNotEmpty)
           .toSet()
           .toList();
 
-      final Map<String, Map<String, dynamic>> programDataMap = {};
-      if (programIds.isNotEmpty) {
-        for (var i = 0; i < programIds.length; i += 30) {
-          final chunk = programIds.sublist(i, (i + 30) > programIds.length ? programIds.length : (i + 30));
-          final programsQuery =
-              await _firestore.collection('programs').where(FieldPath.documentId, whereIn: chunk).get();
-          for (var doc in programsQuery.docs) {
-            programDataMap[doc.id] = doc.data();
+      final Map<String, Map<String, dynamic>> ataMap = {};
+      if (ds.isNotEmpty) {
+        for (var i = 0; i < ds.length; i += 30) {
+          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+          final eventsQuery =
+              await _firestore.collection('events').where(FieldPath.documentId, whereIn: chunk).get();
+          for (var doc in eventsQuery.docs) {
+            ataMap[doc.id] = doc.data();
           }
         }
       }
@@ -183,35 +183,35 @@ class ContributionService {
 
       for (final doc in contributionSnapshot.docs) {
         final contribution = doc.data();
-        final programId = contribution['programId'] as String?;
+        final eventId = contribution['eventId'] as String?;
 
-        if (programId == null || programId.isEmpty) {
+        if (eventId == null || eventId.isEmpty) {
           continue;
         }
 
-        final programData = programDataMap[programId];
+        final data = ataMap[eventId];
 
-        if (programData != null) {
+        if (data != null) {
           contributionHistory.add({
             'contributionId': doc.id,
-            'programId': programId,
-            'programTitle': programData['title'] ?? 'Unknown Program',
-            'programDate': programData['programDate'],
-            'programType': programData['programType'] ?? 'general',
+            'eventId': eventId,
+            'title': data['title'] ?? 'Unknown event',
+            'eventDate': data['eventDate'],
+            'eventType': data['eventType'] ?? 'general',
             'amount': (contribution['amount'] ?? 0).toDouble(),
             'createdAt': contribution['createdAt'],
             'paidAt': contribution['paidAt'] ?? contribution['createdAt'],
             'paymentMethod': contribution['paymentMethod'] ?? 'cash',
-            'suggestedContribution': (programData['suggestedContribution'] ?? 0).toDouble(),
+            'suggestedContribution': (data['suggestedContribution'] ?? 0).toDouble(),
             'communityId': communityId,
           });
         } else {
-          // Still add contribution with basic info if program not found
+          // Still add contribution with basic info if event not found
           contributionHistory.add({
             'contributionId': doc.id,
-            'programId': programId,
-            'programTitle': 'Deleted Program',
-            'programType': 'unknown',
+            'eventId': eventId,
+            'title': 'Deleted event',
+            'eventType': 'unknown',
             'amount': (contribution['amount'] ?? 0).toDouble(),
             'createdAt': contribution['createdAt'],
             'paidAt': contribution['paidAt'] ?? contribution['createdAt'],
@@ -238,21 +238,21 @@ class ContributionService {
           .get();
       return snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
     } catch (e) {
-      throw Exception('Failed to load contributions by user and program: $e');
+      throw Exception('Failed to load contributions by user and event: $e');
     }
   }
 
 
 
-  Future<List<Map<String, dynamic>>> getContributionsByUserAndProgram({
+  Future<List<Map<String, dynamic>>> getContributionsByUserAn({
     required String userId,
-    required String programId,
+    required String eventId,
   }) async {
     try {
       final contributionSnapshot = await _firestore
           .collection('contributions')
           .where('userId', isEqualTo: userId)
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .get();
 
       return contributionSnapshot.docs.map((doc) {
@@ -274,63 +274,63 @@ class ContributionService {
   // -------------------------------
   // 📊 Calculations
   // -------------------------------
-  Future<double> getProgramTotalContributions(String programId) async {
+  Future<double> getTotalContributions(String eventId) async {
     try {
       // 🚀 OPTIMIZATION: Use aggregate query (sum)
       final aggregateQuery = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .aggregate(sum('amount'))
           .get();
       final total = (aggregateQuery.getSum('amount') ?? 0).toDouble();
       
       // Fallback: If 0 but we want to be absolutely sure (e.g. during migration)
       if (total == 0) {
-        final docs = await getProgramContributions(programId);
+        final docs = await getContributions(eventId);
         return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
       }
       
       return total;
     } catch (e) {
       // Final fallback
-      final docs = await getProgramContributions(programId);
+      final docs = await getContributions(eventId);
       return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
     }
   }
 
-  Future<double> getUserProgramTotalContributions(String programId, String userId) async {
+  Future<double> getUseTotalContributions(String eventId, String userId) async {
     try {
       // 🚀 OPTIMIZATION: Use aggregate query (sum)
       final aggregateQuery = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .aggregate(sum('amount'))
           .get();
       final total = (aggregateQuery.getSum('amount') ?? 0).toDouble();
       
       if (total == 0) {
-        final docs = await getUserProgramContributions(programId, userId);
+        final docs = await getUseContributions(eventId, userId);
         return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
       }
       return total;
     } catch (e) {
-      final docs = await getUserProgramContributions(programId, userId);
+      final docs = await getUseContributions(eventId, userId);
       return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
     }
   }
 
-  Future<Map<String, dynamic>> getUserPaymentProgress(String programId, String userId) async {
+  Future<Map<String, dynamic>> getUserPaymentProgress(String eventId, String userId) async {
     try {
-      final totalPaid = await getUserProgramTotalContributions(programId, userId);
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
+      final totalPaid = await getUseTotalContributions(eventId, userId);
+      final doc = await _firestore.collection('events').doc(eventId).get();
 
-      if (!programDoc.exists) {
-        throw Exception('Program not found');
+      if (!doc.exists) {
+        throw Exception('event not found');
       }
 
-      final programData = programDoc.data()!;
-      final suggestedAmount = (programData['suggestedContribution'] ?? 0).toDouble();
+      final data = doc.data()!;
+      final suggestedAmount = (data['suggestedContribution'] ?? 0).toDouble();
       final remainingAmount = suggestedAmount - totalPaid;
       final progressPercentage = suggestedAmount > 0 ? (totalPaid / suggestedAmount) * 100 : 0;
 
@@ -365,18 +365,18 @@ class ContributionService {
   // -------------------------------
   // 📈 Analytics
   // -------------------------------
-  Future<Map<String, dynamic>> getProgramPaymentSummary(String programId) async {
+  Future<Map<String, dynamic>> getPaymentSummary(String eventId) async {
     try {
-      final totalCollected = await getProgramTotalContributions(programId);
-      final programDoc = await _firestore.collection('programs').doc(programId).get();
+      final totalCollected = await getTotalContributions(eventId);
+      final doc = await _firestore.collection('events').doc(eventId).get();
 
-      if (!programDoc.exists) {
-        throw Exception('Program not found');
+      if (!doc.exists) {
+        throw Exception('event not found');
       }
 
-      final programData = programDoc.data()!;
-      final suggestedAmount = (programData['suggestedContribution'] ?? 0).toDouble();
-      final currentParticipants = (programData['currentParticipants'] ?? 0) as int;
+      final data = doc.data()!;
+      final suggestedAmount = (data['suggestedContribution'] ?? 0).toDouble();
+      final currentParticipants = (data['currentParticipants'] ?? 0) as int;
 
       // Note: For detailed breakdown of fully/partially paid users, 
       // we still might need some logic, but for general summary, 
@@ -391,7 +391,7 @@ class ContributionService {
             suggestedAmount * currentParticipants > 0 ? (totalCollected / (suggestedAmount * currentParticipants)) * 100 : 0,
       };
     } catch (e) {
-      throw Exception('Failed to get program payment summary: $e');
+      throw Exception('Failed to get event payment summary: $e');
     }
   }
 
@@ -454,13 +454,13 @@ class ContributionService {
           .get();
 
       final paymentHistory = <Map<String, dynamic>>[];
-      final programIds = <String>{};
+      final ds = <String>{};
 
       for (final doc in querySnapshot.docs) {
         final data = doc.data();
         paymentHistory.add({
           'contributionId': doc.id,
-          'programId': data['programId'],
+          'eventId': data['eventId'],
           'amount': data['amount'],
           'paymentMethod': data['paymentMethod'],
           'status': data['status'],
@@ -476,34 +476,34 @@ class ContributionService {
           'contributorName': data['contributorName'],
         });
 
-        if (data['programId'] != null) {
-          programIds.add(data['programId']);
+        if (data['eventId'] != null) {
+          ds.add(data['eventId']);
         }
       }
 
-      if (programIds.isNotEmpty) {
-        final programsSnapshot =
-            await _firestore.collection('programs').where(FieldPath.documentId, whereIn: programIds.toList()).get();
+      if (ds.isNotEmpty) {
+        final eventsSnapshot =
+            await _firestore.collection('events').where(FieldPath.documentId, whereIn: ds.toList()).get();
 
-        final programMap = {
-          for (var doc in programsSnapshot.docs)
+        final ap = {
+          for (var doc in eventsSnapshot.docs)
             doc.id: {
-              'title': doc.data()['title'] ?? 'Unknown Program',
-              'programType': doc.data()['programType'] ?? 'general',
+              'title': doc.data()['title'] ?? 'Unknown event',
+              'eventType': doc.data()['eventType'] ?? 'general',
               'suggestedContribution': (doc.data()['suggestedContribution'] ?? 0).toDouble(),
             }
         };
 
         for (var contribution in paymentHistory) {
-          final programId = contribution['programId'];
-          if (programId != null && programMap.containsKey(programId)) {
-            final programData = programMap[programId]!;
-            contribution['programTitle'] = programData['title'];
-            contribution['programType'] = programData['programType'];
-            contribution['suggestedContribution'] = programData['suggestedContribution'];
+          final eventId = contribution['eventId'];
+          if (eventId != null && ap.containsKey(eventId)) {
+            final data = ap[eventId]!;
+            contribution['title'] = data['title'];
+            contribution['eventType'] = data['eventType'];
+            contribution['suggestedContribution'] = data['suggestedContribution'];
           } else {
-            contribution['programTitle'] = 'Program Not Found';
-            contribution['programType'] = 'unknown';
+            contribution['title'] = 'event Not Found';
+            contribution['eventType'] = 'unknown';
             contribution['suggestedContribution'] = 0;
           }
         }
@@ -549,10 +549,10 @@ class ContributionService {
         changes['paymentMethod'] = {'old': currentContribution.paymentMethod, 'new': contribution.paymentMethod};
       }
 
-      if (currentContribution.programId != contribution.programId) {
-        changes['program'] = {
-          'oldId': currentContribution.programId,
-          'newId': contribution.programId,
+      if (currentContribution.contributionId != contribution.contributionId) {
+        changes['event'] = {
+          'oldId': currentContribution.contributionId,
+          'newId': contribution.contributionId,
         };
       }
 
@@ -569,7 +569,7 @@ class ContributionService {
         await docRef.update({
           'amount': contribution.amount,
           'paymentMethod': contribution.paymentMethod,
-          'programId': contribution.programId,
+          'eventId': contribution.eventId,
           'userId': contribution.userId,
           'isMonthlyContribution': contribution.isMonthlyContribution,
           'monthId': contribution.monthId,
@@ -598,10 +598,10 @@ class ContributionService {
   // -------------------------------
   // 📡 Real-time Streams
   // -------------------------------
-  Stream<List<ContributionModel>> streamProgramContributions(String programId) {
+  Stream<List<ContributionModel>> streamContributions(String eventId) {
     return _firestore
         .collection('contributions')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList());
@@ -626,21 +626,21 @@ class ContributionService {
         .map((snapshot) => snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList());
   }
 
-  Stream<double> streamProgramTotalContributions(String programId) {
+  Stream<double> streamTotalContributions(String eventId) {
     return _firestore
         .collection('contributions')
-        .where('programId', isEqualTo: programId)
+        .where('eventId', isEqualTo: eventId)
         .snapshots()
         .asyncMap((_) async {
-          return await getProgramTotalContributions(programId);
+          return await getTotalContributions(eventId);
         });
   }
 
-  Future<List<ContributionModel>> getMonthlyContributionsForProgram(String programId, String monthId) async {
+  Future<List<ContributionModel>> getMonthlyContributionsFo(String eventId, String monthId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('monthId', isEqualTo: monthId)
           .get();
       final docs = snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList();
@@ -651,12 +651,12 @@ class ContributionService {
     }
   }
 
-  Future<bool> hasUserPaidForMonth(String userId, String programId, String monthId) async {
+  Future<bool> hasUserPaidForMonth(String userId, String eventId, String monthId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')
           .where('userId', isEqualTo: userId)
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('monthId', isEqualTo: monthId)
           .limit(1)
           .get();
@@ -666,11 +666,11 @@ class ContributionService {
     }
   }
 
-  Future<Map<String, bool>> getMonthlyPaymentStatus(String programId, String monthId) async {
+  Future<Map<String, bool>> getMonthlyPaymentStatus(String eventId, String monthId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('monthId', isEqualTo: monthId)
           .get();
 
@@ -689,3 +689,7 @@ class ContributionService {
     }
   }
 }
+
+
+
+

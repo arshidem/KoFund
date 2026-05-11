@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'stats_card_skeleton.dart';
-import 'program_card_skeleton.dart';
+import 'event_card_skeleton.dart';
 import 'members_skeleton.dart';
 import 'history_skeleton.dart';
 
@@ -28,7 +28,7 @@ class DashboardSkeleton extends StatelessWidget {
                 const SizedBox(height: 16),
                 StatsCardSkeleton(isDarkMode: isDarkMode),
                 const SizedBox(height: 24),
-                ProgramCardSkeleton(isDarkMode: isDarkMode),
+                EventCardSkeleton(isDarkMode: isDarkMode),
                 const SizedBox(height: 24),
                 MembersSkeleton(isDarkMode: isDarkMode),
                 const SizedBox(height: 24),
@@ -119,3 +119,8 @@ class DashboardSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

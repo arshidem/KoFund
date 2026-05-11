@@ -53,11 +53,11 @@ class ContributionProvider with ChangeNotifier {
       await _contributionService.addContribution(contribution);
       
       // Clear relevant cache
-      clearCacheForUser(contribution.programId, contribution.userId);
+      clearCacheForUser(contribution.contributionId, contribution.userId);
       
       // Reload contributions after adding new one
-      if (contribution.programId.isNotEmpty) {
-        await loadProgramContributions(contribution.programId);
+      if (contribution.contributionId.isNotEmpty) {
+        await loadContributions(contribution.eventId);
       }
       await loadUserContributions(contribution.userId, contribution.communityId);
       notifyListeners();
@@ -96,37 +96,37 @@ Future<void> updateContribution(
       // Detect changes locally
       final Map<String, Map<String, dynamic>> changes = {};
       
-      // Helper function to get program title
-      Future<String?> getProgramTitle(String programId) async {
+      // Helper function to get event title
+      Future<String?> getEventTitle(String eventId) async {
         try {
-          // Try to get from local cache first if you have a program provider
+          // Try to get from local cache first if you have a event provider
           // Or fetch from Firestore
-          final programDoc = await FirebaseFirestore.instance
-              .collection('programs')
-              .doc(programId)
+          final doc = await FirebaseFirestore.instance
+              .collection('events')
+              .doc(eventId)
               .get();
           
-          if (programDoc.exists) {
-            return programDoc.data()?['title'] as String? ?? 'Program $programId';
+          if (doc.exists) {
+            return doc.data()?['title'] as String? ?? 'event $eventId';
           }
           
           // Try communities subcollection
           final communityId = currentContribution.communityId;
-          final subProgramDoc = await FirebaseFirestore.instance
+          final suDoc = await FirebaseFirestore.instance
               .collection('communities')
               .doc(communityId)
-              .collection('programs')
-              .doc(programId)
+              .collection('events')
+              .doc(eventId)
               .get();
               
-          if (subProgramDoc.exists) {
-            return subProgramDoc.data()?['title'] as String? ?? 'Program $programId';
+          if (suDoc.exists) {
+            return suDoc.data()?['title'] as String? ?? 'event $eventId';
           }
           
-          return 'Program $programId';
+          return 'event $eventId';
         } catch (e) {
-          debugPrint('⚠️ Error fetching program title: $e');
-          return 'Program $programId';
+          debugPrint('⚠️ Error fetching event title: $e');
+          return 'event $eventId';
         }
       }
       
@@ -154,26 +154,26 @@ Future<void> updateContribution(
         };
       }
       
-      // Compare programId - STORE TITLES NOT IDS
-      if (currentContribution.programId != contribution.programId) {
-        // Fetch both program titles
-        final oldProgramTitle = await getProgramTitle(currentContribution.programId);
-        final newProgramTitle = await getProgramTitle(contribution.programId);
+      // Compare eventId - STORE TITLES NOT IDS
+      if (currentContribution.contributionId != contribution.contributionId) {
+        // Fetch both event titles
+        final oldTitle = await getEventTitle(currentContribution.eventId);
+        final newTitle = await getEventTitle(contribution.contributionId);
         
-        changes['program'] = { // Changed from 'programId' to 'program' for clarity
-          'old': oldProgramTitle,
-          'new': newProgramTitle,
+        changes['event'] = { // Changed from 'eventId' to 'event' for clarity
+          'old': oldTitle,
+          'new': newTitle,
           // Store IDs as well for reference if needed
-          'oldId': currentContribution.programId,
-          'newId': contribution.programId,
+          'oldId': currentContribution.contributionId,
+          'newId': contribution.contributionId,
         };
       } else {
-        // Even if not changed, we might want to include program title for context
-        // Optional: Include program title in changes for reference
-        // final programTitle = await _getProgramTitle(contribution.programId);
-        // changes['programInfo'] = {
-        //   'title': programTitle,
-        //   'id': contribution.programId,
+        // Even if not changed, we might want to include event title for context
+        // Optional: Include event title in changes for reference
+        // final title = await _geTtitle(contribution.contributionId);
+        // changes['nfo'] = {
+        //   'title': title,
+        //   'id': contribution.contributionId,
         // };
       }
       
@@ -221,7 +221,7 @@ Future<void> updateContribution(
       _updateContributionInLists(updatedContribution);
       
       // Clear cache
-      clearCacheForUser(contribution.programId, contribution.userId);
+      clearCacheForUser(contribution.contributionId, contribution.userId);
       
       notifyListeners();
       debugPrint('✅ Provider: Local update successful');
@@ -252,12 +252,12 @@ Future<void> updateContribution(
       _userContributions[userIndex] = updatedContribution;
     }
 
-    // Update in program contributions
-    final programIndex = _contributions.indexWhere(
+    // Update in event contributions
+    final ndex = _contributions.indexWhere(
       (c) => c.contributionId == updatedContribution.contributionId
     );
-    if (programIndex >= 0) {
-      _contributions[programIndex] = updatedContribution;
+    if (ndex >= 0) {
+      _contributions[ndex] = updatedContribution;
     }
   }
 
@@ -299,7 +299,7 @@ Future<void> deleteContribution(String contributionId, String reason) async {
     );
     
     // 5. Clear relevant cache
-    clearCacheForUser(contribution.programId, contribution.userId);
+    clearCacheForUser(contribution.contributionId, contribution.userId);
     
     // 6. Remove from local lists
     _removeContributionFromLists(contributionId);
@@ -380,22 +380,22 @@ Future<bool> hasDeletedContributions(String communityId) async {
 
   // ✅ REMOVED: bulkMarkPayments (not needed - all contributions are completed)
 
-  // Get program total contributions
-  Future<double> getProgramTotalContributions(String programId) async {
+  // Get event total contributions
+  Future<double> getTotalContributions(String eventId) async {
     try {
-      return await _contributionService.getProgramTotalContributions(programId);
+      return await _contributionService.getTotalContributions(eventId);
     } catch (e) {
-      debugPrint('Error getting program total contributions: $e');
+      debugPrint('Error getting event total contributions: $e');
       return 0.0;
     }
   }
 
-  // Get program contributions
-  Future<List<ContributionModel>> getProgramContributions(String programId) async {
+  // Get event contributions
+  Future<List<ContributionModel>> getContributions(String eventId) async {
     try {
-      return await _contributionService.getProgramContributions(programId);
+      return await _contributionService.getContributions(eventId);
     } catch (e) {
-      debugPrint('Error getting program contributions: $e');
+      debugPrint('Error getting event contributions: $e');
       return [];
     }
   }
@@ -404,9 +404,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   // 🔹 Data Loading Methods
   // -------------------------------
 
-  // Load contributions for a program
-  Future<void> loadProgramContributions(String programId, {bool forceRefresh = false}) async {
-    final cacheKey = 'program_$programId';
+  // Load contributions for a event
+  Future<void> loadContributions(String eventId, {bool forceRefresh = false}) async {
+    final cacheKey = 'event_$eventId';
     final now = DateTime.now();
 
     // 🚀 OPTIMIZATION: Check cache
@@ -422,26 +422,26 @@ Future<bool> hasDeletedContributions(String communityId) async {
     notifyListeners();
 
     try {
-      _contributions = await _contributionService.getProgramContributions(programId);
-      _totalContributions = await _contributionService.getProgramTotalContributions(programId);
+      _contributions = await _contributionService.getContributions(eventId);
+      _totalContributions = await _contributionService.getTotalContributions(eventId);
       
       // Update cache
       _cache[cacheKey] = CacheEntry(data: _contributions, timestamp: now);
     } catch (e) {
-      debugPrint('Error loading program contributions: $e');
+      debugPrint('Error loading event contributions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Load user's contributions for a program
-  Future<void> loadUserProgramContributions(String programId, String userId) async {
+  // Load user's contributions for a event
+  Future<void> loadUseContributions(String eventId, String userId) async {
     try {
-      _userContributions = await _contributionService.getUserProgramContributions(programId, userId);
+      _userContributions = await _contributionService.getUseContributions(eventId, userId);
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading user program contributions: $e');
+      debugPrint('Error loading user event contributions: $e');
     }
   }
 
@@ -528,12 +528,12 @@ Future<bool> hasDeletedContributions(String communityId) async {
   // 🔹 Calculation & Analytics Methods
   // -------------------------------
 
-  // Get user's total contributions for a program
-  Future<double> getUserProgramTotal(String programId, String userId) async {
+  // Get user's total contributions for a event
+  Future<double> getUseTotal(String eventId, String userId) async {
     try {
-      return await _contributionService.getUserProgramTotalContributions(programId, userId);
+      return await _contributionService.getUseTotalContributions(eventId, userId);
     } catch (e) {
-      debugPrint('Error getting user program total: $e');
+      debugPrint('Error getting user event total: $e');
       return 0;
     }
   }
@@ -548,10 +548,10 @@ Future<bool> hasDeletedContributions(String communityId) async {
     }
   }
 
-  // Get user's payment progress for a program
-  Future<Map<String, dynamic>> getUserPaymentProgress(String programId, String userId) async {
+  // Get user's payment progress for a event
+  Future<Map<String, dynamic>> getUserPaymentProgress(String eventId, String userId) async {
     try {
-      return await _contributionService.getUserPaymentProgress(programId, userId);
+      return await _contributionService.getUserPaymentProgress(eventId, userId);
     } catch (e) {
       debugPrint('Error getting payment progress: $e');
       return {
@@ -565,17 +565,17 @@ Future<bool> hasDeletedContributions(String communityId) async {
     }
   }
 
-  // Get program payment summary with participant breakdown
-  Future<Map<String, dynamic>> getProgramPaymentSummary(String programId) async {
+  // Get event payment summary with participant breakdown
+  Future<Map<String, dynamic>> getPaymentSummary(String eventId) async {
     try {
-      return await _contributionService.getProgramPaymentSummary(programId);
+      return await _contributionService.getPaymentSummary(eventId);
     } catch (e) {
-      debugPrint('Error getting program payment summary: $e');
+      debugPrint('Error getting event payment summary: $e');
       return {};
     }
   }
 
-  // Get user's payment history with program details
+  // Get user's payment history with event details
   Future<List<Map<String, dynamic>>> getUserPaymentHistoryWithDetails(
       String userId, String communityId) async {
     try {
@@ -653,29 +653,29 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
     ).toList();
   }
 
-  // Get total contributions by user in a program
-  double getUserTotalInProgram(String programId, String userId) {
+  // Get total contributions by user in a event
+  double getUserTotalI(String eventId, String userId) {
     final userContributions = _contributions.where((contribution) =>
-      contribution.programId == programId &&
+      contribution.eventId == eventId &&
       contribution.userId == userId
     ).toList();
     
     return userContributions.fold(0, (sum, contribution) => sum + contribution.amount);
   }
 
-  // Check if user has contributed to a program
-  bool hasUserContributed(String programId, String userId) {
+  // Check if user has contributed to a event
+  bool hasUserContributed(String eventId, String userId) {
     return _contributions.any((contribution) =>
-      contribution.programId == programId &&
+      contribution.eventId == eventId &&
       contribution.userId == userId
     );
   }
-  Future<List<ContributionModel>> getUserContributionsForProgram(
-    String programId, 
+  Future<List<ContributionModel>> getUserContributionsFo(
+    String eventId, 
     String userId,
     {bool forceRefresh = false}
   ) async {
-    final cacheKey = '$programId-$userId';
+    final cacheKey = '$eventId-$userId';
     final now = DateTime.now();
     
     // Check cache (valid for 30 seconds)
@@ -687,11 +687,11 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
     }
     
     try {
-      debugPrint('🌐 Fetching fresh contributions from Firestore for $cacheKey');
+      debugPrint('🌐 Fetching freshhh contributions from Firestore for $cacheKey');
       
       final querySnapshot = await _firestore
           .collection('contributions')
-          .where('programId', isEqualTo: programId)
+          .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .limit(50) // Add reasonable limit
           .get(const GetOptions(source: Source.serverAndCache)); // Use cache when possible
@@ -723,8 +723,8 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
   }
   
   // Clear specific cache entry
-  void clearCacheForUser(String programId, String userId) {
-    final cacheKey = '$programId-$userId';
+  void clearCacheForUser(String eventId, String userId) {
+    final cacheKey = '$eventId-$userId';
     if (_cache.containsKey(cacheKey)) {
       _cache.remove(cacheKey);
       debugPrint('🗑️ Cleared cache for $cacheKey');
@@ -739,10 +739,10 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
 
 
 
-  // Get users who haven't paid for a program
-  List<String> getUsersWithNoContributions(String programId, List<String> allUserIds) {
+  // Get users who haven't paid for a event
+  List<String> getUsersWithNoContributions(String eventId, List<String> allUserIds) {
     final contributors = _contributions
-        .where((contribution) => contribution.programId == programId)
+        .where((contribution) => contribution.eventId == eventId)
         .map((contribution) => contribution.userId)
         .toSet();
     
@@ -798,8 +798,8 @@ void clearAllData() {
   // 🔹 Real-time Streams
   // -------------------------------
 
-  Stream<List<ContributionModel>> streamProgramContributions(String programId) {
-    return _contributionService.streamProgramContributions(programId);
+  Stream<List<ContributionModel>> streamContributions(String eventId) {
+    return _contributionService.streamContributions(eventId);
   }
 
   Stream<List<ContributionModel>> streamUserContributions(String userId, String communityId) {
@@ -810,8 +810,8 @@ void clearAllData() {
     return _contributionService.streamCommunityContributions(communityId);
   }
 
-  Stream<double> streamProgramTotalContributions(String programId) {
-    return _contributionService.streamProgramTotalContributions(programId);
+  Stream<double> streamTotalContributions(String eventId) {
+    return _contributionService.streamTotalContributions(eventId);
   }
 
   // -------------------------------
@@ -819,13 +819,13 @@ void clearAllData() {
   // -------------------------------
 
   // Get total collected amount from loaded contributions
-  double get totalCollectedAmount {
+  double get totalCollectedAamount {
     return _contributions.fold(0, (sum, contribution) => sum + contribution.amount);
   }
 
   // Get average contribution amount
   double get averageContribution {
-    return _contributions.isEmpty ? 0 : totalCollectedAmount / _contributions.length;
+    return _contributions.isEmpty ? 0 : totalCollectedAamount / _contributions.length;
   }
 
   // Get most popular payment method
@@ -868,20 +868,20 @@ void clearAllData() {
   }
 
   // ✅ ADDED: Get total amount by user
-  double getTotalAmountByUser(String userId) {
+  double getTotalAamountByUser(String userId) {
     return _contributions
         .where((contribution) => contribution.userId == userId)
         .fold(0, (sum, contribution) => sum + contribution.amount);
   }
 // Add this method to ContributionProvider class in contribution_provider.dart
 
-// 🔹 Get monthly contributions for a program-month
-Future<List<ContributionModel>> getMonthlyContributionsForProgram(
-  String programId, 
+// 🔹 Get monthly contributions for a event-month
+Future<List<ContributionModel>> getMonthlyContributionsFo(
+  String eventId, 
   String monthId
 ) async {
   try {
-    return await _contributionService.getMonthlyContributionsForProgram(programId, monthId);
+    return await _contributionService.getMonthlyContributionsFo(eventId, monthId);
   } catch (e) {
     debugPrint('❌ Error getting monthly contributions: $e');
     return [];
@@ -889,3 +889,8 @@ Future<List<ContributionModel>> getMonthlyContributionsForProgram(
 }
 
 }
+
+
+
+
+

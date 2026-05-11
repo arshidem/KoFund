@@ -1,4 +1,4 @@
-// 📁 lib/features/programs/screens/add_participant_skeleton.dart
+// 📁 lib/features/events/screens/add_participant_skeleton.dart
 
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
@@ -231,3 +231,8 @@ class AddParticipantSkeleton extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

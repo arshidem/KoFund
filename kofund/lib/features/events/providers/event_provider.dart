@@ -1,0 +1,733 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/services/participant_service.dart';
+import '../../../core/services/contribution_service.dart';
+import '../../../core/services/event_service.dart';
+import 'dart:async';
+import '../models/event_model.dart';
+import 'package:intl/intl.dart';
+import '../../participants/models/participant_model.dart';
+
+class EventProvider with ChangeNotifier {
+  final EventService _eventService;
+  final ParticipantService _participantService;
+  final ContributionService _contributionService;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  List<EventModel> _events = [];
+  List<ParticipantModel> _myParticipations = [];
+  bool _isLoading = false;
+  String? _error;
+
+  // 🚀 OPTIMIZATION: Caches with TTL
+  final Map<String, ({Map<String, dynamic> data, DateTime timestamp})> _summaryCache = {};
+  final Map<String, ({List<EventModel> data, DateTime timestamp})> _listCache = {};
+  final Duration _cacheTTL = const Duration(minutes: 5);
+
+  List<EventModel> get events => _events;
+  String? get error => _error;
+  List<ParticipantModel> get myParticipations => _myParticipations;
+  bool get isLoading => _isLoading;
+
+  EventProvider({
+    required EventService eventService,
+    required ParticipantService participantService,
+    required ContributionService contributionService,
+  })  : _eventService = eventService,
+        _participantService = participantService,
+        _contributionService = contributionService;
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+  
+  void setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void clearUserData() {
+    _myParticipations.clear();
+    _events.clear();
+    _summaryCache.clear();
+    _listCache.clear();
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+    // debugPrint('🔄 EventProvider: User data cleared');
+  }
+
+  void clearAllData() {
+    clearUserData();
+  }
+
+  // ✅ OPTIMIZED: Get event financial summary with Cache
+  Future<Map<String, dynamic>> getFinancialSummary(String eventId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache first
+    if (!forceRefresh && _summaryCache.containsKey(eventId)) {
+      final cached = _summaryCache[eventId]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        return cached.data;
+      }
+    }
+
+    try {
+      final totalContributions = await _eventService.getTotalContributions(eventId);
+      final totalExpenses = await _eventService.getTotalExpenses(eventId);
+      final participantCount = await _participantService.getParticipantCount(eventId);
+      
+      final event = await _eventService.getEventById(eventId);
+      final suggested = event?.suggestedContribution ?? 0.0;
+      
+      final totalExpected = suggested * participantCount;
+      final collectionRate = totalExpected > 0 ? (totalContributions / totalExpected) * 100 : 0.0;
+
+      final summary = {
+        'totalParticipants': participantCount,
+        'totalCollected': totalContributions,
+        'totalExpenses': totalExpenses,
+        'balance': totalContributions - totalExpenses,
+        'totalExpected': totalExpected,
+        'collectionRate': collectionRate,
+        'suggestedContribution': suggested,
+      };
+
+      // 🚀 Cache result
+      _summaryCache[eventId] = (data: summary, timestamp: DateTime.now());
+      return summary;
+    } catch (e) {
+      debugPrint('❌ Error getting financial summary: $e');
+      return {
+        'totalParticipants': 0,
+        'totalCollected': 0.0,
+        'totalExpenses': 0.0,
+        'balance': 0.0,
+        'totalExpected': 0.0,
+        'collectionRate': 0.0,
+        'suggestedContribution': 0.0,
+      };
+    }
+  }
+
+  Future<void> loadEvents(String communityId, {bool forceRefresh = false}) async {
+    // 🚀 OPTIMIZATION: Check cache
+    if (!forceRefresh && _listCache.containsKey(communityId)) {
+      final cached = _listCache[communityId]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheTTL) {
+        _events = cached.data;
+        notifyListeners();
+        return;
+      }
+    }
+
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _events = await _eventService.getEventsByCommunity(communityId);
+      _listCache[communityId] = (data: _events, timestamp: DateTime.now());
+    } catch (e) {
+      debugPrint('Error loading events: $e');
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Stream<EventModel?> getEventById(String eventId) {
+    // 🚀 We can still optimize by emitting the cached version first
+    final controller = StreamController<EventModel?>();
+    
+    // Check cache
+    final index = _events.indexWhere((p) => p.eventId == eventId);
+    if (index != -1) {
+      controller.add(_events[index]);
+    }
+    
+    // Then listen to _firestore for real-time updates
+    _eventService.getEventStreamById(eventId).listen((event) {
+      if (event != null) {
+        final idx = _events.indexWhere((p) => p.eventId == eventId);
+        if (idx != -1) {
+          _events[idx] = event;
+        } else {
+          _events.add(event);
+        }
+        notifyListeners();
+      }
+      if (!controller.isClosed) {
+        controller.add(event);
+      }
+    }, onError: (e) {
+      if (!controller.isClosed) controller.addError(e);
+    }, onDone: () {
+      if (!controller.isClosed) controller.close();
+    });
+    
+    return controller.stream;
+  }
+
+  Future<void> update(EventModel event) async {
+    try {
+      await _eventService.updateModel(event);
+      
+      // ✅ Invalidate cache and reload
+      _listCache.remove(event.communityId);
+      _summaryCache.remove(event.eventId);
+      
+      await loadEvents(event.communityId, forceRefresh: true);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> delete(String eventId) async {
+    try {
+      final event = await _eventService.getEventById(eventId);
+      await _eventService.delete(eventId);
+      _events.removeWhere((p) => p.eventId == eventId);
+      _summaryCache.remove(eventId);
+      if (event != null) {
+        _listCache.remove(event.communityId);
+      }
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ✅ Stream for participant count
+  Stream<int> streamParticipantCount(String eventId) {
+    return _participantService.streamParticipants(eventId)
+        .map((participants) => participants.length);
+  }
+
+  // ✅ Stream for total contributions (used in lists)
+  Stream<double> streamTotalContributions(String eventId) {
+    return _firestore
+        .collection('contributions')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          // Use the faster aggregate query even for the stream mapping
+          return await _contributionService.getTotalContributions(eventId);
+        });
+  }
+
+  // 📈 NEW: Unified Progress Stream (Handles Monthly vs Global)
+  Stream<Map<String, dynamic>> streamProgress(String eventId) {
+    // 1. Get the event first (one-time)
+    return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
+      final doc = await _firestore.collection('events').doc(eventId).get();
+      if (!doc.exists) {
+        return {
+          'collected': 0.0,
+          'target': 100.0,
+          'percentage': 0.0,
+          'participantCount': 0,
+          'isMonthlyy': false,
+        };
+      }
+      
+      final data = doc.data()!;
+      final isMonthlyy = data['isMonthlyPayment'] ?? false;
+      final suggestedContribution = (data['suggestedContribution'] ?? 0).toDouble();
+      final totalAmount = (data['totalAmount'] ?? 0).toDouble();
+      final maxParticipants = (data['maxParticipants'] ?? 0) as int;
+      final isFixedParticipants = (data['participantType'] ?? 'fixed') == 'fixed';
+      
+      double collected = 0.0;
+      double target = 0.0;
+      
+      if (isMonthlyy) {
+        // --- Monthly Logic ---
+        final currentMonthId = DateFormat('yyyy-MM').format(DateTime.now());
+        final monthlyContributions = await _contributionService.getMonthlyContributionsFo(
+          eventId,
+          currentMonthId,
+        );
+        
+        collected = monthlyContributions.fold(0.0, (sum, c) => sum + c.amount);
+        
+        // Target for current month = participantCount * suggestedAmount
+        // Using participants.length to count joined users
+        final pCount = participants.length; 
+        target = suggestedContribution * (pCount > 0 ? pCount : 1);
+        
+      } else {
+        // --- Global Logic ---
+        collected = await _eventService.getTotalContributions(eventId);
+        
+        if (totalAmount > 0) {
+          target = totalAmount;
+        } else {
+          final pCount = isFixedParticipants ? maxParticipants : participants.length;
+          target = suggestedContribution * (pCount > 0 ? pCount : 1);
+        }
+      }
+      
+      final percentage = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
+      
+      return {
+        'collected': collected,
+        'target': target,
+        'percentage': percentage,
+        'participantCount': participants.length,
+        'isMonthlyy': isMonthlyy,
+        'monthId': isMonthlyy ? DateFormat('yyyy-MM').format(DateTime.now()) : null,
+      };
+    });
+  }
+
+  // 💰 NEW: Expenses stream
+  Stream<double> streamExpenses(String eventId) {
+    return _firestore
+        .collection('expenses')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map((snapshot) {
+          double total = 0.0;
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            final status = data['status'] ?? 'pending';
+            if (status == 'approved' || status == 'completed') {
+              total += (data['amount'] ?? 0).toDouble();
+            }
+          }
+          return total;
+        });
+  }
+
+  // 📊 NEW: Full Financial Summary Stream
+  Stream<Map<String, dynamic>> streamFinancialSummary(String eventId) {
+    return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
+      final doc = await _firestore.collection('events').doc(eventId).get();
+      final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+      
+      final allContributionsForCount = await _contributionService.getContributions(eventId);
+      final totalContributions = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0.0));
+      final totalExpenses = await _eventService.getTotalExpenses(eventId);
+      
+      int paidParticipants = 0;
+      for (final p in participants) {
+        if (p.hasPaidContribution) paidParticipants++;
+      }
+      
+      final totalParticipants = participants.length;
+      final totalExpected = suggestedContribution * totalParticipants;
+
+      return {
+        'totalParticipants': totalParticipants,
+        'paidParticipants': paidParticipants,
+        'pendingParticipants': totalParticipants - paidParticipants,
+        'totalCollected': totalContributions, 
+        'collected': totalContributions,      
+        'totalExpected': totalExpected,
+        'expenses': totalExpenses,
+        'totalExpenses': totalExpenses,
+        'balance': totalContributions - totalExpenses,
+        'contributionCount': allContributionsForCount.length,
+        'totalContributions': allContributionsForCount.length, // Alias for UI
+        'participants': totalParticipants.toDouble(),
+      };
+    });
+  }
+
+  Future<void> create(EventModel event, {bool sendNotification = true}) async {
+    try {
+      final eventId = await _eventService.create(event, sendNotification: sendNotification);
+      
+      // ✅ Invalidate cache and reload to ensure the new event shows up immediately
+      _listCache.remove(event.communityId);
+      await loadEvents(event.communityId, forceRefresh: true);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> refreshData(String eventId) async {
+    try {
+      // debugPrint('🔄 EventProvider: Refreshing event data for $eventId');
+      final index = _events.indexWhere((p) => p.eventId == eventId);
+      if (index != -1) {
+        _events.removeAt(index);
+      }
+      _summaryCache.remove(eventId);
+      notifyListeners();
+      await _eventService.getEventById(eventId);
+      // debugPrint('✅ EventProvider: event data refreshed for $eventId');
+    } catch (e) {
+      debugPrint('❌ EventProvider: Error refreshing event data: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Stream for user joined status
+  Stream<bool> streamUserJoinedStatus(String eventId, String userId) {
+    return _firestore
+        .collection('participants') // FIXED back to participants
+        .where('eventId', isEqualTo: eventId)
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: 'joined')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.isNotEmpty);
+  }
+
+  // ✅ OPTIMIZED: Get participant with real-time contribution data
+  Future<ParticipantModel> getParticipantWithContribution(String eventId, String userId) async {
+    try {
+      final participant = await _participantService.getParticipant(eventId, userId);
+      final contributions = await _contributionService.getContributionsByUserAn(
+        userId: userId,
+        eventId: eventId,
+      );
+      final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
+      final doc = await _firestore.collection('events').doc(eventId).get();
+      final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+      
+      return participant.copyWith(
+        contributionPaid: totalPaid,
+        hasPaidContribution: suggestedContribution > 0 ? totalPaid >= suggestedContribution : false,
+      );
+    } catch (e) {
+      debugPrint('❌ Error getting participant with contribution: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Stream with monthly contributions
+  Stream<List<ParticipantModel>> streamParticipantsWithMonthlyContributions(
+    String eventId, 
+    String monthId
+  ) {
+    return _participantService.streamParticipants(eventId).asyncMap((participants) async {
+      if (participants.isEmpty) return [];
+      
+      try {
+        final doc = await _firestore.collection('events').doc(eventId).get();
+        final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+        
+        final monthlyContributions = await _contributionService.getMonthlyContributionsFo(
+          eventId,
+          monthId,
+        );
+        
+        final Map<String, double> userPaidMap = {};
+        for (final contribution in monthlyContributions) {
+          userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
+        }
+        
+        return participants.map((participant) {
+          final amountPaid = userPaidMap[participant.userId] ?? 0.0;
+          final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
+          
+          return participant.copyWith(
+            contributionPaid: amountPaid,
+            hasPaidContribution: hasPaid,
+          );
+        }).toList();
+      } catch (e) {
+        debugPrint('❌ Error in optimized monthly participants stream: $e');
+        return participants;
+      }
+    });
+  }
+
+  Future<Map<String, int>> getMonthlyPaymentCounts(String eventId) async {
+    try {
+      final contributions = await _contributionService.getContributions(eventId);
+      final counts = <String, int>{};
+      for (final contribution in contributions) {
+        if (contribution.isMonthlyContribution && contribution.monthId != null) {
+          counts[contribution.monthId!] = (counts[contribution.monthId!] ?? 0) + 1;
+        }
+      }
+      return counts;
+    } catch (e) {
+      debugPrint('❌ Error getting monthly payment counts: $e');
+      return {};
+    }
+  }
+
+  Future<void> join(
+    EventModel event,
+    String userId,
+    String userName,
+    String userEmail,
+    String communityId,
+  ) async {
+    try {
+      final participant = ParticipantModel(
+        participantId: '', 
+        eventId: event.eventId,
+        userId: userId,
+        userName: userName,
+        userEmail: userEmail,
+        communityId: communityId,
+        joinedAt: DateTime.now(),
+        status: 'joined',
+        contributionPaid: 0,
+        hasPaidContribution: false,
+      );
+
+      await _participantService.join(participant);
+      _summaryCache.remove(event.eventId);
+      await loadMyParticipations(userId, communityId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> loadMyParticipations(String userId, String communityId) async {
+    try {
+      _myParticipations = await _participantService.getUseParticipations(
+        userId,
+        communityId,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading participations: $e');
+    }
+  }
+
+  bool hasUserJoined(String eventId, String userId) {
+    return _myParticipations.any(
+      (p) => p.eventId == eventId && p.userId == userId && p.status == 'joined',
+    );
+  }
+
+  Stream<List<EventModel>> streamActivs(String communityId) {
+    return _eventService.streamActiveEventsByCommunity(communityId);
+  }
+
+  // ✅ Stream for event financial summary
+  Stream<Map<String, dynamic>> streamFinancialSummaryOld(String eventId) {
+    // Keep this one if any older screen uses Map<String, dynamic> specifically, 
+    // but the Map<String, double> version at line 303 is better for the Dashboard.
+    // For now, I'll just rename it to avoid conflict or remove it if unused.
+    return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
+      if (participants.isEmpty) {
+        return {
+          'totalParticipants': 0,
+          'paidParticipants': 0,
+          'pendingParticipants': 0,
+          'totalCollected': 0.0,
+          'totalExpected': 0.0,
+          'collectionRate': 0.0,
+        };
+      }
+
+      final summary = await getFinancialSummary(eventId);
+      return summary;
+    });
+  }
+
+  Stream<List<ParticipantModel>> streamParticipantsWithContributions(String eventId) {
+    return _participantService.streamParticipants(eventId).asyncMap((participants) async {
+      if (participants.isEmpty) return [];
+      
+      try {
+        final doc = await _firestore.collection('events').doc(eventId).get();
+        final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+        final allContributions = await _contributionService.getContributions(eventId);
+        
+        final Map<String, double> userPaidMap = {};
+        for (final contribution in allContributions) {
+          userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
+        }
+        
+        return participants.map((participant) {
+          final amountPaid = userPaidMap[participant.userId] ?? 0.0;
+          final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
+          
+          return participant.copyWith(
+            contributionPaid: amountPaid,
+            hasPaidContribution: hasPaid,
+          );
+        }).toList();
+      } catch (e) {
+        debugPrint('❌ Error in optimized participants stream: $e');
+        return participants;
+      }
+    });
+  }
+
+  Future<void> leave(String eventId, String userId) async {
+    try {
+      await _participantService.leave(eventId, userId);
+      final event = await _eventService.getEventById(eventId);
+      if (event != null) {
+        await loadMyParticipations(userId, event.communityId);
+      }
+      _summaryCache.remove(eventId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> syncEventsStatus() async {
+    try {
+      for (final event in _events) {
+        try {
+          await event.syncComputedStatusToFirestore();
+        } catch (e) {
+          debugPrint('❌ Error syncing status for event ${event.eventId}: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error in syncEventsStatus: $e');
+    }
+  }
+
+  Future<void> addContributionReminderDate(String eventId, DateTime date) async {
+    try {
+      await _eventService.addContributionReminderDate(eventId, date);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  Future<void> removeContributionReminderDate(String eventId, DateTime date) async {
+    try {
+      await _eventService.removeContributionReminderDate(eventId, date);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+
+  
+  Future<void> clearAllReminderDates(String eventId) async {
+    try {
+      await _eventService.clearAllReminderDates(eventId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> sendContributionReminder(String eventId) async {
+    try {
+      await _eventService.sendContributionReminder(eventId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateReminderSettings({
+    required String eventId,
+    bool? enableAutoReminders,
+    int? reminderDaysBefore,
+    String? reminderFrequency,
+    List<DateTime>? contributionReminderDates,
+    DateTime? firstPaymentDueDate,
+    DateTime? nextReminderDate,
+  }) async {
+    try {
+      await _eventService.updateReminderSettings(
+        eventId: eventId,
+        enableAutoReminders: enableAutoReminders,
+        reminderDaysBefore: reminderDaysBefore,
+        reminderFrequency: reminderFrequency,
+        contributionReminderDates: contributionReminderDates,
+        firstPaymentDueDate: firstPaymentDueDate,
+        nextReminderDate: nextReminderDate,
+      );
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getReminderStatus(String eventId) async {
+    try {
+      final event = await _eventService.getEventById(eventId);
+      if (event == null) return {'hasReminders': false};
+      final unpaidParticipants = await _eventService.getParticipantsWithUnpaidContributions(eventId);
+      return {
+        'hasReminders': event.enableAutoReminders,
+        'nextReminder': event.nextReminderDate,
+        'participantsToNotify': unpaidParticipants.length,
+        'status': event.enableAutoReminders ? 'active' : 'disabled',
+      };
+    } catch (e) {
+      return {'hasReminders': false};
+    }
+  }
+
+  Future<EventModel?> getMonthlyPayment(String communityId) async {
+    try {
+      final events = await _eventService.getEventsByCommunity(communityId);
+      return events.firstWhere((p) => p.isMonthlyPayment, orElse: () => throw 'Not found');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  StreamSubscription? _participationSub;
+  void watchUserParticipation(String communityId, String userId) {
+    _participationSub?.cancel();
+    _participationSub = _firestore
+        .collection('participants')
+        .where('userId', isEqualTo: userId)
+        .where('communityId', isEqualTo: communityId)
+        .snapshots()
+        .listen((snapshot) {
+      _myParticipations = snapshot.docs
+          .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
+          .toList();
+      notifyListeners();
+    });
+  }
+
+  Stream<Map<String, dynamic>> streamMonthlyFinancialSummary(String eventId, String monthId) {
+    return streamParticipantsWithMonthlyContributions(eventId, monthId)
+        .asyncMap((participants) async {
+      final doc = await _firestore.collection('events').doc(eventId).get();
+      final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+      
+      final monthlyContributions = await _contributionService.getMonthlyContributionsFo(eventId, monthId);
+      
+      int paidParticipants = 0;
+      double totalCollected = 0.0;
+      for (final p in participants) {
+        totalCollected += p.contributionPaid ?? 0.0;
+        if (p.hasPaidContribution) paidParticipants++;
+      }
+      
+      final totalParticipants = participants.length;
+      final totalExpected = suggestedContribution * totalParticipants;
+      
+      return {
+        'totalParticipants': totalParticipants,
+        'paidParticipants': paidParticipants,
+        'pendingParticipants': totalParticipants - paidParticipants,
+        'totalCollected': totalCollected,
+        'collected': totalCollected,
+        'totalExpected': totalExpected,
+        'contributionCount': monthlyContributions.length,
+        'totalContributions': monthlyContributions.length,
+        'monthId': monthId,
+        'expenses': 0.0, 
+        'balance': totalCollected,
+      };
+    });
+  }
+
+  void clearCache() {
+    _summaryCache.clear();
+    _listCache.clear();
+  }
+}
+
+
+
+
+
+

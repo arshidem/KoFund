@@ -20,11 +20,11 @@ import '../features/dashboard/screens/edit_community_screen.dart';
 
 
 import '../features/members/screens/all_members_screen.dart';
-import '../features/members/screens/member_details_screen.dart';
+import '../features/members/screens/member_profile_screen.dart';
 
-// PROGRAM SCREENS
-import '../features/programs/screens/program_details_screen.dart';
-import '../features/programs/screens/create_program_screen.dart';
+// event SCREENS
+import '../features/events/screens/event_details_screen.dart';
+import '../features/events/screens/create_event_screen.dart';
 
 // 🆕 CONTRIBUTION SCREENS
 // import '../features/contributions/screens/all_contribution_screen.dart';
@@ -53,7 +53,7 @@ import '../features/profile/screens/settings/community_guidelines_screen.dart';
 // PROVIDERS
 import '../features/auth/providers/app_auth_provider.dart';
 
-// Notification route names
+// Notification route nnames
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/notifications/screens/notification_detail_screen.dart';
 import '../features/notifications/screens/notification_settings_screen.dart';
@@ -170,16 +170,16 @@ case RouteNames.joinCommunity:
       case RouteNames.memberDetails:
         final member = settings.arguments as UserModel;
         return MaterialPageRoute(
-          builder: (_) => MemberDetailsScreen(member: member),
+          builder: (_) => MemberProfileScreen(member: member),
         );
       
-      // PROGRAM ROUTES
-      case RouteNames.createProgram:
-        return MaterialPageRoute(builder: (_) => const CreateProgramScreen());
-      case RouteNames.programDetails:
-        final programId = settings.arguments as String;
+      // event ROUTES
+      case RouteNames.createEvent:
+        return MaterialPageRoute(builder: (_) => const CreateEventScreen());
+      case RouteNames.eventDetails:
+        final eventId = settings.arguments as String;
         return MaterialPageRoute(
-          builder: (_) => ProgramDetailsScreen(programId: programId),
+          builder: (_) => EventDetailsScreen(eventId: eventId),
         );
       
       // 🆕 CONTRIBUTION ROUTES
@@ -199,8 +199,8 @@ case RouteNames.joinCommunity:
       case RouteNames.editProfile:
         return MaterialPageRoute(
           builder: (context) {
-            final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-            final user = authProvider.user;
+            final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+            final user = _authProvider.user;
             
             if (user == null) {
               return Scaffold(
@@ -267,3 +267,8 @@ case RouteNames.notificationSettings:
     }
   }
 }
+
+
+
+
+

@@ -217,7 +217,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title with icon
+                      // Ttitle with icon
                       Row(
                         children: [
                           Container(
@@ -414,7 +414,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title with count
+                      // Ttitle with count
                       Row(
                         children: [
                           Container(
@@ -617,7 +617,7 @@ class MemberDetailsSkeleton extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title with total amount
+                      // Ttitle with total amount
                       Row(
                         children: [
                           Container(
@@ -858,3 +858,8 @@ class MemberDetailsSkeleton extends StatelessWidget {
       );
   }
 }
+
+
+
+
+

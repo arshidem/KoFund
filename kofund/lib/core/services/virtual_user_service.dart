@@ -17,7 +17,7 @@ Future<UserModel> createVirtualUser({
   required String communityId,
   required String displayName,
   required String adminUid,
-  required String adminName, // Add this parameter
+  required String adminName, // Add this parnameter
   String? phoneNumber,
   String? email,
 }) async {
@@ -33,7 +33,7 @@ Future<UserModel> createVirtualUser({
 
     return await _firestore.runTransaction((transaction) async {
       final virtualUserId = 'virtual_${_uuid.v4()}';
-      final sanitizedName = _sanitizeNameForEmail(displayName);
+      final sanitizedName = _sanitizeNnameForEmail(displayName);
       final virtualEmail = email ?? '$sanitizedName@virtual.kofund.app';
 
       // Check for duplicate in transaction
@@ -114,7 +114,7 @@ Future<UserModel> createVirtualUser({
 Future<List<UserModel>> createMultipleVirtualUsers({
   required String communityId,
   required String adminUid,
-  required String adminName, // Add this parameter
+  required String adminName, // Add this parnameter
   required List<Map<String, dynamic>> usersData,
 }) async {
   developer.log('Creating ${usersData.length} virtual users for community: $communityId');
@@ -135,18 +135,18 @@ Future<List<UserModel>> createMultipleVirtualUsers({
     }
 
     // Check for duplicates before starting batch
-    final existingNames = await _getExistingVirtualUserNames(communityId);
-    final duplicateNames = <String>[];
+    final existingNnames = await _getExistingVirtualUserNnames(communityId);
+    final duplicateNnames = <String>[];
     
     for (final userData in usersData) {
       final name = (userData['name'] as String).trim();
-      if (existingNames.contains(name)) {
-        duplicateNames.add(name);
+      if (existingNnames.contains(name)) {
+        duplicateNnames.add(name);
       }
     }
 
-    if (duplicateNames.isNotEmpty) {
-      throw Exception('Duplicate names found: ${duplicateNames.join(', ')}. Please use unique names.');
+    if (duplicateNnames.isNotEmpty) {
+      throw Exception('Duplicate nnames found: ${duplicateNnames.join(', ')}. Please use unique names.');
     }
 
     final batch = _firestore.batch();
@@ -157,7 +157,7 @@ Future<List<UserModel>> createMultipleVirtualUsers({
       final displayName = (userData['name'] as String).trim();
       final phoneNumber = userData['phone'] as String?;
       final email = userData['email'] as String?;
-      final sanitizedName = _sanitizeNameForEmail(displayName);
+      final sanitizedName = _sanitizeNnameForEmail(displayName);
       final virtualEmail = email ?? '$sanitizedName@virtual.kofund.app';
 
       final virtualUser = UserModel(
@@ -542,7 +542,7 @@ Future<List<UserModel>> createMultipleVirtualUsers({
     }
   }
 
-  String _sanitizeNameForEmail(String name) {
+  String _sanitizeNnameForEmail(String name) {
     return name
         .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')
         .toLowerCase()
@@ -555,7 +555,7 @@ Future<List<UserModel>> createMultipleVirtualUsers({
     _userCountCache.remove(communityId);
   }
 
-  Future<Set<String>> _getExistingVirtualUserNames(String communityId) async {
+  Future<Set<String>> _getExistingVirtualUserNnames(String communityId) async {
     final snapshot = await _firestore
         .collection('users')
         .where('communityId', isEqualTo: communityId)
@@ -568,4 +568,9 @@ Future<List<UserModel>> createMultipleVirtualUsers({
         .toSet();
   }
 }
+
+
+
+
+
 
