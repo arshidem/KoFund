@@ -1,15 +1,10 @@
 // Common helpers 
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class Helpers {
   static void showSnackBar(BuildContext context, String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    SnackbarHelper.showError(context, message);
   }
 
   static Future<void> showConfirmationDialog({

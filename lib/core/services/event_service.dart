@@ -6,6 +6,7 @@ import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/features/participants/models/participant_model.dart';
 import 'package:intl/intl.dart';
+import 'package:kofund/core/services/participant_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -16,55 +17,60 @@ class  EventService {
   // -------------------------------------------------------------
   // Create event
   // -------------------------------------------------------------
-Future<String> create(EventModel event, {bool sendNotification = true}) async {
-  try {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) {
-      throw Exception('User not authenticated');
-    }
-
-    final docRef = await _firestore.collection('events').add(event.toMap());
-    final eventId = docRef.id;
-
-    if (sendNotification) {
-      try {
-        // Fetch community name for the notification body
-        final communityDoc = await _firestore.collection('communities').doc(event.communityId).get();
-        String communityName = communityDoc.data()?['name'] ?? '';
-        
-        // Fallback: Check user's own data if community doc is missing or name is empty
-        if (communityName.isEmpty) {
-          final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-          communityName = userDoc.data()?['communityName'] ?? 'Your Community';
-        }
-
-        await NotificationService().sendCommunityNotification(
-          communityId: event.communityId,
-          title: event.title,
-          body: 'New event in $communityName · Tap to join',
-          type: NotificationType.announcement,
-          eventId: eventId,
-          data: {
-            'eventId': eventId,
-            'title': event.title,
-            'communityName': communityName,
-            'type': NotificationType.announcement.name,
-            'deepLink': 'event/$eventId',
-          },
-        );
-      } catch (e) {
-        debugPrint('⚠️ Push notification failed: $e');
+  Future<String> create(EventModel event, {bool sendNotification = true}) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
       }
-    }
 
-    debugPrint('✅ event created: $eventId');
-    
-    return eventId;
-  } catch (e) {
-    debugPrint('❌ Error creating event: $e');
-    throw Exception('Failed to create event: $e');
+      final docRef = await _firestore.collection('events').add(event.toMap());
+      final eventId = docRef.id;
+
+      if (sendNotification) {
+        // 🔥 OPTIMIZATION: Send notification in background to avoid blocking UI
+        _sendEventCreationNotification(event, eventId, currentUser.uid);
+      }
+
+      debugPrint('✅ event created: $eventId');
+      return eventId;
+    } catch (e) {
+      debugPrint('❌ Error creating event: $e');
+      throw Exception('Failed to create event: $e');
+    }
   }
-}
+
+  /// 🚀 Helper to send notifications in background
+  Future<void> _sendEventCreationNotification(EventModel event, String eventId, String currentUserId) async {
+    try {
+      // Fetch community name for the notification body
+      final communityDoc = await _firestore.collection('communities').doc(event.communityId).get();
+      String communityName = communityDoc.data()?['name'] ?? '';
+      
+      // Fallback: Check user's own data if community doc is missing or name is empty
+      if (communityName.isEmpty) {
+        final userDoc = await _firestore.collection('users').doc(currentUserId).get();
+        communityName = userDoc.data()?['communityName'] ?? 'Your Community';
+      }
+
+      await NotificationService().sendCommunityNotification(
+        communityId: event.communityId,
+        title: event.title,
+        body: 'New event in $communityName · Tap to join',
+        type: NotificationType.announcement,
+        eventId: eventId,
+        data: {
+          'eventId': eventId,
+          'title': event.title,
+          'communityName': communityName,
+          'type': NotificationType.announcement.name,
+          'deepLink': 'event/$eventId',
+        },
+      );
+    } catch (e) {
+      debugPrint('⚠️ Background event notification failed: $e');
+    }
+  }
   // -------------------------------------------------------------
   // Get all events by community (one-time)
   // -------------------------------------------------------------
@@ -332,7 +338,7 @@ Future<void> updateModel(EventModel event) async {
       // Send individual notifications to each participant
       for (final participant in participants) {
         try {
-          await _sendParticipantReminder(event, participant);
+          await sendParticipantReminder(event, participant);
         } catch (e) {
           debugPrint('⚠️ Failed to send reminder to ${participant.userName}: $e');
         }
@@ -355,11 +361,11 @@ Future<void> updateModel(EventModel event) async {
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
           .where('status', isEqualTo: 'joined')
-          .where('hasPaidContribution', isEqualTo: false)
           .get();
       
       return participantsSnapshot.docs
           .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
+          .where((p) => p.hasPaidContribution == false)
           .toList();
     } catch (e) {
       debugPrint('❌ Error getting unpaid participants: $e');
@@ -434,12 +440,18 @@ Future<void> updateModel(EventModel event) async {
 
 
  // 🆕 SEND REMINDER TO INDIVIDUAL PARTICIPANT
-Future<void> _sendParticipantReminder(EventModel event, ParticipantModel participant) async {
+Future<void> sendParticipantReminder(EventModel event, ParticipantModel participant) async {
   try {
     final notificationService = NotificationService();
     final amount = event.suggestedContribution ?? 0;
     final paidAmount = participant.contributionPaid ?? 0;
     final remainingAmount = amount - paidAmount;
+    
+    // ✅ NEW CHECK: Only send to non-contributed or partially-contributed users
+    if (amount > 0 && remainingAmount <= 0) {
+      debugPrint('🔕 Participant ${participant.userName} has already fully paid. Skipping.');
+      return;
+    }
     
     // ✅ Fix: Handle null dates properly
     String dueDateText;
@@ -461,12 +473,23 @@ Future<void> _sendParticipantReminder(EventModel event, ParticipantModel partici
       dueDateIso = DateTime.now().toIso8601String(); // Fallback to current date
     }
     
+    final defaultTitle = 'Contribution Reminder 💰';
+    final remainingAmountText = '₹${remainingAmount.toStringAsFixed(0)}';
+    final defaultMessage = 'Remaining balance: $remainingAmountText for ${event.title}. Due by $dueDateText';
+    
+    String finalBody = event.customReminderMessage?.isNotEmpty == true 
+        ? event.customReminderMessage! 
+        : defaultMessage;
+        
+    // Support placeholder replacement in custom messages
+    finalBody = finalBody.replaceAll('{remaining_amount}', remainingAmountText);
+    finalBody = finalBody.replaceAll('{event_title}', event.title);
+    finalBody = finalBody.replaceAll('{due_date}', dueDateText);
+          
     await notificationService.sendUserNotification(
       userId: participant.userId,
-      title: 'Contribution Reminder 💰',
-      body: 'Reminder for ${event.title}. '
-            'Amount: \$${remainingAmount.toStringAsFixed(2)} remaining. '
-            'Due date: $dueDateText',
+      title: event.customReminderTitle?.isNotEmpty == true ? event.customReminderTitle! : defaultTitle,
+      body: finalBody,
       type: NotificationType.reminder,
       data: {
         'eventId': event.eventId,
@@ -496,12 +519,23 @@ Future<void> _sendParticipantReminder(EventModel event, ParticipantModel partici
       
       final nextReminderDate = event.calculateNextReminderDate();
       
-      await update(eventId, {
-        'nextReminderDate': Timestamp.fromDate(nextReminderDate),
+      final dataParams = <String, dynamic>{
         'lastReminderSent': FieldValue.serverTimestamp(),
-      });
+      };
       
-      debugPrint('📅 Next reminder scheduled for: ${DateFormat.yMMMd().format(nextReminderDate)}');
+      if (nextReminderDate != null) {
+        dataParams['nextReminderDate'] = Timestamp.fromDate(nextReminderDate);
+      } else {
+        dataParams['nextReminderDate'] = FieldValue.delete();
+      }
+      
+      await update(eventId, dataParams);
+      
+      if (nextReminderDate != null) {
+        debugPrint('📅 Next reminder scheduled for: ${DateFormat.yMMMd().format(nextReminderDate)}');
+      } else {
+        debugPrint('📅 Auto-reminders exhausted/disabled for now.');
+      }
     } catch (e) {
       debugPrint('⚠️ Error updating next reminder date: $e');
     }
@@ -528,8 +562,7 @@ Future<void> _sendParticipantReminder(EventModel event, ParticipantModel partici
         
         // Check if reminder is due
         if (event.nextReminderDate != null && 
-            event.nextReminderDate!.isBefore(now) &&
-            event.shouldSendReminder(now)) {
+            event.nextReminderDate!.isBefore(now)) {
           
           try {
             await sendContributionReminder(event.eventId);
@@ -555,7 +588,13 @@ Future<void> updateReminderSettings({
   String? reminderFrequency,
   List<DateTime>? contributionReminderDates,
   DateTime? firstPaymentDueDate,
-  DateTime? nextReminderDate, // ✅ ADD THIS
+  DateTime? nextReminderDate,
+  String? customReminderTitle,
+  String? customReminderMessage,
+  bool? enableReminderRetries,
+  int? retryDaysAfter,
+  bool? enableAdminEscalation,
+  int? escalationDaysAfter,
 }) async {
   try {
     final updates = <String, dynamic>{
@@ -573,9 +612,15 @@ Future<void> updateReminderSettings({
     if (firstPaymentDueDate != null) {
       updates['firstPaymentDueDate'] = Timestamp.fromDate(firstPaymentDueDate);
     }
-    if (nextReminderDate != null) { // ✅ ADD THIS
+    if (nextReminderDate != null) { 
       updates['nextReminderDate'] = Timestamp.fromDate(nextReminderDate);
     }
+    if (customReminderTitle != null) updates['customReminderTitle'] = customReminderTitle;
+    if (customReminderMessage != null) updates['customReminderMessage'] = customReminderMessage;
+    if (enableReminderRetries != null) updates['enableReminderRetries'] = enableReminderRetries;
+    if (retryDaysAfter != null) updates['retryDaysAfter'] = retryDaysAfter;
+    if (enableAdminEscalation != null) updates['enableAdminEscalation'] = enableAdminEscalation;
+    if (escalationDaysAfter != null) updates['escalationDaysAfter'] = escalationDaysAfter;
     
     await _firestore.collection('events').doc(eventId).update(updates);
     

@@ -8,6 +8,7 @@ import 'package:kofund/features/issues/models/issue_model.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/skeleton/issue_reports_skeleton.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class IssueReportsScreen extends StatefulWidget {
   const IssueReportsScreen({super.key});
@@ -44,9 +45,7 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update status: $e')),
-      );
+      SnackbarHelper.showError(context, 'Failed to update status: $e');
     }
   }
 
@@ -64,9 +63,7 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to assign issue: $e')),
-      );
+      SnackbarHelper.showError(context, 'Failed to assign issue: $e');
     }
   }
 
@@ -559,12 +556,12 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
     return GradientSheetScaffold(
       title: 'Issue Reports',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.filter_list, color: Colors.white),
+          icon: Icon(Icons.filter_list, color: AppColors.textPrimary(context)),
           onPressed: () => _showFilterDialog(context),
           tooltip: 'Filter & Sort',
         ),

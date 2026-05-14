@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/haptic_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ManageDevelopersScreen extends StatefulWidget {
   const ManageDevelopersScreen({super.key});
@@ -24,7 +27,13 @@ class _ManageDevelopersScreenState extends State<ManageDevelopersScreen> {
     _loadDevelopers();
   }
 
-Future<void> _loadDevelopers() async {
+Future<void> _loadDevelopers({bool silent = false}) async {
+  if (!silent) {
+    setState(() => _isLoading = true);
+  } else {
+    HapticHelper.light();
+  }
+
   try {
     final query = await _firestore
         .collection('users')
@@ -32,14 +41,16 @@ Future<void> _loadDevelopers() async {
         .orderBy('updatedAt', descending: true)
         .get();
 
+    if (!mounted) return;
+
     setState(() {
       _developers = query.docs.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
           'email': data['email'] ?? 'No email',
-          'name': data['displayName'] ?? data['name'] ?? 'Unknown', // FIXED HERE
-          'phone': data['phoneNumber'] ?? data['phone'] ?? '', // Also fix phone field
+          'name': data['displayName'] ?? data['name'] ?? 'Unknown',
+          'phone': data['phoneNumber'] ?? data['phone'] ?? '',
           'isAdmin': data['isAdmin'] ?? false,
           'createdAt': (data['createdAt'] as Timestamp?)?.toDate(),
           'updatedAt': (data['updatedAt'] as Timestamp?)?.toDate(),
@@ -49,10 +60,9 @@ Future<void> _loadDevelopers() async {
       _isLoading = false;
     });
   } catch (e) {
+    if (!mounted) return;
     setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error loading developers: $e')),
-    );
+    SnackbarHelper.showError(context, 'Error loading developers: $e');
   }
 }
 
@@ -61,12 +71,7 @@ Future<void> _loadDevelopers() async {
     
     // P removing yourself
     if (userId == _authProvider.user?.uid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You cannot remove yourself as developer'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'You cannot remove yourself as developer');
       return;
     }
 
@@ -106,16 +111,9 @@ Future<void> _loadDevelopers() async {
       await _loadDevelopers();
       if (!mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Developer access removed'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Developer access removed');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      SnackbarHelper.showError(context, 'Error: $e');
     }
   }
 
@@ -335,186 +333,192 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
     return GradientSheetScaffold(
       title: 'Manage Developers',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.white),
-          onPressed: _loadDevelopers,
-          tooltip: 'Refresh',
-        ),
-      ],
+      actions: const [],
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Stats Card
-                  Card(
-                    color: AppColors.card(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            children: [
-                              Text(
-                                _developers.length.toString(),
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary(context),
-                                ),
-                              ),
-                              Text(
-                                'Total Developers',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary(context),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+          : CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
+                CupertinoSliverRefreshControl(
+                  onRefresh: () => _loadDevelopers(silent: true),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.all(12),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Stats Card
+                        Card(
+                          color: AppColors.card(context),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          Column(
-                            children: [
-                              Text(
-                                _developers
-                                    .where((eventId) => eventId['isAdmin'])
-                                    .length
-                                    .toString(),
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  children: [
+                                    Text(
+                                      _developers.length.toString(),
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary(context),
+                                      ),
+                                    ),
+                                    Text(
+                                      'Total Developers',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary(context),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              Text(
-                                'Community Admins',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary(context),
-                                  fontSize: 12,
+                                Column(
+                                  children: [
+                                    Text(
+                                      _developers
+                                          .where((eventId) => eventId['isAdmin'])
+                                          .length
+                                          .toString(),
+                                      style: const TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Community Admins',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary(context),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Developers List
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Developers List',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary(context),
                         ),
-                      ),
-                      Chip(
-                        label: Text('${_developers.length} users'),
-                        backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
-                        labelStyle: TextStyle(
-                          color: AppColors.primary(context),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
 
-                  if (_developers.isEmpty)
-                    Card(
-                      color: AppColors.card(context),
-                      child: const Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Column(
+                        const SizedBox(height: 24),
+
+                        // Developers List
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.people_outline, size: 48, color: Colors.grey),
-                            SizedBox(height: 16),
                             Text(
-                              'No Developers Found',
+                              'Developers List',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey,
+                                color: AppColors.textPrimary(context),
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Add developers from the Add Developer screen',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey),
+                            Chip(
+                              label: Text('${_developers.length} users'),
+                              backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+                              labelStyle: TextStyle(
+                                color: AppColors.primary(context),
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    )
-                  else
-                    ..._developers.map(_buildDeveloperCard),
+                        const SizedBox(height: 12),
 
-                  const SizedBox(height: 24),
+                        if (_developers.isEmpty)
+                          Card(
+                            color: AppColors.card(context),
+                            child: const Padding(
+                              padding: EdgeInsets.all(40),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.people_outline, size: 48, color: Colors.grey),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'No Developers Found',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Add developers from the Add Developer screen',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ..._developers.map(_buildDeveloperCard),
 
-                  // Instructions
-                  Card(
-                    color: AppColors.surface(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: AppColors.primary(context),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Information',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary(context),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 24),
+
+                        // Instructions
+                        Card(
+                          color: AppColors.surface(context),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '• Developers have access to developer tools\n'
-                            '• You cannot remove yourself as developer\n'
-                            '• Community Admins can manage community\n'
-                            '• Tap on a developer to view details\n'
-                            '• Use menu (...) for more actions',
-                            style: TextStyle(
-                              color: AppColors.textSecondary(context),
-                              fontSize: 12,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: AppColors.primary(context),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Information',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '• Developers have access to developer tools\n'
+                                  '• You cannot remove yourself as developer\n'
+                                  '• Community Admins can manage community\n'
+                                  '• Tap on a developer to view details\n'
+                                  '• Use menu (...) for more actions',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }

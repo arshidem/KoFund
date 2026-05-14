@@ -11,6 +11,7 @@ import '../providers/event_provider.dart';
 import '../models/event_model.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -751,20 +752,10 @@ void _onParticipantsChanged() {
       
       Navigator.pop(context);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Event created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Event created successfully!');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to create event: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to create event: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

@@ -9,6 +9,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/constants/notification_Types.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/utils/dialog_helper.dart';
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -380,41 +381,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     }
 
-    return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          int count = 0;
-          for (var entry in grouped.entries) {
-            if (entry.value.isEmpty) continue;
-            
-            // Header
-            if (index == count) {
-              return _buildGroupHeader(entry.key);
-            }
-            count++;
-            
-            // Items
-            if (index < count + entry.value.length) {
-              final n = entry.value[index - count];
-              return NotificationCard(notification: n);
-            }
-            count += entry.value.length;
-          }
-          return null;
-        },
-        childCount: grouped.values.expand((x) => x).length + 
-                  grouped.values.where((x) => x.isNotEmpty).length,
-      ),
+    // Build a flat list of items: group headers + notifications interleaved
+    final List<_NotifListItem> items = [];
+    for (var entry in grouped.entries) {
+      if (entry.value.isEmpty) continue;
+      items.add(_NotifListItem.header(entry.key));
+      for (final n in entry.value) {
+        items.add(_NotifListItem.notification(n));
+      }
+    }
+
+    // Collect only notification items for the separator builder so dividers
+    // appear only between sibling notification rows (not after a header).
+    return SliverList.separated(
+      itemCount: items.length,
+      separatorBuilder: (context, index) {
+        final current = items[index];
+        final next = items[index + 1];
+        // Only show divider between two notification rows
+        if (current.isNotification && next.isNotification) {
+          return Divider(
+            height: 1,
+            indent: 0,
+            endIndent: 0,
+            color: AppColors.textSecondary(context).withValues(alpha: 0.1),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+      itemBuilder: (context, index) {
+        final item = items[index];
+        if (item.isHeader) return _buildGroupHeader(item.label!);
+        return NotificationCard(notification: item.notification!);
+      },
     );
   }
 
   Widget _buildGroupHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
           color: AppColors.textSecondary(context).withValues(alpha: 0.6),
           letterSpacing: 1.2,
@@ -636,198 +645,189 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     provider.clearFilters();
   }
 
-  void _showClearAllDialog(BuildContext context, NotificationProvider provider) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Notifications'),
-        content: const Text('This will remove all notifications. This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              provider.clearAll();
-              Navigator.pop(context);
-            },
-            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  void _showClearAllDialog(BuildContext context, NotificationProvider provider) async {
+    final confirm = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Clear All Notifications',
+      message: 'This will remove all notifications. This action cannot be undone.',
+      confirmLabel: 'Clear All',
+      icon: Icons.delete_sweep_rounded,
+      isDestructive: true,
     );
+
+    if (confirm == true) {
+      provider.clearAll();
+    }
   }
 }
 
+// ─── Helper: discriminates list rows for SliverList.separated ───────────────
+class _NotifListItem {
+  final bool isHeader;
+  final String? label;
+  final AppNotification? notification;
+
+  const _NotifListItem.header(String l)
+      : isHeader = true,
+        label = l,
+        notification = null;
+
+  const _NotifListItem.notification(AppNotification n)
+      : isHeader = false,
+        label = null,
+        notification = n;
+
+  bool get isNotification => !isHeader;
+}
+
+// ─── Notification row – mirrors _buildMemberTile in all_members_screen ───────
 class NotificationCard extends StatelessWidget {
   final AppNotification notification;
 
   const NotificationCard({super.key, required this.notification});
 
+  Color _accentColor(BuildContext context) {
+    switch (notification.type) {
+      case NotificationType.payment:
+      case NotificationType.contribution:
+        return Colors.green;
+      case NotificationType.withdrawal:
+        return Colors.red;
+      case NotificationType.approval:
+        return Colors.blue;
+      case NotificationType.reminder:
+        return Colors.orange;
+      case NotificationType.pendingUser:
+        return Colors.orangeAccent;
+      default:
+        return AppColors.primary(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.read<NotificationProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    Color getBgColor() {
-      switch (notification.type) {
-        case NotificationType.payment:
-        case NotificationType.contribution:
-          return Colors.green;
-        case NotificationType.withdrawal:
-          return Colors.red;
-        case NotificationType.approval:
-          return Colors.blue;
-        case NotificationType.reminder:
-          return Colors.orange;
-        case NotificationType.pendingUser:
-          return Colors.orangeAccent;
-        default:
-          return AppColors.primary(context);
-      }
-    }
+    final accentColor = _accentColor(context);
+    final isUnread = !notification.isRead;
 
-    final accentColor = getBgColor();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Dismissible(
-        key: Key(notification.id),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          decoration: BoxDecoration(
-            color: Colors.redAccent.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 24),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
-              SizedBox(height: 4),
-              Text('Delete', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-            ],
-          ),
+    return Dismissible(
+      key: Key(notification.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.redAccent.withValues(alpha: 0.15),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+            SizedBox(height: 4),
+            Text('Delete',
+                style: TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold)),
+          ],
         ),
-        onDismissed: (_) => provider.deleteNotification(notification.id),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: !notification.isRead 
-                ? accentColor.withValues(alpha: 0.25) 
-                : AppColors.border(context).withValues(alpha: 0.5),
-              width: !notification.isRead ? 1.5 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                if (!notification.isRead) {
-                  provider.markAsRead(notification.id);
-                }
-                NotificationService().handleNotificationTap(notification);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      onDismissed: (_) => provider.deleteNotification(notification.id),
+      child: Material(
+        color: isUnread
+            ? accentColor.withValues(alpha: 0.04)
+            : AppColors.background(context),
+        child: InkWell(
+          onTap: () {
+            if (isUnread) provider.markAsRead(notification.id);
+            NotificationService().handleNotificationTap(notification);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // ── Leading icon (CircleAvatar style) ──────────────────
+                Stack(
                   children: [
-                    // Modern Icon Container
-                    Stack(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: accentColor.withValues(alpha: 0.12),
+                      child: Icon(
+                        notification.typeIcon,
+                        color: accentColor,
+                        size: 20,
+                      ),
+                    ),
+                    if (isUnread)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 11,
+                          height: 11,
                           decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            notification.typeIcon,
                             color: accentColor,
-                            size: 22,
-                          ),
-                        ),
-                        if (!notification.isRead)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: accentColor,
-                                border: Border.all(color: AppColors.card(context), width: 2),
-                                shape: BoxShape.circle,
-                              ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.background(context),
+                              width: 2,
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(width: 16),
-                    
-                    // Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+
+                // ── Content ────────────────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  notification.title,
-                                  style: TextStyle(
-                                    fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w800,
-                                    fontSize: 15,
-                                    color: AppColors.textPrimary(context),
-                                    letterSpacing: -0.2,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          Expanded(
+                            child: Text(
+                              notification.title,
+                              style: TextStyle(
+                                fontWeight:
+                                    isUnread ? FontWeight.w700 : FontWeight.w600,
+                                fontSize: 14,
+                                color: AppColors.textPrimary(context),
+                                letterSpacing: -0.1,
                               ),
-                              Text(
-                                notification.timeAgo,
-                                style: TextStyle(
-                                  fontSize: 10, 
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(width: 8),
                           Text(
-                            notification.body,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            notification.timeAgo,
                             style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary(context).withValues(alpha: 0.9),
-                              height: 1.4,
-                              letterSpacing: 0.1,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary(context)
+                                  .withValues(alpha: 0.55),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 3),
+                      Text(
+                        notification.body,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context)
+                              .withValues(alpha: 0.85),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -842,28 +842,22 @@ class NotificationSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.grey[800]!.withValues(alpha: 0.5) : Colors.grey[200]!;
-    
-    return Container(
-      height: 80,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
-      ),
-      padding: const EdgeInsets.all(16),
+    final baseColor =
+        isDark ? Colors.grey[800]!.withValues(alpha: 0.5) : Colors.grey[200]!;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Circle avatar placeholder
           Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: baseColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
+            width: 44,
+            height: 44,
+            decoration:
+                BoxDecoration(color: baseColor, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -872,14 +866,34 @@ class NotificationSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(height: 12, width: 120, decoration: BoxDecoration(color: baseColor, borderRadius: BorderRadius.circular(6))),
-                    Container(height: 8, width: 40, decoration: BoxDecoration(color: baseColor, borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        height: 12,
+                        width: 130,
+                        decoration: BoxDecoration(
+                            color: baseColor,
+                            borderRadius: BorderRadius.circular(6))),
+                    Container(
+                        height: 10,
+                        width: 36,
+                        decoration: BoxDecoration(
+                            color: baseColor,
+                            borderRadius: BorderRadius.circular(4))),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Container(height: 10, width: double.infinity, decoration: BoxDecoration(color: baseColor, borderRadius: BorderRadius.circular(4))),
-                const SizedBox(height: 6),
-                Container(height: 10, width: 200, decoration: BoxDecoration(color: baseColor, borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 8),
+                Container(
+                    height: 10,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                        color: baseColor,
+                        borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 5),
+                Container(
+                    height: 10,
+                    width: 180,
+                    decoration: BoxDecoration(
+                        color: baseColor,
+                        borderRadius: BorderRadius.circular(4))),
               ],
             ),
           ),

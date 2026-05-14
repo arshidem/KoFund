@@ -14,6 +14,7 @@ import 'package:kofund/core/skeleton/contribution_history_skeleton.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 // Move ChangeEntry to top level
 class ChangeEntry {
@@ -520,7 +521,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvi
 
   Widget _buildContributionListItem(
       Map<String, dynamic> contribution, AppAuthProvider _authProvider) {
-    final EventTitle = contribution['EventTitle'] ?? 'Unknown event';
+    final eventTitle = contribution['title'] ?? 'Unnamed Event';
     final amount = (contribution['amount'] ?? 0).toDouble();
     final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
     final createdAt =
@@ -562,7 +563,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvi
                       children: [
                         Expanded(
                           child: Text(
-                            EventTitle,
+                            eventTitle,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -681,7 +682,7 @@ void _debugContributionData(Map<String, dynamic> contribution) {
 }
 // Show contribution details method with premium design - FIXED VERSION
 void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider _authProvider) {
-  final EventTitle = contribution['EventTitle'] ?? 'Unknown event';
+  final EventTitle = contribution['title'] ?? 'Unnamed Event';
   final amount = (contribution['amount'] ?? 0).toDouble();
   final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
   final createdAt = (contribution['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
@@ -1468,12 +1469,7 @@ Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution,
     debugPrint('Receipt error: $e\n$st');
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate receipt: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to generate receipt: ${e.toString()}');
     }
   }
 }
@@ -1487,6 +1483,7 @@ ContributionModel _convertMapToContributionModel(Map<String, dynamic> contributi
   return ContributionModel(
     contributionId: contribution['contributionId'] ?? '',
     eventId: contribution['eventId'] ?? '',
+    eventName: contribution['eventName'] ?? contribution['EventTitle'] ?? 'Unknown Event',
     userId: contribution['userId'] ?? _authProvider.user?.uid ?? '',
     contributorName: contribution['contributorName'] ?? _authProvider.user?.displayName ?? 'User',
     communityId: contribution['communityId'] ?? '',

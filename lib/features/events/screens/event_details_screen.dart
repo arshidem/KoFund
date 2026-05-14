@@ -143,12 +143,7 @@ Future<void> _refreshAllData() async {
     _refreshController.refreshFailed();
     
     // Show error to user
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to refresh: ${e.toString()}'),
-        backgroundColor: AppColors.error(context),
-      ),
-    );
+    SnackbarHelper.showError(context, 'Failed to refresh: ${e.toString()}');
   }
 }
 
@@ -406,12 +401,7 @@ Widget build(BuildContext context) {
 
       final currentUser = _authProvider.user;
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please sign in to join the event'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Please sign in to join the event');
         return;
       }
 
@@ -427,12 +417,7 @@ Widget build(BuildContext context) {
           participantCount >= event.maxParticipants;
 
       if (isFull) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Event is full!'),
-            backgroundColor: AppColors.error(context),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Event is full!');
         return;
       }
 
@@ -441,18 +426,14 @@ Widget build(BuildContext context) {
       );
 
       if (hasJoined) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('You have already joined this event'),
-            backgroundColor: AppColors.warning(context),
-          ),
-        );
+        SnackbarHelper.showInfo(context, 'You have already joined this event');
         return;
       }
 
       final participant = ParticipantModel(
         participantId: '',
         eventId: widget.eventId,
+        eventName: event.title,
         userId: currentUser.uid,
         userName: currentUser.displayName ?? 'User',
         userEmail: currentUser.email,
@@ -466,22 +447,12 @@ Widget build(BuildContext context) {
       await participantProvider.joinEvent(participant);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully joined the event!'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Successfully joined the event!');
       
       // Refresh data after joining
       _refreshAllData();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to join event: $e'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to join event: $e');
     }
   }
 

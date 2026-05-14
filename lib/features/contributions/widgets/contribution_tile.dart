@@ -7,6 +7,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../providers/contribution_provider.dart';
 import '../../events/utils/contribution_receipt_image.dart';
 import '../screens/edit_contribution_screen.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ContributionTile extends StatelessWidget {
   final ContributionModel contribution;
@@ -214,9 +215,7 @@ class ContributionTile extends StatelessWidget {
           contributionId: contribution.contributionId,
           onSave: (updated) {
             if (updated != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: const Text('Updated successfully'), backgroundColor: AppColors.success(context)),
-              );
+              SnackbarHelper.showSuccess(context, 'Updated successfully');
             }
           },
         ),
@@ -234,9 +233,7 @@ class ContributionTile extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      SnackbarHelper.showError(context, 'Error: $e');
     }
   }
 
@@ -269,12 +266,10 @@ class ContributionTile extends StatelessWidget {
       await provider.deleteContribution(contribution.contributionId, reason);
       
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Deleted successfully'), backgroundColor: AppColors.success(context)),
-      );
+      SnackbarHelper.showError(context, 'Deleted successfully');
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      SnackbarHelper.showError(context, 'Error: $e');
     }
   }
 

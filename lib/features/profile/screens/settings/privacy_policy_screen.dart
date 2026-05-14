@@ -6,6 +6,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kofund/core/utils/app_info.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 
 class PrivacyPolicyScreen extends StatefulWidget {
@@ -68,12 +69,7 @@ Future<void> _loadAppInfo() async {
       if (!mounted) return;
       
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Privacy email copied to clipboard'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showInfo(context, 'Privacy email copied to clipboard');
       }
     }
   }

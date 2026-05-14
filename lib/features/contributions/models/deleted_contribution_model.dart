@@ -13,6 +13,7 @@ class DeletedContributionModel {
   
   // 🔹 COPY of ALL Original Contribution Data
   String eventId;
+  String eventName;
   String userId;
   String contributorName;
   String communityId;
@@ -65,6 +66,7 @@ class DeletedContributionModel {
     
     // Original Contribution Data
     required this.eventId,
+    required this.eventName,
     required this.userId,
     required this.contributorName,
     required this.communityId,
@@ -132,6 +134,7 @@ class DeletedContributionModel {
       
       // Copy all original contribution data
       eventId: contribution.eventId,
+      eventName: contribution.eventName,
       userId: contribution.userId,
       contributorName: contribution.contributorName,
       communityId: contribution.communityId,
@@ -202,6 +205,7 @@ class DeletedContributionModel {
       
       // Original contribution data
       eventId: map['eventId'] ?? '',
+      eventName: map['eventName'] ?? '',
       userId: map['userId'] ?? '',
       contributorName: map['contributorName'] ?? '',
       communityId: map['communityId'] ?? '',
@@ -254,6 +258,7 @@ class DeletedContributionModel {
       
       // Original contribution data
       'eventId': eventId,
+      'eventName': eventName,
       'userId': userId,
       'contributorName': contributorName,
       'communityId': communityId,
@@ -303,6 +308,7 @@ class DeletedContributionModel {
     return ContributionModel(
       contributionId: originalContributionId, // Use original ID
       eventId: eventId,
+      eventName: eventName,
       userId: userId,
       contributorName: contributorName,
       communityId: communityId,
@@ -391,6 +397,7 @@ class DeletedContributionModel {
       deletedContributionId: deletedContributionId,
       originalContributionId: originalContributionId,
       eventId: eventId,
+      eventName: eventName,
       userId: userId,
       contributorName: contributorName,
       communityId: communityId,
@@ -440,6 +447,7 @@ class DeletedContributionModel {
     String? deletedContributionId,
     String? originalContributionId,
     String? eventId,
+    String? eventName,
     String? userId,
     String? contributorName,
     String? communityId,
@@ -475,6 +483,7 @@ class DeletedContributionModel {
       deletedContributionId: deletedContributionId ?? this.deletedContributionId,
       originalContributionId: originalContributionId ?? this.originalContributionId,
       eventId: eventId ?? this.eventId,
+      eventName: eventName ?? this.eventName,
       userId: userId ?? this.userId,
       contributorName: contributorName ?? this.contributorName,
       communityId: communityId ?? this.communityId,

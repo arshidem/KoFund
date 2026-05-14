@@ -1001,10 +1001,10 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
         children: [
           Row(
             children: [
-              Icon(Icons.event_note, color: Colors.blueAccent, size: 22),
+              Icon(Icons.event_note, color: AppColors.primary(context), size: 22),
               const SizedBox(width: 10),
               Text(
-                'event Participation',
+                'Event Participation',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -1104,7 +1104,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
 
   // Participation Item
   Widget _buildParticipationItem(Map<String, dynamic> participation) {
-    final EventTitle = participation['EventTitle'] ?? 'Unnnamed event';
+    final eventTitle = participation['title'] ?? 'Unnamed Event';
     final eventType = participation['eventType'] ?? EventTypes.general;
     final joinedAt =
         (participation['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
@@ -1146,7 +1146,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      EventTitle,
+                      eventTitle,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -1279,7 +1279,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
 
   // Contribution Item
   Widget _buildContributionItem(Map<String, dynamic> contribution) {
-    final EventTitle = contribution['EventTitle'] ?? 'Unknown event';
+    final eventTitle = contribution['eventName'] ?? 'Unnamed Event';
     final amount = (contribution['amount'] ?? 0).toDouble();
     final paymentMethod = contribution['paymentMethod'] ?? 'cash';
     final paidAt =
@@ -1315,7 +1315,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  EventTitle,
+                  eventTitle,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -1889,12 +1889,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
       final cleanedNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
 
       if (cleanedNumber.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid phone number'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarHelper.showError(context, 'Invalid phone number');
         return;
       }
 
@@ -1904,17 +1899,10 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
         await launchUrl(url);
         if (!mounted) return;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cannot make calls from this device'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        SnackbarHelper.showWarning(context, 'Cannot make calls from this device');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      SnackbarHelper.showError(context, 'Error: $e');
     }
   }
 

@@ -12,6 +12,7 @@ import '../../../features/auth/screens/set_phone_screen.dart';
 import '../../../features/community/screens/join_community_screen.dart';
 import '../../../features/community/screens/community_dashboard.dart';
 import '../../../features/community/screens/pending_approval_screen.dart';
+import '../../../features/events/screens/event_details_screen.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../core/constants/app_colors.dart';
@@ -23,7 +24,8 @@ void unawaited(Future<void> future) {}
 
 class SplashScreen extends StatefulWidget {
   final String? deepLinkInviteCode;
-  const SplashScreen({super.key, this.deepLinkInviteCode});
+  final String? deepLinkEventId;
+  const SplashScreen({super.key, this.deepLinkInviteCode, this.deepLinkEventId});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -33,6 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
   bool _isInitializing = true;
   String _status = '';
   String? _pendingInviteCode;
+  String? _pendingEventId;
 
   @override
   void initState() {
@@ -47,6 +50,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
     _handleInviteCode();
+    _handleEventId();
     _startSplashTimer();
   }
 
@@ -82,6 +86,21 @@ class _SplashScreenState extends State<SplashScreen> {
     await prefs.remove('pending_invite_code');
     _pendingInviteCode = null;
     debugPrint('🗑️ Cleared pending invite code from storage');
+  }
+
+  Future<void> _handleEventId() async {
+    if (widget.deepLinkEventId != null && widget.deepLinkEventId!.isNotEmpty) {
+      _pendingEventId = widget.deepLinkEventId;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pending_event_id', _pendingEventId!);
+      debugPrint('💾 Saved event ID to storage: $_pendingEventId');
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      _pendingEventId = prefs.getString('pending_event_id');
+      if (_pendingEventId != null) {
+        debugPrint('📋 Found pending event in storage: $_pendingEventId');
+      }
+    }
   }
 
   /// Ensure splash shows for exactly 1 second to match logo shimmer
@@ -188,8 +207,10 @@ class _SplashScreenState extends State<SplashScreen> {
         listen: false,
       );
 
-      // ⭐ Start the 1.0-second animation timer
-      final splashTimer = Future.delayed(const Duration(milliseconds: 1000));
+      // ⭐ Start the 1.0-second animation timer (skip if deep link)
+      final splashTimer = Future.delayed(
+        Duration(milliseconds: widget.deepLinkEventId != null ? 0 : 1000),
+      );
 
       // ⭐ WAIT for auth provider to be initialized
       debugPrint("⏳ Waiting for auth provider initialization...");
@@ -312,7 +333,11 @@ class _SplashScreenState extends State<SplashScreen> {
     debugPrint(
       "📱 OFFLINE: User has cached community and approval - go to dashboard",
     );
-    _navigateToDashboard();
+    if (_pendingEventId != null && _pendingEventId!.isNotEmpty) {
+      _navigateToEventDetails();
+    } else {
+      _navigateToDashboard();
+    }
   }
 
   // ⭐ UPDATED: Remove UserModel parnameter
@@ -369,7 +394,11 @@ class _SplashScreenState extends State<SplashScreen> {
     // All good - go to dashboard
     debugPrint("➡️ User has community and is approved - go to dashboard");
     debugPrint("   Pending invite code saved for later: $_pendingInviteCode");
-    _navigateToDashboard();
+    if (_pendingEventId != null && _pendingEventId!.isNotEmpty) {
+      _navigateToEventDetails();
+    } else {
+      _navigateToDashboard();
+    }
   }
 
   // ⭐ NEW: Navigate to verification pending screen
@@ -457,6 +486,31 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
+  void _navigateToEventDetails() async {
+    if (!mounted || _pendingEventId == null) return;
+    
+    debugPrint('🚀 Navigating directly to EventDetailsScreen for: $_pendingEventId');
+    
+    // Clear it so it doesn't persist forever
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pending_event_id');
+    
+    // Push the dashboard as the root
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const CommunityDashboard()),
+    );
+    
+    // Then immediately push the event details on top
+    // This allows the user to press the back button and go to the dashboard instead of exiting
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EventDetailsScreen(eventId: _pendingEventId!),
+      ),
+    );
+  }
+
   void _updateStatus(String message) {
     if (mounted) {
       setState(() => _status = message);
@@ -473,46 +527,48 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Premium Wave Logo Loader (XL Size - Tighter Padding)
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 170,
-                      height: 170,
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 50,
-                            spreadRadius: 6,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
-                      ),
-                      child: const AnimatedLogo(
-                        size: 90,
-                        loopAnimation: true,
+          // Only show logo loader if NOT navigating via an event deep link
+          if (widget.deepLinkEventId == null)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Premium Wave Logo Loader (XL Size - Tighter Padding)
+                  Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 170,
+                        height: 170,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryColor.withValues(alpha: 0.4),
+                              blurRadius: 50,
+                              spreadRadius: 6,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: const AnimatedLogo(
+                          size: 90,
+                          loopAnimation: true,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: 100), // More breathing room without spinner
-              ],
+                  
+                  const SizedBox(height: 100), // More breathing room without spinner
+                ],
+              ),
             ),
-          ),
 
           // Status & Info (Positioned at bottom for minimalism)
           Positioned(
@@ -521,7 +577,7 @@ class _SplashScreenState extends State<SplashScreen> {
             right: 0,
             child: Column(
               children: [
-                if (_isInitializing && _status.isNotEmpty)
+                if (_isInitializing && _status.isNotEmpty && widget.deepLinkEventId == null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 24),
                     child: Text(
@@ -534,7 +590,6 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ),
                   ),
-                
                 if (_pendingInviteCode != null)
                   Container(
                     padding: const EdgeInsets.symmetric(

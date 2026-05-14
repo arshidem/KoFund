@@ -8,6 +8,7 @@ import 'package:kofund/features/community/screens/join_community_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class SetPhoneScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -87,9 +88,9 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
       return;
     }
 
-    // Basic length validation (you can adjust as needed)
-    if (phone.length < 8) {
-      setState(() => _phoneError = 'Please enter a valid phone number');
+    // Strict 10-digit validation
+    if (phone.length != 10) {
+      setState(() => _phoneError = 'Please enter a 10-digit phone number');
       return;
     }
 
@@ -123,16 +124,7 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-        ),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, message);
   }
 
   Widget _buildInputField({
@@ -265,6 +257,8 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
                         errorText: _phoneError,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        maxLength: 10,
                       ),
 
                       const SizedBox(height: 32),

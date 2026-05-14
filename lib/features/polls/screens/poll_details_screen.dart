@@ -9,6 +9,7 @@ import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'dart:async';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class PollDetailsScreen extends StatefulWidget {
   final String pollId;
@@ -79,9 +80,7 @@ void _setupPollSubscription() {
     } catch (e) {
       debugPrint('Error loading poll: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading poll: ${e.toString()}')),
-        );
+        SnackbarHelper.showError(context, 'Error loading poll: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -154,25 +153,19 @@ void _setupPollSubscription() {
     final pollProvider = context.read<PollProvider>();
     
     if (_authProvider.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to vote')),
-      );
+      SnackbarHelper.showInfo(context, 'Please sign in to vote');
       return;
     }
     
     // Check if poll is active
     if (_poll!.status != PollStatus.active) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This poll is no longer active')),
-      );
+      SnackbarHelper.showInfo(context, 'This poll is no longer active');
       return;
     }
     
     // Check if poll has expired
     if (_poll!.isExpired) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This poll has expired')),
-      );
+      SnackbarHelper.showInfo(context, 'This poll has expired');
       return;
     }
     
@@ -184,15 +177,11 @@ void _setupPollSubscription() {
       );
       
       if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to cast vote. Please try again.')),
-        );
+        SnackbarHelper.showError(context, 'Failed to cast vote. Please try again.');
       }
     } catch (e) {
       debugPrint('Error casting vote: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      SnackbarHelper.showError(context, 'Error: ${e.toString()}');
     }
   }
 
@@ -218,21 +207,15 @@ void _setupPollSubscription() {
       if (!mounted) return;
       
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Poll deleted successfully')),
-        );
+        SnackbarHelper.showError(context, 'Poll deleted successfully');
         Navigator.pop(context);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete poll')),
-        );
+        SnackbarHelper.showError(context, 'Failed to delete poll');
       }
     } catch (e) {
       debugPrint('Error deleteing poll: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        SnackbarHelper.showError(context, 'Error: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -283,16 +266,12 @@ void _setupPollSubscription() {
       );
       
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Poll closed successfully')),
-        );
+        SnackbarHelper.showSuccess(context, 'Poll closed successfully');
       }
     } catch (e) {
       debugPrint('Error closing poll: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        SnackbarHelper.showError(context, 'Error: ${e.toString()}');
       }
     }
   }
@@ -318,16 +297,12 @@ void _setupPollSubscription() {
       );
       
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Poll reopened successfully')),
-        );
+        SnackbarHelper.showSuccess(context, 'Poll reopened successfully');
       }
     } catch (e) {
       debugPrint('Error reopening poll: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        SnackbarHelper.showError(context, 'Error: ${e.toString()}');
       }
     }
   }
@@ -379,13 +354,13 @@ void _setupPollSubscription() {
     return GradientSheetScaffold(
       title: 'Poll Details',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
         if (widget.isAdmin && _poll != null && !_isLoading)
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
+            icon: Icon(Icons.more_vert, color: AppColors.textPrimary(context)),
             onSelected: (value) {
               if (value == 'edit') {
                 _editPoll();

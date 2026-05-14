@@ -5,6 +5,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/virtual_users/providers/virtual_user_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class CreateVirtualUsersScreen extends StatefulWidget {
   final String communityId;
@@ -103,12 +104,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
         _bulkInputController.clear();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Imported ${newUsers.length} users'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Imported ${newUsers.length} users');
     }
   }
 
@@ -117,12 +113,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     final currentUser = _authProvider.user;
     
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You must be logged in'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'You must be logged in');
       return;
     }
 
@@ -134,12 +125,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     }).toList();
 
     if (validUsers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one user with a name'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      SnackbarHelper.showWarning(context, 'Please add at least one user with a name');
       return;
     }
 
@@ -246,12 +232,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ Successfully created ${virtualUserProvider.successfulCreations} virtual users'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, '✅ Successfully created ${virtualUserProvider.successfulCreations} virtual users');
       
       Future.delayed(const Duration(seconds: 1), () {
         if (!mounted) return;

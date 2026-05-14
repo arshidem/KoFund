@@ -83,7 +83,7 @@ class UserModel {
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       displayName: map['displayName'] ?? map['name'],
-      phoneNumber: map['phoneNumber'],
+      phoneNumber: map['phoneNumber'] ?? map['phone'],
       communityId: map['communityId'],
       communityName: map['communityName'],
       role: map['role'] ?? 'member',

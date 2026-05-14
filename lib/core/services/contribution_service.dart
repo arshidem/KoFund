@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:intl/intl.dart';
+import 'package:kofund/core/services/participant_service.dart';
 
 class ContributionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -72,6 +73,15 @@ class ContributionService {
         );
       } catch (e) {
         debugPrint('⚠️ Contribution notification failed: $e');
+      }
+
+      // ✅ NEW: Update participant's summary in Firestore
+      try {
+        final participantService = ParticipantService();
+        await participantService.updateParticipantContribution(contribution.userId, contribution.eventId);
+        debugPrint('✅ Participant payment status updated');
+      } catch (e) {
+        debugPrint('⚠️ Failed to update participant summary: $e');
       }
 
       return docRef.id;
@@ -195,7 +205,7 @@ class ContributionService {
           contributionHistory.add({
             'contributionId': doc.id,
             'eventId': eventId,
-            'title': data['title'] ?? 'Unknown event',
+            'title': data['title'] ?? contribution['eventName'] ?? 'Unknown event',
             'eventDate': data['eventDate'],
             'eventType': data['eventType'] ?? 'general',
             'amount': (contribution['amount'] ?? 0).toDouble(),
@@ -210,7 +220,7 @@ class ContributionService {
           contributionHistory.add({
             'contributionId': doc.id,
             'eventId': eventId,
-            'title': 'Deleted event',
+            'title': contribution['eventName'] ?? 'Deleted event',
             'eventType': 'unknown',
             'amount': (contribution['amount'] ?? 0).toDouble(),
             'createdAt': contribution['createdAt'],
@@ -474,6 +484,7 @@ class ContributionService {
           'addedByUserName': data['addedByUserName'],
           'communityId': data['communityId'] ?? communityId,
           'contributorName': data['contributorName'],
+          'eventName': data['eventName'],
         });
 
         if (data['eventId'] != null) {
@@ -502,7 +513,7 @@ class ContributionService {
             contribution['eventType'] = data['eventType'];
             contribution['suggestedContribution'] = data['suggestedContribution'];
           } else {
-            contribution['title'] = 'event Not Found';
+            contribution['title'] = contribution['eventName'] ?? 'event Not Found';
             contribution['eventType'] = 'unknown';
             contribution['suggestedContribution'] = 0;
           }
@@ -581,6 +592,15 @@ class ContributionService {
           'editHistory': existingHistory,
           'updatedAt': Timestamp.now(),
         });
+
+        // ✅ NEW: Update participant's summary in Firestore
+        try {
+          final participantService = ParticipantService();
+          await participantService.updateParticipantContribution(contribution.userId, contribution.eventId);
+          debugPrint('✅ Participant payment status updated after edit');
+        } catch (e) {
+          debugPrint('⚠️ Failed to update participant summary after edit: $e');
+        }
       }
     } catch (e) {
       throw Exception('Failed to update contribution: $e');
@@ -589,7 +609,24 @@ class ContributionService {
 
   Future<void> deleteContribution(String contributionId) async {
     try {
+      // Get contribution data first to know userId and eventId
+      final doc = await _firestore.collection('contributions').doc(contributionId).get();
+      if (!doc.exists) return;
+      
+      final data = doc.data()!;
+      final userId = data['userId'] as String;
+      final eventId = data['eventId'] as String;
+
       await _firestore.collection('contributions').doc(contributionId).delete();
+
+      // ✅ NEW: Update participant's summary in Firestore
+      try {
+        final participantService = ParticipantService();
+        await participantService.updateParticipantContribution(userId, eventId);
+        debugPrint('✅ Participant payment status updated after deletion');
+      } catch (e) {
+        debugPrint('⚠️ Failed to update participant summary after deletion: $e');
+      }
     } catch (e) {
       throw Exception('Failed to delete contribution: $e');
     }

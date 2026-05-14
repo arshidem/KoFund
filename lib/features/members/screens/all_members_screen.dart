@@ -24,22 +24,25 @@ enum MemberTeventTypeFilter { all, real, virtual }
 // =================== MAIN SCREEN ===================
 class AllMembersScreen extends StatelessWidget {
   final bool? forceBackButton;
+  final VoidCallback? onBack;
 
-  const AllMembersScreen({super.key, this.forceBackButton});
+  const AllMembersScreen({super.key, this.forceBackButton, this.onBack});
 
   @override
   Widget build(BuildContext context) {
-    // ⭐ Use the global MemberProvider from main.dart instead of creating
-    // a new one every time. This preserves cached data across navigations.
-    return _AllMembersScreenBody(forceBackButton: forceBackButton);
+    return _AllMembersScreenBody(
+      forceBackButton: forceBackButton,
+      onBack: onBack,
+    );
   }
 }
 
 // =================== SCREEN BODY ===================
 class _AllMembersScreenBody extends StatefulWidget {
   final bool? forceBackButton;
+  final VoidCallback? onBack;
 
-  const _AllMembersScreenBody({this.forceBackButton});
+  const _AllMembersScreenBody({this.forceBackButton, this.onBack});
 
   @override
   State<_AllMembersScreenBody> createState() => _AllMembersScreenBodyState();
@@ -351,236 +354,28 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     });
   }
 
-  // ✅ BULK ACTION METHODS - FIXED: Added back the missing methods
-  void _showBulkActionsMenu(BuildContext context) {
-    final memberProvider = context.read<MemberProvider>();
-
-    if (_selectedMemberIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select members first'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final currentMembers = List<UserModel>.from(memberProvider.members);
-    final currentSelectedIds = Set<String>.from(_selectedMemberIds);
-
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusExtraLarge)),
-      ),
-      builder: (context) => _buildBulkActionsBottomSheet(
-        members: currentMembers,
-        selectedIds: currentSelectedIds,
-      ),
-      useRootNavigator: true,
-    );
-  }
-
-  Widget _buildBulkActionsBottomSheet({
-    required List<UserModel> members,
-    required Set<String> selectedIds,
-  }) {
-    final selectedMembers = members
-        .where((m) => selectedIds.contains(m.uid))
-        .toList();
-
-    final textPrimary = AppColors.textPrimary(context);
-    final textSecondary = AppColors.textSecondary(context);
-    final card = AppColors.card(context);
-    final primary = AppColors.primary(context);
-
-    /// --------------------
-    /// EMPTY STATE
-    /// --------------------
-    if (selectedMembers.isEmpty) {
-      return SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          decoration: BoxDecoration(
-            color: card,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: primary),
-              const SizedBox(height: 12),
-              Text(
-                'No members selected',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Close', style: TextStyle(color: textSecondary)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final hasAdmins = selectedMembers.any((m) => m.isAdmin);
-    final hasNonAdmins = selectedMembers.any((m) => !m.isAdmin);
-
-    /// --------------------
-    /// MAIN BOTTOM SHEET
-    /// --------------------
-    return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            /// HEADER
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient(context),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    "Bulk Actions",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "${selectedMembers.length} selected",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            /// ACTION LIST
-            _actionTile(
-              icon: Icons.admin_panel_settings,
-              iconColor: primary,
-              title: "Make Admin",
-              subtitle:
-                  "Make ${selectedMembers.where((m) => !m.isAdmin).length} user(s) admin",
-              visible: hasNonAdmins,
-              onTap: () {
-                Navigator.pop(context);
-                _showBulkMakeAdminConfirmation(selectedMembers);
-              },
-            ),
-
-            _actionTile(
-              icon: Icons.person_remove_alt_1,
-              iconColor: AppColors.warning(context),
-              title: "Remove Admin",
-              subtitle:
-                  "Remove admin role from ${selectedMembers.where((m) => m.isAdmin).length} user(s)",
-              visible: hasAdmins,
-              onTap: () {
-                Navigator.pop(context);
-                _showBulkRemoveAdminConfirmation(selectedMembers);
-              },
-            ),
-
-            _actionTile(
-              icon: Icons.block,
-              iconColor: AppColors.error(context),
-              title: "Unapprove Users",
-              subtitle: "Unapprove ${selectedMembers.length} user(s)",
-              onTap: () {
-                Navigator.pop(context);
-                _showBulkUnapproveConfirmation(selectedMembers);
-              },
-            ),
-
-            _actionTile(
-              icon: Icons.exit_to_app,
-              iconColor: Colors.purple,
-              title: "Remove from Community",
-              subtitle: "Remove ${selectedMembers.length} user(s)",
-              onTap: () {
-                Navigator.pop(context);
-                _showBulkRemoveConfirmation(selectedMembers);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// ---------------------------------------------
-  /// REUSABLE ACTION TILE
-  /// ---------------------------------------------
-  Widget _actionTile({
+  PopupMenuItem<String> _buildPopupMenuItem({
+    required String value,
     required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool visible = true,
+    required String label,
+    required Color color,
   }) {
-    if (!visible) return const SizedBox();
-    return Column(
-      children: [
-        ListTile(
-          leading: CircleAvatar(
-            radius: 20,
-            backgroundColor: iconColor.withValues(alpha: 0.12),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          title: Text(
-            title,
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
               color: AppColors.textPrimary(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          subtitle: Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary(context),
-            ),
-          ),
-          onTap: onTap,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 72),
-          child: Divider(height: 1, color: AppColors.border(context)),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -652,12 +447,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     if (success && mounted) {
       _clearSelection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Made ${members.length} users admin'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Made ${members.length} users admin');
       _refreshDataSilent();
     }
   }
@@ -670,12 +460,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     if (success && mounted) {
       _clearSelection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed admin role from ${members.length} users'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Removed admin role from ${members.length} users');
       _refreshDataSilent();
     }
   }
@@ -688,12 +473,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     if (success && mounted) {
       _clearSelection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unapproved ${members.length} users'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Unapproved ${members.length} users');
       _refreshDataSilent();
     }
   }
@@ -706,12 +486,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
 
     if (success && mounted) {
       _clearSelection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed ${members.length} users from community'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Removed ${members.length} users from community');
       _refreshDataSilent();
     }
   }
@@ -802,9 +577,18 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
       leading: widget.forceBackButton == true
-          ? IconButton(
-              icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-              onPressed: () => Navigator.pop(context),
+          ? Transform.translate(
+              offset: const Offset(0, -40),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+                onPressed: () {
+                  if (widget.onBack != null) {
+                    widget.onBack!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
             )
           : null,
       flexibleSpace: LayoutBuilder(
@@ -1378,16 +1162,23 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final selectableCount = displayedMembers
         .where((m) => m.uid != currentUser?.uid)
         .length;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color barBg = isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.card(context).withValues(alpha: 0.8);
+    final Color barBorder = isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.border(context);
+
+    final Color contentColor = isDark ? Colors.white : AppColors.textPrimary(context);
+    final Color contentIconColor = isDark ? Colors.white70 : Colors.black;
 
     return RepaintBoundary(
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+          color: barBg,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: barBorder),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -1395,7 +1186,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
+          borderRadius: BorderRadius.circular(26),
           clipBehavior: Clip.antiAlias,
           child: Row(
             children: [
@@ -1403,8 +1194,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
               IconButton(
                 icon: Icon(
                   Icons.close,
-                  color: AppColors.primary(context),
-                  size: 22,
+                  color: contentIconColor,
+                  size: 20,
                 ),
                 onPressed: _toggleSelectionMode,
                 tooltip: 'Cancel selection',
@@ -1415,10 +1206,10 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                 child: Text(
                   '${_selectedMemberIds.length} selected',
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: 15,
-                    color: AppColors.primary(context),
-                    letterSpacing: 0.5,
+                    color: contentColor,
+                    letterSpacing: 0.3,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1431,8 +1222,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                           selectableCount > 0)
                       ? Icons.check_box
                       : Icons.check_box_outline_blank,
-                  color: AppColors.primary(context),
-                  size: 22,
+                  color: contentIconColor,
+                  size: 20,
                 ),
                 onPressed:
                     (_selectedMemberIds.length == selectableCount &&
@@ -1447,16 +1238,72 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
               ),
 
               // Actions Menu
-              IconButton(
+              PopupMenuButton<String>(
                 icon: Icon(
                   Icons.more_vert,
-                  color: AppColors.primary(context),
-                  size: 22,
+                  color: contentIconColor,
+                  size: 20,
                 ),
-                onPressed: _selectedMemberIds.isNotEmpty
-                    ? () => _showBulkActionsMenu(context)
-                    : null,
-                tooltip: 'Bulk actions',
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+                color: AppColors.card(context),
+                enabled: _selectedMemberIds.isNotEmpty,
+                onSelected: (value) {
+                  final memberProvider = context.read<MemberProvider>();
+                  final selectedMembers = memberProvider.members
+                      .where((m) => _selectedMemberIds.contains(m.uid))
+                      .toList();
+                  
+                  if (value == 'make_admin') {
+                    _showBulkMakeAdminConfirmation(selectedMembers);
+                  } else if (value == 'remove_admin') {
+                    _showBulkRemoveAdminConfirmation(selectedMembers);
+                  } else if (value == 'unapprove') {
+                    _showBulkUnapproveConfirmation(selectedMembers);
+                  } else if (value == 'remove_community') {
+                    _showBulkRemoveConfirmation(selectedMembers);
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  final memberProvider = context.read<MemberProvider>();
+                  final selectedMembers = memberProvider.members
+                      .where((m) => _selectedMemberIds.contains(m.uid))
+                      .toList();
+                  final hasAdmins = selectedMembers.any((m) => m.isAdmin);
+                  final hasNonAdmins = selectedMembers.any((m) => !m.isAdmin);
+
+                  return [
+                    if (hasNonAdmins)
+                      _buildPopupMenuItem(
+                        value: 'make_admin',
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: 'Make Admin',
+                        color: AppColors.primary(context),
+                      ),
+                    if (hasAdmins)
+                      _buildPopupMenuItem(
+                        value: 'remove_admin',
+                        icon: Icons.person_remove_alt_1_rounded,
+                        label: 'Remove Admin',
+                        color: AppColors.warning(context),
+                      ),
+                    _buildPopupMenuItem(
+                      value: 'unapprove',
+                      icon: Icons.block_flipped,
+                      label: 'Unapprove',
+                      color: AppColors.error(context),
+                    ),
+                    _buildPopupMenuItem(
+                      value: 'remove_community',
+                      icon: Icons.person_remove_rounded,
+                      label: 'Remove Community',
+                      color: Colors.purple,
+                    ),
+                  ];
+                },
               ),
             ],
           ),

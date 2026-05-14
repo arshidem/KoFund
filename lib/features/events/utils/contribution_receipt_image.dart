@@ -10,6 +10,7 @@ import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 
 import 'package:kofund/core/skeleton/receipt_skeleton.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ContributionReceiptImage {
   // Cache for user nnames (userId -> userName)
@@ -180,12 +181,7 @@ class ContributionReceiptImage {
       }
       debugPrint('Receipt error: $e\n$st');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to generate receipt: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to generate receipt: ${e.toString()}');
       }
     }
   }
@@ -243,9 +239,7 @@ class _ReceiptImageDialogState extends State<ReceiptImageDialog> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Share failed: $e'), backgroundColor: Colors.red),
-        );
+        SnackbarHelper.showError(context, 'Share failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isSharing = false);
@@ -276,18 +270,11 @@ class _ReceiptImageDialogState extends State<ReceiptImageDialog> {
       await file.writeAsBytes(imageBytes);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Receipt saved to Downloads folder!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        SnackbarHelper.showSuccess(context, 'Receipt saved to Downloads folder!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red),
-        );
+        SnackbarHelper.showError(context, 'Download failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isDownloading = false);

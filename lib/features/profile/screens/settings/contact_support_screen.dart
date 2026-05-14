@@ -6,6 +6,7 @@ import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
@@ -135,12 +136,7 @@ Future<void> _launchEmail(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: text));
     
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email details copied to clipboard'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      SnackbarHelper.showInfo(context, 'Email details copied to clipboard');
     }
   }
 
@@ -153,22 +149,12 @@ Future<void> _launchEmail(BuildContext context) async {
       } else {
         await Clipboard.setData(ClipboardData(text: phone));
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Phone number copied: $phone'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          SnackbarHelper.showInfo(context, 'Phone number copied: $phone');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to make phone call'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        SnackbarHelper.showInfo(context, 'Unable to make phone call');
       }
     }
   }
@@ -183,22 +169,12 @@ Future<void> _launchEmail(BuildContext context) async {
       } else {
         await Clipboard.setData(ClipboardData(text: phone));
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('WhatsApp number copied: $phone'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          SnackbarHelper.showInfo(context, 'WhatsApp number copied: $phone');
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open WhatsApp'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        SnackbarHelper.showInfo(context, 'Unable to open WhatsApp');
       }
     }
   }

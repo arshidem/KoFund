@@ -1,6 +1,7 @@
 // lib/services/network_aware_service.dart
 import 'network_service.dart';
 import 'package:flutter/material.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 mixin NetworkAwareService {
   final NetworkService _networkService = NetworkService();
@@ -28,12 +29,7 @@ mixin NetworkAwareService {
   
   void _showNetworkError(BuildContext? context, String operation) {
     if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Internet required to $operation'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Internet required to $operation');
     }
   }
 }

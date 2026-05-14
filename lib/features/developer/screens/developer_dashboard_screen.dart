@@ -11,6 +11,7 @@ import 'push_notification_tool_screen.dart';
 import 'database_tools_screen.dart';
 import 'app_analytics_screen.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 class DeveloperDashboardScreen extends StatelessWidget {
   static const routeName = '/developer-dashboard';
   
@@ -395,9 +396,7 @@ class DeveloperDashboardScreen extends StatelessWidget {
             onPressed: () {
               // Clear cache logic
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared')),
-              );
+              SnackbarHelper.showInfo(context, 'Cache cleared');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error(context), // Now works

@@ -28,6 +28,14 @@ class EventModel {
   final DateTime? nextReminderDate; // When to send next reminder
   final Timestamp? updatedAt; // Last update timestamp
   final Timestamp? lastReminderSent; // When last reminder was sent
+  
+  // 🆕 NEW REMINDER FEATURES
+  final String? customReminderTitle; 
+  final String? customReminderMessage; 
+  final bool enableReminderRetries; 
+  final int retryDaysAfter;
+  final bool enableAdminEscalation;
+  final int escalationDaysAfter;
 
   EventModel({
     required this.eventId,
@@ -54,6 +62,12 @@ class EventModel {
     this.nextReminderDate, // 🆕
     this.updatedAt, // 🆕
     this.lastReminderSent, // 🆕
+    this.customReminderTitle,
+    this.customReminderMessage,
+    this.enableReminderRetries = false,
+    this.retryDaysAfter = 3,
+    this.enableAdminEscalation = false,
+    this.escalationDaysAfter = 3,
   });
 
   // ✅ Convert Firestore document → EventModel
@@ -99,6 +113,12 @@ factory EventModel.fromMap(Map<String, dynamic> map, String documentId) {
         : null,
     updatedAt: map['updatedAt'] as Timestamp?,
     lastReminderSent: map['lastReminderSent'] as Timestamp?,
+    customReminderTitle: map['customReminderTitle'] as String?,
+    customReminderMessage: map['customReminderMessage'] as String?,
+    enableReminderRetries: map['enableReminderRetries'] ?? false,
+    retryDaysAfter: (map['retryDaysAfter'] ?? 3) as int,
+    enableAdminEscalation: map['enableAdminEscalation'] ?? false,
+    escalationDaysAfter: (map['escalationDaysAfter'] ?? 3) as int,
   );
 }
 
@@ -137,6 +157,12 @@ Map<String, dynamic> toMap() {
         ? Timestamp.fromDate(nextReminderDate!)
         : null,
     'updatedAt': updatedAt ?? Timestamp.now(),
+    if (customReminderTitle != null) 'customReminderTitle': customReminderTitle,
+    if (customReminderMessage != null) 'customReminderMessage': customReminderMessage,
+    'enableReminderRetries': enableReminderRetries,
+    'retryDaysAfter': retryDaysAfter,
+    'enableAdminEscalation': enableAdminEscalation,
+    'escalationDaysAfter': escalationDaysAfter,
   };
 }
 
@@ -166,6 +192,12 @@ Map<String, dynamic> toMap() {
     DateTime? nextReminderDate,
     Timestamp? updatedAt,
     Timestamp? lastReminderSent,
+    String? customReminderTitle,
+    String? customReminderMessage,
+    bool? enableReminderRetries,
+    int? retryDaysAfter,
+    bool? enableAdminEscalation,
+    int? escalationDaysAfter,
   }) {
     return EventModel(
       eventId: eventId ?? this.eventId,
@@ -192,6 +224,12 @@ Map<String, dynamic> toMap() {
       nextReminderDate: nextReminderDate ?? this.nextReminderDate,
       updatedAt: updatedAt ?? this.updatedAt,
       lastReminderSent: lastReminderSent ?? this.lastReminderSent,
+      customReminderTitle: customReminderTitle ?? this.customReminderTitle,
+      customReminderMessage: customReminderMessage ?? this.customReminderMessage,
+      enableReminderRetries: enableReminderRetries ?? this.enableReminderRetries,
+      retryDaysAfter: retryDaysAfter ?? this.retryDaysAfter,
+      enableAdminEscalation: enableAdminEscalation ?? this.enableAdminEscalation,
+      escalationDaysAfter: escalationDaysAfter ?? this.escalationDaysAfter,
     );
   }
 
@@ -289,89 +327,70 @@ bool get isDateFuture => eventDate != null ? eventDate!.isAfter(DateTime.now()) 
     return DateTime(date.year, date.month, date.day);
   }
 
-  // ✅ Check if should send reminder
+  // ✅ Check if should send reminder (Helper for compatibility/fallback)
   bool shouldSendReminder(DateTime currentDate) {
-    if (!enableAutoReminders) return false;
-    
-    // Check specific reminder dates
-    if (contributionReminderDates.isNotEmpty) {
-      for (final reminderDate in contributionReminderDates) {
-        final daysUntilReminder = reminderDate.difference(currentDate).inDays;
-        if (daysUntilReminder <= reminderDaysBefore && daysUntilReminder >= 0) {
-          return true;
-        }
-      }
-    }
-    
-    // Check first payment due date
-    if (firstPaymentDueDate != null) {
-      final daysUntilDue = firstPaymentDueDate!.difference(currentDate).inDays;
-      return daysUntilDue <= reminderDaysBefore && daysUntilDue >= 0;
-    }
-    
-    return false;
+    if (!enableAutoReminders || nextReminderDate == null) return false;
+    // We only rely on nextReminderDate falling behind the current time
+    // If it's less than now, it's pending to be sent.
+    return nextReminderDate!.isBefore(currentDate);
   }
 
   // ✅ Get next upcoming reminder date
-  DateTime? get nextUpcomingReminder {
+  DateTime? get nextUpcomingReminder => nextReminderDate;
+
+  // ✅ Calculate next reminder date based on frequency and lead time
+  DateTime? calculateNextReminderDate() {
     if (!enableAutoReminders) return null;
     
     final now = DateTime.now();
-    DateTime? nextReminder;
+    final candidateSendDates = <DateTime>[];
     
-    // Check specific reminder dates
-    for (final reminderDate in contributionReminderDates) {
-      if (reminderDate.isAfter(now)) {
-        if (nextReminder == null || reminderDate.isBefore(nextReminder)) {
-          nextReminder = reminderDate;
+    // 1. Literal Custom Send Dates
+    if (contributionReminderDates.isNotEmpty) {
+      for (final date in contributionReminderDates) {
+        if (date.isAfter(now)) {
+          candidateSendDates.add(date);
         }
       }
     }
     
-    // Check first payment due date
-    if (firstPaymentDueDate != null && firstPaymentDueDate!.isAfter(now)) {
-      if (nextReminder == null || firstPaymentDueDate!.isBefore(nextReminder)) {
-        nextReminder = firstPaymentDueDate;
-      }
-    }
-    
-    return nextReminder;
-  }
-
-  // ✅ Calculate next reminder date based on frequency
-  DateTime calculateNextReminderDate() {
-    if (!enableAutoReminders) {
-      return DateTime.now().add(const Duration(days: 365)); // Far future
-    }
-    
-    final now = DateTime.now();
-    
-    // If we have specific reminder dates, find the next one
-    if (contributionReminderDates.isNotEmpty) {
-      for (final date in contributionReminderDates) {
-        if (date.isAfter(now)) return date;
-      }
-    }
-    
-    // If we have a first payment due date, use frequency
+    // 2. Frequency-based Due Dates -> Send Dates
     if (firstPaymentDueDate != null) {
-      switch (reminderFrequency) {
-        case 'daily':
-          return now.add(const Duration(days: 1));
-        case 'weekly':
-          return now.add(const Duration(days: 7));
-        case 'monthly':
-          return DateTime(now.year, now.month + 1, now.day);
-        case 'custom':
-          // For custom, we should already have specific dates
-          // If not, default to monthly
-          return DateTime(now.year, now.month + 1, now.day);
-        default:
-          return now.add(const Duration(days: 30));
+      DateTime currentDueDate = firstPaymentDueDate!;
+      int safeguard = 0;
+      
+      // Look ahead up to 24 cycles to find the next valid future send date
+      while (safeguard < 24) {
+        safeguard++;
+        final sendDate = currentDueDate.subtract(Duration(days: reminderDaysBefore));
+        
+        if (sendDate.isAfter(now)) {
+          candidateSendDates.add(sendDate);
+          break; // Found the next immediate one, no need to look further for this pattern
+        }
+        
+        switch (reminderFrequency) {
+          case 'daily':
+            currentDueDate = currentDueDate.add(const Duration(days: 1));
+            break;
+          case 'weekly':
+            currentDueDate = currentDueDate.add(const Duration(days: 7));
+            break;
+          case 'monthly':
+            currentDueDate = DateTime(currentDueDate.year, currentDueDate.month + 1, currentDueDate.day);
+            break;
+          case 'custom':
+          default:
+            safeguard = 24; // Break loop for custom/invalid frequencies
+            break;
+        }
       }
     }
     
-    return now.add(const Duration(days: 365)); // Far future
+    if (candidateSendDates.isEmpty) return null;
+    
+    candidateSendDates.sort();
+    return candidateSendDates.first;
   }
 
   // ✅ Check if any reminders are scheduled
@@ -440,7 +459,13 @@ bool get isDateFuture => eventDate != null ? eventDate!.isAfter(DateTime.now()) 
         other.reminderDaysBefore == reminderDaysBefore &&
         other.reminderFrequency == reminderFrequency &&
         other.firstPaymentDueDate == firstPaymentDueDate &&
-        other.nextReminderDate == nextReminderDate;
+        other.nextReminderDate == nextReminderDate &&
+        other.customReminderTitle == customReminderTitle &&
+        other.customReminderMessage == customReminderMessage &&
+        other.enableReminderRetries == enableReminderRetries &&
+        other.retryDaysAfter == retryDaysAfter &&
+        other.enableAdminEscalation == enableAdminEscalation &&
+        other.escalationDaysAfter == escalationDaysAfter;
   }
 
 @override
@@ -468,6 +493,12 @@ int get hashCode {
     reminderFrequency,
     firstPaymentDueDate,
     nextReminderDate,
+    customReminderTitle,
+    customReminderMessage,
+    enableReminderRetries,
+    retryDaysAfter,
+    enableAdminEscalation,
+    escalationDaysAfter,
   ]);
 }
 }

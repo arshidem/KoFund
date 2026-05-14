@@ -15,6 +15,7 @@ import 'splash_screen.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/features/profile/screens/settings/terms_of_service_screen.dart';
 import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -83,12 +84,7 @@ Widget _buildInviteBanner() {
           icon: Icon(Icons.copy, size: 16, color: Colors.blue),
           onPressed: () {
             Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Copied'),
-                duration: Duration(seconds: 1),
-              ),
-            );
+            SnackbarHelper.showInfo(context, 'Copied');
           },
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
@@ -515,16 +511,7 @@ String _getGoogleErrorMessage(dynamic error) {
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, message);
   }
 
   void _clearError() => setState(() => _errorMessage = null);
@@ -791,7 +778,7 @@ Widget _buildTermsCheckbox() {
                       height: 90,
                       decoration: BoxDecoration(
                         color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary(context).withValues(alpha: 0.3),
@@ -801,8 +788,7 @@ Widget _buildTermsCheckbox() {
                         ],
                       ),
                       child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
+                        child: ClipOval(
                           child: Image.asset(
                             'assets/logos/KoFund.png',
                             height: 80,

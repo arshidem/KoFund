@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import '../../notifications/services/announcement_service.dart';
 
@@ -187,11 +188,11 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
       _bodyController.clear();
       setState(() => _showOnOpen = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Announcement published!')));
+        SnackbarHelper.showSuccess(context, 'Announcement published!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        SnackbarHelper.showError(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

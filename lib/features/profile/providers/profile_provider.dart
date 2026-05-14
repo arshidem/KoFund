@@ -513,34 +513,30 @@ Future<bool> leaveCommunity() async {
 
   // Get user statistics
   Map<String, dynamic> getUserStatistics() {
-    // Check if we have data loaded at all
-    if (_participationHistory.isEmpty && _contributionHistory.isEmpty) {
-      debugPrint('⚠️ No data loaded yet');
-      return {
-        'participations': 0,
-        'contributions': 0,
-        'totalContributed': 0.0,
-        'averageContribution': 0.0,
-        'paidParticipations': 0,
-        'pendingParticipations': 0,
-      };
-    }
+    // 🔥 NEW: Use base providers for instant counts rather than slow-loading history calculations
+    final int participationsCount = _EventProvider.myParticipations.isNotEmpty 
+        ? _EventProvider.myParticipations.length 
+        : _participationHistory.length;
+        
+    final int contributionsCount = _contributionProvider.userContributions.isNotEmpty 
+        ? _contributionProvider.userContributions.length 
+        : _contributionHistory.length;
 
-    final participations = _participationHistory.length;
-    final contributions = _contributionHistory.length;
-    
-    final totalContributedFromParticipations = _participationHistory
-        .fold(0.0, (sum, p) => sum + (p['contributionPaid'] ?? 0.0));
+    // Use participationHistory for amount details if available
+    final totalContributedFromParticipations = _participationHistory.isNotEmpty
+        ? _participationHistory.fold(0.0, (sum, p) => sum + (p['contributionPaid'] ?? 0.0))
+        : 0.0;
 
-    final totalContributedFromContributions = _contributionHistory
-        .fold(0.0, (sum, c) => sum + (c['amount'] ?? 0.0));
+    final totalContributedFromContributions = _contributionProvider.userContributions.isNotEmpty
+        ? _contributionProvider.userContributions.fold(0.0, (sum, c) => sum + c.amount)
+        : _contributionHistory.fold(0.0, (sum, c) => sum + (c['amount'] ?? 0.0));
 
     return {
-      'participations': participations,
-      'contributions': contributions,
+      'participations': participationsCount,
+      'contributions': contributionsCount,
       'totalContributed': totalContributedFromParticipations,
       'totalContributedFromContributions': totalContributedFromContributions,
-      'averageContribution': contributions > 0 ? totalContributedFromContributions / contributions : 0.0,
+      'averageContribution': contributionsCount > 0 ? totalContributedFromContributions / contributionsCount : 0.0,
       'paidParticipations': _participationHistory.where((p) => p['hasPaidContribution'] == true).length,
       'pendingParticipations': _participationHistory.where((p) => p['hasPaidContribution'] == false).length,
     };

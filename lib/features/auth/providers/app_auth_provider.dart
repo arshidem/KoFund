@@ -416,7 +416,7 @@ class AppAuthProvider with ChangeNotifier {
           userId: user.uid,
           email: email,
           name: name,
-          phone: phone,
+          phoneNumber: phone,
         );
 
         // Send email verification
@@ -464,14 +464,14 @@ class AppAuthProvider with ChangeNotifier {
     required String userId,
     required String email,
     required String name,
-    required String phone,
+    required String phoneNumber,
   }) async {
     try {
       final userData = {
         'uid': userId,
         'email': email,
         'displayName': name,
-        'phone': phone,
+        'phoneNumber': phoneNumber,
         'isApproved': false,
         'isAdmin': false,
         'role': 'member',

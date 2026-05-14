@@ -8,6 +8,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class DeletedContributionsScreen extends StatefulWidget {
   final String eventId;
@@ -111,21 +112,11 @@ String _formatTime(DateTime date) {
       );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contribution restored successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        SnackbarHelper.showSuccess(context, 'Contribution restored successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarHelper.showError(context, 'Error: $e');
       }
     } finally {
       if (mounted) {

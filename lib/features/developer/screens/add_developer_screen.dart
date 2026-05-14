@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 class AddDeveloperScreen extends StatefulWidget {
   const AddDeveloperScreen({super.key});
 
@@ -145,13 +146,9 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      SnackbarHelper.showInfo(context, 
             isDeveloper ? 'Added as developer' : 'Removed as developer',
-          ),
-        ),
-      );
+          );
       
       // Update local state if selected
       if (_selectedUser != null && _selectedUser!['uid'] == userId) {
@@ -160,9 +157,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      SnackbarHelper.showError(context, 'Error: $e');
     }
   }
 
@@ -299,7 +294,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
     return GradientSheetScaffold(
       title: 'Add Developer',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(

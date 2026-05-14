@@ -177,7 +177,7 @@ Future<void> _loadAppInfo() async {
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -198,6 +198,7 @@ Future<void> _loadAppInfo() async {
                   ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

@@ -18,6 +18,7 @@ import 'package:kofund/features/profile/screens/settings/terms_of_service_screen
 import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -483,16 +484,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-        ),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, message);
   }
 
   void _clearError() => setState(() => _errorMessage = null);
@@ -741,42 +733,40 @@ class _LoginScreenState extends State<LoginScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.1),
+        color: AppColors.primary(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(
+          color: AppColors.primary(context).withValues(alpha: 0.2),
+        ),
       ),
       child: Row(
         children: [
-          Icon(Icons.link, size: 16, color: Colors.blue),
+          Icon(Icons.link_rounded, size: 16, color: AppColors.primary(context)),
           const SizedBox(width: 8),
           Text(
             'Invite code: ',
-            style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
+            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
           ),
           Text(
             _cachedInviteCode!,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.blue,
+              color: AppColors.primary(context),
               fontSize: 13,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.copy, size: 16, color: Colors.blue),
+            icon: Icon(Icons.copy_rounded, size: 16, color: AppColors.primary(context)),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: _cachedInviteCode!));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              SnackbarHelper.showInfo(context, 'Copied');
             },
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           IconButton(
-            icon: Icon(Icons.close, size: 16, color: Colors.grey),
+            icon: Icon(Icons.close_rounded, size: 16, color: AppColors.textTertiary(context)),
             onPressed: () {
               unawaited(_clearPendingInviteCode());
               setState(() => _cachedInviteCode = null);
@@ -812,7 +802,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 90,
                       decoration: BoxDecoration(
                         color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary(
@@ -824,8 +814,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
+                        child: ClipOval(
                           child: Image.asset(
                             'assets/logos/KoFund.png',
                             height: 80,

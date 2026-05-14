@@ -314,9 +314,13 @@ if (_isLoadingProfile) {
           final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
               (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
 
-          // Smoother linear cross-fade curves
-          final double expandedOpacity = expandRatio.clamp(0.0, 1.0);
-          final double collapsedOpacity = (1.0 - expandRatio).clamp(0.0, 1.0);
+          // Expanded content: visible until ratio drops below 0.6, then fades quickly
+          // (mapped from [0.6 → 0.0] to opacity [1.0 → 0.0])
+          final double expandedOpacity = ((expandRatio - 0.0) / 0.6).clamp(0.0, 1.0);
+
+          // Collapsed content: only starts appearing in the last 25% of travel
+          // (mapped from [0.25 → 0.0] ratio to opacity [0.0 → 1.0])
+          final double collapsedOpacity = (1.0 - (expandRatio / 0.25)).clamp(0.0, 1.0);
           
           final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -481,6 +485,12 @@ if (_isLoadingProfile) {
 
   Widget _buildMetricBoard(BuildContext context, int participations, int contributions) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final profileProvider = context.watch<ProfileProvider>();
+    final stats = profileProvider.getUserStatistics();
+    
+    // Get the actual total amount contributed
+    final totalContributed = stats['totalContributedFromContributions'] as double? ?? 0.0;
+    
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
@@ -503,9 +513,9 @@ if (_isLoadingProfile) {
         children: [
           _buildMetricItem(
             context,
-            label: 'ACTIVITIES',
+            label: 'EVENTS',
             value: participations.toString(),
-            icon: Icons.flash_on_rounded,
+            icon: Icons.event_available_rounded,
             iconColor: const Color(0xFF00D2B4),
           ),
           Container(
@@ -515,9 +525,11 @@ if (_isLoadingProfile) {
           ),
           _buildMetricItem(
             context,
-            label: 'CONTRIBUTIONS',
-            value: contributions.toString(),
-            icon: Icons.account_balance_wallet_rounded,
+            label: 'TOTAL (₹)',
+            value: totalContributed >= 1000 
+                ? '${(totalContributed / 1000).toStringAsFixed(1)}K' 
+                : totalContributed.toStringAsFixed(0),
+            icon: Icons.currency_rupee_rounded,
             iconColor: const Color(0xFF00D2B4),
           ),
         ],

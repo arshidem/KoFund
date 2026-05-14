@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ParticipantModel {
   String participantId;
   String eventId;
+  String eventName;
   String userId;
   String userName;
   String userEmail;
@@ -15,6 +16,7 @@ class ParticipantModel {
   ParticipantModel({
     required this.participantId,
     required this.eventId,
+    required this.eventName,
     required this.userId,
     required this.userName,
     required this.userEmail,
@@ -29,6 +31,7 @@ class ParticipantModel {
   ParticipantModel copyWith({
     String? participantId,
     String? eventId,
+    String? eventName,
     String? userId,
     String? userName,
     String? userEmail,
@@ -41,6 +44,7 @@ class ParticipantModel {
     return ParticipantModel(
       participantId: participantId ?? this.participantId,
       eventId: eventId ?? this.eventId,
+      eventName: eventName ?? this.eventName,
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userEmail: userEmail ?? this.userEmail,
@@ -56,6 +60,7 @@ class ParticipantModel {
     return ParticipantModel(
       participantId: documentId,
       eventId: map['eventId'] ?? '',
+      eventName: map['eventName'] ?? '',
       userId: map['userId'] ?? '',
       userName: map['userName'] ?? '',
       userEmail: map['userEmail'] ?? '',
@@ -72,6 +77,7 @@ factory ParticipantModel.empty() {
   return ParticipantModel(
     participantId: '',
     eventId: '',
+    eventName: '',
     userId: '',
     userName: '',
     userEmail: '',
@@ -85,6 +91,7 @@ factory ParticipantModel.empty() {
   Map<String, dynamic> toMap() {
     return {
       'eventId': eventId,
+      'eventName': eventName,
       'userId': userId,
       'userName': userName,
       'userEmail': userEmail,

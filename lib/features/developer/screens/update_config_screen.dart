@@ -4,6 +4,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:kofund/core/skeleton/app_config_skeleton.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class UpdateConfigScreen extends StatefulWidget {
   const UpdateConfigScreen({super.key});
@@ -36,13 +37,9 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
       setState(() {
         _latestVersionController.text = packageInfo.version;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('App version auto-filled from pubspec!')),
-      );
+      SnackbarHelper.showInfo(context, 'App version auto-filled from pubspec!');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch local version: $e')),
-      );
+      SnackbarHelper.showError(context, 'Failed to fetch local version: $e');
     }
   }
 
@@ -57,9 +54,7 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
         _messageController.text = data['update_message'] ?? '';
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading config: $e')),
-      );
+      SnackbarHelper.showError(context, 'Error loading config: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -79,15 +74,11 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
       }, SetOptions(merge: true));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Config updated successfully!')),
-        );
+        SnackbarHelper.showSuccess(context, 'Config updated successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving config: $e')),
-        );
+        SnackbarHelper.showError(context, 'Error saving config: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -99,7 +90,7 @@ class _UpdateConfigScreenState extends State<UpdateConfigScreen> {
     return GradientSheetScaffold(
       title: 'App Update Config',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       body: _isLoading 

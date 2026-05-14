@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 
 class PushNotificationToolScreen extends StatefulWidget {
@@ -393,17 +394,17 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
 
   Future<void> _confirmAndSend() async {
     if (_titleController.text.isEmpty || _bodyController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ttitle and Body are required')));
+      SnackbarHelper.showError(context, 'Ttitle and Body are required');
       return;
     }
 
     if (_targetTeventType == 'Targeted' && _selectedUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target user is required')));
+      SnackbarHelper.showError(context, 'Target user is required');
       return;
     }
 
     if (_targetTeventType == 'Community' && _selectedCommunity == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a community')));
+      SnackbarHelper.showError(context, 'Please select a community');
       return;
     }
 
@@ -455,13 +456,13 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Notification sent successfully!')));
+        SnackbarHelper.showSuccess(context, 'Notification sent successfully!');
         _titleController.clear();
         _bodyController.clear();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error: $e')));
+        SnackbarHelper.showError(context, 'Error: $e');
       }
     } finally {
       if (mounted) setState(() => _isSending = false);

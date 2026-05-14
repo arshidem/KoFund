@@ -110,18 +110,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (profileProvider.isLoading)
           Container(
             margin: const EdgeInsets.only(right: 16),
-            child: const SizedBox(
+            child: SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: AppColors.textPrimary(context),
               ),
             ),
           )
         else
           IconButton(
-            icon: const Icon(Icons.check, color: Colors.white),
+            icon: Icon(Icons.check, color: AppColors.textPrimary(context)),
             onPressed: _updateProfile,
             tooltip: 'Update Profile',
           ),

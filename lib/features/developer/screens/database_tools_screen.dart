@@ -249,7 +249,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
     return GradientSheetScaffold(
       title: 'Database Tools',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(

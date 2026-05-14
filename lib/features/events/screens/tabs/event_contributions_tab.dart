@@ -21,6 +21,7 @@ import '../../../../core/skeleton/receipt_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
 import 'package:kofund/features/contributions/screens/event_deleted_contributions_screen.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 class EventContributionsTab extends StatefulWidget {
   final EventModel event;
 
@@ -57,12 +58,17 @@ class _PinnedStatsHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _ContributionsTabState extends State<EventContributionsTab> {
+class _ContributionsTabState extends State<EventContributionsTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _filterMethod = 'all';
   final Map<String, String> _localUserNnameCache = {};
   Map<String, dynamic>? _cachedStats;
+  
+  Stream<List<ContributionModel>>? _contributionsStream;
+  Stream<Map<String, dynamic>>? _statsStream;
 
   void _onRefresh() async {
     try {
@@ -141,12 +147,7 @@ class _ContributionsTabState extends State<EventContributionsTab> {
   void _showAddContributionModal(BuildContext context) {
     // Check if user is admin before allowing to add contribution
     if (!_isAdmin(context)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Only admins can add contributions'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Only admins can add contributions');
       return;
     }
 
@@ -186,17 +187,19 @@ class _ContributionsTabState extends State<EventContributionsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isAdmin = _isAdmin(context);
 
-    // Use the contributions stream here (we'll listen below in StreamBuilder)
-    final contributionsStream = Provider.of<ContributionProvider>(context, listen: false)
+    // Cache the streams to avoid creating new Firebase listeners on every rebuild
+    _contributionsStream ??= Provider.of<ContributionProvider>(context, listen: false)
         .streamContributions(widget.event.eventId);
+    _statsStream ??= _getContributionStatsStream(context);
 
     return Stack(
       children: [
         // Main scroll area with pinned stats
         StreamBuilder<List<ContributionModel>>(
-          stream: contributionsStream,
+          stream: _contributionsStream,
           builder: (context, snapshot) {
             // Determine common states
             final connectionWaiting = snapshot.connectionState == ConnectionState.waiting;
@@ -265,8 +268,7 @@ class _ContributionsTabState extends State<EventContributionsTab> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final contribution = filtered[index];
-                          final showMenu = isAdmin || _isContributor(contribution, context);
-                          return _buildContributionCard(contribution, context, showMenu);
+                          return _buildContributionCard(contribution, context, isAdmin);
                         },
                         childCount: filtered.length,
                       ),
@@ -287,7 +289,7 @@ class _ContributionsTabState extends State<EventContributionsTab> {
         bottom: 16,
         right: 16,
         child: StreamBuilder<List<ContributionModel>>(
-          stream: contributionsStream,
+          stream: _contributionsStream,
           builder: (context, snapshot) {
             final contributions = snapshot.data ?? [];
             final filtered = _filterContributions(contributions);
@@ -317,7 +319,7 @@ Widget _buildContributionSummary(BuildContext context) {
     key: ValueKey(
       'contribution-summary-${widget.event.eventId}',
     ),
-    stream: _getContributionStatsStream(context),
+    stream: _statsStream,
     builder: (context, snapshot) {
       // Update cache on new data
       if (snapshot.hasData) {
@@ -377,18 +379,29 @@ Widget _buildContributionSummary(BuildContext context) {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.card(context),
+                gradient: isDark
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+                      ),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+                  color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
                 ),
                 boxShadow: [
-                  if (!isDark)
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
+                  BoxShadow(
+                    color: isDark 
+                        ? Colors.black.withValues(alpha: 0.3) 
+                        : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
                 ],
               ),
               child: Column(
@@ -403,7 +416,7 @@ Widget _buildContributionSummary(BuildContext context) {
                         Text(
                           "CONTRIBUTIONS OVERVIEW",
                           style: TextStyle(
-                            color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.5,
@@ -411,19 +424,19 @@ Widget _buildContributionSummary(BuildContext context) {
                         ),
                         const SizedBox(height: 4),
                         if (widget.event.isMonthlyPayment)
-                          Text(
+                          const Text(
                             "Monthly Progress",
                             style: TextStyle(
-                              color: AppColors.textPrimary(context),
+                              color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           )
                         else
-                          Text(
+                          const Text(
                             "Total Collection",
                             style: TextStyle(
-                              color: AppColors.textPrimary(context),
+                              color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
@@ -433,21 +446,21 @@ Widget _buildContributionSummary(BuildContext context) {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary(context).withValues(alpha: 0.1),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.payments_rounded,
-                            color: AppColors.primary(context),
+                            color: Colors.white,
                             size: 14,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             totalContributions.toString(),
-                            style: TextStyle(
-                              color: AppColors.primary(context),
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
                             ),
@@ -468,8 +481,8 @@ Widget _buildContributionSummary(BuildContext context) {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       "₹${totalCollected.toStringAsFixed(0)}",
-                      style: TextStyle(
-                        color: AppColors.textPrimary(context),
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 36,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1.2,
@@ -485,7 +498,7 @@ Widget _buildContributionSummary(BuildContext context) {
                     child: Text(
                       "of ₹${targetAmount.toStringAsFixed(0)} $targetLabel",
                       style: TextStyle(
-                        color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -499,7 +512,7 @@ Widget _buildContributionSummary(BuildContext context) {
                     child: Text(
                       "₹${widget.event.suggestedContribution!.toStringAsFixed(0)} × $participantCount participants",
                       style: TextStyle(
-                        color: AppColors.textSecondary(context).withValues(alpha: 0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -516,9 +529,9 @@ Widget _buildContributionSummary(BuildContext context) {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 6,
-                      backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary(context),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.white,
                       ),
                     ),
                   ),
@@ -531,15 +544,15 @@ Widget _buildContributionSummary(BuildContext context) {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(context).withValues(alpha: 0.1),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                            '${progressPercentage.toStringAsFixed(1)}% complete',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.primary(context),
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -549,7 +562,7 @@ Widget _buildContributionSummary(BuildContext context) {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -859,7 +872,7 @@ void _navigateToDeletedContributions(BuildContext context) {
     ),
   );
 }
-  Widget _buildContributionCard(ContributionModel contribution, BuildContext context, bool showMenu) {
+  Widget _buildContributionCard(ContributionModel contribution, BuildContext context, bool isAdmin) {
     return Column(
       children: [
         Material(
@@ -869,10 +882,11 @@ void _navigateToDeletedContributions(BuildContext context) {
               _showContributionDetails(contribution, context);
             },
             child: Container(
-
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // 1. Icon column
                   Container(
                     width: 40,
                     height: 40,
@@ -888,49 +902,52 @@ void _navigateToDeletedContributions(BuildContext context) {
                   ),
                   const SizedBox(width: 12),
                   
+                  // 2. Middle column: Name, method, date
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                     Row(
-  children: [
-    Text(
-      contribution.contributorName, // Use contributorName directly
-      style: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary(context),
-        fontSize: 15,
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    ),
-    if (contribution.isEdited)
-      Padding(
-        padding: const EdgeInsets.only(left: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 6,
-            vertical: 2,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: Colors.orange.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Text(
-            'Edited',
-            style: TextStyle(
-              fontSize: 9,
-              color: Colors.orange,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-  ],
-),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                contribution.contributorName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary(context),
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (contribution.isEdited)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: Colors.orange.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Edited',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           '${_formatPaymentMethod(contribution.paymentMethod)} • ${DateFormat('dd/MM/yyyy').format(contribution.createdAt.toDate())}',
@@ -945,7 +962,10 @@ void _navigateToDeletedContributions(BuildContext context) {
                     ),
                   ),
                   
+                  // 3. Right column: Amount and consistently aligned menu
                   Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         '₹${contribution.amount.toStringAsFixed(0)}',
@@ -955,99 +975,8 @@ void _navigateToDeletedContributions(BuildContext context) {
                           color: AppColors.textPrimary(context),
                         ),
                       ),
-                      
-                      if (showMenu)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: PopupMenuButton<String>(
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: AppColors.textSecondary(context),
-                              size: 20,
-                            ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
-                            ),
-                            onSelected: (value) {
-                              _handleMenuAction(value, contribution, context);
-                            },
-                            itemBuilder: (BuildContext context) {
-                              final isAdmin = _isAdmin(context);
-                              final isContributor = _isContributor(contribution, context);
-                              
-                              List<PopupMenuEntry<String>> items = [];
-                              
-                              // View Details - Available to everyone
-                              items.add(
-                                const PopupMenuItem<String>(
-                                  value: 'view_details',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.info_outline, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('View Details'),
-                                    ],
-                                  ),
-                                ),
-                              );
-                              
-                              // Edit - Only for admin
-                              if (isAdmin) {
-                                items.add(
-                                  const PopupMenuItem<String>(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.edit, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Edit'),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }
-                              
-                              // Get Receipt - Available to contributor and admin
-                              if (isContributor || isAdmin) {
-                                items.add(
-                                  const PopupMenuItem<String>(
-                                    value: 'receipt',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.receipt, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Get Receipt'),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }
-                              
-                              // Delete - Only for admin
-                              if (isAdmin) {
-                                items.add(
-                                  const PopupMenuDivider(),
-                                );
-                                items.add(
-                                  PopupMenuItem<String>(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete, size: 18, color: Colors.red),
-                                        SizedBox(width: 8),
-                                        Text('Delete', style: TextStyle(color: Colors.red)),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }
-                              
-                              return items;
-                            },
-                          ),
-                        ),
+                      const SizedBox(width: 4),
+                      _buildContributionMenu(contribution, context, isAdmin),
                     ],
                   ),
                 ],
@@ -1064,6 +993,97 @@ void _navigateToDeletedContributions(BuildContext context) {
       ],
     );
   }
+
+  Widget _buildContributionMenu(ContributionModel contribution, BuildContext context, bool isAdmin) {
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        color: AppColors.textSecondary(context),
+        size: 20,
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(
+        minWidth: 36,
+        minHeight: 36,
+      ),
+      onSelected: (value) {
+        _handleMenuAction(value, contribution, context);
+      },
+      itemBuilder: (BuildContext context) {
+        final isContributor = _isContributor(contribution, context);
+        
+        List<PopupMenuEntry<String>> items = [];
+        
+        // View Details - Always available
+        items.add(
+          const PopupMenuItem<String>(
+            value: 'view_details',
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18),
+                const SizedBox(width: 8),
+                const Text('View Details'),
+              ],
+            ),
+          ),
+        );
+        
+        // Edit - Only for admin
+        if (isAdmin) {
+          items.add(
+            const PopupMenuItem<String>(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Edit'),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Get Receipt - Available to contributor and admin
+        if (isContributor || isAdmin) {
+          items.add(
+            const PopupMenuItem<String>(
+              value: 'receipt',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Get Receipt'),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Delete - Only for admin
+        if (isAdmin) {
+          items.add(
+            const PopupMenuDivider(),
+          );
+          items.add(
+            const PopupMenuItem<String>(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  const SizedBox(width: 8),
+                  const Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        return items;
+      },
+    );
+  }
+
 
   void _handleMenuAction(String value, ContributionModel contribution, BuildContext context) {
     switch (value) {
@@ -2017,24 +2037,12 @@ String _getFieldDisplayName(String field) {
           onSave: (updatedContribution) async {
             try {
               if (updatedContribution != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Contribution updated successfully'),
-                    backgroundColor: AppColors.success(context),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+                SnackbarHelper.showSuccess(context, 'Contribution updated successfully');
                 setState(() {});
               }
             } catch (e) {
               debugPrint('Error handling updated contribution: $e');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: AppColors.error(context),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              SnackbarHelper.showError(context, 'Error: ${e.toString()}');
             }
           },
         ),
@@ -2060,12 +2068,7 @@ Future<void> _generateReceipt(
     debugPrint('Receipt error: $e\n$st');
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate receipt: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to generate receipt: ${e.toString()}');
     }
   }
 }
@@ -2102,19 +2105,9 @@ void _deleteContribution(ContributionModel contribution, BuildContext context) a
       reason, // Add this parnameter
     );
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Contribution deleted successfully!'),
-        backgroundColor: AppColors.success(context),
-      ),
-    );
+    SnackbarHelper.showError(context, 'Contribution deleted successfully!');
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to delete contribution: $e'),
-        backgroundColor: AppColors.error(context),
-      ),
-    );
+    SnackbarHelper.showError(context, 'Failed to delete contribution: $e');
   }
 }
 

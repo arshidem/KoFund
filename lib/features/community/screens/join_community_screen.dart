@@ -92,8 +92,8 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     // ✅ SAME gradient system used app-wide
     gradient: LinearGradient(
       colors: [
-        Colors.blue.withValues(alpha: 0.15),
-        Colors.blue.withValues(alpha: 0.05),
+        AppColors.primary(context).withValues(alpha: 0.15),
+        AppColors.primary(context).withValues(alpha: 0.05),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -101,7 +101,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
 
     // ✅ SAME border style
     border: Border.all(
-      color: Colors.blue.withValues(alpha: 0.25),
+      color: AppColors.primary(context).withValues(alpha: 0.25),
     ),
 
     // ✅ SAME soft shadow
@@ -117,7 +117,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     children: [
       Icon(
         Icons.code,
-        color: Colors.blue.shade700,
+        color: AppColors.primary(context),
         size: 20,
       ),
       const SizedBox(width: 10),
@@ -129,7 +129,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
               'Invite Code',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.blue.shade800,
+                color: AppColors.textSecondary(context),
               ),
             ),
             const SizedBox(height: 2),
@@ -138,7 +138,7 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue.shade800,
+                color: AppColors.textPrimary(context),
                 letterSpacing: 1,
               ),
             ),
@@ -317,7 +317,7 @@ Widget build(BuildContext context) {
   return GradientSheetScaffold(
     title: 'Join Community',
     leading: IconButton(
-      icon: const Icon(Icons.arrow_back, color: Colors.white),
+      icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
       onPressed: () {
         Navigator.pushReplacementNamed(context, RouteNames.login);
       },
@@ -338,21 +338,26 @@ Widget build(BuildContext context) {
                     Container(
                       width: 90,
                       height: 90,
-                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(24),
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary(context).withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            blurRadius: 15,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: Image.asset(
-                        'assets/logos/KoFund.png',
-                        fit: BoxFit.contain,
+                      child: Center(
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logos/KoFund.png',
+                            height: 80,
+                            width: 80,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),

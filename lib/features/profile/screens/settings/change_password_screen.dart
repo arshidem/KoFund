@@ -83,14 +83,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           Consumer<AppAuthProvider>(
             builder: (context, _authProvider, child) {
               return _authProvider.isLoading
-                  ? const Padding(
-                      padding: EdgeInsets.only(right: 16),
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 16),
                       child: SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                          valueColor: AlwaysStoppedAnimation(AppColors.textPrimary(context)),
                         ),
                       ),
                     )
@@ -103,8 +103,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           final bool isOnline = snapshot.data ?? true;
                           return IconButton(
                             icon: isOnline
-                                ? const Icon(Icons.check, color: Colors.white, size: 26)
-                                : const Icon(Icons.wifi_off, color: Colors.white70, size: 26),
+                                ? Icon(Icons.check, color: AppColors.textPrimary(context), size: 26)
+                                : Icon(Icons.wifi_off, color: AppColors.textPrimary(context).withValues(alpha: 0.7), size: 26),
                             tooltip: isOnline ? 'Update Password' : 'Offline - No Connection',
                             onPressed: isOnline ? _changePassword : null,
                           );

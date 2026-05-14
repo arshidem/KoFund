@@ -39,14 +39,14 @@ class _AnimatedLogoState extends State<AnimatedLogo>
       vsync: this,
     );
 
-    _scaleEntrance = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _scaleEntrance = Tween<double>(begin: 1.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
         curve: Curves.easeOutBack,
       ),
     );
 
-    _opacityEntrance = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _opacityEntrance = Tween<double>(begin: 1.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
         curve: Curves.easeIn,

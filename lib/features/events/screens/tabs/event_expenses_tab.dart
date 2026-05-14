@@ -12,6 +12,7 @@ import '../../../auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/constants/app_dimensions.dart'; // Add this import
 import '../../../../core/services/network_service.dart'; // Add this import
+import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
@@ -572,12 +573,7 @@ void _navigateToEditExpense(ExpenseModel expense, BuildContext context) {
         expenseId: expense.expenseId,
         onSave: (updatedExpense) {
           if (updatedExpense != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Expense updated successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            SnackbarHelper.showSuccess(context, 'Expense updated successfully');
           }
         },
       ),
@@ -1869,9 +1865,7 @@ Future<void> _updateExpenseStatusWithHistory(
     final expenseProvider = context.read<ExpenseProvider>();
     
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to update status')),
-      );
+      SnackbarHelper.showError(context, 'You must be logged in to update status');
       return;
     }
 
@@ -1912,20 +1906,10 @@ Future<void> _updateExpenseStatusWithHistory(
     // Close the bottom sheet
     Navigator.pop(context);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Expense marked as $newStatus!'),
-        backgroundColor: _getStatusColor(newStatus),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, 'Expense marked as $newStatus!');
     
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Failed to update expense: $e'),
-        backgroundColor: AppColors.error(context),
-      ),
-    );
+    SnackbarHelper.showError(context, 'Failed to update expense: $e');
   }
 }
 
@@ -2255,19 +2239,9 @@ String _formatPaymentMethod(String method) {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
       await expenseProvider.updateExpenseStatus(expense.expenseId, status);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Expense ${status}eventId successfully!'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Expense ${status}eventId successfully!');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update expense: $e'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to update expense: $e');
     }
   }
   void _showDeleteConfirmation(ExpenseModel expense, BuildContext context) async {
@@ -2290,19 +2264,9 @@ String _formatPaymentMethod(String method) {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
       await expenseProvider.deleteExpense(expense.expenseId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Expense deleted successfully!'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Expense deleted successfully!');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete expense: $e'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to delete expense: $e');
     }
   }
 
@@ -2323,7 +2287,6 @@ String _formatPaymentMethod(String method) {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final stableSuccessColor = AppColors.success(context);
     final stableErrorColor = AppColors.error(context);
-    final messenger = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -2375,7 +2338,7 @@ String _formatPaymentMethod(String method) {
 
             try {
               final success = await _createExpense(
-                messenger: messenger,
+                context: context,
                 authProvider: _authProvider,
                 expenseProvider: expenseProvider,
                 successColor: stableSuccessColor,
@@ -2642,7 +2605,7 @@ String _formatPaymentMethod(String method) {
   }
 
 Future<bool> _createExpense({
-  required ScaffoldMessengerState messenger,
+  required BuildContext context,
   required AppAuthProvider authProvider,
   required ExpenseProvider expenseProvider,
   required Color successColor,
@@ -2659,9 +2622,7 @@ Future<bool> _createExpense({
     final currentUser = authProvider.user;
 
     if (currentUser == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('You must be logged in to add expenses')),
-      );
+      SnackbarHelper.showError(context, 'You must be logged in to add expenses');
       return false;
     }
 
@@ -2697,34 +2658,20 @@ Future<bool> _createExpense({
     await expenseProvider.createExpense(expense);
     
     // Show success snackbar
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isAdmin 
-            ? 'Expense added and approved successfully!' 
-            : 'Expense submitted for admin approval!',
-        ),
-        backgroundColor: successColor,
-      ),
+    SnackbarHelper.showSuccess(
+      context,
+      isAdmin 
+        ? 'Expense added and approved successfully!' 
+        : 'Expense submitted for admin approval!',
     );
     return true;
   } catch (e) {
     if (e.toString().contains('must be a participant')) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Join this event before adding expenses'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      SnackbarHelper.showWarning(context, 'Join this event before adding expenses');
     } else {
       // Log error but don't crash the UI if it's just a SnackBar failure
       debugPrint('Error in _createExpense: $e');
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Failed to add expense: $e'),
-          backgroundColor: errorColor,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to add expense: $e');
     }
     return false;
   }

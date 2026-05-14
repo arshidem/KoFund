@@ -436,18 +436,18 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
       title: 'Settings',
       actions: [
         if (!_isOnline)
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.cloud_off_rounded, color: Colors.white70, size: 20),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Icon(Icons.cloud_off_rounded, color: AppColors.textPrimary(context).withValues(alpha: 0.7), size: 20),
           ),
         if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
             child: SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
-                color: Colors.white,
+                color: AppColors.textPrimary(context),
                 strokeWidth: 2,
               ),
             ),
@@ -457,7 +457,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
             onPressed: _isOnline ? _updateCommunity : null,
             icon: Icon(
               Icons.check_rounded, 
-              color: _isOnline ? Colors.white : Colors.white.withValues(alpha: 0.5), 
+              color: _isOnline ? AppColors.textPrimary(context) : AppColors.textPrimary(context).withValues(alpha: 0.5), 
               size: 28
             ),
             tooltip: 'Save Changes',

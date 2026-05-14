@@ -1,43 +1,10 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:kofund/core/services/event_service.dart';
 
 class ReminderService {
-  final FirebaseFunctions _functions;
-  
-  ReminderService() : _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-  
-  // Helper methods - MOVE THESE OUTSIDE THE MAIN METHOD
-  Map<String, dynamic> _convertMap(Map<dynamic, dynamic> map) {
-    final result = <String, dynamic>{};
-    
-    for (final entry in map.entries) {
-      final key = entry.key.toString();
-      final value = entry.value;
-      
-      if (value is Map) {
-        result[key] = _convertMap(value);
-      } else if (value is List) {
-        result[key] = _convertList(value);
-      } else {
-        result[key] = value;
-      }
-    }
-    
-    return result;
-  }
-
-  List<dynamic> _convertList(List<dynamic> list) {
-    return list.map((item) {
-      if (item is Map) {
-        return _convertMap(item);
-      } else if (item is List) {
-        return _convertList(item);
-      }
-      return item;
-    }).toList();
-  }
+  ReminderService();
   
   Future<Map<String, dynamic>> sendContributionReminders({
     required String communityId,
@@ -46,85 +13,64 @@ class ReminderService {
     String? testUserId,
   }) async {
     try {
-      debugPrint("⏰ Calling Cloud Function: sendContributionReminders");
+      debugPrint("⏰ Computing reminders locally for event: $eventId");
       
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         debugPrint("❌ User not authenticated");
-        throw Exception("User not authenticated");
+        return {'success': false, 'message': 'User not authenticated'};
+      }
+
+      final eventService = EventService();
+      final event = await eventService.getEventById(eventId);
+      if (event == null) {
+        return {'success': false, 'message': 'Event not found'};
       }
       
-      final now = DateTime.now();
-      final baseNotificationId = '${now.millisecondsSinceEpoch}';
+      final participants = await eventService.getParticipantsWithUnpaidContributions(eventId);
       
-      final callData = {
-        'communityId': communityId,
-        'eventId': eventId,
-        'sendTest': sendTest,
-        'testUserId': testUserId,
-        'data': {
-          'senderId': currentUser.uid,
-          'sentFromApp': true,
-          'notificationId': baseNotificationId,
-        },
-      };
+      int remindersSent = 0;
       
-      debugPrint("📦 Call data: ${jsonEncode(callData)}");
-      
-      final callable = _functions.httpsCallable(
-        'sendContributionReminders',
-        options: HttpsCallableOptions(timeout: Duration(seconds: 60)),
-      );
-      
-      // ✅ FIXED: Remove duplicate variable declaration
-      final response = await callable.call(callData);
-      
-      // ✅ ABSOLUTELY SAFE CASTING
-      Map<String, dynamic> resultData = {};
-
-      if (response.data != null && response.data is Map) {
-        final dynamic rawResponse = response.data;
-        final Map<dynamic, dynamic> rawData = rawResponse as Map<dynamic, dynamic>;
-        
-        // Convert all keys to String
-        for (final entry in rawData.entries) {
-          final key = entry.key.toString();
-          final value = entry.value;
-          
-          // Handle nested maps
-          if (value is Map) {
-            resultData[key] = _convertMap(value);
-          } 
-          // Handle nested lists
-          else if (value is List) {
-            resultData[key] = _convertList(value);
-          }
-          else {
-            resultData[key] = value;
+      if (!sendTest) {
+        for (final p in participants) {
+          try {
+            await eventService.sendParticipantReminder(event, p);
+            remindersSent++;
+          } catch (e) {
+            debugPrint("⚠️ Failed to send to ${p.userName}");
           }
         }
-      } else {
-        throw Exception('Invalid response from Cloud Function');
+        
+        // ✅ NEW: Update lastReminderSent to prevent misuse
+        if (remindersSent > 0) {
+          await eventService.update(eventId, {
+            'lastReminderSent': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
-
-      debugPrint("✅ Cloud Function Result: $resultData");
-      return resultData;
       
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint("❌ Firebase Functions Error:");
-      debugPrint("   Code: ${e.code}");
-      debugPrint("   Message: ${e.message}");
-      debugPrint("   Details: ${e.details}");
-      rethrow;
+      return {
+        'success': true,
+        'isTest': sendTest,
+        'eventsProcessed': 1,
+        'remindersSent': remindersSent,
+        'notificationsCreated': remindersSent,
+        'results': [
+          {
+            'eventId': eventId,
+            'name': event.title,
+            'participantsNeedingReminders': participants.length,
+            'remindersSent': remindersSent,
+            'pushNotificationsSent': remindersSent,
+          }
+        ]
+      };
+      
     } catch (e, stackTrace) {
-      debugPrint("❌ Error calling Cloud Function: $e");
+      debugPrint("❌ Error computing local reminders: $e");
       debugPrint("📌 Stack trace: $stackTrace");
-      rethrow;
+      return {'success': false, 'message': e.toString()};
     }
   }
 }
-
-
-
-
-

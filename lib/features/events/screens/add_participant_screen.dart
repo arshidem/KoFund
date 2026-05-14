@@ -12,6 +12,7 @@ import '../../events/models/event_model.dart';
 import '../../../features/members/providers/member_provider.dart';
 import 'package:kofund/core/skeleton/add_participants_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class AddParticipantScreen extends StatefulWidget {
   final EventModel event;
@@ -75,13 +76,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load data: $e'),
-            backgroundColor: AppColors.error(context),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to load data: $e');
       }
     }
   }
@@ -124,13 +119,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       // Check if already a participant
       final isAlreadyParticipant = _currentParticipants.any((p) => p.userId == userId);
       if (isAlreadyParticipant) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$userName is already a participant'),
-            backgroundColor: AppColors.warning(context),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        SnackbarHelper.showInfo(context, '$userName is already a participant');
         return;
       }
       
@@ -138,6 +127,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       final participant = ParticipantModel(
         participantId: '${DateTime.now().millisecondsSinceEpoch}_$userId',
         eventId: widget.event.eventId,
+        eventName: widget.event.title,
         userId: userId,
         userName: userName,
         userEmail: userEmail,
@@ -162,13 +152,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       
       developer.log('✅ AddParticipantScreen: Added $userName to event');
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added $userName to event'),
-          backgroundColor: AppColors.success(context),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Added $userName to event');
       
     } catch (e, stackTrace) {
       developer.log('❌ AddParticipantScreen Error adding participant: $e', error: e, stackTrace: stackTrace);
@@ -178,13 +162,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
           _addingParticipants.remove(userId);
         });
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add participant: $e'),
-            backgroundColor: AppColors.error(context),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to add participant: $e');
       }
     }
   }
@@ -212,25 +190,13 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       
       developer.log('✅ AddParticipantScreen: Removed ${participant.userName} from event');
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed ${participant.userName} from event'),
-          backgroundColor: AppColors.success(context),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Removed ${participant.userName} from event');
       
     } catch (e, stackTrace) {
       developer.log('❌ AddParticipantScreen Error removing participant: $e', error: e, stackTrace: stackTrace);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to remove participant: $e'),
-            backgroundColor: AppColors.error(context),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to remove participant: $e');
       }
     }
   }

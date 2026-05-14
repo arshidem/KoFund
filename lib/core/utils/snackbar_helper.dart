@@ -4,78 +4,79 @@ import 'package:kofund/core/constants/app_colors.dart';
 
 class SnackbarHelper {
   static void showSuccess(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primary(context), // This works!
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        elevation: 4,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    _showBranded(context, message);
   }
 
   static void showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.error(context), // Use your AppColors.error
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        elevation: 4,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    _showBranded(context, message); // Use global premium style
   }
 
   static void showInfo(BuildContext context, String message) {
+    _showBranded(context, message);
+  }
+
+  static void showWarning(BuildContext context, String message) {
+    _showBranded(context, message);
+  }
+
+  // Branded KoFund Snackbar logic
+  static void showKoFundSnackbar(BuildContext context, String message, {Color? backgroundColor}) {
+    _showBranded(context, message, backgroundColor: backgroundColor);
+  }
+
+  // Private helper to avoid duplication and globalize the style
+  static void _showBranded(BuildContext context, String message, {Color? backgroundColor}) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white),
+        content: Row(
+          children: [
+            // Small KoFund Logo with Primary Background (Branding)
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Transform.scale(
+                scale: 1.6,
+                child: Image.asset(
+                  'assets/logos/KoFund.png',
+                  height: 18,
+                  width: 18,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Global Small Text Style
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
         ),
-        backgroundColor: AppColors.info(context), // Use your AppColors.info
+        backgroundColor: backgroundColor ?? (Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF13181D) // Deeper premium dark
+            : const Color(0xFF1D2329)), // Sleek charcoal
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
-        elevation: 4,
+        elevation: 6,
         duration: const Duration(seconds: 3),
       ),
     );
   }
 
-  static void showWarning(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppColors.warning(context), // Use your AppColors.warning
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        elevation: 4,
-        duration: const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  // Custom snackbar with your app colors
+  // Keep custom option for specialized use cases
   static void showCustom(BuildContext context, {
     required String message,
     Color? backgroundColor,
@@ -85,32 +86,6 @@ class SnackbarHelper {
     String? actionLabel,
     VoidCallback? onActionPressed,
   }) {
-    final snackBar = SnackBar(
-      content: Text(
-        message,
-        style: TextStyle(color: textColor ?? Colors.white),
-      ),
-      backgroundColor: backgroundColor ?? AppColors.primary(context),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      elevation: 4,
-      duration: Duration(seconds: durationSeconds),
-      action: actionLabel != null && onActionPressed != null
-          ? SnackBarAction(
-              label: actionLabel,
-              textColor: actionColor ?? AppColors.textPrimary(context),
-              onPressed: onActionPressed,
-            )
-          : null,
-    );
-    
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    _showBranded(context, message, backgroundColor: backgroundColor);
   }
 }
-
-
-
-
-

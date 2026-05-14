@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 class ContributionModel {
   String contributionId;
   String eventId;
+  String eventName;
   String userId;
   String contributorName;
   String communityId;
@@ -35,6 +36,7 @@ class ContributionModel {
   ContributionModel({
     required this.contributionId,
     required this.eventId,
+    required this.eventName,
     required this.userId,
     required this.contributorName,
     required this.communityId,
@@ -84,6 +86,7 @@ class ContributionModel {
     return ContributionModel(
       contributionId: id,
       eventId: map['eventId'] ?? '',
+      eventName: map['eventName'] ?? '',
       userId: map['userId'] ?? '',
       contributorName: map['contributorName'] ?? '',
       communityId: map['communityId'] ?? '',
@@ -119,6 +122,7 @@ class ContributionModel {
   Map<String, dynamic> toMap() {
     return {
       'eventId': eventId,
+      'eventName': eventName,
       'userId': userId,
       'contributorName': contributorName,
       'communityId': communityId,
@@ -154,6 +158,7 @@ class ContributionModel {
   ContributionModel copyWith({
     String? contributionId,
     String? eventId,
+    String? eventName,
     String? userId,
     String? contributorName,
     String? communityId,
@@ -182,6 +187,7 @@ class ContributionModel {
     return ContributionModel(
       contributionId: contributionId ?? this.contributionId,
       eventId: eventId ?? this.eventId,
+      eventName: eventName ?? this.eventName,
       userId: userId ?? this.userId,
       contributorName: contributorName ?? this.contributorName,
       communityId: communityId ?? this.communityId,

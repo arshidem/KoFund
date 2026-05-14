@@ -20,6 +20,7 @@ import '../../../contributions/providers/contribution_provider.dart';
 import '../../../contributions/models/contribution_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class SafeAsyncOperation {
   static Future<T?> execute<T>({
@@ -54,7 +55,9 @@ class EventParticipantsTab extends StatefulWidget {
   State<EventParticipantsTab> createState() => _articipantsTabState();
 }
 
-class _articipantsTabState extends State<EventParticipantsTab> {
+class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
   final Map<String, bool> _updatingParticipants = {};
   String _searchQuery = '';
@@ -70,6 +73,20 @@ class _articipantsTabState extends State<EventParticipantsTab> {
   
   List<ParticipantModel> _cachedParticipants = [];
   Map<String, dynamic>? _cachedStats;
+
+  Stream<List<ParticipantModel>>? _participantsStream;
+  Stream<Map<String, dynamic>>? _statsStream;
+  String? _cachedStreamMonth;
+  int _cachedStreamKey = -1;
+
+  void _updateStreamsIfNeeded(BuildContext context) {
+    if (_participantsStream == null || _statsStream == null || _cachedStreamMonth != _selectedMonth || _cachedStreamKey != _streamKey) {
+      _participantsStream = _getParticipantsStream(context);
+      _statsStream = _getStatsStream(context);
+      _cachedStreamMonth = _selectedMonth;
+      _cachedStreamKey = _streamKey;
+    }
+  }
 
   @override
   void initState() {
@@ -231,7 +248,9 @@ class _articipantsTabState extends State<EventParticipantsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isAdmin = _isAdmin(context);
+    _updateStreamsIfNeeded(context);
 
     return Stack(
       children: [
@@ -279,7 +298,7 @@ class _articipantsTabState extends State<EventParticipantsTab> {
           bottom: 16,
           right: 16,
           child: StreamBuilder<List<ParticipantModel>>(
-            stream: _getParticipantsStream(context),
+            stream: _participantsStream,
             builder: (context, snapshot) {
               final participants = snapshot.data ?? [];
               final filtered = _filterParticipants(participants);
@@ -306,7 +325,7 @@ class _articipantsTabState extends State<EventParticipantsTab> {
   Widget _buildParticipantsListSliver(BuildContext context) {
     return StreamBuilder<List<ParticipantModel>>(
       key: ValueKey('participants-${widget.event.eventId}-${_selectedMonth ?? 'regular'}-$_streamKey'),
-      stream: _getParticipantsStream(context),
+      stream: _participantsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && _cachedParticipants.isEmpty) {
           return SliverToBoxAdapter(
@@ -367,7 +386,7 @@ class _articipantsTabState extends State<EventParticipantsTab> {
       key: ValueKey(
         'stats-${widget.event.eventId}-${_selectedMonth ?? 'regular'}-$_streamKey',
       ),
-      stream: _getStatsStream(context),
+      stream: _statsStream,
       builder: (context, snapshot) {
         // Update cache on new data
         if (snapshot.hasData) {
@@ -403,18 +422,29 @@ class _articipantsTabState extends State<EventParticipantsTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.card(context),
+                  gradient: isDark
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+                        ),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
                   ),
                   boxShadow: [
-                    if (!isDark)
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
+                    BoxShadow(
+                      color: isDark 
+                          ? Colors.black.withValues(alpha: 0.3) 
+                          : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
                 child: Column(
@@ -428,7 +458,7 @@ class _articipantsTabState extends State<EventParticipantsTab> {
                               ? "MONTHLY SUMMARY"
                               : "PARTICIPANTS OVERVIEW",
                           style: TextStyle(
-                            color: AppColors.textPrimary(context).withValues(alpha: 0.4),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
@@ -437,17 +467,17 @@ class _articipantsTabState extends State<EventParticipantsTab> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primary(context).withValues(alpha: 0.1),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.people_alt_rounded, color: AppColors.primary(context), size: 14),
+                              const Icon(Icons.people_alt_rounded, color: Colors.white, size: 14),
                               const SizedBox(width: 6),
                               Text(
                                 totalCount.toString(),
-                                style: TextStyle(
-                                  color: AppColors.primary(context),
+                                style: const TextStyle(
+                                  color: Colors.white,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -460,8 +490,8 @@ class _articipantsTabState extends State<EventParticipantsTab> {
                     const SizedBox(height: 16),
                     Text(
                       "₹${totalCollected.toStringAsFixed(0)}",
-                      style: TextStyle(
-                        color: AppColors.textPrimary(context),
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 36,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1.2,
@@ -473,39 +503,64 @@ class _articipantsTabState extends State<EventParticipantsTab> {
                         child: Text(
                           "of ₹${totalExpected.toStringAsFixed(0)} expected",
                           style: TextStyle(
-                            color: AppColors.textPrimary(context).withValues(alpha: 0.5),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              paidCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "PAID",
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              pendingCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "PENDING",
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              // 🚀 Secondary Row with Gap
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMetricCard(
-                      context,
-                      label: "PAID",
-                      value: paidCount.toString(),
-                      icon: Icons.check_circle_rounded,
-                      color: const Color(0xFF10B981), // Vibrant Green
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMetricCard(
-                      context,
-                      label: "PENDING",
-                      value: pendingCount.toString(),
-                      icon: Icons.error_rounded,
-                      color: const Color(0xFFF59E0B), // Vibrant Amber/Orange
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
@@ -1767,13 +1822,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
       }
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to load member profile'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to load member profile');
       }
     }
   }
@@ -1782,37 +1831,25 @@ Future<void> _togglePaymentStatus(
   ParticipantModel participant,
   BuildContext context,
 ) async {
-  final scaffoldMessenger = ScaffoldMessenger.of(context);
-  final contributionProvider = context.read<ContributionProvider>();
-  final _authProvider = context.read<AppAuthProvider>();
-  final errorColor = AppColors.error(context);
-  final warningColor = AppColors.warning(context);
-  
-  final eventId = widget.event.eventId;
-  final communityId = widget.event.communityId;
-  final isMonthlyy = widget.event.isMonthlyPayment;
-  final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
-
-  if (!mounted) return;
-
-  setState(() => _updatingParticipants[participant.userId] = true);
-
   try {
-    await Future.delayed(const Duration(milliseconds: 200));
+    final eventId = widget.event.eventId;
+    final communityId = widget.event.communityId;
+    final isMonthlyy = widget.event.isMonthlyPayment;
+    final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
     
-    if (!mounted) return;
+    final _authProvider = context.read<AppAuthProvider>();
+    final contributionProvider = context.read<ContributionProvider>();
 
     if (suggestedAmount <= 0) {
       if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: const Text('This event has no suggested contribution amount'),
-            backgroundColor: warningColor,
-          ),
-        );
+        SnackbarHelper.showInfo(context, 'This event has no suggested contribution amount');
       }
       return;
     }
+
+    setState(() {
+      _updatingParticipants[participant.userId] = true;
+    });
 
     contributionProvider.clearCacheForUser(eventId, participant.userId);
 
@@ -1824,12 +1861,7 @@ Future<void> _togglePaymentStatus(
 
     if (isMonthlyy) {
       if (_selectedMonth == null) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: const Text('Please select a month first'),
-            backgroundColor: warningColor,
-          ),
-        );
+        SnackbarHelper.showWarning(context, 'Please select a month first');
         return;
       }
 
@@ -1845,23 +1877,21 @@ Future<void> _togglePaymentStatus(
       if (totalPaid >= suggestedAmount) {
         await _removeContributions(
           contributionProvider: contributionProvider,
-          scaffoldMessenger: scaffoldMessenger,
           context: context,
           eventId: eventId,
           userId: participant.userId,
           participantName: participant.userName,
           monthId: _selectedMonth,
           isMonthlyy: true,
-          reason: totalPaid > suggestedAmount 
-            ? 'Marking as pending: Overpaid for ${_formatMonthDisplay(_selectedMonth!)}' 
-            : 'Marking as pending: Fully paid for ${_formatMonthDisplay(_selectedMonth!)}',
+          reason: 'Marked as pending by admin',
         );
       } else {
         final remaining = suggestedAmount - totalPaid;
         await _createContribution(
           contributionProvider: contributionProvider,
-          scaffoldMessenger: scaffoldMessenger,
+          context: context,
           eventId: eventId,
+          eventName: widget.event.title,
           communityId: communityId,
           userId: participant.userId,
           participantName: participant.userName,
@@ -1871,49 +1901,43 @@ Future<void> _togglePaymentStatus(
           authProvider: _authProvider,
         );
       }
-      return;
-    }
-
-    final nonMonthlyContributions = contributions.where((c) => !c.isMonthlyContribution).toList();
-    final totalPaid = nonMonthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
-
-    if (totalPaid >= suggestedAmount) {
-      await _removeContributions(
-        contributionProvider: contributionProvider,
-        scaffoldMessenger: scaffoldMessenger,
-        context: context,
-        eventId: eventId,
-        userId: participant.userId,
-        participantName: participant.userName,
-        monthId: null,
-        isMonthlyy: false,
-        reason: totalPaid > suggestedAmount 
-          ? 'Marking as pending: Overpaid' 
-          : 'Marking as pending: Fully paid',
-      );
     } else {
-      final remaining = suggestedAmount - totalPaid;
-      await _createContribution(
-        contributionProvider: contributionProvider,
-        scaffoldMessenger: scaffoldMessenger,
-        eventId: eventId,
-        communityId: communityId,
-        userId: participant.userId,
-        participantName: participant.userName,
-        amount: remaining,
-        monthId: null,
-        isMonthlyy: false,
-        authProvider: _authProvider,
-      );
-    }
+      final totalPaid = contributions
+          .where((c) => !c.isMonthlyContribution)
+          .fold<double>(0.0, (sum, c) => sum + c.amount);
 
+      if (totalPaid >= suggestedAmount) {
+        await _removeContributions(
+          contributionProvider: contributionProvider,
+          context: context,
+          eventId: eventId,
+          userId: participant.userId,
+          participantName: participant.userName,
+          monthId: null,
+          isMonthlyy: false,
+          reason: 'Marked as pending by admin',
+        );
+      } else {
+        final remaining = suggestedAmount - totalPaid;
+        await _createContribution(
+          contributionProvider: contributionProvider,
+          context: context,
+          eventId: eventId,
+          eventName: widget.event.title,
+          communityId: communityId,
+          userId: participant.userId,
+          participantName: participant.userName,
+          amount: remaining,
+          monthId: null,
+          isMonthlyy: false,
+          authProvider: _authProvider,
+        );
+      }
+    }
   } catch (error) {
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: const Text('Failed to update payment status'),
-        backgroundColor: errorColor,
-      ),
-    );
+    if (mounted) {
+      SnackbarHelper.showError(context, 'Failed to update payment status');
+    }
   } finally {
     if (mounted) {
       setState(() {
@@ -1926,8 +1950,9 @@ Future<void> _togglePaymentStatus(
 
 Future<void> _createContribution({
   required ContributionProvider contributionProvider,
-  required ScaffoldMessengerState scaffoldMessenger,
+  required BuildContext context,
   required String eventId,
+  required String eventName,
   required String communityId,
   required String userId,
   required String participantName,
@@ -1942,6 +1967,7 @@ Future<void> _createContribution({
     final contribution = ContributionModel(
       contributionId: contributionId,
       eventId: eventId,
+      eventName: eventName,
       userId: userId,
       contributorName: participantName,
       communityId: communityId,
@@ -1962,28 +1988,15 @@ Future<void> _createContribution({
         ? 'Marked $participantName as paid for ${_formatMonthDisplay(monthId)}'
         : 'Marked $participantName as paid';
     
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
+    SnackbarHelper.showSuccess(context, message);
   } catch (error) {
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: const Text('Failed to create contribution'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showError(context, 'Failed to create contribution');
     rethrow;
   }
 }
 
 Future<void> _removeContributions({
   required ContributionProvider contributionProvider,
-  required ScaffoldMessengerState scaffoldMessenger,
   required BuildContext context,
   required String eventId,
   required String userId,
@@ -2023,21 +2036,9 @@ Future<void> _removeContributions({
         ? 'Marked $participantName as pending for ${_formatMonthDisplay(monthId)}'
         : 'Marked $participantName as pending';
     
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
+    SnackbarHelper.showSuccess(context, message);
   } catch (error) {
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: const Text('Failed to update payment status'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showError(context, 'Failed to update payment status');
     rethrow;
   }
 }
@@ -2062,19 +2063,9 @@ Future<void> _removeContributions({
       final eventProvider = context.read<EventProvider>();
       await eventProvider.leave(participant.eventId, participant.userId);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed ${participant.userName} from event'),
-          backgroundColor: AppColors.success(context),
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Removed ${participant.userName} from event');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to remove participant'),
-          backgroundColor: AppColors.error(context),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to remove participant');
     }
   }
 
@@ -2188,10 +2179,4 @@ class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.maxExtent != maxExtent ||
         oldDelegate.minExtent != minExtent;
   }
-}
-
-
-
-
-
-
+}

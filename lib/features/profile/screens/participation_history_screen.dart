@@ -186,7 +186,7 @@ Widget _buildContent(
   }
 
   Widget _buildParticipationItem(Map<String, dynamic> participation) {
-    final EventTitle = participation['EventTitle'] ?? 'Unnnamed Event';
+    final eventTitle = participation['title'] ?? 'Unnamed Event';
     final eventType = participation['eventType'] ?? EventTypes.general;
     final joinedAt = _parseDate(participation['joinedAt']);
     final hasPaid = participation['hasPaidContribution'] ?? false;
@@ -221,7 +221,7 @@ Widget _buildContent(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        EventTitle,
+                        eventTitle,
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,

@@ -11,6 +11,7 @@ import '../../../routing/route_names.dart'; // Use route nnames
 import '../providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class VerificationPendingScreen extends StatefulWidget {
   final String email;
@@ -86,16 +87,7 @@ Future<void> _checkForPendingInvite() async {
         _rotationController.stop(); // Stop the rotation
         
         // Show success message using AppColors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Email verified successfully!'),
-            backgroundColor: AppColors.success(context),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
+        SnackbarHelper.showSuccess(context, 'Email verified successfully!');
         
         // ⭐ NEW: Check if we have a pending invite code
         if (widget.pendingInviteCode != null) {
@@ -153,13 +145,7 @@ Future<void> _checkForPendingInvite() async {
     if (!mounted) return;
     
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Verification email sent!'),
-          backgroundColor: AppColors.success(context),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      SnackbarHelper.showSuccess(context, 'Verification email sent!');
     } else if (mounted) {
       SnackbarHelper.showError(
         context, 
@@ -192,14 +178,14 @@ Future<void> _checkForPendingInvite() async {
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
           colors: [
-            Colors.blue.withValues(alpha: 0.15),
-            Colors.blue.withValues(alpha: 0.05),
+            AppColors.primary(context).withValues(alpha: 0.15),
+            AppColors.primary(context).withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border.all(
-          color: Colors.blue.withValues(alpha: 0.25),
+          color: AppColors.primary(context).withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
@@ -214,7 +200,7 @@ Future<void> _checkForPendingInvite() async {
           Icon(
             Icons.link_rounded,
             size: 20,
-            color: Colors.blue.shade700,
+            color: AppColors.primary(context),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -226,7 +212,7 @@ Future<void> _checkForPendingInvite() async {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade800,
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -234,7 +220,7 @@ Future<void> _checkForPendingInvite() async {
                   widget.pendingInviteCode!,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.blue.shade600,
+                    color: AppColors.primary(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -245,16 +231,11 @@ Future<void> _checkForPendingInvite() async {
             icon: Icon(
               Icons.copy_rounded,
               size: 20,
-              color: Colors.blue.shade700,
+              color: AppColors.primary(context),
             ),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: widget.pendingInviteCode!));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Invite code copied to clipboard'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              SnackbarHelper.showInfo(context, 'Invite code copied to clipboard');
             },
             padding: const EdgeInsets.all(4),
           ),
@@ -305,7 +286,7 @@ Future<void> _checkForPendingInvite() async {
     return GradientSheetScaffold(
       title: 'Verify Your Email',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: _signOut,
         tooltip: 'Sign Out',
       ),
@@ -337,7 +318,7 @@ Future<void> _checkForPendingInvite() async {
                         child: Icon(
                           Icons.mark_email_unread_outlined,
                           size: 60,
-                          color: Colors.blue.shade700,
+                          color: AppColors.primary(context),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -406,14 +387,14 @@ Future<void> _checkForPendingInvite() async {
                           borderRadius: BorderRadius.circular(20),
                           gradient: LinearGradient(
                             colors: [
-                              Colors.blue.withValues(alpha: 0.15),
-                              Colors.blue.withValues(alpha: 0.05),
+                              AppColors.primary(context).withValues(alpha: 0.15),
+                              AppColors.primary(context).withValues(alpha: 0.05),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.25),
+                            color: AppColors.primary(context).withValues(alpha: 0.25),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -434,7 +415,7 @@ Future<void> _checkForPendingInvite() async {
                                 Icon(
                                   Icons.info_outline_rounded,
                                   size: 20,
-                                  color: Colors.blue.shade700,
+                                  color: AppColors.primary(context),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -442,7 +423,7 @@ Future<void> _checkForPendingInvite() async {
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.blue.shade800,
+                                    color: AppColors.primary(context),
                                   ),
                                 ),
                               ],
@@ -453,23 +434,23 @@ Future<void> _checkForPendingInvite() async {
                               children: [
                                 _buildFeatureItem(
                                   'Check your email inbox (and spam folder)',
-                                  Colors.blue.shade800,
+                                  AppColors.textSecondary(context),
                                   Icons.email_rounded,
                                 ),
                                 _buildFeatureItem(
                                   'Click the verification link in the email',
-                                  Colors.blue.shade800,
+                                  AppColors.textSecondary(context),
                                   Icons.link_rounded,
                                 ),
                                 _buildFeatureItem(
                                   'Return to app - it will update automatically',
-                                  Colors.blue.shade800,
+                                  AppColors.textSecondary(context),
                                   Icons.autorenew_rounded,
                                 ),
                                 if (widget.pendingInviteCode != null)
                                   _buildFeatureItem(
                                     'After verification, you\'ll join the invited community',
-                                    Colors.blue.shade800,
+                                    AppColors.textSecondary(context),
                                     Icons.group_add_rounded,
                                   ),
                               ],
@@ -572,11 +553,12 @@ Container(
                         child: OutlinedButton(
                           onPressed: _signOut,
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.border(context)),
+                            side: BorderSide(color: AppColors.error(context).withValues(alpha: 0.5), width: 1.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                             ),
                             backgroundColor: AppColors.surface(context),
+                            foregroundColor: AppColors.error(context),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,

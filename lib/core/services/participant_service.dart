@@ -93,27 +93,30 @@ class ParticipantService {
         }
 
         final data = ataMap[eventId];
+        final totalPaid = contributionsB[eventId] ?? 0.0;
+        
+        // Use data from event document if available, otherwise fallback to participant document data
+        final title = data?['title'] ?? participation['eventName'] ?? 'Unknown event';
+        final eventDate = data?['eventDate'] ?? participation['joinedAt'];
+        final eventType = data?['eventType'] ?? 'general';
+        final suggestedContribution = (data?['suggestedContribution'] ?? 0).toDouble();
+        
+        final hasFullyPaid = suggestedContribution > 0 
+            ? totalPaid >= suggestedContribution 
+            : (participation['hasPaidContribution'] ?? false);
 
-        if (data != null) {
-          final suggestedContribution = (data['suggestedContribution'] ?? 0).toDouble();
-          final totalPaid = contributionsB[eventId] ?? 0.0;
-          final hasFullyPaid = suggestedContribution > 0 && totalPaid >= suggestedContribution;
-
-          participationHistory.add({
-            'eventId': eventId,
-            'title': data['title'] ?? 'Unknown event',
-            'eventDate': data['eventDate'],
-            'eventType': data['eventType'] ?? 'general',
-            'joinedAt': participation['joinedAt'],
-            'status': participation['status'] ?? 'joined',
-            'hasPaidContribution': hasFullyPaid,
-            'contributionPaid': totalPaid,
-            'suggestedContribution': suggestedContribution,
-            'communityId': communityId,
-          });
-        } else {
-          debugPrint('⚠️ ParticipantService: event $eventId not found');
-        }
+        participationHistory.add({
+          'eventId': eventId,
+          'title': title,
+          'eventDate': eventDate,
+          'eventType': eventType,
+          'joinedAt': participation['joinedAt'],
+          'status': participation['status'] ?? 'joined',
+          'hasPaidContribution': hasFullyPaid,
+          'contributionPaid': totalPaid,
+          'suggestedContribution': suggestedContribution,
+          'communityId': communityId,
+        });
       }
 
       // Sort by joined date (newest first)
@@ -226,25 +229,31 @@ class ParticipantService {
         }
 
         final data = ataMap[eventId];
-        if (data != null) {
-          final suggestedContribution = (data['suggestedContribution'] ?? 0).toDouble();
-          final totalPaid = contributionsB[eventId] ?? 0.0;
-          final hasFullyPaid = suggestedContribution > 0 && totalPaid >= suggestedContribution;
+        final totalPaid = contributionsB[eventId] ?? 0.0;
+        
+        // Use data from event document if available, otherwise fallback to participant document data
+        final title = data?['title'] ?? participation['eventName'] ?? 'Unknown event';
+        final eventDate = data?['eventDate'] ?? participation['joinedAt'];
+        final eventType = data?['eventType'] ?? 'general';
+        final suggestedContribution = (data?['suggestedContribution'] ?? 0).toDouble();
+        
+        final hasFullyPaid = suggestedContribution > 0 
+            ? totalPaid >= suggestedContribution 
+            : (participation['hasPaidContribution'] ?? false);
 
-          participationHistory.add({
-            'participationId': doc.id,
-            'eventId': eventId,
-            'title': data['title'] ?? 'Unknown event',
-            'eventDate': data['eventDate'],
-            'eventType': data['eventType'] ?? 'general',
-            'joinedAt': participation['joinedAt'],
-            'status': participation['status'] ?? 'joined',
-            'hasPaidContribution': hasFullyPaid,
-            'contributionPaid': totalPaid,
-            'suggestedContribution': suggestedContribution,
-            'progressPercentage': suggestedContribution > 0 ? (totalPaid / suggestedContribution) * 100 : 0,
-          });
-        }
+        participationHistory.add({
+          'participationId': doc.id,
+          'eventId': eventId,
+          'title': title,
+          'eventDate': eventDate,
+          'eventType': eventType,
+          'joinedAt': participation['joinedAt'],
+          'status': participation['status'] ?? 'joined',
+          'hasPaidContribution': hasFullyPaid,
+          'contributionPaid': totalPaid,
+          'suggestedContribution': suggestedContribution,
+          'progressPercentage': suggestedContribution > 0 ? (totalPaid / suggestedContribution) * 100 : 0,
+        });
       }
 
       // Sort by joined date (newest first)

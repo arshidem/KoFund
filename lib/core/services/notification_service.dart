@@ -891,6 +891,9 @@ Future<void> _sendCommunityNotificationLocalFallback({
     int notificationsCreated = 0;
 
     for (final userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      if (userData['isVirtualUser'] == true) continue;
+      
       final userId = userDoc.id;
       final notificationId = '${baseNotificationId}_$userId';
       
@@ -945,6 +948,13 @@ Future<void> sendUserNotification({
 }) async {
   try {
     debugPrint("📨 Sending user notification via Cloud Function");
+    
+    // ✅ Check if target user is virtual to avoid unnecessary DB saves and push notifications
+    final targetDoc = await _firestore.collection('users').doc(userId).get();
+    if (targetDoc.exists && targetDoc.data()?['isVirtualUser'] == true) {
+      debugPrint("🔕 Skipping notification: Target $userId is a virtual user");
+      return;
+    }
     
     // ⭐ NEW: Validate sender has permission to send to this user
     final currentUser = _auth.currentUser;

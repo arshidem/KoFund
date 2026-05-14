@@ -587,13 +587,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider _authProvid
       return;
     }
     
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Text('Leaving community...'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    final scaffoldMessenger = SnackbarHelper.showWarning(context, 'Leaving community...');
 
     final success = await profileProvider.leaveCommunity();
     if (!mounted) return;
@@ -806,9 +800,7 @@ void _showPasswordDialog(ProfileProvider profileProvider) {
                 password: passwordController.text,
               );
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Please enter your password')),
-              );
+              SnackbarHelper.showInfo(context, 'Please enter your password');
             }
           },
           child: const Text('Confirm Delete'),
@@ -844,12 +836,7 @@ Future<void> _attemptAccountDeletion(
     
     if (success) {
       // Account deleted successfully
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Account deleted successfully');
       // Navigate to login screen
       Navigator.pushNamedAndRemoveUntil(
         context, 
@@ -863,13 +850,7 @@ Future<void> _attemptAccountDeletion(
       _showPasswordDialog(profileProvider);
     } else if (e.toString().contains('wrong_password')) {
       // Show wrong password snackbar and reopen password dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Wrong password. Please try again.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      SnackbarHelper.showError(context, 'Wrong password. Please try again.');
       
       // Reopen password dialog after a short delay
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -878,20 +859,10 @@ Future<void> _attemptAccountDeletion(
         }
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Error: ${e.toString()}');
     }
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showError(context, 'Error: ${e.toString()}');
   }
 }
 

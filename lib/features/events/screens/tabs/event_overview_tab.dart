@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
+import '../../../auth/providers/app_auth_provider.dart';
 import '../../models/event_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
 import '../../../expenses/providers/expense_provider.dart';
@@ -14,6 +17,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/milestone_celebration_overlay.dart';
 import '../../../../core/utils/event_report_generator.dart';
 import '../../../community/providers/community_provider.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class EventOverviewTab extends StatefulWidget {
   final EventModel event;
@@ -76,9 +80,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate report: $e')),
-        );
+        SnackbarHelper.showError(context, 'Failed to generate report: $e');
       }
     } finally {
       if (mounted) {
@@ -98,6 +100,10 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final participantProvider = Provider.of<ParticipantProvider>(context);
     final _userService = Provider.of<UserService>(context, listen: false);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    
+    final bool isOrganizer = authProvider.user?.uid == widget.event.createdBy || 
+                           (authProvider.user?.isAdmin ?? false);
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -126,7 +132,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                       participantProvider,
                     ),
                     const SizedBox(height: 16),
-                    _builHeader(context, participantProvider),
+                    _builHeader(context, participantProvider, isOrganizer),
                     const SizedBox(height: 16),
                     _builInfoCard(context, participantProvider, _userService),
                     const SizedBox(height: 16),
@@ -138,16 +144,17 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
             ],
           ),
           
-          // Floating Export Button
+          // Floating Action Buttons (Export & Link)
           Positioned(
             left: 20,
             right: 20,
             bottom: 24,
-            child: _buildExportButton(
+            child: _buildFloatingActions(
               context,
               contributionProvider,
               expenseProvider,
               participantProvider,
+              isOrganizer,
             ),
           ),
         ],
@@ -158,6 +165,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   Widget _builHeader(
     BuildContext context,
     ParticipantProvider participantProvider,
+    bool isOrganizer,
   ) {
     return StreamBuilder<List<ParticipantModel>>(
       stream: participantProvider.streamEventParticipants(widget.event.eventId),
@@ -186,14 +194,21 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                widget.event.title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary(context),
-                  height: 1.3,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.event.title,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary(context),
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               Container(
@@ -527,42 +542,164 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     );
   }
 
-  Widget _buildSummaryMetric(BuildContext context, {required String label, required double value, required IconData icon, bool useWhite = false}) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
+  Widget _buildAdminActions(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: () => _showShareMenu(context),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: useWhite ? Colors.white.withValues(alpha: 0.2) : AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 24, color: useWhite ? Colors.white : AppColors.primary(context)),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '₹${value.toStringAsFixed(0)}', 
-            style: TextStyle(
-              fontSize: 16, 
-              fontWeight: FontWeight.w800, 
-              color: useWhite ? Colors.white : AppColors.textPrimary(context)
+            child: Icon(
+              Icons.link_rounded,
+              size: 20,
+              color: AppColors.primary(context),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label, 
-            style: TextStyle(
-              fontSize: 12, 
-              fontWeight: FontWeight.w600, 
-              color: useWhite ? Colors.white.withValues(alpha: 0.8) : AppColors.textSecondary(context)
+          tooltip: 'Get Web Link',
+        ),
+      ],
+    );
+  }
+
+  void _showShareMenu(BuildContext context) {
+    final String eventLink = 'https://kofund-153ba.web.app/event/${widget.event.eventId}';
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Share Event Link',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary(context),
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Anyone with this link can view the event status on the web.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Link Preview Box
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.background(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border(context)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      eventLink,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary(context),
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: eventLink));
+                      Navigator.pop(context);
+                      SnackbarHelper.showInfo(context, 'Link copied to clipboard!');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary(context),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Copy',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Share to WhatsApp Option
+            ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                Share.share(
+                  'Check out "${widget.event.title}" on KoFund:\n$eventLink',
+                  subject: widget.event.title,
+                );
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF25D366),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+              ),
+              title: const Text('Share via App'),
+              subtitle: const Text('Send to WhatsApp, Email, or other apps'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color textPrimary, Color textSecondary) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: textSecondary.withValues(alpha: 0.6),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -628,24 +765,41 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.account_balance_wallet_rounded, size: 20, color: Colors.white), 
-                            const SizedBox(width: 10), 
-                            const Text(
-                              'Financial Summary', 
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)
-                            ),
-                          ],
+                        Text(
+                          "Financial Summary",
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 8),
+                        Text(
+                          "₹${balanceAamount.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildSummaryMetric(context, label: 'Collected', value: totalCollected, icon: Icons.payments_rounded, useWhite: true),
-                            _buildSummaryMetric(context, label: 'Expenses', value: totalExpenses, icon: Icons.receipt_long_rounded, useWhite: true),
-                            _buildSummaryMetric(context, label: 'Balance', value: balanceAamount, icon: Icons.account_balance_rounded, useWhite: true),
+                            _buildStatItem(
+                              "Total Collected",
+                              "₹${totalCollected.toStringAsFixed(2)}",
+                              Colors.white,
+                              Colors.white.withValues(alpha: 0.7),
+                            ),
+                            _buildStatItem(
+                              "Total Expenses",
+                              "₹${totalExpenses.toStringAsFixed(2)}",
+                              Colors.white,
+                              Colors.white.withValues(alpha: 0.7),
+                            ),
                           ],
                         ),
 
@@ -709,48 +863,89 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     }
   }
 
-  Widget _buildExportButton(
+  Widget _buildFloatingActions(
     BuildContext context,
     ContributionProvider contributionProvider,
     ExpenseProvider expenseProvider,
     ParticipantProvider participantProvider,
+    bool isOrganizer,
   ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: ElevatedButton.icon(
-        onPressed: _isExporting 
-          ? null 
-          : () => _handleExport(
-            contributionProvider: contributionProvider,
-            expenseProvider: expenseProvider,
-            participantProvider: participantProvider,
-          ),
-        icon: _isExporting
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            )
-          : const Icon(Icons.share_rounded, size: 20),
-        label: Text(
-          _isExporting ? 'Generating Report...' : 'Export Event Summary',
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.3,
+    return Row(
+      children: [
+        // Export Button (Main Action)
+        Expanded(
+          flex: isOrganizer ? 4 : 1,
+          child: ElevatedButton.icon(
+            onPressed: _isExporting 
+              ? null 
+              : () => _handleExport(
+                contributionProvider: contributionProvider,
+                expenseProvider: expenseProvider,
+                participantProvider: participantProvider,
+              ),
+            icon: _isExporting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Icon(Icons.share_rounded, size: 20, color: Colors.white),
+            label: Text(
+              _isExporting ? 'Exporting...' : 'Export Event Summary',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              elevation: 6,
+              shadowColor: AppColors.primary(context).withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30), // Fully rounded
+              ),
+            ),
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary(context),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        
+        if (isOrganizer) ...[
+          const SizedBox(width: 12),
+          // Link Button (Admin Action)
+          Container(
+            height: 58, // Match height of Export button
+            width: 58,
+            decoration: BoxDecoration(
+              color: AppColors.primary(context),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary(context).withValues(alpha: 0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showShareMenu(context),
+                borderRadius: BorderRadius.circular(30),
+                child: const Icon(
+                  Icons.link_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 }

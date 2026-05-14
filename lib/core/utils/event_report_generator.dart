@@ -25,7 +25,7 @@ class EventReportGenerator {
     await showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => eportPreviewDialog(
+      builder: (context) => ReportPreviewDialog(
         event: event,
         participants: participants,
         expenses: expenses,

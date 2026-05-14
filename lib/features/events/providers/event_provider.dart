@@ -7,6 +7,7 @@ import 'dart:async';
 import '../models/event_model.dart';
 import 'package:intl/intl.dart';
 import '../../participants/models/participant_model.dart';
+import '../../contributions/models/contribution_model.dart';
 
 class EventProvider with ChangeNotifier {
   final EventService _eventService;
@@ -217,9 +218,22 @@ class EventProvider with ChangeNotifier {
 
   // 📈 NEW: Unified Progress Stream (Handles Monthly vs Global)
   Stream<Map<String, dynamic>> streamProgress(String eventId) {
-    // 1. Get the event first (one-time)
-    return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
-      final doc = await _firestore.collection('events').doc(eventId).get();
+    // 🚀 OPTIMIZATION: Use snapshots to immediately emit locally cached contributions
+    return _firestore
+        .collection('contributions')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .asyncMap((contribSnapshot) async {
+          
+      // Fast local document read for event details
+      final docRef = _firestore.collection('events').doc(eventId);
+      DocumentSnapshot<Map<String, dynamic>> doc;
+      try {
+        doc = await docRef.get(const GetOptions(source: Source.cache));
+      } catch (_) {
+        doc = await docRef.get();
+      }
+
       if (!doc.exists) {
         return {
           'collected': 0.0,
@@ -237,33 +251,41 @@ class EventProvider with ChangeNotifier {
       final maxParticipants = (data['maxParticipants'] ?? 0) as int;
       final isFixedParticipants = (data['participantType'] ?? 'fixed') == 'fixed';
       
+      // Fast local document read for participant count
+      int pCount = (data['currentParticipants'] ?? 0) as int;
+      try {
+        final pSnap = await _firestore.collection('participants').where('eventId', isEqualTo: eventId).get(const GetOptions(source: Source.cache));
+        if (pSnap.docs.isNotEmpty) pCount = pSnap.docs.length;
+      } catch (_) {
+        // Fallback to event document's cached count
+      }
+      
       double collected = 0.0;
       double target = 0.0;
       
       if (isMonthlyy) {
         // --- Monthly Logic ---
         final currentMonthId = DateFormat('yyyy-MM').format(DateTime.now());
-        final monthlyContributions = await _contributionService.getMonthlyContributionsFo(
-          eventId,
-          currentMonthId,
-        );
+        for (var c in contribSnapshot.docs) {
+          final m = c.data();
+          if (m['monthId'] == currentMonthId) {
+            collected += (m['amount'] ?? 0).toDouble();
+          }
+        }
         
-        collected = monthlyContributions.fold(0.0, (sum, c) => sum + c.amount);
-        
-        // Target for current month = participantCount * suggestedAmount
-        // Using participants.length to count joined users
-        final pCount = participants.length; 
         target = suggestedContribution * (pCount > 0 ? pCount : 1);
         
       } else {
         // --- Global Logic ---
-        collected = await _eventService.getTotalContributions(eventId);
+        for (var c in contribSnapshot.docs) {
+          collected += (c.data()['amount'] ?? 0).toDouble();
+        }
         
         if (totalAmount > 0) {
           target = totalAmount;
         } else {
-          final pCount = isFixedParticipants ? maxParticipants : participants.length;
-          target = suggestedContribution * (pCount > 0 ? pCount : 1);
+          final usedCount = isFixedParticipants ? maxParticipants : pCount;
+          target = suggestedContribution * (usedCount > 0 ? usedCount : 1);
         }
       }
       
@@ -273,7 +295,7 @@ class EventProvider with ChangeNotifier {
         'collected': collected,
         'target': target,
         'percentage': percentage,
-        'participantCount': participants.length,
+        'participantCount': pCount,
         'isMonthlyy': isMonthlyy,
         'monthId': isMonthlyy ? DateFormat('yyyy-MM').format(DateTime.now()) : null,
       };
@@ -302,12 +324,19 @@ class EventProvider with ChangeNotifier {
   // 📊 NEW: Full Financial Summary Stream
   Stream<Map<String, dynamic>> streamFinancialSummary(String eventId) {
     return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
-      final doc = await _firestore.collection('events').doc(eventId).get();
-      final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
+      final futures = await Future.wait([
+        _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
+        _contributionService.getContributions(eventId),
+        _eventService.getTotalExpenses(eventId),
+      ]);
       
-      final allContributionsForCount = await _contributionService.getContributions(eventId);
+      final doc = futures[0] as DocumentSnapshot;
+      final allContributionsForCount = futures[1] as List<ContributionModel>;
+      final totalExpenses = futures[2] as double;
+      
+      final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
+      
       final totalContributions = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0.0));
-      final totalExpenses = await _eventService.getTotalExpenses(eventId);
       
       int paidParticipants = 0;
       for (final p in participants) {
@@ -336,11 +365,13 @@ class EventProvider with ChangeNotifier {
 
   Future<void> create(EventModel event, {bool sendNotification = true}) async {
     try {
-      final eventId = await _eventService.create(event, sendNotification: sendNotification);
+      await _eventService.create(event, sendNotification: sendNotification);
       
-      // ✅ Invalidate cache and reload to ensure the new event shows up immediately
+      // ✅ Invalidate cache to ensure the new event shows up on next refresh
       _listCache.remove(event.communityId);
-      await loadEvents(event.communityId, forceRefresh: true);
+      
+      // 🚀 OPTIMIZATION: Trigger reload in background so the UI can close immediately
+      loadEvents(event.communityId, forceRefresh: true);
     } catch (e) {
       rethrow;
     }
@@ -461,6 +492,7 @@ class EventProvider with ChangeNotifier {
       final participant = ParticipantModel(
         participantId: '', 
         eventId: event.eventId,
+        eventName: event.title,
         userId: userId,
         userName: userName,
         userEmail: userEmail,
@@ -529,9 +561,14 @@ class EventProvider with ChangeNotifier {
       if (participants.isEmpty) return [];
       
       try {
-        final doc = await _firestore.collection('events').doc(eventId).get();
-        final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
-        final allContributions = await _contributionService.getContributions(eventId);
+        final futures = await Future.wait([
+          _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
+          _contributionService.getContributions(eventId),
+        ]);
+        
+        final doc = futures[0] as DocumentSnapshot;
+        final allContributions = futures[1] as List<ContributionModel>;
+        final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
         
         final Map<String, double> userPaidMap = {};
         for (final contribution in allContributions) {
@@ -628,6 +665,12 @@ class EventProvider with ChangeNotifier {
     List<DateTime>? contributionReminderDates,
     DateTime? firstPaymentDueDate,
     DateTime? nextReminderDate,
+    String? customReminderTitle,
+    String? customReminderMessage,
+    bool? enableReminderRetries,
+    int? retryDaysAfter,
+    bool? enableAdminEscalation,
+    int? escalationDaysAfter,
   }) async {
     try {
       await _eventService.updateReminderSettings(
@@ -638,6 +681,12 @@ class EventProvider with ChangeNotifier {
         contributionReminderDates: contributionReminderDates,
         firstPaymentDueDate: firstPaymentDueDate,
         nextReminderDate: nextReminderDate,
+        customReminderTitle: customReminderTitle,
+        customReminderMessage: customReminderMessage,
+        enableReminderRetries: enableReminderRetries,
+        retryDaysAfter: retryDaysAfter,
+        enableAdminEscalation: enableAdminEscalation,
+        escalationDaysAfter: escalationDaysAfter,
       );
       notifyListeners();
     } catch (e) {
@@ -689,10 +738,15 @@ class EventProvider with ChangeNotifier {
   Stream<Map<String, dynamic>> streamMonthlyFinancialSummary(String eventId, String monthId) {
     return streamParticipantsWithMonthlyContributions(eventId, monthId)
         .asyncMap((participants) async {
-      final doc = await _firestore.collection('events').doc(eventId).get();
-      final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
       
-      final monthlyContributions = await _contributionService.getMonthlyContributionsFo(eventId, monthId);
+      final futures = await Future.wait([
+        _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
+        _contributionService.getMonthlyContributionsFo(eventId, monthId),
+      ]);
+      
+      final doc = futures[0] as DocumentSnapshot;
+      final monthlyContributions = futures[1] as List<ContributionModel>;
+      final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
       
       int paidParticipants = 0;
       double totalCollected = 0.0;

@@ -45,6 +45,7 @@ import 'package:kofund/features/notifications/widgets/announcement_on_open_modal
 import 'package:kofund/features/notifications/widgets/app_update_dialog.dart';
 import 'package:kofund/core/services/app_update_service.dart';
 import 'package:kofund/features/notifications/services/announcement_service.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 // 🆕 ADD INVITE IMPORTS
 
@@ -393,12 +394,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     if (!mounted) return;
     
     if (cid == null || cid.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No community found'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'No community found');
       return;
     }
     
@@ -436,12 +432,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Error: $e');
     } finally {
       setState(() {
         _inviteLoading = false;
@@ -457,13 +448,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     await FlutterClipboard.copy(_inviteCode);
     if (!mounted) return;
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invite code copied to clipboard!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, 'Invite code copied to clipboard!');
   }
 
   // 🆕 Copy invite link to clipboard
@@ -473,13 +458,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
     await FlutterClipboard.copy(_inviteLink);
     if (!mounted) return;
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invite link copied to clipboard!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    SnackbarHelper.showSuccess(context, 'Invite link copied to clipboard!');
   }
 
   // 🆕 Navigate to edit community screen
@@ -535,13 +514,13 @@ void _initializeWidgetProviders(String userId, String communityId) {
     );
   }
 
-  Widget _buildNotificationIconButton(BuildContext context) {
+  Widget _buildNotificationIconButton(BuildContext context, {double size = 52, double iconSize = 20}) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Consumer<NotificationProvider>(
       builder: (context, provider, child) {
         return Container(
-          width: 52,
-          height: 52,
+          width: size,
+          height: size,
           decoration: const BoxDecoration(
             color: Colors.transparent,
             shape: BoxShape.circle,
@@ -570,11 +549,11 @@ void _initializeWidgetProviders(String userId, String communityId) {
                     padding: const EdgeInsets.all(4),
                     elevation: 0,
                   ),
-                  position: badges.BadgePosition.topEnd(top: -6, end: -6),
+                  position: badges.BadgePosition.topEnd(top: size == 52 ? -6 : -8, end: size == 52 ? -6 : -8),
                     child: Icon(
                       Icons.notifications_outlined,
                       color: isDark ? Colors.white : AppColors.textPrimary(context),
-                      size: 20,
+                      size: iconSize,
                     ),
                 ),
               ),
@@ -745,6 +724,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
                     
                     MembersWidget(
                       key: ValueKey('members-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
+                      onSeeAll: widget.onNavigateToMembers,
                     ),
                   ],
                   
@@ -861,9 +841,10 @@ void _initializeWidgetProviders(String userId, String communityId) {
       ),
       actions: [
         Padding(
-          padding: const EdgeInsets.only(right: 16.0),
+          padding: const EdgeInsets.only(bottom: 16.0),
           child: _buildNotificationIconButton(context),
         ),
+        const SizedBox(width: 8),
       ],
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
@@ -874,9 +855,13 @@ void _initializeWidgetProviders(String userId, String communityId) {
           final double expandRatio = ((constraints.maxHeight - collapsedHeight) / 
               (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
 
-           // Smoother linear cross-fade curves
-          final double expandedOpacity = expandRatio.clamp(0.0, 1.0);
-          final double collapsedOpacity = (1.0 - expandRatio).clamp(0.0, 1.0);
+          // Expanded content: visible until ratio drops below 0.6, then fades quickly
+          // (mapped from [0.6 → 0.0] to opacity [1.0 → 0.0])
+          final double expandedOpacity = ((expandRatio - 0.0) / 0.6).clamp(0.0, 1.0);
+
+          // Collapsed content: only starts appearing in the last 25% of travel
+          // (mapped from [0.25 → 0.0] ratio to opacity [0.0 → 1.0])
+          final double collapsedOpacity = (1.0 - (expandRatio / 0.25)).clamp(0.0, 1.0);
           
           final String providerClubName = stats['clubName']?.toString().trim() ?? '';
           final bool hasProviderName = providerClubName.isNotEmpty;
@@ -922,13 +907,29 @@ void _initializeWidgetProviders(String userId, String communityId) {
                           children: [
                             showNameShimmer
                                 ? _buildShimmerText(isDarkMode, 120, 18)
-                                : Text(
-                                    clubName,
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDarkMode ? Colors.white : AppColors.textPrimary(context),
-                                    ),
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        clubName,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDarkMode ? Colors.white : AppColors.textPrimary(context),
+                                        ),
+                                      ),
+                                      if (isAdmin) ...[
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: _navigateToEditCommunity,
+                                          child: Icon(
+                                            Icons.edit_rounded,
+                                            size: 14,
+                                            color: isDarkMode ? Colors.white.withValues(alpha: 0.7) : AppColors.textPrimary(context).withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                             Text(
                               "${stats['membersCount'] ?? 0} Members",

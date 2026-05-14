@@ -82,6 +82,27 @@ String? extractWebInviteCode() {
   }
   return null;
 }
+
+// ✨ Extract event ID from web URL
+String? extractWebEventId() {
+  if (!kIsWeb) return null;
+  try {
+    final qp = Uri.base.queryParameters['eventId'];
+    if (qp != null && qp.isNotEmpty) {
+      debugPrint('🎯 Web Event ID (query): $qp');
+      return qp;
+    }
+
+    final segments = Uri.base.pathSegments.where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2 && segments[0] == 'event') {
+      debugPrint('🎯 Web Event ID (path): ${segments[1]}');
+      return segments[1];
+    }
+  } catch (e) {
+    debugPrint('⚠️ extractWebEventId error: $e');
+  }
+  return null;
+}
 // =============================
 // 🚀 MAIN() - FIXED VERSION
 // =============================
@@ -140,7 +161,7 @@ void main() async {
   }
 
   // Initialize Storage & Migration
-  await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
   await SecureStorageService().migrateFromSharedPrefs([
     'kofund_auth_state',
     'kofund_user_data',
@@ -148,6 +169,11 @@ void main() async {
     'cached_community'
   ]);
   if (kDebugMode) debugPrint('✅ Storage migrated/initialized');
+
+  // ⭐ KEY FIX: Read the saved theme before runApp so the first frame
+  // is already in the correct theme — eliminates the white flash.
+  final bool initialDarkMode = prefs.getBool('isDarkMode') ?? false;
+  if (kDebugMode) debugPrint('🎨 Initial theme: ${initialDarkMode ? "dark" : "light"}');
 
   // Register Background FCM Handler
   FirebaseMessaging.onBackgroundMessage(
@@ -193,9 +219,9 @@ void main() async {
     );
   };
 
-  // Run app
+  // Run app — pass initialDarkMode so first frame uses correct theme
   runZonedGuarded(() {
-    runApp(const AppProviders());
+    runApp(AppProviders(initialDarkMode: initialDarkMode));
   }, (error, stackTrace) {
     if (kDebugMode) {
       debugPrint('🐛 Dart Error: $error');
@@ -265,27 +291,8 @@ class FirebaseInitializationWrapper extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: Scaffold(
-              backgroundColor: const Color(0xFFF8F9FA),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Initializing app...',
-                      style: TextStyle(color: Colors.black87, fontSize: 16),
-                    ),
-                    const SizedBox(height: 10),
-                    if (snapshot.hasError)
-                      Text(
-                        'Error: ${snapshot.error}',
-                        style: const TextStyle(color: Colors.red, fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                  ],
-                ),
-              ),
+              backgroundColor: Colors.transparent,
+              body: const SizedBox.shrink(),
             ),
           );
         }
@@ -294,7 +301,6 @@ class FirebaseInitializationWrapper extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             home: Scaffold(
-              backgroundColor: const Color(0xFFF8F9FA),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -303,7 +309,7 @@ class FirebaseInitializationWrapper extends StatelessWidget {
                     const SizedBox(height: 20),
                     const Text(
                       'Firebase Initialization Failed',
-                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                      style: TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -318,7 +324,6 @@ class FirebaseInitializationWrapper extends StatelessWidget {
                           await Firebase.initializeApp(
                             options: DefaultFirebaseOptions.currentPlatform,
                           );
-                          // Restart app by pushing new MaterialApp
                           runApp(const AppProviders());
                         } catch (e) {
                           debugPrint('Retry failed: $e');
@@ -351,7 +356,8 @@ class FirebaseInitializationWrapper extends StatelessWidget {
 }
 
 class AppProviders extends StatefulWidget {
-  const AppProviders({super.key});
+  final bool initialDarkMode;
+  const AppProviders({super.key, this.initialDarkMode = false});
 
   @override
   State<AppProviders> createState() => _AppProvidersState();
@@ -386,6 +392,15 @@ class _AppProvidersState extends State<AppProviders> {
       debugPrint('💾 Storing invite code for later use: $_webInviteCode');
       // Save to SharedPreferences for use throughout app
       _saveWebInviteCode(_webInviteCode!);
+    }
+    
+    // 🎯 Extract web event ID early
+    final webEventId = extractWebEventId();
+    if (webEventId != null) {
+      debugPrint('💾 Storing event ID for later use: $webEventId');
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('pending_event_id', webEventId);
+      });
     }
     
     // Initialize services
@@ -474,13 +489,18 @@ class _AppProvidersState extends State<AppProviders> {
   
   @override
   Widget build(BuildContext context) {
-    // Show loading screen while auth provider initializes
+    final bool isDark = widget.initialDarkMode;
+    // Show a theme-matched loading screen while auth provider initializes.
+    // Using the correct background prevents any white flash in dark mode.
     if (!_isAuthInitialized) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
         home: Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA), // Match system light bg
-          body: Container(),
+          backgroundColor: isDark
+              ? AppColors.darkBackground  // 0xFF0B0E11
+              : AppColors.lightBackground, // 0xFFF8F9FA
+          body: const SizedBox.shrink(),
         ),
       );
     }
@@ -647,9 +667,9 @@ ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
   create: (_) => VirtualUserProvider(VirtualUserService()),
 ),
 
-        // 🌗 Theme Provider
+        // 🌗 Theme Provider — seeded with the initial value read before runApp
         ChangeNotifierProvider(
-          create: (_) => ThemeProvider(),
+          create: (_) => ThemeProvider(initialDarkMode: widget.initialDarkMode),
         ),
       ],
       child: const MyApp(),
@@ -699,6 +719,13 @@ void _handleDdeepLink(Uri uri) {
   // Handle ANY kofund:// URL with a code parnameter
   // Supports both: kofund:///join-community?code=... and kofund://join?code=...
   if (uri.scheme == 'kofund') {
+    final eventId = uri.queryParameters['eventId'];
+    if (eventId != null && eventId.isNotEmpty) {
+      debugPrint('✅ Found event ID from kofund:// URL: $eventId');
+      _navigateToSplashWithEvent(eventId);
+      return;
+    }
+
     inviteCode = uri.queryParameters['code'];
     if (inviteCode != null && inviteCode.isNotEmpty) {
       debugPrint('✅ Found invite code from kofund:// URL: $inviteCode');
@@ -709,6 +736,24 @@ void _handleDdeepLink(Uri uri) {
   
   // Handle web links
   if (uri.scheme == 'https' && uri.host.contains('kofund')) {
+    // Event deep link: https://kofund-153ba.web.app/event/12345
+    if (uri.path.startsWith('/event/')) {
+      final segments = uri.path.split('/');
+      if (segments.length >= 3) {
+        final eventId = segments[2];
+        debugPrint('✅ Found event ID from web URL: $eventId');
+        _navigateToSplashWithEvent(eventId);
+        return;
+      }
+    }
+    
+    final qpEventId = uri.queryParameters['eventId'];
+    if (qpEventId != null && qpEventId.isNotEmpty) {
+      debugPrint('✅ Found event ID from web query URL: $qpEventId');
+      _navigateToSplashWithEvent(qpEventId);
+      return;
+    }
+
     // Format 1: https://kofund-153ba.web.app/join/CUOVUA3H
     if (uri.path.startsWith('/join/')) {
       final segments = uri.path.split('/');
@@ -756,6 +801,29 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
   });
 }
 
+void _navigateToSplashWithEvent(String? eventId) async {
+  if (eventId == null || eventId.isEmpty) return;
+  
+  debugPrint('📍 Navigating to splash screen with event id: $eventId');
+  
+  // Save to storage as backup
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('pending_event_id', eventId);
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (navigatorKey.currentState == null) {
+      debugPrint('❌ Navigator not ready yet');
+      return;
+    }
+    
+    navigatorKey.currentState!.pushNamedAndRemoveUntil(
+      '/',
+      (route) => false,
+      arguments: {'eventId': eventId},
+    );
+  });
+}
+
 
   @override
   void dispose() {
@@ -783,7 +851,6 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
           child: Stack(
             children: [
               child ?? const SizedBox.shrink(),
-              const GlobalThemeToggle(),
             ],
           ),
         );

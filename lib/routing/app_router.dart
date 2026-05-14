@@ -63,15 +63,19 @@ class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case RouteNames.splash:
-  // Check if arguments contain invite code (from deep link)
+  // Check if arguments contain invite code/event id (from deep link)
   if (settings.arguments != null && settings.arguments is Map) {
     final args = settings.arguments as Map<String, dynamic>;
     final inviteCode = args['inviteCode'] as String?;
+    final eventId = args['eventId'] as String?;
     
-    if (inviteCode != null) {
-      // Create a SplashScreen with invite code
+    if (inviteCode != null || eventId != null) {
+      // Create a SplashScreen with invite code or event id
       return MaterialPageRoute(
-        builder: (_) => SplashScreen(deepLinkInviteCode: inviteCode),
+        builder: (_) => SplashScreen(
+          deepLinkInviteCode: inviteCode, 
+          deepLinkEventId: eventId,
+        ),
       );
     }
   }

@@ -15,6 +15,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/features/events/providers/event_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:intl/intl.dart';
 import 'package:kofund/features/contributions/providers/contribution_provider.dart';
 import 'package:kofund/features/events/utils/contribution_receipt_image.dart';
 
@@ -148,6 +149,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       final participant = ParticipantModel(
         participantId: '',
         eventId: eventId,
+        eventName: event.title,
         userId: currentUser.uid,
         userName: currentUser.displayName ?? 'User',
         userEmail: currentUser.email,
@@ -217,8 +219,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       title: 'Notification',
       actions: [
         IconButton(
-          icon: const Icon(Icons.delete_outline_rounded,
-              color: Colors.white, size: 22),
+          icon: Icon(Icons.delete_outline_rounded,
+              color: AppColors.textPrimary(context), size: 22),
           onPressed: () => _confirmDelete(context, provider, notification.id),
         ),
       ],
@@ -278,7 +280,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              notification.timeAgo,
+              DateFormat('MMM d, yyyy • h:mm a').format(notification.timestamp),
               style: TextStyle(
                 color: AppColors.textPrimary(context).withValues(alpha: 0.5),
                 fontSize: 14,

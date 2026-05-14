@@ -15,6 +15,7 @@ import '../../../features/contributions/providers/contribution_provider.dart'; /
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/skeleton/member_list_skeleton.dart';
+import '../../../../core/utils/snackbar_helper.dart';
 class AddContributionModal extends StatefulWidget {
   final String? preSelectedeventId;
   final String? preSelectedeventName;
@@ -1645,23 +1646,13 @@ Future<void> _submitContribution() async {
 
   // Validate required fields
   if (_selectedEvent == null || _selectedUser == null || _aamount <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please fill all required fields'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showKoFundSnackbar(context, 'Please fill all required fields', backgroundColor: AppColors.error(context));
     return;
   }
   
   // Validate month selection for monthly events
   if (_isMonthlyEvent && (_selectedMonth == null || _selectedMonth!.isEmpty)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please select month for monthly contribution'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showKoFundSnackbar(context, 'Please select month for monthly contribution', backgroundColor: AppColors.error(context));
     return;
   }
 
@@ -1675,6 +1666,7 @@ Future<void> _submitContribution() async {
     final contribution = ContributionModel(
       contributionId: '', // Will be set by Firestore
       eventId: _selectedEvent!.eventId,
+      eventName: _selectedEvent!.title,
       userId: _selectedUser!.uid, // Who contributed
       contributorName: _selectedUser!.displayName ?? 'Unknown',
       communityId: _selectedEvent!.communityId,
@@ -1688,29 +1680,19 @@ Future<void> _submitContribution() async {
       createdAt: Timestamp.now(),
     );
 
-    // Use Provider to add contribution
+    // Use Provider to add contribution in background
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
-    await contributionProvider.addContribution(contribution);
-    
-    if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Contribution added successfully!'),
-        backgroundColor: AppColors.primary(context),
-      ),
-    );
+    contributionProvider.addContribution(contribution); // Start save process
 
-    if (mounted) Navigator.pop(context); // Close modal
+    // Show success message immediately
+    SnackbarHelper.showKoFundSnackbar(context, 'Contribution added successfully!');
+    
+    // Close modal instantly
+    Navigator.pop(context);
+
   } catch (e) {
     if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error adding contribution: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    SnackbarHelper.showKoFundSnackbar(context, 'Error adding contribution: $e', backgroundColor: AppColors.error(context));
   } finally {
     if (mounted) {
       setState(() => _isSubmitting = false);

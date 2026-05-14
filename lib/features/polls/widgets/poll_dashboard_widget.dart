@@ -7,6 +7,7 @@ import 'package:kofund/features/polls/screens/create_poll_screen.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/polls/screens/poll_details_screen.dart';
 import 'dart:async';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class PollDashboardWidget extends StatefulWidget {
   final String communityId;
@@ -377,23 +378,13 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
     final pollProvider = context.read<PollProvider>();
     
     if (_authProvider.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please login to vote'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Please login to vote');
       return;
     }
     
     // Check if user can vote
     if (!pollProvider.canUserVote(poll.pollId, _authProvider.user!.uid)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('You cannot vote on this poll'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      SnackbarHelper.showWarning(context, 'You cannot vote on this poll');
       return;
     }
     
@@ -406,31 +397,13 @@ class _PollDashboardWidgetState extends State<PollDashboardWidget> {
       
       if (success) {
         // The stream will automatically update in real-time
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: poll.allowVoteChange 
-                ? Text('Vote submitted! You can change it until the poll ends.')
-                : Text('Vote submitted! This vote is final and cannot be changed.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        SnackbarHelper.showSuccess(context, 'Vote submitted! You can change it until the poll ends.');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit vote'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        SnackbarHelper.showError(context, 'Failed to submit vote');
       }
     } catch (e) {
       debugPrint('Error casting vote: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to vote: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      SnackbarHelper.showError(context, 'Failed to vote: ${e.toString()}');
     }
   }
 }
@@ -832,24 +805,12 @@ class __InstagramPollCardState extends State<_InstagramPollCard> with TickerProv
                         canUserVote: widget.canUserVote,
                         onTap: () async {
                           if (votesLocked) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Votes are locked for this poll. You cannot change your vote.'),
-                                backgroundColor: Colors.orange,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
+                            SnackbarHelper.showWarning(context, 'Votes are locked for this poll. You cannot change your vote.');
                             return;
                           }
                           
                           if (!widget.canUserVote) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('You cannot vote on this poll'),
-                                backgroundColor: Colors.orange,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
+                            SnackbarHelper.showWarning(context, 'You cannot vote on this poll');
                             return;
                           }
                           

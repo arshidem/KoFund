@@ -447,7 +447,14 @@ exports.sendCommunityNotification = onCall(
         .where('isApproved', '==', true)
         .get();
 
+      // Create a map of member IDs to their data for quick role lookups
+      const memberDataMap = new Map();
+      for (const doc of communityMembersSnapshot.docs) {
+        memberDataMap.set(doc.id, doc.data());
+      }
+
       console.log(`👥 Found ${communityMembersSnapshot.size} approved members in users collection`);
+      if (targetRole) console.log(`🎯 Filtering by targetRole: ${targetRole}`);
 
       // Collect tokens and user info
       const allTokens = [];
@@ -461,6 +468,12 @@ exports.sendCommunityNotification = onCall(
         const userId = tData.userId;
         
         if (userId === auth.uid) continue; // Skip sender
+        
+        // Filter by role if specified
+        if (targetRole) {
+          const mData = memberDataMap.get(userId);
+          if (!mData || mData.role !== targetRole) continue;
+        }
         
         if (typeof token === 'string' && token.length >= 50) {
           allTokens.push(token);
@@ -476,6 +489,9 @@ exports.sendCommunityNotification = onCall(
 
         // Skip handled or invalid cases
         if (userId === auth.uid || userData.isVirtualUser === true) continue;
+        
+        // Filter by role if specified
+        if (targetRole && userData.role !== targetRole) continue;
 
         // Collect all FCM tokens for this user
         const fcmTokens = userData.fcmTokens || [];

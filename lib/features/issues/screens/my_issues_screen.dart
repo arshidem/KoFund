@@ -628,54 +628,68 @@ String _getTimeAgo(Timestamp timestamp) {
   }
 
   Widget _buildSliverAppBar(BuildContext context, IssueProvider issueProvider) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: 190,
+      toolbarHeight: 60,
       floating: false,
       pinned: true,
       stretch: true,
       elevation: 0,
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(
+          Icons.arrow_back, 
+          color: isDark ? Colors.white : AppColors.textPrimary(context),
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
-          // Calculate scale factor (0.0 to 1.0)
-          // Expanded is 220, Collapsed is toolbarHeight (around 140 with bottom)
-          final double maxHeight = 220.0;
-          final double currentHeight = top;
+          final double maxHeight = 190.0 + statusBarHeight;
+          final double collapsedHeight = 60.0 + (72 + 18) + statusBarHeight;
           
-          // Normalized progress: 0.0 at collapsed (~140), 1.0 at expanded (220)
-          final double progress = ((currentHeight - 140) / (maxHeight - 140)).clamp(0.0, 1.0);
-          
-          final double fontSize = 18 + (4 * progress); // 18 to 22 scaling
+          final double progress = ((top - collapsedHeight) / (maxHeight - collapsedHeight)).clamp(0.0, 1.0);
+          final double titleFontSize = 20 + (4 * progress);
+          final double titleTop = statusBarHeight + 10 + (25 * progress);
           
           return Stack(
             fit: StackFit.expand,
             children: [
               Container(
                 decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient(context),
+                  gradient: isDark 
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF1A2E2E),
+                            Color(0xFF0D1B1A),
+                          ],
+                        )
+                      : null,
+                  color: isDark ? null : AppColors.background(context),
                 ),
               ),
               
-              FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground],
-                centerTitle: true,
-                titlePadding: const EdgeInsets.only(
-                  bottom: 100 + 10, // Adjusted for stats (72) + rounded (28) height
-                ),
-                title: Text(
-                  'My Issues',
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: -0.5 - (0.5 * progress),
+              // Title centered horizontally, but moving vertically
+              Positioned(
+                top: titleTop,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'My Issues',
+                    style: TextStyle(
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : AppColors.textPrimary(context),
+                      letterSpacing: -0.5 - (0.5 * progress),
+                    ),
                   ),
                 ),
               ),
@@ -684,22 +698,31 @@ String _getTimeAgo(Timestamp timestamp) {
         },
       ),
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(72 + 28),
+        preferredSize: const Size.fromHeight(72 + 18),
         child: Column(
           children: [
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppDimensions.screenPaddingHorizontal),
               child: _buildStatsRow(issueProvider),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 0),
             Container(
               height: 28,
               decoration: BoxDecoration(
                 color: AppColors.background(context),
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: isDark ? 0.15 : 0.08,
+                    ),
+                    offset: const Offset(0, -4),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
             ),
           ],
@@ -709,12 +732,20 @@ String _getTimeAgo(Timestamp timestamp) {
   }
 
   Widget _buildStatsRow(IssueProvider issueProvider) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color statsBg = isDark 
+        ? Colors.white.withValues(alpha: 0.12) 
+        : AppColors.primary(context).withValues(alpha: 0.08);
+    final Color statsBorder = isDark 
+        ? Colors.white.withValues(alpha: 0.2) 
+        : AppColors.primary(context).withValues(alpha: 0.15);
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: statsBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: statsBorder),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -723,12 +754,20 @@ String _getTimeAgo(Timestamp timestamp) {
             value: issueProvider.myIssues.length.toString(),
             label: 'Total',
           ),
-          Container(height: 24, width: 1, color: Colors.white24),
+          Container(
+            height: 24, 
+            width: 1, 
+            color: isDark ? Colors.white24 : AppColors.primary(context).withValues(alpha: 0.1),
+          ),
           _buildCompactStatItem(
             value: issueProvider.myIssues.where((i) => i.isPending).length.toString(),
             label: 'Pending',
           ),
-          Container(height: 24, width: 1, color: Colors.white24),
+          Container(
+            height: 24, 
+            width: 1, 
+            color: isDark ? Colors.white24 : AppColors.primary(context).withValues(alpha: 0.1),
+          ),
           _buildCompactStatItem(
             value: issueProvider.myIssues.where((i) => i.isResolved).length.toString(),
             label: 'Resolved',
@@ -739,22 +778,24 @@ String _getTimeAgo(Timestamp timestamp) {
   }
 
   Widget _buildCompactStatItem({required String value, required String label}) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: isDark ? Colors.white : AppColors.primary(context),
           ),
         ),
         Text(
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.8),
+            color: isDark ? Colors.white.withValues(alpha: 0.8) : AppColors.textSecondary(context),
             fontWeight: FontWeight.w500,
           ),
         ),

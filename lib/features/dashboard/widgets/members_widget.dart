@@ -10,8 +10,11 @@ import 'package:kofund/features/members/screens/all_members_screen.dart';
 import 'package:kofund/features/members/screens/member_profile_screen.dart';
 
 class MembersWidget extends StatefulWidget {
+  final VoidCallback? onSeeAll;
+  
   const MembersWidget({
     super.key,
+    this.onSeeAll,
   });
 
   @override
@@ -293,7 +296,13 @@ class _MembersWidgetState extends State<MembersWidget> {
                 if (members.length >= 3 && user != null)
                   InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () => _navigateToAllMembers(context),
+                    onTap: () {
+                      if (widget.onSeeAll != null) {
+                        widget.onSeeAll!();
+                      } else {
+                        _navigateToAllMembers(context);
+                      }
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Text(

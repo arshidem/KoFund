@@ -379,26 +379,25 @@ Widget build(BuildContext context) {
                   children: [
                     // Logo with rounded background
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary(context).withValues(alpha: 0.3),
-                            blurRadius: 12,
+                            blurRadius: 15,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
+                        child: ClipOval(
                           child: Image.asset(
-                            'assets/logos/KoFund.png', // Your logo path
-                            height: 70,
-                            width: 70,
+                            'assets/logos/KoFund.png',
+                            height: 80,
+                            width: 80,
                             fit: BoxFit.contain,
                           ),
                         ),

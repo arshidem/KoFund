@@ -884,9 +884,7 @@ Widget _builCard(
                                   ),
                                 ),
                                 if (widget.isAdmin)
-                                  _buildAdminMenu(event, eventProvider)
-                                else if (!event.isMonthlyPayment)
-                                  _buildStatusBadge(event, progress, daysLeft ?? 0),
+                                  _buildAdminMenu(event, eventProvider),
                               ],
                             ),
                             const SizedBox(height: 16),

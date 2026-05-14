@@ -10,6 +10,7 @@ import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/providers/theme_provider.dart';
 import 'dart:async';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class CreatePollScreen extends StatefulWidget {
   final String communityId;
@@ -64,9 +65,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         // Handle case where pollToEdit is null but isEditing is true
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Poll data not found')),
-            );
+            SnackbarHelper.showInfo(context, 'Poll data not found');
             Navigator.pop(context);
           }
         });
@@ -170,16 +169,12 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     if (picked != null && picked != _selectedDate) {
       // Ensure selected date is not in the past
       if (picked.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('End date cannot be in the past')),
-        );
+        SnackbarHelper.showInfo(context, 'End date cannot be in the past');
         return;
       }
       // Validation for too far in future
       if (picked.isAfter(maxDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('End date cannot be more than 1 year in the future')),
-        );
+        SnackbarHelper.showInfo(context, 'End date cannot be more than 1 year in the future');
         return;
       }
       setState(() {
@@ -246,25 +241,19 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     }
 
     if (options.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least 2 options')),
-      );
+      SnackbarHelper.showInfo(context, 'Please add at least 2 options');
       return;
     }
 
     final uniqueOptions = options.toSet();
     if (uniqueOptions.length != options.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Options must be unique')),
-      );
+      SnackbarHelper.showInfo(context, 'Options must be unique');
       return;
     }
 
     // Validate event selection when not community-wide
     if (!_isCommunityWide && (_selectedeventId == null || _selectedeventId!.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a event')),
-      );
+      SnackbarHelper.showInfo(context, 'Please select a event');
       return;
     }
 
@@ -301,14 +290,10 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         if (!mounted) return;
 
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Poll updated successfully')),
-          );
+          SnackbarHelper.showSuccess(context, 'Poll updated successfully');
           Navigator.pop(context, true); // Return true to indicate success
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update poll')),
-          );
+          SnackbarHelper.showError(context, 'Failed to update poll');
         }
       } else {
         // Create new poll
@@ -328,20 +313,14 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         );
 
         if (poll != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Poll created successfully')),
-          );
+          SnackbarHelper.showSuccess(context, 'Poll created successfully');
           Navigator.pop(context, true); // Return true to indicate success
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to create poll')),
-          );
+          SnackbarHelper.showError(context, 'Failed to create poll');
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      SnackbarHelper.showError(context, 'Error: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -844,9 +823,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                 final percent = int.tryParse(value);
                 // Validate percentage range
                 if (percent != null && (percent < 1 || percent > 100)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a value between 1 and 100')),
-                  );
+                  SnackbarHelper.showInfo(context, 'Please enter a value between 1 and 100');
                   _minParticipationPercent = null;
                 } else {
                   _minParticipationPercent = percent;

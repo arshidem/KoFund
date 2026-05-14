@@ -29,6 +29,17 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   bool _enableReminders = false;
   bool _isSendingReminder = false;
   late ReminderService _reminderService;
+  
+  final TextEditingController _customTitleController = TextEditingController();
+  final TextEditingController _customMessageController = TextEditingController();
+  
+  bool _enableRetries = false;
+  final TextEditingController _retryDaysController = TextEditingController();
+  final FocusNode _retryDaysFocus = FocusNode();
+  
+  bool _enableEscalation = false;
+  final TextEditingController _escalationDaysController = TextEditingController();
+  final FocusNode _escalationDaysFocus = FocusNode();
 
   @override
   void initState() {
@@ -37,6 +48,12 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     _enableReminders = _event.enableAutoReminders;
     _selectedFrequency = _event.reminderFrequency;
     _daysController.text = _event.reminderDaysBefore.toString();
+    _customTitleController.text = _event.customReminderTitle ?? '';
+    _customMessageController.text = _event.customReminderMessage ?? '';
+    _enableRetries = _event.enableReminderRetries;
+    _retryDaysController.text = _event.retryDaysAfter.toString();
+    _enableEscalation = _event.enableAdminEscalation;
+    _escalationDaysController.text = _event.escalationDaysAfter.toString();
     _reminderService = ReminderService();
   }
 
@@ -44,68 +61,16 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   void dispose() {
     _daysController.dispose();
     _daysFocus.dispose();
+    _customTitleController.dispose();
+    _customMessageController.dispose();
+    _retryDaysController.dispose();
+    _retryDaysFocus.dispose();
+    _escalationDaysController.dispose();
+    _escalationDaysFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _sendTestReminder() async {
-    if (_isSendingReminder) {
-      SnackbarHelper.showInfo(context, 'Please wait, reminder is already being sent');
-      return;
-    }
-    
-    _isSendingReminder = true;
-    
-    try {
-      final shouldSend = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusLarge)),
-          title: const Text('Send Test Reminder'),
-          content: const Text('This will test the reminder system for participants with unpaid contributions. Continue?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary(context)),
-              child: const Text('Send Test', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      );
-      
-      if (shouldSend != true) {
-        _isSendingReminder = false;
-        return;
-      }
-      
-      _showLoadingDialog('Sending test reminder...');
-      
-      final result = await _reminderService.sendContributionReminders(
-        communityId: _event.communityId,
-        eventId: _event.eventId,
-        sendTest: true,
-      );
-      
-      if (mounted) Navigator.pop(context); // Close loading
-      
-      if (result['success'] == true) {
-        _showReminderResults(result);
-      } else {
-        SnackbarHelper.showError(context, 'Failed: ${result['message']}');
-      }
-      
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading
-        SnackbarHelper.showError(context, 'Failed to send test: $e');
-      }
-    } finally {
-      _isSendingReminder = false;
-    }
-  }
+
 
   Future<void> _sendRealReminder() async {
     if (_isSendingReminder) {
@@ -116,6 +81,23 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     _isSendingReminder = true;
     
     try {
+      // ✅ NEW: Prevent multiple executions within the same day
+      if (_event.lastReminderSent != null) {
+        final lastSent = _event.lastReminderSent!.toDate();
+        final now = DateTime.now();
+        if (lastSent.year == now.year && 
+            lastSent.month == now.month && 
+            lastSent.day == now.day) {
+          SnackbarHelper.showInfo(
+            context, 
+            'Reminders have already been sent today (at ${DateFormat.jm().format(lastSent)}). '
+            'Manual execution is limited to once per day.'
+          );
+          _isSendingReminder = false;
+          return;
+        }
+      }
+      
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -604,16 +586,159 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     );
   }
 
-  Widget _buildSaveButton() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      color: AppColors.background(context),
-      child: CustomButton(
-        onPressed: _saveReminders,
-        text: 'Save Configuration',
-      ),
+  Widget _buildAdvancedFeatures() {
+    return Column(
+      children: [
+        _buildCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Custom Notification Message',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Override the default push notification text',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _customTitleController,
+                decoration: InputDecoration(
+                  labelText: 'Custom Title (Optional)',
+                  filled: true,
+                  fillColor: AppColors.background(context),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _customMessageController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Custom Body Message (Optional)',
+                  filled: true,
+                  fillColor: AppColors.background(context),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        _buildCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                title: Text('Follow-up Retries', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(context))),
+                subtitle: Text('Send a second reminder if unpaid', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                value: _enableRetries,
+                activeThumbColor: AppColors.primary(context),
+                onChanged: (val) {
+                  HapticHelper.medium();
+                  setState(() => _enableRetries = val);
+                },
+              ),
+              if (_enableRetries) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Days after initial reminder',
+                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                        child: TextFormField(
+                          controller: _retryDaysController,
+                          focusNode: _retryDaysFocus,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            suffixText: 'days',
+                            filled: true,
+                            fillColor: AppColors.background(context),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        _buildCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                title: Text('Admin Escalation Alerts', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(context))),
+                subtitle: Text('Notify you when payments are overdue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                value: _enableEscalation,
+                activeThumbColor: AppColors.error(context),
+                onChanged: (val) {
+                  HapticHelper.medium();
+                  setState(() => _enableEscalation = val);
+                },
+              ),
+              if (_enableEscalation) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Days overdue to escalate',
+                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                        child: TextFormField(
+                          controller: _escalationDaysController,
+                          focusNode: _escalationDaysFocus,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            suffixText: 'days',
+                            filled: true,
+                            fillColor: AppColors.background(context),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
+
+
 
   Future<void> _pickFirstPaymentDate() async {
     HapticHelper.selection();
@@ -732,6 +857,12 @@ class _emindersScreenState extends State<EventRemindersScreen> {
         contributionReminderDates: _event.contributionReminderDates,
         firstPaymentDueDate: _event.firstPaymentDueDate,
         nextReminderDate: nextReminderDate,
+        customReminderTitle: _customTitleController.text.trim().isEmpty ? null : _customTitleController.text.trim(),
+        customReminderMessage: _customMessageController.text.trim().isEmpty ? null : _customMessageController.text.trim(),
+        enableReminderRetries: _enableRetries,
+        retryDaysAfter: int.tryParse(_retryDaysController.text) ?? 3,
+        enableAdminEscalation: _enableEscalation,
+        escalationDaysAfter: int.tryParse(_escalationDaysController.text) ?? 3,
       );
       
       if (mounted) {
@@ -913,47 +1044,16 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   @override
   Widget build(BuildContext context) {
     return GradientSheetScaffold(
-      title: 'Reminder Engine',
+      title: 'Reminder',
       actions: [
-        Theme(
-          data: Theme.of(context).copyWith(
-            hoverColor: Colors.white24,
-            splashColor: Colors.white24,
+        IconButton(
+          onPressed: _saveReminders,
+          icon: Icon(
+            Icons.check_rounded,
+            color: AppColors.textPrimary(context),
+            size: 26,
           ),
-          child: PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'test') {
-                _sendTestReminder();
-              } else if (value == 'real') {
-                _sendRealReminder();
-              }
-            },
-            offset: const Offset(0, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
-            icon: const Icon(Icons.bolt, color: Colors.white),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'test',
-                child: Row(
-                  children: [
-                    Icon(Icons.bug_report, color: AppColors.info(context), size: 18),
-                    const SizedBox(width: 12),
-                    const Text('Dry Run (Test)'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'real',
-                child: Row(
-                  children: [
-                    Icon(Icons.rocket_launch, color: AppColors.error(context), size: 18),
-                    const SizedBox(width: 12),
-                    const Text('Force Execution'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          tooltip: 'Save Configuration',
         ),
       ],
       body: Column(
@@ -966,23 +1066,45 @@ class _emindersScreenState extends State<EventRemindersScreen> {
                 children: [
                   _buildReminderToggle(),
                   
-                  if (_enableReminders) ...[
-                    _buildSectionHeader('Schedule Frequency', icon: Icons.repeat),
-                    _buildFrequencySelector(),
-                    
-                    _buildSectionHeader('Parnameters', icon: Icons.settings_outlined),
-                    _buildSettingsDetail(),
-                    
-                    _buildSectionHeader('One-time Alerts', icon: Icons.calendar_today_outlined),
-                    _buildCustomDatesSection(),
-                    
-                    const SizedBox(height: 40),
-                  ],
+                  _buildSectionHeader('Schedule Frequency', icon: Icons.repeat),
+                  _buildFrequencySelector(),
+                  
+                  _buildSectionHeader('Parameters', icon: Icons.settings_outlined),
+                  _buildSettingsDetail(),
+                  
+                  _buildSectionHeader('One-time Alerts', icon: Icons.calendar_today_outlined),
+                  _buildCustomDatesSection(),
+                  
+                  _buildSectionHeader('Advanced Settings', icon: Icons.tune),
+                  _buildAdvancedFeatures(),
+                  
+                  const SizedBox(height: 32),
+                  
+                  _buildSectionHeader('Manual Execution', icon: Icons.bolt),
+                  _buildCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+
+                        TextButton.icon(
+                          onPressed: _sendRealReminder,
+                          icon: Icon(Icons.rocket_launch, color: AppColors.primary(context)),
+                          label: Text('Force Execution', style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
-          if (_enableReminders) _buildSaveButton(),
         ],
       ),
     );

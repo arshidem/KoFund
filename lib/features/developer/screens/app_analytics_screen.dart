@@ -127,7 +127,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
     return GradientSheetScaffold(
       title: 'App Analytics',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       actions: const [],

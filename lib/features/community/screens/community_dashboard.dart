@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 import 'package:kofund/ads/simple_banner_ad.dart';
 import 'package:kofund/routing/route_names.dart';
 import './tabs/dashboard_tab.dart';
@@ -24,12 +25,38 @@ class CommunityDashboard extends StatefulWidget {
 class _CommunityDashboardState extends State<CommunityDashboard> {
   int _currentIndex = 0;
   bool _isCheckingAuth = true;
+  bool _forceMembersBackButton = false;
   late PageController _pageController;
 
-  final List<Widget> _tabs = [
-    const DashboardTab(),
+  void _navigateToMembers() {
+    setState(() {
+      _forceMembersBackButton = true;
+    });
+    _pageController.animateToPage(
+      2,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _navigateToDashboard() {
+    setState(() {
+      _forceMembersBackButton = false;
+    });
+    _pageController.animateToPage(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  List<Widget> get _tabs => [
+    DashboardTab(onNavigateToMembers: _navigateToMembers),
     const eventsTab(),
-    const MembersTab(),
+    MembersTab(
+      showBackButton: _forceMembersBackButton,
+      onBackToDashboard: _navigateToDashboard,
+    ),
     const ProfileTab(),
   ];
 
@@ -109,32 +136,52 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 5️⃣ User is authenticated and approved - show dashboard
-    return Scaffold(
-      body: Column(
-        children: [
-          // Main content
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              children: _tabs,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        
+        final shouldExit = await DialogHelper.showConfirmationDialog(
+          context,
+          title: 'Exit App?',
+          message: 'Are you sure you want to close the app?',
+          confirmLabel: 'Exit',
+          cancelLabel: 'Stay',
+          icon: Icons.exit_to_app_rounded,
+          isDestructive: true,
+        );
+
+        if (shouldExit == true && context.mounted) {
+           Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: Column(
+          children: [
+            // Main content
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                children: _tabs,
+              ),
             ),
-          ),
-          
-          // Banner ad
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-            child: const SimpleBannerAd(),
-          ),
-        ],
+            
+            // Banner ad
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+              child: const SimpleBannerAd(),
+            ),
+          ],
+        ),
+        bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, _authProvider),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, _authProvider),
     );
   }
 
@@ -153,6 +200,9 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          setState(() {
+            _forceMembersBackButton = false;
+          });
           _pageController.animateToPage(
             index,
             duration: const Duration(milliseconds: 300),
@@ -182,7 +232,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
           const BottomNavigationBarItem(
             icon: Icon(Icons.event_outlined),
             activeIcon: Icon(Icons.event),
-            label: 'events',
+            label: 'Events',
           ),
           BottomNavigationBarItem(
             icon: Consumer<UserProvider>(
