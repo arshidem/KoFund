@@ -64,7 +64,7 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
         </div>
         <div class="cta-buttons">
           <button onclick="handleAppOpen()" class="cta-btn primary-cta">Open in App</button>
-          <a href="${appWebLink}" class="cta-btn secondary-cta" target="_blank">Web Link</a>
+          <a href="https://kofund-153ba.web.app/" class="cta-btn secondary-cta" target="_blank">Web Link</a>
         </div>
       </div>
     </div>
@@ -141,16 +141,16 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
       .tile-val.highlight { color: var(--primary); font-size: 16px; font-weight: 800; }
 
       /* Lists */
-      .member-row { display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
-      .member-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 14px; }
+      .member-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+      .member-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 12px; font-size: 13px; }
       .member-info { flex: 1; }
-      .member-name { font-size: 16px; font-weight: 700; }
-      .member-amount { font-size: 18px; font-weight: 800; color: var(--primary); }
-      .member-due { font-size: 11px; color: var(--text-sec); font-weight: 600; }
+      .member-name { font-size: 14px; font-weight: 700; }
+      .member-amount { font-size: 15px; font-weight: 800; color: var(--primary); }
+      .member-due { font-size: 10px; color: var(--text-sec); font-weight: 600; }
 
       .list-container { background: white; border-radius: 16px; padding: 10px 20px; border: 1px solid var(--border); }
-      .list-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #F1F5F9; }
-      .list-amount { font-weight: 700; color: var(--success); }
+      .list-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #F1F5F9; }
+      .list-amount { font-weight: 700; color: var(--success); font-size: 15px; }
       .list-amount.expense { color: var(--danger); }
 
       /* Month Picker Trigger */
@@ -239,7 +239,7 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
     <div class="tabs-container">
       <div class="tabs">
         <button class="tab-btn active" id="btn-overview" onclick="showTab('overview')">Overview</button>
-        <button class="tab-btn" id="btn-participants" onclick="showTab('participants')">Participants</button>
+        <button class="tab-btn" id="btn-participants" onclick="showTab('participants')">Members</button>
         <button class="tab-btn" id="btn-expenses" onclick="showTab('expenses')">Expenses</button>
       </div>
     </div>
@@ -369,7 +369,7 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
             \` : ''}
           </div>
           <div class="grid-card">
-            <div class="header-tile"><div class="tile-label">Participants</div><div class="tile-val highlight">\${event.participantType === 'fixed' ? participants.length + ' / ' + event.maxParticipants : participants.length}</div></div>
+            <div class="header-tile"><div class="tile-label">Members</div><div class="tile-val highlight">\${event.participantType === 'fixed' ? participants.length + ' / ' + event.maxParticipants : participants.length}</div></div>
             <div class="header-grid">
               <div class="header-tile"><div class="tile-label">Contribution</div><div class="tile-val">₹\${event.suggestedContribution || 0}</div></div>
               <div class="header-tile"><div class="tile-label">Status</div><div class="tile-val">\${event.status || 'Active'}</div></div>
@@ -443,6 +443,24 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
         const scroll = window.pageYOffset;
         if (scroll > 100) document.getElementById('appbar').classList.add('scrolled');
         else document.getElementById('appbar').classList.remove('scrolled');
+      }
+
+      function handleAppOpen() {
+        const deepLink = "kofund://open";
+        const startTime = Date.now();
+        
+        // Attempt to open the app
+        window.location.href = deepLink;
+        
+        // Fallback check after 1.5 seconds
+        setTimeout(() => {
+          if (Date.now() - startTime < 2000) {
+            // App didn't open or browser didn't lose focus
+            if (confirm("KoFund app not detected. Would you like to download it now?")) {
+              window.location.href = downloadUrl;
+            }
+          }
+        }, 1500);
       }
 
       window.onload = init;
