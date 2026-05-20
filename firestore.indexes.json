@@ -427,6 +427,26 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "amount", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "contributions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "monthId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "expenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "monthId", "order": "ASCENDING" },
+        { "fieldPath": "expenseDate", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -43,26 +43,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   ExpenseModel? _expense;
   String? _selectedeventId;
   List<EventModel> _availableEvents = [];
-  String? _selectedCategory;
-  String? _selectedPaymentMethod;
   DateTime _selectedDate = DateTime.now();
-
-  final List<String> _categories = [
-    'food',
-    'transport',
-    'venue',
-    'materials',
-    'decorations',
-    'utilities',
-    'maintenance',
-    'events',
-    'other'
-  ];
-
-  final List<String> _paymentMethods = [
-    'cash',
-    'upi',
-  ];
 
   bool get _hasAnyChanges {
     if (_expense == null) return false;
@@ -70,9 +51,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
            _expense!.description != _descriptionController.text.trim() ||
            _expense!.amount != (double.tryParse(_aamountController.text) ?? 0.0) ||
            _expense!.eventId != _selectedeventId ||
-           _expense!.category != _selectedCategory ||
-           _expense!.paymentMethod != _selectedPaymentMethod ||
-           _expense!.expenseDate != _selectedDate;
+           _expense!.amount != (double.tryParse(_aamountController.text) ?? 0.0) ||
+           _expense!.eventId != _selectedeventId;
   }
 
   @override
@@ -115,8 +95,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       _descriptionController.text = _expense!.description;
       _aamountController.text = _expense!.amount.toString();
       _selectedeventId = _expense!.eventId;
-      _selectedCategory = _expense!.category;
-      _selectedPaymentMethod = _expense!.paymentMethod;
       _selectedDate = _expense!.expenseDate;
 
       setState(() {
@@ -145,8 +123,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         description: _descriptionController.text.trim(),
         amount: double.parse(_aamountController.text),
         eventId: _selectedeventId,
-        category: _selectedCategory,
-        paymentMethod: _selectedPaymentMethod,
         expenseDate: _selectedDate,
         isEdited: true,
         lastEditedByUserId: currentUser?.uid,
@@ -195,19 +171,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
+  // Removed date selection logic
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -329,35 +293,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   }
 
   Widget _buildDatePickerField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: _selectDate,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border(context)),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              color: AppColors.surface(context),
-            ),
-            child: ListTile(
-              leading: Icon(Icons.calendar_today, color: AppColors.primary(context), size: 20),
-              title: Text(
-                'Expense Date *',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
-              ),
-              subtitle: Text(
-                DateFormat('MMM dd, yyyy').format(_selectedDate),
-                style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              trailing: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            ),
-          ),
-        ),
-      ],
-    );
+    return const SizedBox.shrink(); // Hide date picker
   }
 
   Widget _buildChangeItem({
@@ -499,57 +435,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 const SizedBox(height: 16),
                                 _buildInputField(controller: _aamountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
                                 const SizedBox(height: 16),
-                                // Category Selection
-                                DropdownButtonFormField<String>(
-                                  initialValue: (_selectedCategory != null && _categories.contains(_selectedCategory!.toLowerCase())) 
-                                      ? _selectedCategory!.toLowerCase() 
-                                      : null,
-                                  dropdownColor: AppColors.surface(context),
-                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
-                                  decoration: InputDecoration(
-                                    labelText: 'Category *',
-                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    filled: true,
-                                    fillColor: AppColors.surface(context),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                    prefixIcon: Icon(Icons.category_outlined, color: AppColors.primary(context), size: 20),
-                                  ),
-                                  items: _categories.map((cat) => DropdownMenuItem(
-                                    value: cat, 
-                                    child: Text(_formatCategory(cat), style: TextStyle(color: AppColors.textPrimary(context)))
-                                  )).toList(),
-                                  onChanged: (value) => setState(() => _selectedCategory = value),
-                                  validator: (value) => value == null ? 'Required' : null,
-                                  hint: Text(_selectedCategory ?? 'Select Category'),
-                                ),
-                                const SizedBox(height: 16),
-                                // Payment Method
-                                DropdownButtonFormField<String>(
-                                  initialValue: (_selectedPaymentMethod != null && _paymentMethods.contains(_selectedPaymentMethod!.toLowerCase())) 
-                                      ? _selectedPaymentMethod!.toLowerCase() 
-                                      : null,
-                                  dropdownColor: AppColors.surface(context),
-                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
-                                  decoration: InputDecoration(
-                                    labelText: 'Payment Method *',
-                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    filled: true,
-                                    fillColor: AppColors.surface(context),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                    prefixIcon: Icon(Icons.payment_outlined, color: AppColors.primary(context), size: 20),
-                                  ),
-                                  items: _paymentMethods.map((m) => DropdownMenuItem(
-                                    value: m, 
-                                    child: Text(_formatPaymentMethod(m), style: TextStyle(color: AppColors.textPrimary(context)))
-                                  )).toList(),
-                                  onChanged: (value) => setState(() => _selectedPaymentMethod = value),
-                                  validator: (value) => value == null ? 'Required' : null,
-                                  hint: Text(_selectedPaymentMethod ?? 'Select Method'),
-                                ),
                                 const SizedBox(height: 16),
                                 _buildDatePickerField(),
                                 const SizedBox(height: 16),

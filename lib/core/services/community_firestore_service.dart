@@ -297,7 +297,8 @@ String _generateInviteLink(String inviteCode, String communityId) {
       // 🔔 Trigger Notification to Admins (New Member Pending Approval)
       try {
         final notificationService = NotificationService();
-        await notificationService.sendCommunityNotification(
+        // Fire and forget, don't await to speed up UI navigation
+        notificationService.sendCommunityNotification(
           communityId: communityId,
           title: 'New Join Request 👤',
           body: '$userName wants to join ${communityData['name']}. Review now.',
@@ -310,9 +311,11 @@ String _generateInviteLink(String inviteCode, String communityId) {
             'pendingUserId': userId, // ✅ Use pendingUserId to avoid confusion with recipient or sender
             'communityId': communityId,
           },
-        );
+        ).catchError((e) {
+          debugPrint('⚠️ Admin notification background failed: $e');
+        });
       } catch (e) {
-        debugPrint('⚠️ Admin notification failed: $e');
+        debugPrint('⚠️ Admin notification setup failed: $e');
       }
 
     } catch (e) {

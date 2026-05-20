@@ -29,19 +29,33 @@ class EventParticipantsSkeleton extends StatelessWidget {
   Widget _buildStatsSkeleton(BuildContext context, bool dark) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary(context).withValues(alpha: 0.1),
-            AppColors.primary(context).withValues(alpha: 0.05),
-          ],
+        gradient: dark
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+              ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context)),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            color: dark 
+                ? Colors.black.withValues(alpha: 0.3) 
+                : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,49 +67,38 @@ class EventParticipantsSkeleton extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _line(context, width: 80, height: 11),
+                  _line(context, width: 120, height: 12),
                   if (isMonthlyy) ...[
                     const SizedBox(height: 4),
-                    _line(context, width: 100, height: 13),
+                    _line(context, width: 100, height: 14),
                   ],
                 ],
               ),
-              Row(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  _line(context, width: 20, height: 16),
-                ],
+              Container(
+                width: 40,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(11),
+                ),
               ),
             ],
           ),
           
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           
           // Amount
-          _line(context, width: 100, height: 26),
-          const SizedBox(height: 2),
-          _line(context, width: 120, height: 11),
-          
+          _line(context, width: 140, height: 34),
           const SizedBox(height: 8),
+          _line(context, width: 100, height: 12),
           
-          // Progress bar
-          _line(context, width: double.infinity, height: 6, radius: BorderRadius.circular(4)),
-          
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           
           // Stats chips
           Row(
             children: [
               Expanded(child: _buildStatChipSkeleton(context)),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(child: _buildStatChipSkeleton(context)),
             ],
           ),

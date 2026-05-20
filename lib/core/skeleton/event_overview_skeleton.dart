@@ -138,15 +138,30 @@ class EventOverviewSkeleton extends StatelessWidget {
   Widget _buildFinancialSummarySkeleton(BuildContext context, bool dark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient(context),
-        borderRadius: BorderRadius.circular(16),
+        gradient: dark
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+              ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+        ),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            color: dark 
+                ? Colors.black.withValues(alpha: 0.3) 
+                : const Color(0xFF00C6A2).withValues(alpha: 0.25),
           ),
         ],
       ),
@@ -160,44 +175,40 @@ class EventOverviewSkeleton extends StatelessWidget {
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(9),
                 ),
               ),
               const SizedBox(width: 6),
-              _line(context, width: 120, height: 15),
+              _line(context, width: 120, height: 13),
             ],
           ),
           
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          _line(context, width: 180, height: 32),
+          const SizedBox(height: 24),
           
           // Top stats row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(3, (index) => _buildMetricSkeleton(context)),
+            children: List.generate(2, (index) => _buildMetricSkeleton(context)),
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           
           // Progress section
-          _line(context, width: 100, height: 12),
-          const SizedBox(height: 4),
-          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _line(context, width: 80, height: 16),
-              _line(context, width: 40, height: 14),
+              _line(context, width: 80, height: 12),
+              _line(context, width: 100, height: 13),
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           
           // Progress bar
-          _line(context, width: double.infinity, height: 6, radius: BorderRadius.circular(4)),
-          
-          const SizedBox(height: 6),
-          _line(context, width: 120, height: 11),
+          _line(context, width: double.infinity, height: 8, radius: BorderRadius.circular(10)),
         ],
       ),
     );

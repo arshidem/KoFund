@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../models/event_model.dart';
 import '../../../contributions/providers/contribution_provider.dart';
+import '../../providers/event_provider.dart';
 import '../../../expenses/providers/expense_provider.dart';
 import '../../../auth/models/user_model.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -33,6 +34,14 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   double _previousProgress = 0.0;
   static const List<double> _milestones = [50.0, 75.0, 100.0];
   bool _isExporting = false;
+  double? _cachedTotalCollected;
+  double? _cachedTotalExpenses;
+  int? _cachedParticipantCount;
+
+  // Cache streams to prevent re-creation on every rebuild
+  Stream<double>? _contributionsStream;
+  Stream<double>? _expensesStream;
+  Stream<int>? _participantCountStream;
 
   void _onRefresh() {
     setState(() {});
@@ -131,11 +140,11 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                       expenseProvider,
                       participantProvider,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _builHeader(context, participantProvider, isOrganizer),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _builInfoCard(context, participantProvider, _userService),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _builStatusCard(context, participantProvider),
 
                   ]),
@@ -178,7 +187,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.card(context),
             borderRadius: BorderRadius.circular(20),
@@ -192,90 +201,25 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.event.title,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary(context),
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
+              _buildHeaderInfoTile(
+                context,
+                icon: Icons.people_alt_rounded,
+                title: 'Participants',
+                value: widget.event.participantType == 'fixed'
+                    ? '$participantCount / ${widget.event.maxParticipants}'
+                    : '$participantCount',
+                valueColor: isFull ? AppColors.error(context) : AppColors.primary(context),
               ),
               const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isFull
-                      ? AppColors.error(context).withValues(alpha: 0.08)
-                      : AppColors.primary(context).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people_alt_rounded,
-                          size: 18,
-                          color: isFull
-                              ? AppColors.error(context)
-                              : AppColors.primary(context),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Participants',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          '$participantCount',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: isFull
-                                ? AppColors.error(context)
-                                : AppColors.primary(context),
-                          ),
-                        ),
-                        if (widget.event.participantType == 'fixed') ...[
-                          const SizedBox(width: 4),
-                          Text(
-                            '/ ${widget.event.maxParticipants}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
               GridView(
                 shrinkWrap: true,
+                padding: EdgeInsets.zero,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
                   childAspectRatio: 2.8,
                 ),
                 children: [
@@ -567,113 +511,271 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   }
 
   void _showShareMenu(BuildContext context) {
-    final String eventLink = 'https://kofund-153ba.web.app/event/${widget.event.eventId}';
-    
+    final eventProvider = Provider.of<EventProvider>(context, listen: false);
+    bool isPublic = widget.event.isPublicEnabled;
+    String? password = widget.event.publicPassword;
+    final TextEditingController passwordController = TextEditingController(text: password);
+    bool isSaving = false;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-        decoration: BoxDecoration(
-          color: AppColors.card(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Share Event Link',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final String eventPublicLink = 'https://kofund-153ba.web.app/s/${widget.event.eventId}';
+          
+          // Check if anything has changed compared to the original event data
+          final bool hasChanges = isPublic != widget.event.isPublicEnabled || 
+                                 passwordController.text != (widget.event.publicPassword ?? '');
+          final bool isValidPassword = passwordController.text.isEmpty || passwordController.text.length >= 4;
+          final bool canSave = hasChanges && isValidPassword;
+          
+          return Container(
+            padding: EdgeInsets.fromLTRB(20, 24, 20, MediaQuery.of(context).viewInsets.bottom + 40),
+            decoration: BoxDecoration(
+              color: AppColors.card(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Anyone with this link can view the event status on the web.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Link Preview Box
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.background(context),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border(context)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      eventLink,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Share Event',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary(context),
-                        fontFamily: 'monospace',
                       ),
                     ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(context)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Public Sharing Toggle
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.1)),
                   ),
-                  const SizedBox(width: 12),
-                  InkWell(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: eventLink));
-                      Navigator.pop(context);
-                      SnackbarHelper.showInfo(context, 'Link copied to clipboard!');
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary(context),
-                        borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.public_rounded, size: 20, color: AppColors.primary(context)),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Public Sharing',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary(context),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Allow anyone to view this event',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Switch.adaptive(
+                            value: isPublic,
+                            activeColor: AppColors.primary(context),
+                            onChanged: (value) {
+                              setModalState(() => isPublic = value);
+                            },
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'Copy',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                      
+                      if (isPublic) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Divider(height: 1),
                         ),
-                      ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.lock_outline_rounded, size: 20, color: AppColors.textSecondary(context)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Access Password (Optional)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: passwordController,
+                              obscureText: true,
+                              onChanged: (value) => setModalState(() {}),
+                              decoration: InputDecoration(
+                                hintText: 'Enter password',
+                                errorText: passwordController.text.isNotEmpty && passwordController.text.length < 4
+                                    ? 'Minimum 4 characters required'
+                                    : null,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: AppColors.border(context)),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: AppColors.border(context)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: AppColors.primary(context)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                if (isPublic) ...[
+                  Text(
+                    'Public Link',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            eventPublicLink,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textPrimary(context),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Copy Button
+                        IconButton(
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: eventPublicLink));
+                            SnackbarHelper.showInfo(context, 'Link copied!');
+                          },
+                          icon: Icon(Icons.copy_rounded, size: 18, color: AppColors.primary(context)),
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Copy Link',
+                        ),
+                        // Share Button
+                        IconButton(
+                          onPressed: () {
+                            Share.share(
+                              'Check out "${widget.event.title}" on KoFund:\n$eventPublicLink',
+                              subject: widget.event.title,
+                            );
+                          },
+                          icon: Icon(Icons.share_rounded, size: 18, color: AppColors.primary(context)),
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Share Link',
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Share to WhatsApp Option
-            ListTile(
-              onTap: () {
-                Navigator.pop(context);
-                Share.share(
-                  'Check out "${widget.event.title}" on KoFund:\n$eventLink',
-                  subject: widget.event.title,
-                );
-              },
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF25D366),
-                  shape: BoxShape.circle,
+                
+                const SizedBox(height: 32),
+
+                // Save Changes Button at the bottom
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (!canSave || isSaving) ? null : () async {
+                      setModalState(() => isSaving = true);
+                      final pwd = passwordController.text;
+                      try {
+                        await eventProvider.update(widget.event.copyWith(
+                          isPublicEnabled: isPublic,
+                          publicPassword: pwd.isEmpty ? null : pwd,
+                        ));
+                        if (context.mounted) {
+                          SnackbarHelper.showSuccess(context, 'Settings saved successfully!');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          SnackbarHelper.showError(context, 'Failed to save: $e');
+                        }
+                      } finally {
+                        setModalState(() => isSaving = false);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canSave ? AppColors.primary(context) : AppColors.textSecondary(context).withValues(alpha: 0.1),
+                      foregroundColor: canSave ? Colors.white : AppColors.textSecondary(context),
+                      disabledBackgroundColor: isSaving ? AppColors.primary(context).withValues(alpha: 0.7) : null,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: hasChanges ? 2 : 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            hasChanges ? 'Save Changes' : 'Saved', 
+                            style: const TextStyle(fontWeight: FontWeight.bold)
+                          ),
+                  ),
                 ),
-                child: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-              ),
-              title: const Text('Share via App'),
-              subtitle: const Text('Send to WhatsApp, Email, or other apps'),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -704,22 +806,127 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   }
 
 
+  /// Shimmer placeholder for the financial card while streams are loading
+  Widget _buildFinancialShimmer(bool isDark) {
+    final shimmerColor = Colors.white.withValues(alpha: isDark ? 0.15 : 0.25);
+    final secondaryShimmerColor = Colors.white.withValues(alpha: isDark ? 0.1 : 0.2);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+              ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 120, height: 14,
+            decoration: BoxDecoration(
+              color: shimmerColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 180, height: 32,
+            decoration: BoxDecoration(
+              color: shimmerColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 80, height: 18, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(height: 6),
+                  Container(width: 60, height: 12, decoration: BoxDecoration(color: secondaryShimmerColor, borderRadius: BorderRadius.circular(6))),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 80, height: 18, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(height: 6),
+                  Container(width: 60, height: 12, decoration: BoxDecoration(color: secondaryShimmerColor, borderRadius: BorderRadius.circular(6))),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFinancialSummaryCard(BuildContext context, ContributionProvider contributionProvider, ExpenseProvider expenseProvider, ParticipantProvider participantProvider) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
+    // Cache streams so they survive rebuilds
+    _contributionsStream ??= contributionProvider.streamTotalContributions(widget.event.eventId);
+    _expensesStream ??= expenseProvider.streamEventTotalExpenses(widget.event.eventId);
+    _participantCountStream ??= participantProvider.streamEventParticipantCount(widget.event.eventId);
+
     return StreamBuilder<double>(
-      stream: contributionProvider.streamTotalContributions(widget.event.eventId),
+      initialData: _cachedTotalCollected,
+      stream: _contributionsStream,
       builder: (context, contributionSnapshot) {
-        final totalCollected = contributionSnapshot.data ?? 0.0;
+        // Only update cache with non-zero values to avoid losing data when offline
+        if (contributionSnapshot.hasData && (contributionSnapshot.data ?? 0) > 0) {
+          _cachedTotalCollected = contributionSnapshot.data;
+        } else if (_cachedTotalCollected == null && contributionSnapshot.hasData) {
+          _cachedTotalCollected = contributionSnapshot.data;
+        }
+        
+        // Wait for contributions to load before showing the card
+        // This prevents a brief flash of "-₹expense" while contributions are still loading
+        final totalCollected = _cachedTotalCollected ?? contributionSnapshot.data ?? 0.0;
+        final bool contributionsReady = _cachedTotalCollected != null || contributionSnapshot.hasData || totalCollected > 0;
+        
         return StreamBuilder<double>(
-          stream: expenseProvider.streamEventTotalExpenses(widget.event.eventId),
+          initialData: _cachedTotalExpenses,
+          stream: _expensesStream,
           builder: (context, expenseSnapshot) {
-            final totalExpenses = expenseSnapshot.data ?? 0.0;
+            if (expenseSnapshot.hasData && (expenseSnapshot.data ?? 0) > 0) {
+              _cachedTotalExpenses = expenseSnapshot.data;
+            } else if (_cachedTotalExpenses == null && expenseSnapshot.hasData) {
+              _cachedTotalExpenses = expenseSnapshot.data;
+            }
+            final totalExpenses = _cachedTotalExpenses ?? expenseSnapshot.data ?? 0.0;
+            
+            // Show shimmer if contributions haven't loaded yet (expenses may have loaded first)
+            if (!contributionsReady && totalExpenses > 0) {
+              return _buildFinancialShimmer(isDark);
+            }
+            
             final balanceAamount = totalCollected - totalExpenses;
             return StreamBuilder<int>(
-              stream: participantProvider.streamEventParticipantCount(widget.event.eventId),
+              initialData: widget.event.currentParticipants,
+              stream: _participantCountStream,
               builder: (context, participantSnapshot) {
-                final participantCount = participantSnapshot.data ?? 0;
+                if (participantSnapshot.hasData && (participantSnapshot.data ?? 0) > 0) {
+                  _cachedParticipantCount = participantSnapshot.data;
+                } else if (_cachedParticipantCount == null && participantSnapshot.hasData) {
+                  _cachedParticipantCount = participantSnapshot.data;
+                }
+                final participantCount = _cachedParticipantCount ?? participantSnapshot.data ?? widget.event.currentParticipants;
                 final double totalExpected = widget.event.isMonthlyPayment 
                     ? 0.0 
                     : ((widget.event.totalAmount ?? 0.0) > 0 ? widget.event.totalAmount! : (widget.event.suggestedContribution ?? 0.0) * (participantCount > 0 ? participantCount : (widget.event.isFixedParticipants ? widget.event.maxParticipants : 1)));

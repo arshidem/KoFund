@@ -46,6 +46,9 @@ class RouteNames {
   static const String notifications = '/notifications';
   static const String notificationDetail = '/notification-detail';
   static const String notificationSettings = '/notification-settings';
+  
+  // 🆕 PUBLIC ROUTES
+  static const String publicEventDetail = '/public-event';
 }
 
 

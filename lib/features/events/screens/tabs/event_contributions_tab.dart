@@ -24,8 +24,13 @@ import 'package:kofund/features/contributions/screens/event_deleted_contribution
 import 'package:kofund/core/utils/snackbar_helper.dart';
 class EventContributionsTab extends StatefulWidget {
   final EventModel event;
+  final String? selectedMonth;
 
-  const EventContributionsTab({super.key, required this.event});
+  const EventContributionsTab({
+    super.key,
+    required this.event,
+    this.selectedMonth,
+  });
 
   @override
   State<EventContributionsTab> createState() => _ContributionsTabState();
@@ -66,6 +71,7 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
   String _filterMethod = 'all';
   final Map<String, String> _localUserNnameCache = {};
   Map<String, dynamic>? _cachedStats;
+  List<ContributionModel> _cachedContributions = [];
   
   Stream<List<ContributionModel>>? _contributionsStream;
   Stream<Map<String, dynamic>>? _statsStream;
@@ -80,6 +86,37 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
       }
     } catch (e) {
       debugPrint("Refresh error: $e");
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
+    
+    if (widget.event.isMonthlyPayment) {
+      final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
+      _contributionsStream = contributionProvider.streamMonthlyContributions(widget.event.eventId, monthId);
+    } else {
+      _contributionsStream = contributionProvider.streamContributions(widget.event.eventId);
+    }
+    
+    _statsStream = _getContributionStatsStream(context);
+  }
+
+  @override
+  void didUpdateWidget(covariant EventContributionsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedMonth != widget.selectedMonth) {
+      setState(() {
+        _cachedContributions = []; // Clear cache on month switch
+        _cachedStats = null;
+        _initStreams();
+      });
     }
   }
 
@@ -164,6 +201,7 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
           preSelectedeventId: widget.event.eventId,
           preSelectedeventName: widget.event.title,
           isMonthlyEvent: widget.event.isMonthlyPayment,
+          initialMonthId: widget.selectedMonth,
         ),
       ),
     );
@@ -190,21 +228,25 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
     super.build(context);
     final isAdmin = _isAdmin(context);
 
-    // Cache the streams to avoid creating new Firebase listeners on every rebuild
-    _contributionsStream ??= Provider.of<ContributionProvider>(context, listen: false)
-        .streamContributions(widget.event.eventId);
-    _statsStream ??= _getContributionStatsStream(context);
+    // Streams are now managed in initState and didUpdateWidget
 
     return Stack(
       children: [
         // Main scroll area with pinned stats
         StreamBuilder<List<ContributionModel>>(
+          initialData: _cachedContributions,
           stream: _contributionsStream,
           builder: (context, snapshot) {
-            // Determine common states
-            final connectionWaiting = snapshot.connectionState == ConnectionState.waiting;
-            final hasError = snapshot.hasError;
-            final allContributions = snapshot.data ?? <ContributionModel>[];
+            if (snapshot.hasData) {
+              _cachedContributions = snapshot.data!;
+            }
+            // Show skeleton ONLY on first ever load (no cache yet)
+            final connectionWaiting = snapshot.connectionState == ConnectionState.waiting && _cachedContributions.isEmpty;
+            final hasError = snapshot.hasError && _cachedContributions.isEmpty;
+            // Use cached or live data
+            final allContributions = _cachedContributions.isNotEmpty
+                ? _cachedContributions
+                : (snapshot.data ?? <ContributionModel>[]);
             final filtered = _filterContributions(allContributions);
 
             return Container(
@@ -319,19 +361,20 @@ Widget _buildContributionSummary(BuildContext context) {
     key: ValueKey(
       'contribution-summary-${widget.event.eventId}',
     ),
+    initialData: _cachedStats,
     stream: _statsStream,
     builder: (context, snapshot) {
-      // Update cache on new data
       if (snapshot.hasData) {
         _cachedStats = snapshot.data;
       }
       
       // Show shimmer only on first load with no cache
-      if (snapshot.connectionState == ConnectionState.waiting && _cachedStats == null) {
+      if ((snapshot.connectionState == ConnectionState.waiting || snapshot.hasError) && _cachedStats == null) {
         return _buildShimmerContributionStats(context);
       }
 
-      final data = _cachedStats ?? {
+      // ALWAYS prefer cached data — never fall through to zero defaults
+      final data = _cachedStats ?? snapshot.data ?? {
         'totalCollected': 0.0,
         'totalContributions': 0,
       };
@@ -343,6 +386,7 @@ Widget _buildContributionSummary(BuildContext context) {
       final participantProvider = Provider.of<ParticipantProvider>(context, listen: false);
       
       return StreamBuilder<int>(
+        initialData: widget.event.currentParticipants,
         stream: participantProvider.streamEventParticipantCount(widget.event.eventId),
         builder: (context, participantSnapshot) {
           final participantCount = participantSnapshot.data ?? widget.event.currentParticipants;
@@ -578,16 +622,12 @@ Widget _buildContributionSummary(BuildContext context) {
   );
 }
 
-// Helper method to create stats stream
 Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) {
   final eventProvider = Provider.of<EventProvider>(context, listen: false);
   
   if (widget.event.isMonthlyPayment) {
-    // For monthly events, we use a fixed month (defaulting to current)
-    // or we could use the selected month if we had one in this tab too.
-    // For now, looking at the logic, it seems it handles global/current month.
-    final currentMonthId = DateFormat('yyyy-MM').format(DateTime.now());
-    return eventProvider.streamMonthlyFinancialSummary(widget.event.eventId, currentMonthId);
+    final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
+    return eventProvider.streamMonthlyFinancialSummary(widget.event.eventId, monthId);
   } else {
     return eventProvider.streamFinancialSummary(widget.event.eventId);
   }
@@ -596,7 +636,7 @@ Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) {
 // Shimmer loading for contributions
 Widget _buildShimmerContributionStats(BuildContext context) {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-  final shimmerColor = isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
+  final shimmerColor = Colors.white.withValues(alpha: isDarkMode ? 0.15 : 0.25);
 
   return Padding(
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -604,9 +644,21 @@ Widget _buildShimmerContributionStats(BuildContext context) {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
+        gradient: isDarkMode
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+              ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,11 +673,11 @@ Widget _buildShimmerContributionStats(BuildContext context) {
           const SizedBox(height: 16),
           Container(width: 130, height: 34, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(8))),
           const SizedBox(height: 8),
-          Container(width: 110, height: 12, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(6))),
+          Container(width: 110, height: 12, decoration: BoxDecoration(color: Colors.white.withValues(alpha: isDarkMode ? 0.1 : 0.2), borderRadius: BorderRadius.circular(6))),
           const SizedBox(height: 16),
-          Container(width: double.infinity, height: 6, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(3))),
+          Container(width: double.infinity, height: 6, decoration: BoxDecoration(color: Colors.white.withValues(alpha: isDarkMode ? 0.1 : 0.2), borderRadius: BorderRadius.circular(3))),
           const SizedBox(height: 12),
-          Container(width: double.infinity, height: 10, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(5))),
+          Container(width: double.infinity, height: 10, decoration: BoxDecoration(color: Colors.white.withValues(alpha: isDarkMode ? 0.1 : 0.15), borderRadius: BorderRadius.circular(5))),
         ],
       ),
     ),
@@ -2100,13 +2152,22 @@ void _deleteContribution(ContributionModel contribution, BuildContext context) a
     final reason = await _showDeleteReasonDialog(context);
     if (reason == null || reason.isEmpty) return; // User cancelled
     
+    // Optimistic UI update: Clear cache or remove item locally if possible
+    // Since we use StreamBuilder, clearing the cache will show the skeleton or empty state 
+    // until the stream pushes the new (empty) list.
+    setState(() {
+      _cachedContributions = List.from(_cachedContributions)..removeWhere((c) => c.contributionId == contribution.contributionId);
+      // We don't clear stats here as it might flicker, the stream should update them quickly.
+    });
+
     await contributionProvider.deleteContribution(
       contribution.contributionId,
-      reason, // Add this parnameter
+      reason,
     );
     
-    SnackbarHelper.showError(context, 'Contribution deleted successfully!');
+    SnackbarHelper.showSuccess(context, 'Contribution deleted successfully!');
   } catch (e) {
+    // If it fails, the stream will eventually put the item back or the user can refresh
     SnackbarHelper.showError(context, 'Failed to delete contribution: $e');
   }
 }

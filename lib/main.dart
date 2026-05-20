@@ -56,6 +56,7 @@ import 'core/widgets/global_theme_toggle.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
+import 'routing/route_names.dart';
 import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb, kDebugMode;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -561,6 +562,7 @@ class _AppProvidersState extends State<AppProviders> {
             eventService: _eventService,
             participantService: _participantService,
             contributionService: _contributionService,
+            expenseService: _expenseService,
           ),
         ),
 
@@ -606,6 +608,7 @@ class _AppProvidersState extends State<AppProviders> {
               eventService: _eventService,
               participantService: _participantService,
               contributionService: _contributionService,
+              expenseService: _expenseService,
             ),
             contributionProvider: ContributionProvider(),
             participantService: _participantService,
@@ -736,13 +739,36 @@ void _handleDdeepLink(Uri uri) {
   
   // Handle web links
   if (uri.scheme == 'https' && uri.host.contains('kofund')) {
-    // Event deep link: https://kofund-153ba.web.app/event/12345
+    // New shortened Event deep link: https://kofund-153ba.web.app/view/12345
+    // or https://kofund-153ba.web.app/e/12345 or /d/
+    if (uri.path.startsWith('/view/') || uri.path.startsWith('/e/') || uri.path.startsWith('/d/')) {
+      final segments = uri.path.split('/');
+      if (segments.length >= 3) {
+        final eventId = segments[2];
+        debugPrint('✅ Found event ID from direct web URL: $eventId');
+        _navigateToEventOrSplash(eventId: eventId);
+        return;
+      }
+    }
+
+    // Public Event deep link: https://kofund-153ba.web.app/p/12345
+    if (uri.path.startsWith('/p/') || uri.path.startsWith('/public-event/')) {
+      final segments = uri.path.split('/');
+      if (segments.length >= 3) {
+        final eventId = segments[2];
+        debugPrint('✅ Found public event ID from web URL: $eventId');
+        _navigateToEventOrSplash(eventId: eventId, isPublic: true);
+        return;
+      }
+    }
+
+    // Original Event deep link: https://kofund-153ba.web.app/event/12345
     if (uri.path.startsWith('/event/')) {
       final segments = uri.path.split('/');
       if (segments.length >= 3) {
         final eventId = segments[2];
         debugPrint('✅ Found event ID from web URL: $eventId');
-        _navigateToSplashWithEvent(eventId);
+        _navigateToEventOrSplash(eventId: eventId);
         return;
       }
     }
@@ -750,7 +776,7 @@ void _handleDdeepLink(Uri uri) {
     final qpEventId = uri.queryParameters['eventId'];
     if (qpEventId != null && qpEventId.isNotEmpty) {
       debugPrint('✅ Found event ID from web query URL: $qpEventId');
-      _navigateToSplashWithEvent(qpEventId);
+      _navigateToEventOrSplash(eventId: qpEventId);
       return;
     }
 
@@ -799,6 +825,40 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
       arguments: {'inviteCode': inviteCode},
     );
   });
+}
+
+void _navigateToEventOrSplash({required String eventId, bool isPublic = false}) async {
+  if (eventId.isEmpty) return;
+
+  final context = navigatorKey.currentContext;
+  if (context != null) {
+    try {
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      
+      // If user is logged in and app is already running, push directly
+      if (authProvider.user != null) {
+        debugPrint('🚀 App is warm and user logged in - pushing event details directly: $eventId');
+        
+        if (isPublic) {
+          navigatorKey.currentState?.pushNamed(
+            RouteNames.publicEventDetail,
+            arguments: eventId,
+          );
+        } else {
+          navigatorKey.currentState?.pushNamed(
+            RouteNames.eventDetails,
+            arguments: eventId,
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Navigation error (provider not ready?): $e');
+    }
+  }
+
+  // Fallback to splash screen flow for cold start or unauthenticated users
+  _navigateToSplashWithEvent(eventId);
 }
 
 void _navigateToSplashWithEvent(String? eventId) async {

@@ -37,6 +37,10 @@ class EventModel {
   final bool enableAdminEscalation;
   final int escalationDaysAfter;
 
+  // 🆕 PUBLIC SHARING FEATURES
+  final bool isPublicEnabled;
+  final String? publicPassword;
+
   EventModel({
     required this.eventId,
     required this.communityId,
@@ -68,6 +72,8 @@ class EventModel {
     this.retryDaysAfter = 3,
     this.enableAdminEscalation = false,
     this.escalationDaysAfter = 3,
+    this.isPublicEnabled = false,
+    this.publicPassword,
   });
 
   // ✅ Convert Firestore document → EventModel
@@ -119,6 +125,8 @@ factory EventModel.fromMap(Map<String, dynamic> map, String documentId) {
     retryDaysAfter: (map['retryDaysAfter'] ?? 3) as int,
     enableAdminEscalation: map['enableAdminEscalation'] ?? false,
     escalationDaysAfter: (map['escalationDaysAfter'] ?? 3) as int,
+    isPublicEnabled: map['isPublicEnabled'] ?? false,
+    publicPassword: map['publicPassword'] as String?,
   );
 }
 
@@ -163,6 +171,8 @@ Map<String, dynamic> toMap() {
     'retryDaysAfter': retryDaysAfter,
     'enableAdminEscalation': enableAdminEscalation,
     'escalationDaysAfter': escalationDaysAfter,
+    'isPublicEnabled': isPublicEnabled,
+    if (publicPassword != null) 'publicPassword': publicPassword,
   };
 }
 
@@ -198,6 +208,8 @@ Map<String, dynamic> toMap() {
     int? retryDaysAfter,
     bool? enableAdminEscalation,
     int? escalationDaysAfter,
+    bool? isPublicEnabled,
+    String? publicPassword,
   }) {
     return EventModel(
       eventId: eventId ?? this.eventId,
@@ -230,6 +242,8 @@ Map<String, dynamic> toMap() {
       retryDaysAfter: retryDaysAfter ?? this.retryDaysAfter,
       enableAdminEscalation: enableAdminEscalation ?? this.enableAdminEscalation,
       escalationDaysAfter: escalationDaysAfter ?? this.escalationDaysAfter,
+      isPublicEnabled: isPublicEnabled ?? this.isPublicEnabled,
+      publicPassword: publicPassword ?? this.publicPassword,
     );
   }
 
@@ -465,7 +479,9 @@ bool get isDateFuture => eventDate != null ? eventDate!.isAfter(DateTime.now()) 
         other.enableReminderRetries == enableReminderRetries &&
         other.retryDaysAfter == retryDaysAfter &&
         other.enableAdminEscalation == enableAdminEscalation &&
-        other.escalationDaysAfter == escalationDaysAfter;
+        other.escalationDaysAfter == escalationDaysAfter &&
+        other.isPublicEnabled == isPublicEnabled &&
+        other.publicPassword == publicPassword;
   }
 
 @override
@@ -499,6 +515,8 @@ int get hashCode {
     retryDaysAfter,
     enableAdminEscalation,
     escalationDaysAfter,
+    isPublicEnabled,
+    publicPassword,
   ]);
 }
 }

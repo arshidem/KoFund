@@ -259,16 +259,6 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
   }
 
-  /// Expenses by category
-  Future<Map<String, double>> getEventExpensesByCategory(String eventId) async {
-    try {
-      return await expenseService.getEventExpensesByCategory(eventId);
-    } catch (e) {
-      debugPrint('Error getting expenses by category: $e');
-      return {};
-    }
-  }
-
   /// Approved & pending filters
   List<ExpenseModel> getApprovedExpenses() =>
       _expenses.where((e) => e.status == 'approved').toList();
@@ -300,6 +290,14 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
 
   Future<List<ExpenseModel>> getEventExpenses(String eventId) async {
     return await expenseService.getExpensesByEvent(eventId);
+  }
+
+  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId) async {
+    return await expenseService.getMonthlyExpenses(eventId, monthId);
+  }
+
+  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId) {
+    return expenseService.streamMonthlyExpenses(eventId, monthId);
   }
 }
 

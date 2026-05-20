@@ -802,6 +802,10 @@ void clearAllData() {
     return _contributionService.streamContributions(eventId);
   }
 
+  Stream<List<ContributionModel>> streamMonthlyContributions(String eventId, String monthId) {
+    return _contributionService.streamMonthlyContributions(eventId, monthId);
+  }
+
   Stream<List<ContributionModel>> streamUserContributions(String userId, String communityId) {
     return _contributionService.streamUserContributions(userId, communityId);
   }
@@ -876,12 +880,12 @@ void clearAllData() {
 // Add this method to ContributionProvider class in contribution_provider.dart
 
 // 🔹 Get monthly contributions for a event-month
-Future<List<ContributionModel>> getMonthlyContributionsFo(
+Future<List<ContributionModel>> getMonthlyContributionsForParticipant(
   String eventId, 
   String monthId
 ) async {
   try {
-    return await _contributionService.getMonthlyContributionsFo(eventId, monthId);
+    return await _contributionService.getMonthlyContributionsForParticipant(eventId, monthId);
   } catch (e) {
     debugPrint('❌ Error getting monthly contributions: $e');
     return [];

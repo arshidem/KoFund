@@ -25,6 +25,7 @@ import '../features/members/screens/member_profile_screen.dart';
 // event SCREENS
 import '../features/events/screens/event_details_screen.dart';
 import '../features/events/screens/create_event_screen.dart';
+import '../features/events/screens/public_event_detail_screen.dart';
 
 // 🆕 CONTRIBUTION SCREENS
 // import '../features/contributions/screens/all_contribution_screen.dart';
@@ -61,7 +62,33 @@ import 'route_names.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
+    final String? routeName = settings.name;
+
+    // Handle public event detail with path parameter (e.g., /public-event/EVENT_ID or /p/EVENT_ID)
+    if (routeName != null && (routeName.startsWith(RouteNames.publicEventDetail + '/') || routeName.startsWith('/p/'))) {
+      final parts = routeName.split('/');
+      if (parts.length > 2) {
+        final eventId = parts[2];
+        return MaterialPageRoute(
+          builder: (_) => PublicEventDetailScreen(eventId: eventId),
+          settings: settings,
+        );
+      }
+    }
+
+    // Handle private event detail with path parameter (e.g., /view/EVENT_ID, /e/EVENT_ID, /d/EVENT_ID)
+    if (routeName != null && (routeName.startsWith('/view/') || routeName.startsWith('/e/') || routeName.startsWith('/d/'))) {
+      final parts = routeName.split('/');
+      if (parts.length > 2) {
+        final eventId = parts[2];
+        return MaterialPageRoute(
+          builder: (_) => EventDetailsScreen(eventId: eventId),
+          settings: settings,
+        );
+      }
+    }
+
+    switch (routeName) {
       case RouteNames.splash:
   // Check if arguments contain invite code/event id (from deep link)
   if (settings.arguments != null && settings.arguments is Map) {
@@ -260,6 +287,31 @@ case RouteNames.notificationDetail:
 
 case RouteNames.notificationSettings:
   return MaterialPageRoute(builder: (_) => const NotificationSettingsScreen());
+
+case RouteNames.publicEventDetail:
+  final args = settings.arguments;
+  String? eventId;
+  
+  if (args is String) {
+    eventId = args;
+  } else if (args is Map) {
+    eventId = args['eventId'] as String?;
+  }
+
+  if (eventId != null) {
+    return MaterialPageRoute(
+      builder: (_) => PublicEventDetailScreen(eventId: eventId!),
+      settings: settings,
+    );
+  }
+  
+  return MaterialPageRoute(
+    builder: (_) => Scaffold(
+      body: Center(
+        child: Text('Invalid event link'),
+      ),
+    ),
+  );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart'; // Add this import
@@ -46,12 +47,23 @@ class _EventDetailsScreenState extends State<EventDetailsScreen>
 
   bool _iLoading = true;
   EventModel? _cache;
-  final RefreshController _refreshController = RefreshController(); // Add this
+  final RefreshController _refreshController = RefreshController();
+
+  // ✅ ADD: Month selection state
+  String? _selectedMonth;
+  int _currentDisplayYear = DateTime.now().year;
+  Map<String, int> _monthPaymentCounts = {};
+  bool _isLoadingMonths = false;
+  int _streamKey = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabTtitles.length, vsync: this);
+    
+    // Initialize selected month
+    _selectedMonth = _formatMonthId(DateTime.now());
+    
     _loaData();
   }
 
@@ -148,7 +160,211 @@ Future<void> _refreshAllData() async {
 }
 
   void _onRefresh() {
+    if (_cache?.isMonthlyPayment ?? false) {
+      _loadMonthPaymentCounts();
+    }
     _refreshAllData();
+  }
+
+  // ✅ ADD: Month Selection Helpers
+  String _formatMonthId(DateTime date) => DateFormat('yyyy-MM').format(date);
+
+  String _formatMonthDisplay(String monthId) {
+    try {
+      final date = DateTime.parse('$monthId-01');
+      return DateFormat('MMMM yyyy').format(date);
+    } catch (e) {
+      return monthId;
+    }
+  }
+
+  String _getShortMonthName(int month) {
+    return DateFormat('MMM').format(DateTime(2024, month));
+  }
+
+  Future<void> _loadMonthPaymentCounts() async {
+    if (_cache == null || !mounted) return;
+    
+    setState(() => _isLoadingMonths = true);
+    try {
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
+      final counts = await eventProvider.getMonthlyPaymentCounts(widget.eventId);
+      if (mounted) {
+        setState(() {
+          _monthPaymentCounts = counts;
+          _isLoadingMonths = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingMonths = false);
+    }
+  }
+
+  void _showMonthSelectorDialog() {
+    _loadMonthPaymentCounts();
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          backgroundColor: AppColors.card(context),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Month',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                    border: Border.all(color: AppColors.border(context)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.chevron_left, color: AppColors.primary(context), size: 20),
+                        onPressed: () => setDialogState(() => _currentDisplayYear--),
+                      ),
+                      Text(
+                        '$_currentDisplayYear',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.chevron_right, color: AppColors.primary(context), size: 20),
+                        onPressed: () => setDialogState(() => _currentDisplayYear++),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) {
+                    final monthNumber = index + 1;
+                    final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
+                    final isSelected = monthId == _selectedMonth;
+                    final paymentCount = _monthPaymentCounts[monthId] ?? 0;
+                    final hasPayments = paymentCount > 0;
+                    final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
+                    final isFutureMonth = DateTime.parse('$monthId-01').isAfter(DateTime.now());
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedMonth = monthId;
+                          _streamKey++;
+                        });
+                        Navigator.pop(context);
+                        HapticHelper.selection();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary(context)
+                              : isFutureMonth
+                                  ? AppColors.surface(context)
+                                  : hasPayments
+                                      ? AppColors.success(context).withValues(alpha: 0.1)
+                                      : AppColors.card(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary(context)
+                                : isCurrentMonth
+                                    ? AppColors.warning(context)
+                                    : AppColors.border(context),
+                            width: isSelected ? 1.5 : 0.8,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _getShortMonthName(monthNumber),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: isSelected
+                                    ? Colors.white
+                                    : isFutureMonth
+                                        ? AppColors.textTertiary(context)
+                                        : AppColors.textPrimary(context),
+                              ),
+                            ),
+                            if (hasPayments)
+                              Text(
+                                '$paymentCount',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.white70 : AppColors.success(context),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _buildLegendItem(AppColors.primary(context), 'Selected', context),
+                    _buildLegendItem(AppColors.success(context).withValues(alpha: 0.2), 'Collected', context),
+                    _buildLegendItem(AppColors.warning(context), 'Current', context),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label, BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+      ],
+    );
   }
 
   // ... rest of your existing methods (join, leave, buildTabSkeleton)
@@ -185,13 +401,52 @@ Widget build(BuildContext context) {
     titleWidget: FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
-      child: Text(
-        _cache?.title ?? 'Event Details',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: isDarkMode ? Colors.white : Colors.black,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _cache?.title ?? 'Event Details',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          if (_cache?.isMonthlyPayment ?? false) ...[
+            const SizedBox(width: 12),
+            Container(
+              height: 20,
+              width: 1,
+              color: (isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.15),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () {
+                HapticHelper.light();
+                _showMonthSelectorDialog();
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _selectedMonth != null ? _formatMonthDisplay(_selectedMonth!) : 'Select Month',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary(context),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: AppColors.primary(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     ),
     title: 'Event Details', // Fallback for voice over/accessibility
@@ -326,12 +581,15 @@ Widget build(BuildContext context) {
                         ),
                         EventParticipantsTab(
                           event: _cache!,
+                          selectedMonth: _selectedMonth,
                         ),
                         EventContributionsTab(
                           event: _cache!,
+                          selectedMonth: _selectedMonth,
                         ),
                         EventExpensesTab(
                           event: _cache!,
+                          selectedMonth: _selectedMonth,
                         ),
                       ],
                     )

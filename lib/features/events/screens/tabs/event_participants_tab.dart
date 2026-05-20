@@ -48,14 +48,19 @@ class SafeAsyncOperation {
 
 class EventParticipantsTab extends StatefulWidget {
   final EventModel event;
+  final String? selectedMonth;
 
-  const EventParticipantsTab({super.key, required this.event});
+  const EventParticipantsTab({
+    super.key,
+    required this.event,
+    this.selectedMonth,
+  });
 
   @override
-  State<EventParticipantsTab> createState() => _articipantsTabState();
+  State<EventParticipantsTab> createState() => _ParticipantsTabState();
 }
 
-class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKeepAliveClientMixin {
+class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
@@ -63,13 +68,7 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
   String _searchQuery = '';
   String _filterStatus = 'all';
   
-  String? _selectedMonth;
-  List<String> _availableMonths = [];
-  bool _isLoadingMonths = false;
-  Map<String, int> _monthPaymentCounts = {};
   int _streamKey = 0;
-  int _currentDisplayYear = DateTime.now().year;
-  bool _showMonthSelector = false;
   
   List<ParticipantModel> _cachedParticipants = [];
   Map<String, dynamic>? _cachedStats;
@@ -80,10 +79,10 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
   int _cachedStreamKey = -1;
 
   void _updateStreamsIfNeeded(BuildContext context) {
-    if (_participantsStream == null || _statsStream == null || _cachedStreamMonth != _selectedMonth || _cachedStreamKey != _streamKey) {
+    if (_participantsStream == null || _statsStream == null || _cachedStreamMonth != widget.selectedMonth || _cachedStreamKey != _streamKey) {
       _participantsStream = _getParticipantsStream(context);
       _statsStream = _getStatsStream(context);
-      _cachedStreamMonth = _selectedMonth;
+      _cachedStreamMonth = widget.selectedMonth;
       _cachedStreamKey = _streamKey;
     }
   }
@@ -91,9 +90,6 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
   @override
   void initState() {
     super.initState();
-    if (widget.event.isMonthlyPayment) {
-      _initializeMonths();
-    }
   }
 
   @override
@@ -112,62 +108,6 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
     }
   }
 
-  void _initializeMonths() async {
-    setState(() => _isLoadingMonths = true);
-    
-    try {
-      final eventProvider = context.read<EventProvider>();
-      final paymentCounts = await eventProvider.getMonthlyPaymentCounts(widget.event.eventId);
-      final months = _generateAllMonths();
-      
-      if (mounted) {
-        setState(() {
-          _availableMonths = months;
-          _monthPaymentCounts = paymentCounts;
-          _selectedMonth = _formatMonthId(DateTime.now());
-          _currentDisplayYear = DateTime.now().year;
-          _streamKey++;
-        });
-      }
-    } catch (e) {
-      final months = _generateAllMonths();
-      if (mounted) {
-        setState(() {
-          _availableMonths = months;
-          _selectedMonth = _formatMonthId(DateTime.now());
-          _currentDisplayYear = DateTime.now().year;
-          _monthPaymentCounts = {};
-          _streamKey++;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingMonths = false);
-      }
-    }
-  }
-
-  List<String> _generateAllMonths() {
-    final months = <String>{};
-    final now = DateTime.now();
-    final currentYear = now.year;
-    
-    for (int year = currentYear - 2; year <= currentYear + 2; year++) {
-      for (int month = 1; month <= 12; month++) {
-        final date = DateTime(year, month, 1);
-        months.add(_formatMonthId(date));
-      }
-    }
-    
-    final sortedMonths = months.toList();
-    sortedMonths.sort((a, b) => b.compareTo(a));
-    return sortedMonths;
-  }
-
-  String _formatMonthId(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}';
-  }
-
   String _formatMonthDisplay(String monthId) {
     try {
       final parts = monthId.split('-');
@@ -180,24 +120,6 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
       return DateFormat('MMMM yyyy').format(date);
     } catch (e) {
       return monthId;
-    }
-  }
-
-  String _getShortMonthName(int monthNumber) {
-    switch (monthNumber) {
-      case 1: return 'Jan';
-      case 2: return 'Feb';
-      case 3: return 'Mar';
-      case 4: return 'Apr';
-      case 5: return 'May';
-      case 6: return 'Jun';
-      case 7: return 'Jul';
-      case 8: return 'Aug';
-      case 9: return 'Sep';
-      case 10: return 'Oct';
-      case 11: return 'Nov';
-      case 12: return 'Dec';
-      default: return '???';
     }
   }
 
@@ -273,14 +195,6 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
                 child: _buildParticipantsStats(context),
               ),
 
-              if (widget.event.isMonthlyPayment)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8, left: AppDimensions.screenPaddingHorizontal, right: AppDimensions.screenPaddingHorizontal),
-                    child: _buildMonthSelectorHeader(context),
-                  ),
-                ),
-
               // STICKY HEADER for Search & Filter
               _buildPinnedSearchFilter(context),
 
@@ -324,16 +238,25 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
 
   Widget _buildParticipantsListSliver(BuildContext context) {
     return StreamBuilder<List<ParticipantModel>>(
-      key: ValueKey('participants-${widget.event.eventId}-${_selectedMonth ?? 'regular'}-$_streamKey'),
+      key: ValueKey('participants-${widget.event.eventId}-${widget.selectedMonth ?? 'regular'}-$_streamKey'),
+      initialData: _cachedParticipants,
       stream: _participantsStream,
       builder: (context, snapshot) {
+        // Smart-cache: only overwrite if new data is non-empty or no cache yet
+        if (snapshot.hasData) {
+          final newData = snapshot.data!;
+          if (newData.isNotEmpty || _cachedParticipants.isEmpty) {
+            _cachedParticipants = List.from(newData);
+          }
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting && _cachedParticipants.isEmpty) {
           return SliverToBoxAdapter(
             child: _buildShimmerSkeleton(),
           );
         }
 
-        if (snapshot.hasError) {
+        if (snapshot.hasError && _cachedParticipants.isEmpty) {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
@@ -354,10 +277,10 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
           );
         }
 
-        final participants = snapshot.data ?? [];
-        if (snapshot.connectionState == ConnectionState.active) {
-          _cachedParticipants = List.from(participants);
-        }
+        // Use cached or live data
+        final participants = _cachedParticipants.isNotEmpty
+            ? _cachedParticipants
+            : (snapshot.data ?? []);
         
         final filteredParticipants = _filterParticipants(participants);
 
@@ -384,21 +307,29 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
   Widget _buildParticipantsStats(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>(
       key: ValueKey(
-        'stats-${widget.event.eventId}-${_selectedMonth ?? 'regular'}-$_streamKey',
+        'stats-${widget.event.eventId}-${widget.selectedMonth ?? 'regular'}-$_streamKey',
       ),
+      initialData: _cachedStats,
       stream: _statsStream,
       builder: (context, snapshot) {
-        // Update cache on new data
+        // Smart-cache: only overwrite if new data has meaningful values
         if (snapshot.hasData) {
-          _cachedStats = snapshot.data;
+          final newData = snapshot.data!;
+          final newTotal = (newData['totalParticipants'] ?? 0) as int;
+          final newCollected = (newData['totalCollected'] ?? 0.0) as double;
+          // Only update cache if data is non-zero OR we have no cache yet
+          if (newTotal > 0 || newCollected > 0 || _cachedStats == null) {
+            _cachedStats = snapshot.data;
+          }
         }
         
         // Show shimmer only on first load when no cache exists
-        if (snapshot.connectionState == ConnectionState.waiting && _cachedStats == null) {
+        if ((snapshot.connectionState == ConnectionState.waiting || snapshot.hasError) && _cachedStats == null) {
           return _buildShimmerStats();
         }
 
-        final data = _cachedStats ?? {
+        // ALWAYS prefer cached data — never fall through to zero defaults
+        final data = _cachedStats ?? snapshot.data ?? {
           'totalParticipants': 0,
           'paidParticipants': 0,
           'pendingParticipants': 0,
@@ -454,7 +385,7 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          widget.event.isMonthlyPayment && _selectedMonth != null
+                          widget.event.isMonthlyPayment && widget.selectedMonth != null
                               ? "MONTHLY SUMMARY"
                               : "PARTICIPANTS OVERVIEW",
                           style: TextStyle(
@@ -658,7 +589,7 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
 
   Widget _buildShimmerStats() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
+    final shimmerColor = Colors.white.withValues(alpha: isDarkMode ? 0.15 : 0.25);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -666,9 +597,21 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface(context),
+          gradient: isDarkMode
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+                ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+          border: Border.all(
+            color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +626,7 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
             const SizedBox(height: 16),
             Container(width: 140, height: 34, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(8))),
             const SizedBox(height: 8),
-            Container(width: 100, height: 12, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(6))),
+            Container(width: 100, height: 12, decoration: BoxDecoration(color: Colors.white.withValues(alpha: isDarkMode ? 0.1 : 0.2), borderRadius: BorderRadius.circular(6))),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -698,306 +641,21 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
     );
   }
 
-  Widget _buildMonthGridSelector(BuildContext context) {
-    if (_isLoadingMonths) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: LinearProgressIndicator(
-          color: AppColors.primary(context),
-        ),
+  Stream<List<ParticipantModel>> _getParticipantsStream(BuildContext context) {
+    final eventProvider = context.read<EventProvider>();
+    
+    if (widget.event.isMonthlyPayment && widget.selectedMonth != null) {
+      return eventProvider.streamParticipantsWithMonthlyContributions(
+        widget.event.eventId,
+        widget.selectedMonth!,
+      );
+    } else {
+      return eventProvider.streamParticipantsWithContributions(
+        widget.event.eventId,
       );
     }
-    
-    return Card(
-      color: AppColors.card(context),
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface(context),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: AppColors.border(context),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.chevron_left,
-                        color: AppColors.primary(context),
-                        size: 20,
-                      ),
-                      onPressed: _goToPreviousYear,
-                      tooltip: 'Previous year',
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                    ),
-                    Text(
-                      '$_currentDisplayYear',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.chevron_right,
-                        color: AppColors.primary(context),
-                        size: 20,
-                      ),
-                      onPressed: _goToNextYear,
-                      tooltip: 'Next year',
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-                childAspectRatio: 1.05,
-              ),
-              itemCount: 12,
-              itemBuilder: (context, index) {
-                final monthNumber = index + 1;
-                final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
-                final paymentCount = _monthPaymentCounts[monthId] ?? 0;
-                final hasPayments = paymentCount > 0;
-                final isSelected = monthId == _selectedMonth;
-                final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
-                final isFutureMonth = DateTime.parse('$monthId-01').isAfter(DateTime.now());
-                
-                return GestureDetector(
-                  onTap: () {
-                    if (monthId != _selectedMonth) {
-                      setState(() {
-                        _selectedMonth = monthId;
-                        _streamKey++;
-                        _showMonthSelector = false;
-                      });
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary(context) : 
-                             isFutureMonth ? AppColors.surface(context) : 
-                             hasPayments ? AppColors.success(context).withValues(alpha: 0.1) : 
-                             AppColors.card(context),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected ? AppColors.primary(context) : 
-                               isCurrentMonth ? AppColors.warning(context) : 
-                               AppColors.border(context),
-                        width: isSelected ? 1.5 : 0.8,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _getShortMonthName(monthNumber),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: isSelected ? Colors.white :
-                                   isFutureMonth ? AppColors.textTertiary(context) :
-                                   AppColors.textPrimary(context),
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 1),
-                        
-                        if (hasPayments) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white.withValues(alpha: 0.9) : 
-                                     AppColors.success(context).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '$paymentCount',
-                              style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? AppColors.success(context) : 
-                                       AppColors.success(context),
-                              ),
-                            ),
-                          ),
-                        ] else if (isFutureMonth) ...[
-                          Icon(
-                            Icons.schedule,
-                            size: 8,
-                            color: AppColors.textTertiary(context),
-                          ),
-                        ] else ...[
-                          const SizedBox(height: 10),
-                        ],
-                        
-                        if (isCurrentMonth && !isSelected)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 0.5),
-                            child: Icon(
-                              Icons.circle,
-                              size: 4,
-                              color: AppColors.warning(context),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            
-            const SizedBox(height: 6),
-            
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                _buildLegendItem(
-                  AppColors.primary(context), 
-                  'Selected',
-                  context,
-                ),
-                _buildLegendItem(
-                  AppColors.success(context).withValues(alpha: 0.2), 
-                  'Has Payments',
-                  context,
-                ),
-                _buildLegendItem(
-                  AppColors.warning(context), 
-                  'Current',
-                  context,
-                ),
-                _buildLegendItem(
-                  AppColors.surface(context), 
-                  'Future',
-                  context,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
-  Widget _buildMonthSelectorHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_month_rounded,
-                  color: AppColors.primary(context),
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Monthly Payments',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(context),
-                    fontSize: 14,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                if (_selectedMonth != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary(context).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                      border: Border.all(
-                        color: AppColors.primary(context).withValues(alpha: 0.15),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _formatMonthDisplay(_selectedMonth!),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary(context),
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () => _showMonthSelectorDialog(context),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.primary(context),
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildLegendItem(Color color, String text, BuildContext context) {
     return Row(
@@ -1027,234 +685,8 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
     );
   }
 
-  void _showMonthSelectorDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
-          return Center(
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                constraints: const BoxConstraints(maxWidth: 400),
-                decoration: BoxDecoration(
-                  color: AppColors.card(context),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Dialog Header
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_month_rounded, color: AppColors.primary(context), size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Select Month',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: AppColors.textPrimary(context),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
-                            onPressed: () => Navigator.pop(dialogContext),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Year Navigator
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface(context),
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                          border: Border.all(color: AppColors.border(context)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.chevron_left, color: AppColors.primary(context), size: 20),
-                              onPressed: () => setDialogState(() => _currentDisplayYear--),
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                            Text(
-                              '$_currentDisplayYear',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary(context),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.chevron_right, color: AppColors.primary(context), size: 20),
-                              onPressed: () => setDialogState(() => _currentDisplayYear++),
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Month Grid
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 6,
-                          mainAxisSpacing: 6,
-                          childAspectRatio: 1.1,
-                        ),
-                        itemCount: 12,
-                        itemBuilder: (context, index) {
-                          final monthNumber = index + 1;
-                          final monthId = '$_currentDisplayYear-${monthNumber.toString().padLeft(2, '0')}';
-                          final paymentCount = _monthPaymentCounts[monthId] ?? 0;
-                          final hasPayments = paymentCount > 0;
-                          final isSelected = monthId == _selectedMonth;
-                          final isCurrentMonth = monthId == _formatMonthId(DateTime.now());
-                          final isFutureMonth = DateTime.parse('$monthId-01').isAfter(DateTime.now());
+  // Removed redundant month selector dialog as it is now handled globally in EventDetailsScreen app bar.
 
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedMonth = monthId;
-                                _streamKey++;
-                              });
-                              Navigator.pop(dialogContext);
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primary(context)
-                                    : isFutureMonth
-                                        ? AppColors.surface(context)
-                                        : hasPayments
-                                            ? AppColors.success(context).withValues(alpha: 0.1)
-                                            : AppColors.card(context),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.primary(context)
-                                      : isCurrentMonth
-                                          ? AppColors.warning(context)
-                                          : AppColors.border(context),
-                                  width: isSelected ? 1.5 : 0.8,
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _getShortMonthName(monthNumber),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : isFutureMonth
-                                              ? AppColors.textTertiary(context)
-                                              : AppColors.textPrimary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  if (hasPayments)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? Colors.white.withValues(alpha: 0.9)
-                                            : AppColors.success(context).withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        '$paymentCount',
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.success(context),
-                                        ),
-                                      ),
-                                    )
-                                  else if (isFutureMonth)
-                                    Icon(Icons.schedule, size: 8, color: AppColors.textTertiary(context))
-                                  else
-                                    const SizedBox(height: 10),
-                                  if (isCurrentMonth && !isSelected)
-                                    Icon(Icons.circle, size: 4, color: AppColors.warning(context)),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      // Legend
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 4,
-                        children: [
-                          _buildLegendItem(AppColors.primary(context), 'Selected', context),
-                          _buildLegendItem(AppColors.success(context).withValues(alpha: 0.2), 'Has Payments', context),
-                          _buildLegendItem(AppColors.warning(context), 'Current', context),
-                          _buildLegendItem(AppColors.surface(context), 'Future', context),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _goToPreviousYear() {
-    setState(() {
-      _currentDisplayYear--;
-    });
-  }
-
-  void _goToNextYear() {
-    setState(() {
-      _currentDisplayYear++;
-    });
-  }
-
-  Stream<List<ParticipantModel>> _getParticipantsStream(BuildContext context) {
-    final eventProvider = context.read<EventProvider>();
-    
-    if (widget.event.isMonthlyPayment && _selectedMonth != null) {
-      return eventProvider.streamParticipantsWithMonthlyContributions(
-        widget.event.eventId,
-        _selectedMonth!,
-      );
-    } else {
-      return eventProvider.streamParticipantsWithContributions(
-        widget.event.eventId,
-      );
-    }
-  }
 
   Widget _statChip(
     BuildContext context, {
@@ -1303,10 +735,10 @@ class _articipantsTabState extends State<EventParticipantsTab> with AutomaticKee
   Stream<Map<String, dynamic>> _getStatsStream(BuildContext context) {
     final eventProvider = context.read<EventProvider>();
     
-    if (widget.event.isMonthlyPayment && _selectedMonth != null) {
+    if (widget.event.isMonthlyPayment && widget.selectedMonth != null) {
       return eventProvider.streamMonthlyFinancialSummary(
         widget.event.eventId,
-        _selectedMonth!,
+        widget.selectedMonth!,
       );
     } else {
       return eventProvider.streamFinancialSummary(widget.event.eventId);
@@ -1450,6 +882,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
   final contributionPaid = participant.contributionPaid ?? 0;
   final suggestedContribution = widget.event.suggestedContribution ?? 0;
   final hasPaidFull = suggestedContribution > 0 && contributionPaid >= suggestedContribution;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
 
   return Column(
     children: [
@@ -1459,34 +892,41 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
           onTap: () {
             _navigateToMemberProfile(participant, context);
           },
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Column 1: Avatar
+                // Avatar
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.primary(context).withValues(alpha: 0.12),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary(context),
+                        AppColors.primary(context).withValues(alpha: 0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                   child: Center(
                     child: Text(
                       userName.substring(0, 1).toUpperCase(),
-                      style: TextStyle(
-                        color: AppColors.primary(context),
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 18,
                       ),
                     ),
                   ),
                 ),
                 
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 
-                // Column 2: Name and Contribution
+                // Name and subtle status indication
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1495,73 +935,67 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                       Text(
                         userName,
                         style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                           color: AppColors.textPrimary(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      if (suggestedContribution > 0)
-                        Text(
-                          'Paid ₹${contributionPaid.toStringAsFixed(0)}/₹${suggestedContribution.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary(context),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      if (suggestedContribution > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: hasPaidFull 
+                                    ? AppColors.success(context)
+                                    : AppColors.warning(context),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              hasPaidFull 
+                                ? 'Fully Paid' 
+                                : 'Due: ₹${(suggestedContribution - contributionPaid).toStringAsFixed(0)}',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
+                      ],
                     ],
                   ),
                 ),
                 
                 const SizedBox(width: 8),
                 
-               if (suggestedContribution > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: hasPaidFull 
-                          ? AppColors.success(context).withValues(alpha: 0.15)
-                          : AppColors.warning(context).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: hasPaidFull 
-                            ? AppColors.success(context).withValues(alpha: 0.3)
-                            : AppColors.warning(context).withValues(alpha: 0.3),
-                        width: 1,
+                // Big Contributed Amount
+                if (suggestedContribution > 0)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '₹${contributionPaid.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: hasPaidFull ? AppColors.success(context) : AppColors.textPrimary(context),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: hasPaidFull 
-                                ? AppColors.success(context)
-                                : AppColors.warning(context),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          hasPaidFull ? 'Paid' : 'Pending',
-                          style: TextStyle(
-                            color: hasPaidFull 
-                                ? AppColors.success(context)
-                                : AppColors.warning(context),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                // Column 4: Three-dot menu
+                  
+                const SizedBox(width: 8),
+
+                // Menu
                 PopupMenuButton<String>(
                   icon: Icon(
                     Icons.more_vert,
@@ -1668,12 +1102,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
           ),
         ),
       ),
-      
-      Divider(
-        height: 1,
-        thickness: 1,
-        color: AppColors.border(context),
-      ),
+      Divider(height: 1, thickness: 1, color: AppColors.border(context)),
     ],
   );
 }
@@ -1706,7 +1135,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
             Text(
               noParticipants 
                 ? widget.event.isMonthlyPayment
-                  ? 'Participants will appear here when they pay for the selected month'
+                  ? 'No participants yet'
                   : 'Start by adding participants to your event to track their contributions.'
                 : 'Try adjusting your search or filter',
               textAlign: TextAlign.center,
@@ -1860,13 +1289,13 @@ Future<void> _togglePaymentStatus(
     );
 
     if (isMonthlyy) {
-      if (_selectedMonth == null) {
+      if (widget.selectedMonth == null) {
         SnackbarHelper.showWarning(context, 'Please select a month first');
         return;
       }
 
       final monthlyContributions = contributions.where(
-        (c) => c.isMonthlyContribution && c.monthId == _selectedMonth,
+        (c) => c.isMonthlyContribution && c.monthId == widget.selectedMonth,
       ).toList();
 
       final totalPaid = monthlyContributions.fold<double>(
@@ -1881,7 +1310,7 @@ Future<void> _togglePaymentStatus(
           eventId: eventId,
           userId: participant.userId,
           participantName: participant.userName,
-          monthId: _selectedMonth,
+          monthId: widget.selectedMonth,
           isMonthlyy: true,
           reason: 'Marked as pending by admin',
         );
@@ -1896,7 +1325,7 @@ Future<void> _togglePaymentStatus(
           userId: participant.userId,
           participantName: participant.userName,
           amount: remaining,
-          monthId: _selectedMonth,
+          monthId: widget.selectedMonth,
           isMonthlyy: true,
           authProvider: _authProvider,
         );
@@ -2085,9 +1514,9 @@ Future<void> _removeContributions({
         forceRefresh: true,
       );
       
-      if (widget.event.isMonthlyPayment && _selectedMonth != null) {
+      if (widget.event.isMonthlyPayment && widget.selectedMonth != null) {
         final monthlyContributions = contributions
-            .where((c) => c.isMonthlyContribution && c.monthId == _selectedMonth)
+            .where((c) => c.isMonthlyContribution && c.monthId == widget.selectedMonth)
             .toList();
         
         final totalPaid = monthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
@@ -2111,8 +1540,8 @@ Future<void> _removeContributions({
       final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
       
       if (suggestedAmount <= 0) {
-        return widget.event.isMonthlyPayment && _selectedMonth != null
-            ? 'For ${_formatMonthDisplay(_selectedMonth!)}'
+        return widget.event.isMonthlyPayment && widget.selectedMonth != null
+            ? 'For ${_formatMonthDisplay(widget.selectedMonth!)}'
             : null;
       }
       
@@ -2124,17 +1553,17 @@ Future<void> _removeContributions({
       
       double totalPaid;
       
-      if (widget.event.isMonthlyPayment && _selectedMonth != null) {
+      if (widget.event.isMonthlyPayment && widget.selectedMonth != null) {
         final monthlyContributions = contributions
-            .where((c) => c.isMonthlyContribution && c.monthId == _selectedMonth)
+            .where((c) => c.isMonthlyContribution && c.monthId == widget.selectedMonth)
             .toList();
         
         totalPaid = monthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
         
         if (totalPaid >= suggestedAmount) {
-          return 'Fully paid for ${_formatMonthDisplay(_selectedMonth!)}';
+          return 'Fully paid for ${_formatMonthDisplay(widget.selectedMonth!)}';
         } else {
-          return '₹${totalPaid.toStringAsFixed(0)}/₹${suggestedAmount.toStringAsFixed(0)} for ${_formatMonthDisplay(_selectedMonth!)}';
+          return '₹${totalPaid.toStringAsFixed(0)}/₹${suggestedAmount.toStringAsFixed(0)} for ${_formatMonthDisplay(widget.selectedMonth!)}';
         }
       } else {
         final nonMonthlyContributions = contributions
@@ -2179,4 +1608,4 @@ class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.maxExtent != maxExtent ||
         oldDelegate.minExtent != minExtent;
   }
-}
+}

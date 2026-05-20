@@ -136,7 +136,8 @@ class UserService {
           }
         }
 
-        await notificationService.sendUserNotification(
+        // Fire and forget to avoid blocking the UI
+        notificationService.sendUserNotification(
           userId: uid,
           title: 'You\'re In! 🎉',
           body: 'Your request to join $communityName has been approved.',
@@ -149,9 +150,11 @@ class UserService {
             'approvedAt': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
             'approvedBy': adminName ?? 'Admin',
           },
-        );
+        ).catchError((e) {
+          debugPrint('⚠️ Approval notification background failed: $e');
+        });
       } catch (e) {
-        debugPrint('⚠️ Approval notification failed: $e');
+        debugPrint('⚠️ Approval notification setup failed: $e');
       }
     } catch (e) {
       throw 'Failed to approve user: $e';

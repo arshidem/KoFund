@@ -50,7 +50,8 @@ class ContributionService {
 
         final recorderName = contribution.addedByUserName ?? 'Admin';
 
-        await notificationService.sendUserNotification(
+        // Fire and forget to avoid blocking UI when adding contribution
+        notificationService.sendUserNotification(
           userId: contribution.userId,
           title: title,
           body: body,
@@ -70,9 +71,11 @@ class ContributionService {
             'eventId': contribution.eventId,
             'timestamp': DateFormat('MMM dd, yyyy · hh:mm a').format(DateTime.now()),
           },
-        );
+        ).catchError((e) {
+          debugPrint('⚠️ Contribution notification background failed: $e');
+        });
       } catch (e) {
-        debugPrint('⚠️ Contribution notification failed: $e');
+        debugPrint('⚠️ Contribution notification setup failed: $e');
       }
 
       // ✅ NEW: Update participant's summary in Firestore
@@ -644,6 +647,16 @@ class ContributionService {
         .map((snapshot) => snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList());
   }
 
+  Stream<List<ContributionModel>> streamMonthlyContributions(String eventId, String monthId) {
+    return _firestore
+        .collection('contributions')
+        .where('eventId', isEqualTo: eventId)
+        .where('monthId', isEqualTo: monthId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => ContributionModel.fromMap(doc.data(), doc.id)).toList());
+  }
+
   Stream<List<ContributionModel>> streamUserContributions(String userId, String communityId) {
     return _firestore
         .collection('contributions')
@@ -673,7 +686,7 @@ class ContributionService {
         });
   }
 
-  Future<List<ContributionModel>> getMonthlyContributionsFo(String eventId, String monthId) async {
+  Future<List<ContributionModel>> getMonthlyContributionsForParticipant(String eventId, String monthId) async {
     try {
       final snapshot = await _firestore
           .collection('contributions')

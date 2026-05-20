@@ -11,7 +11,9 @@ import '../../../expenses/models/expense_model.dart';
 import '../../../auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/constants/app_dimensions.dart'; // Add this import
-import '../../../../core/services/network_service.dart'; // Add this import
+import '../../../../core/services/network_service.dart';
+import '../event_details_screen.dart';
+import '../../providers/event_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
@@ -27,8 +29,13 @@ class ChangeEntry {
 }
 class EventExpensesTab extends StatefulWidget {
   final EventModel event;
+  final String? selectedMonth;
 
-  const EventExpensesTab({super.key, required this.event});
+  const EventExpensesTab({
+    super.key,
+    required this.event,
+    this.selectedMonth,
+  });
 
   @override
   State<EventExpensesTab> createState() => _ExpensesTabState();
@@ -38,20 +45,43 @@ class _ExpensesTabState extends State<EventExpensesTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _filterStatus = 'all';
-  String _filterCategory = 'all';
 
-  final List<String> _categories = [
-    'food',
-    'transport',
-    'venue',
-    'materials',
-    'decorations',
-    'other'
-  ];
-
-  List<String> _paymentMethods = ['cash', 'upi'];
-  String _filterPaymentMethod = 'all';
   List<ExpenseModel>? _cachedExpenses;
+  Map<String, dynamic>? _cachedStats;
+
+  Stream<List<ExpenseModel>>? _expensesStream;
+  Stream<Map<String, dynamic>>? _statsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    
+    if (widget.event.isMonthlyPayment) {
+      final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
+      _expensesStream = expenseProvider.streamMonthlyExpenses(widget.event.eventId, monthId);
+    } else {
+      _expensesStream = expenseProvider.streamEventExpenses(widget.event.eventId);
+    }
+    
+    _statsStream = _getExpenseStatsStream(context);
+  }
+
+  @override
+  void didUpdateWidget(covariant EventExpensesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedMonth != widget.selectedMonth) {
+      setState(() {
+        _cachedExpenses = null; // Clear cache on month switch to avoid showing wrong empty state
+        _cachedStats = null;    // Clear stats too for a fresh load
+        _initStreams();
+      });
+    }
+  }
 
   void _onRefresh() async {
     try {
@@ -144,10 +174,15 @@ class _ExpensesTabState extends State<EventExpensesTab> {
               
               // Expenses List
               StreamBuilder<List<ExpenseModel>>(
-                stream: Provider.of<ExpenseProvider>(context, listen: false)
-                    .streamEventExpenses(widget.event.eventId),
+                initialData: _cachedExpenses,
+                stream: _expensesStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.hasData) {
+                    _cachedExpenses = snapshot.data;
+                  }
+
+                  // Show skeleton ONLY on very first load with no cache
+                  if (snapshot.connectionState == ConnectionState.waiting && _cachedExpenses == null) {
                     return SliverToBoxAdapter(
                       child: SizedBox(
                         height: 400,
@@ -156,13 +191,14 @@ class _ExpensesTabState extends State<EventExpensesTab> {
                     );
                   }
 
-                  if (snapshot.hasError) {
+                  if (snapshot.hasError && _cachedExpenses == null) {
                     return SliverToBoxAdapter(
                       child: _buildErrorState(snapshot.error, context),
                     );
                   }
 
-                  final expenses = snapshot.data ?? [];
+                  // Use cached or live data
+                  final expenses = _cachedExpenses ?? snapshot.data ?? [];
                   final filteredExpenses = _filterExpenses(expenses);
 
                   if (filteredExpenses.isEmpty) {
@@ -209,13 +245,12 @@ class _ExpensesTabState extends State<EventExpensesTab> {
           bottom: 16,
           right: 16,
           child: StreamBuilder<List<ExpenseModel>>(
-            stream: Provider.of<ExpenseProvider>(context, listen: false)
-                .streamEventExpenses(widget.event.eventId),
+            stream: _expensesStream,
             builder: (context, snapshot) {
               final expenses = snapshot.data ?? [];
               final filteredExpenses = _filterExpenses(expenses);
               return Visibility(
-                visible: filteredExpenses.isNotEmpty,
+                visible: expenses.isNotEmpty,
                 child: FloatingActionButton(
                   onPressed: () => _showAddExpenseDialog(context, isAdmin),
                   backgroundColor: AppColors.primary(context),
@@ -277,24 +312,20 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
             _showExpenseDetails(expense, context);
           },
           child: Container(
-                                                                 decoration: BoxDecoration(
-  
-    ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 1. Icon column (fixed width)
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(expense.category).withValues(alpha: 0.1),
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    _getCategoryIcon(expense.category),
-                    color: _getCategoryColor(expense.category),
+                    Icons.receipt_long_rounded,
+                    color: AppColors.primary(context),
                     size: 20,
                   ),
                 ),
@@ -333,7 +364,7 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
                         ),
                       
                       Text(
-                        '${DateFormat('dd/MM/yyyy').format(expense.expenseDate)} • ${expense.category.toUpperCase()}',
+                        DateFormat('dd/MM/yyyy').format(expense.expenseDate),
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary(context),
@@ -582,160 +613,211 @@ void _navigateToEditExpense(ExpenseModel expense, BuildContext context) {
 }
 
 Widget _buildExpenseSummary(BuildContext context) {
-  return StreamBuilder<List<ExpenseModel>>(
-    stream: Provider.of<ExpenseProvider>(context, listen: false)
-        .streamEventExpenses(widget.event.eventId),
+  return StreamBuilder<Map<String, dynamic>>(
+    initialData: _cachedStats,
+    stream: _statsStream,
     builder: (context, snapshot) {
-      // Update cache whenever new data arrives
+      // Smart-cache: only overwrite if new data has meaningful values
       if (snapshot.hasData) {
-        _cachedExpenses = snapshot.data;
+        _cachedStats = snapshot.data;
       }
       
       // Show shimmer only on first load when no cache exists
-      if (snapshot.connectionState == ConnectionState.waiting && _cachedExpenses == null) {
+      if (snapshot.connectionState == ConnectionState.waiting && _cachedStats == null) {
         return _buildShimmerStats(context);
       }
 
       // Use cached data if available (works offline); fall back to empty
-      final expenses = _cachedExpenses ?? snapshot.data ?? [];
-      final totalExpenses = expenses.fold(0.0, (sum, expense) => sum + expense.amount);
-      final approvedExpenses = expenses.where((e) => e.status == 'approved').fold(0.0, (sum, expense) => sum + expense.amount);
-      final pendingExpenses = expenses.where((e) => e.status == 'pending').fold(0.0, (sum, expense) => sum + expense.amount);
+      final data = _cachedStats ?? snapshot.data ?? {
+        'totalExpenses': 0.0,
+        'expenses': 0.0,
+        'totalCollected': 0.0,
+        'collected': 0.0,
+      };
 
       final bool isDark = Theme.of(context).brightness == Brightness.dark;
       
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.card(context),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
-            ),
-            boxShadow: [
-              if (!isDark)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// ───────────────── Header ─────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "EXPENSES OVERVIEW",
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context).withValues(alpha: 0.4),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                        ),
+      return StreamBuilder<List<ExpenseModel>>(
+        stream: _expensesStream,
+        builder: (context, expSnapshot) {
+          final expenses = expSnapshot.data ?? _cachedExpenses ?? [];
+          
+          // Calculate stats locally for instant reflection
+          double totalExpenses = 0.0;
+          double approvedExpenses = 0.0;
+          double pendingExpenses = 0.0;
+          
+          for (var exp in expenses) {
+            totalExpenses += exp.amount;
+            if (exp.status == 'approved') {
+              approvedExpenses += exp.amount;
+            } else if (exp.status == 'pending') {
+              pendingExpenses += exp.amount;
+            }
+          }
+
+          // Fallback to summary data if list is empty but summary has data (e.g. initial load)
+          if (expenses.isEmpty && (data['totalExpenses'] ?? 0.0) > 0) {
+            totalExpenses = (data['totalExpenses'] ?? data['expenses'] ?? 0.0).toDouble();
+            approvedExpenses = totalExpenses;
+          }
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: isDark
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Summary",
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark 
+                        ? Colors.black.withValues(alpha: 0.3) 
+                        : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// ───────────────── Header ─────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "EXPENSES OVERVIEW",
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Summary",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Top-right icon + count
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.receipt_long_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${expenses.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-  
-                  // Top-right icon + count (mirrors contributions card)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+      
+                  const SizedBox(height: 16),
+      
+                  /// ───────────────── APPROVED EXPENSES (Big Text) ─────────────────
+                  Text(
+                    "₹${approvedExpenses.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.2,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.receipt_long_rounded,
-                          color: AppColors.primary(context),
-                          size: 14,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${expenses.length}',
-                          style: TextStyle(
-                            color: AppColors.primary(context),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      "Approved & Verified",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                  ),
+      
+                  const SizedBox(height: 12),
+      
+                  /// ───────────────── Stats Row ─────────────────
+                  Row(
+                    children: [
+                      _buildStatChip(
+                        context,
+                        icon: Icons.receipt,
+                        label: "TOTAL",
+                        value: "₹${totalExpenses.toStringAsFixed(0)}",
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildStatChip(
+                        context,
+                        icon: Icons.pending_rounded,
+                        label: "PENDING",
+                        value: "₹${pendingExpenses.toStringAsFixed(0)}",
+                        color: Colors.white,
+                      ),
+                    ],
                   ),
                 ],
               ),
-  
-              const SizedBox(height: 16),
-  
-              /// ───────────────── APPROVED EXPENSES (Big Text) ─────────────────
-              Text(
-                "₹${approvedExpenses.toStringAsFixed(0)}",
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  "Approved & Verified",
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context).withValues(alpha: 0.5),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-  
-              const SizedBox(height: 12),
-  
-              /// ───────────────── Stats Row ─────────────────
-              Row(
-                children: [
-                  _buildStatChip(
-                    context,
-                    icon: Icons.receipt,
-                    label: "Total",
-                    value: "₹${totalExpenses.toStringAsFixed(0)}",
-                    color: AppColors.textPrimary(context),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatChip(
-                    context,
-                    icon: Icons.pending_rounded,
-                    label: "PENDING",
-                    value: "₹${pendingExpenses.toStringAsFixed(0)}",
-                    color: const Color(0xFFF59E0B), // Vibrant Amber
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }
       );
     },
   );
+}
+
+Stream<Map<String, dynamic>> _getExpenseStatsStream(BuildContext context) {
+  final eventProvider = Provider.of<EventProvider>(context, listen: false);
+  
+  if (widget.event.isMonthlyPayment) {
+    final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
+    return eventProvider.streamMonthlyFinancialSummary(widget.event.eventId, monthId);
+  } else {
+    return eventProvider.streamFinancialSummary(widget.event.eventId);
+  }
 }
 
   Widget _buildSearchFilterBar(BuildContext context) {
@@ -931,8 +1013,6 @@ Widget _buildExpenseSummary(BuildContext context) {
                         onPressed: () {
                           setSheetState(() {
                             _filterStatus = 'all';
-                            _filterCategory = 'all';
-                            _filterPaymentMethod = 'all';
                           });
                           setState(() {});
                           HapticHelper.medium();
@@ -945,69 +1025,42 @@ Widget _buildExpenseSummary(BuildContext context) {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Status Column
-                      buildFilterColumn(
-                        'STATUS',
-                        [
-                          buildFilterItem('All', Icons.list_alt_rounded, _filterStatus == 'all', () {
-                            setSheetState(() => _filterStatus = 'all');
-                            setState(() {});
-                          }),
-                          buildFilterItem('Approved', Icons.check_circle_outline_rounded, _filterStatus == 'approved', () {
-                            setSheetState(() => _filterStatus = 'approved');
-                            setState(() {});
-                          }),
-                          buildFilterItem('Pending', Icons.pending_outlined, _filterStatus == 'pending', () {
-                            setSheetState(() => _filterStatus = 'pending');
-                            setState(() {});
-                          }),
-                          buildFilterItem('Rejected', Icons.cancel_outlined, _filterStatus == 'rejected', () {
-                            setSheetState(() => _filterStatus = 'rejected');
-                            setState(() {});
-                          }),
-                        ],
-                      ),
-                      const SizedBox(width: 8),
-                      // Category Column
-                      buildFilterColumn(
-                        'CATEGORY',
-                        [
-                          buildFilterItem('All', Icons.category_outlined, _filterCategory == 'all', () {
-                            setSheetState(() => _filterCategory = 'all');
-                            setState(() {});
-                          }),
-                          ..._categories.map((cat) => buildFilterItem(
-                            cat.substring(0, 1).toUpperCase() + cat.substring(1),
-                            Icons.label_outline_rounded,
-                            _filterCategory == cat,
-                            () {
-                              setSheetState(() => _filterCategory = cat);
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'STATUS',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildFilterItem('All', Icons.list_alt_rounded, _filterStatus == 'all', () {
+                              setSheetState(() => _filterStatus = 'all');
                               setState(() {});
-                            },
-                          )),
-                        ],
-                      ),
-                      const SizedBox(width: 8),
-                      // Payment Column
-                      buildFilterColumn(
-                        'PAYMENT',
-                        [
-                          buildFilterItem('All', Icons.payments_outlined, _filterPaymentMethod == 'all', () {
-                            setSheetState(() => _filterPaymentMethod = 'all');
-                            setState(() {});
-                          }),
-                          buildFilterItem('Cash', Icons.money, _filterPaymentMethod == 'cash', () {
-                            setSheetState(() => _filterPaymentMethod = 'cash');
-                            setState(() {});
-                          }),
-                          buildFilterItem('UPI', Icons.phone_android, _filterPaymentMethod == 'upi', () {
-                            setSheetState(() => _filterPaymentMethod = 'upi');
-                            setState(() {});
-                          }),
-                        ],
+                            }),
+                            buildFilterItem('Approved', Icons.check_circle_outline_rounded, _filterStatus == 'approved', () {
+                              setSheetState(() => _filterStatus = 'approved');
+                              setState(() {});
+                            }),
+                            buildFilterItem('Pending', Icons.pending_outlined, _filterStatus == 'pending', () {
+                              setSheetState(() => _filterStatus = 'pending');
+                              setState(() {});
+                            }),
+                            buildFilterItem('Rejected', Icons.cancel_outlined, _filterStatus == 'rejected', () {
+                              setSheetState(() => _filterStatus = 'rejected');
+                              setState(() {});
+                            }),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1038,24 +1091,7 @@ Widget _buildExpenseSummary(BuildContext context) {
   }
 
 
-Widget _buildAddExpenseButton(BuildContext context, bool isAdmin) {
-  return Visibility(
-    child: Positioned(
-      bottom: 16,
-      right: 16,
-      child: FloatingActionButton(
-        onPressed: () => _showAddExpenseDialog(context, isAdmin),
-        backgroundColor: AppColors.primary(context),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-        ),
-        elevation: 4,
-        child: const Icon(Icons.add),
-      ),
-    ),
-  );
-}
+
 
   Widget _buildNotApprovedMessage(BuildContext context) {
     return Container(
@@ -1160,10 +1196,10 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withValues(alpha: 0.15),
+            color: Colors.white.withValues(alpha: 0.25),
             width: 1,
           ),
         ),
@@ -1172,14 +1208,14 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
           children: [
             Row(
               children: [
-                Icon(icon, color: color, size: 14),
+                Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 14),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
-                    color: color.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.7),
                     letterSpacing: 1,
                   ),
                 ),
@@ -1188,10 +1224,10 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
             const SizedBox(height: 6),
             Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary(context),
+                color: Colors.white,
                 letterSpacing: -0.5,
               ),
             ),
@@ -1204,6 +1240,11 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
   List<ExpenseModel> _filterExpenses(List<ExpenseModel> expenses) {
     List<ExpenseModel> filtered = expenses;
 
+    // Filter by shared month if it's a monthly event
+    if (widget.event.isMonthlyPayment && widget.selectedMonth != null) {
+      filtered = filtered.where((expense) => expense.monthId == widget.selectedMonth).toList();
+    }
+
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((expense) =>
         expense.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -1213,14 +1254,6 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
 
     if (_filterStatus != 'all') {
       filtered = filtered.where((expense) => expense.status == _filterStatus).toList();
-    }
-
-    if (_filterCategory != 'all') {
-      filtered = filtered.where((expense) => expense.category == _filterCategory).toList();
-    }
-
-    if (_filterPaymentMethod != 'all') {
-      filtered = filtered.where((expense) => expense.paymentMethod == _filterPaymentMethod).toList();
     }
 
     return filtered;
@@ -1467,43 +1500,51 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                               ),
                             ),
                             
-                            // ───── BASIC INFORMATION ─────
-                            _buildSectionHeader(
-                              context,
-                              title: 'Basic Information',
-                              icon: Icons.info_outline_rounded,
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface(context),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.border(context),
-                                  width: 0.6,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // ───── CATEGORY ─────
-                                  _buildInfoRowMinimal(
+                                  // ───── BASIC INFORMATION ─────
+                                  _buildSectionHeader(
                                     context,
-                                    icon: _getCategoryIcon(expense.category),
-                                    label: 'Category',
-                                    value: expense.category.toUpperCase(),
+                                    title: 'Basic Information',
+                                    icon: Icons.info_outline_rounded,
                                   ),
 
-                                  const SizedBox(height: 12),
-                                  Divider(
-                                    height: 1,
-                                    thickness: 0.6,
-                                    color: AppColors.border(context),
-                                  ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
+
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface(context),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: AppColors.border(context),
+                                        width: 0.6,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // ───── DATE ─────
+                                        _buildInfoRowMinimal(
+                                          context,
+                                          icon: Icons.calendar_today_rounded,
+                                          label: 'Date',
+                                          value: DateFormat('MMM dd, yyyy').format(expense.expenseDate),
+                                        ),
+
+                                        if (expense.monthId != null) ...[
+                                          const SizedBox(height: 12),
+                                          Divider(
+                                            height: 1,
+                                            thickness: 0.6,
+                                            color: AppColors.border(context),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildInfoRowMinimal(
+                                            context,
+                                            icon: Icons.event_repeat_rounded,
+                                            label: 'Month',
+                                            value: _formatMonthId(expense.monthId!),
+                                          ),
+                                        ],
 
                                   // ───── DESCRIPTION ─────
                                   if (expense.description.isNotEmpty)
@@ -1578,22 +1619,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                     ),
                                   ],
 
-                                  if (expense.paymentMethod?.isNotEmpty == true) ...[
-                                    const SizedBox(height: 12),
-                                    Divider(
-                                      height: 1,
-                                      thickness: 0.6,
-                                      color: AppColors.border(context),
-                                    ),
-                                    const SizedBox(height: 12),
-
-                                    _buildInfoRowMinimal(
-                                      context,
-                                      icon: Icons.payment_rounded,
-                                      label: 'Payment Method',
-                                      value: _formatPaymentMethod(expense.paymentMethod!),
-                                    ),
-                                  ],
+                                  // Removed paymentMethod section
 
       
                                 ],
@@ -2104,12 +2130,10 @@ String _getExpenseFieldDisplayName(String field) {
     'amount': 'Amount',
     'title': 'Ttitle',
     'description': 'Description',
-    'category': 'Category',
     'status': 'Status',
     'paidBy': 'Paid By',
     'expenseDate': 'Expense Date',
     'vendorName': 'Vendor',
-    'paymentMethod': 'Payment Method',
     'referenceNumber': 'Reference No.',
     'receiptUrl': 'Receipt',
   };
@@ -2274,9 +2298,7 @@ String _formatPaymentMethod(String method) {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     final TextEditingController aamountController = TextEditingController();
-    String selectedCategory = _categories.first;
-    String selectedPaymentMethod = _paymentMethods.first;
-    DateTime selectedDate = DateTime.now();
+    String? selectedMonthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
 
     final titleInputFormatter = FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s]'));
     String? titleError;
@@ -2295,6 +2317,7 @@ String _formatPaymentMethod(String method) {
       builder: (modalContext) => StatefulBuilder(
         builder: (stateContext, setBottomSheetState) {
           bool isLoading = false;
+          bool _isSubmitting = false; // Local lock for this specific submission attempt
 
           void clearTtitleError() {
             if (titleError != null) setBottomSheetState(() => titleError = null);
@@ -2304,12 +2327,15 @@ String _formatPaymentMethod(String method) {
           }
 
           Future<void> validateAndSubmit(bool isOnline) async {
+            if (_isSubmitting) return; // Immediate lock
+            
             if (!isOnline) {
               setBottomSheetState(() => titleError = 'No internet connection');
               return;
             }
 
             setBottomSheetState(() {
+              _isSubmitting = true;
               titleError = null;
               aamountError = null;
               isLoading = true;
@@ -2346,10 +2372,10 @@ String _formatPaymentMethod(String method) {
                 title: titleController.text.trim(),
                 description: descriptionController.text.trim(),
                 amount: double.parse(aamountController.text),
-                category: selectedCategory,
-                paymentMethod: selectedPaymentMethod,
-                expenseDate: selectedDate,
+                expenseDate: DateTime.now(),
                 isAdmin: isAdmin,
+                monthId: widget.event.isMonthlyPayment ? selectedMonthId : null,
+                isMonthlyExpense: widget.event.isMonthlyPayment,
               );
               
               if (success && stateContext.mounted) {
@@ -2483,79 +2509,53 @@ String _formatPaymentMethod(String method) {
                   ),
                   const SizedBox(height: 16),
 
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    decoration: InputDecoration(
-                      labelText: 'Category *',
-                      prefixIcon: Icon(_getCategoryIcon(selectedCategory), size: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      filled: true,
-                      fillColor: AppColors.surface(context),
-                    ),
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c.toUpperCase()))).toList(),
-                    onChanged: (v) => setBottomSheetState(() => selectedCategory = v!),
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    value: selectedPaymentMethod,
-                    decoration: InputDecoration(
-                      labelText: 'Payment Method *',
-                      prefixIcon: const Icon(Icons.payment_rounded, size: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      filled: true,
-                      fillColor: AppColors.surface(context),
-                    ),
-                    items: _paymentMethods.map((m) => DropdownMenuItem(value: m, child: Text(m.toUpperCase()))).toList(),
-                    onChanged: (v) => setBottomSheetState(() => selectedPaymentMethod = v!),
-                  ),
-                  const SizedBox(height: 16),
-
-                  InkWell(
-                    onTap: () async {
-                      final DateTime? picked = await showDatePicker(
-                        context: modalContext,
-                        initialDate: selectedDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) setBottomSheetState(() => selectedDate = picked);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface(context),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border(context)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.textSecondary(context)),
-                          const SizedBox(width: 12),
-                          Text(
-                            DateFormat('dd MMM yyyy').format(selectedDate),
-                            style: TextStyle(color: AppColors.textPrimary(context)),
-                          ),
-                          const Spacer(),
-                          Text('Change', style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
-                        ],
+                  if (widget.event.isMonthlyPayment) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Select Month',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary(context),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () {
+                        // Using the style from event_details_screen
+                        _showMonthSelectorDialogForAdd(context, (monthId) {
+                          setBottomSheetState(() {
+                            selectedMonthId = monthId;
+                          });
+                        }, selectedMonthId ?? DateFormat('yyyy-MM').format(DateTime.now()));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border(context)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month_rounded, size: 20, color: AppColors.primary(context)),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedMonthId != null 
+                                  ? _formatMonthDisplay(selectedMonthId!) 
+                                  : 'Select Month',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary(context)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   
                   const SizedBox(height: 32),
 
@@ -2613,10 +2613,10 @@ Future<bool> _createExpense({
   required String title,
   required String description,
   required double amount,
-  required String category,
-  required String paymentMethod,
   required DateTime expenseDate,
   required bool isAdmin,
+  String? monthId,
+  bool isMonthlyExpense = false,
 }) async {
   try {
     final currentUser = authProvider.user;
@@ -2646,13 +2646,13 @@ Future<bool> _createExpense({
       title: title,
       description: description,
       amount: amount,
-      category: category,
-      paymentMethod: paymentMethod,
       paidBy: currentUser.uid,
       paidByName: getUserDisplayName(),
-      expenseDate: expenseDate,
+      expenseDate: DateTime.now(),
       status: status,
       createdAt: Timestamp.now(),
+      monthId: monthId,
+      isMonthlyExpense: isMonthlyExpense,
     );
 
     await expenseProvider.createExpense(expense);
@@ -2686,31 +2686,152 @@ Future<bool> _createExpense({
     }
   }
 
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'food': return Colors.orange;
-      case 'transport': return Colors.blue;
-      case 'venue': return Colors.purple;
-      case 'materials': return Colors.teal;
-      case 'decorations': return Colors.pink;
-      default: return Colors.grey;
+  // Helper methods for month formatting
+  String _formatMonthId(String monthId) {
+     try {
+       final parts = monthId.split('-');
+       final date = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+       return DateFormat('MMMM yyyy').format(date);
+     } catch (e) {
+       return monthId;
+     }
+  }
+
+  String _formatMonthDisplay(String monthId) {
+    try {
+      final parts = monthId.split('-');
+      final date = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+      return DateFormat('MMMM yyyy').format(date);
+    } catch (e) {
+      return monthId;
     }
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'food': return Icons.restaurant;
-      case 'transport': return Icons.directions_car;
-      case 'venue': return Icons.location_city;
-      case 'materials': return Icons.inventory;
-      case 'decorations': return Icons.celebration;
-      default: return Icons.receipt;
-    }
+  String _getShortMonthName(int month) {
+    return DateFormat('MMM').format(DateTime(2024, month));
+  }
+
+  void _showMonthSelectorDialogForAdd(BuildContext context, Function(String) onMonthSelected, String initialMonth) {
+    int displayYear = int.parse(initialMonth.split('-')[0]);
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          backgroundColor: AppColors.card(context),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Month',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                    border: Border.all(color: AppColors.border(context)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.chevron_left, color: AppColors.primary(context), size: 20),
+                        onPressed: () => setDialogState(() => displayYear--),
+                      ),
+                      Text(
+                        '$displayYear',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.chevron_right, color: AppColors.primary(context), size: 20),
+                        onPressed: () => setDialogState(() => displayYear++),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) {
+                    final monthNumber = index + 1;
+                    final monthIdString = '$displayYear-${monthNumber.toString().padLeft(2, '0')}';
+                    final isSelected = monthIdString == initialMonth;
+                    final isCurrentMonth = monthIdString == DateFormat('yyyy-MM').format(DateTime.now());
+
+                    return GestureDetector(
+                      onTap: () {
+                        onMonthSelected(monthIdString);
+                        Navigator.pop(context);
+                        HapticHelper.selection();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary(context) : AppColors.card(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary(context)
+                                : isCurrentMonth
+                                    ? AppColors.warning(context)
+                                    : AppColors.border(context),
+                            width: isSelected ? 1.5 : 0.8,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getShortMonthName(monthNumber),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isSelected ? Colors.white : AppColors.textPrimary(context),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildShimmerStats(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
+    final shimmerColor = Colors.white.withValues(alpha: isDarkMode ? 0.15 : 0.25);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -2718,9 +2839,21 @@ Future<bool> _createExpense({
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface(context),
+          gradient: isDarkMode
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
+                ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+          border: Border.all(
+            color: isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2735,7 +2868,7 @@ Future<bool> _createExpense({
             const SizedBox(height: 16),
             Container(width: 130, height: 34, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(8))),
             const SizedBox(height: 8),
-            Container(width: 110, height: 12, decoration: BoxDecoration(color: shimmerColor, borderRadius: BorderRadius.circular(6))),
+            Container(width: 110, height: 12, decoration: BoxDecoration(color: Colors.white.withValues(alpha: isDarkMode ? 0.1 : 0.2), borderRadius: BorderRadius.circular(6))),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -2750,7 +2883,8 @@ Future<bool> _createExpense({
     );
   }
 
-  }
+// Deleted _generateMonthOptions
+}
 
 
 class _SliverPinnedHeaderDelegate extends SliverPersistentHeaderDelegate {

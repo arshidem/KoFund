@@ -35,6 +35,10 @@
     ],
     "rewrites": [
       {
+        "source": "/s/**",
+        "function": "viewEvent"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

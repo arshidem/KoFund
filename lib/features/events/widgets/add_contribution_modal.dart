@@ -20,12 +20,14 @@ class AddContributionModal extends StatefulWidget {
   final String? preSelectedeventId;
   final String? preSelectedeventName;
   final bool isMonthlyEvent;
+  final String? initialMonthId;
 
   const AddContributionModal({
     super.key,
     this.preSelectedeventId,
     this.preSelectedeventName,
     this.isMonthlyEvent = false,
+    this.initialMonthId,
   });
 
   @override
@@ -164,6 +166,12 @@ void initState() {
     // Initialize months if monthly event
     if (_isMonthlyEvent) {
       _initializeMonths();
+      if (widget.initialMonthId != null) {
+        _selectedMonth = widget.initialMonthId;
+        try {
+          _currentDisplayYear = int.parse(widget.initialMonthId!.split('-')[0]);
+        } catch (_) {}
+      }
     }
   }
 }

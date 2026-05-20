@@ -21,7 +21,7 @@ class CreatePollScreen extends StatefulWidget {
   const CreatePollScreen({
     super.key,
     required this.communityId,
-    this.id,
+    this.eventId,
     this.pollToEdit,
     this.isEditing = false,
   });
@@ -42,7 +42,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   PollType _selectedType = PollType.decision;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 7));
   bool _allowMultipleVotes = false;
-  bool _allowVoteChange = true; // NEW: Default to true
+  bool _allowVoteChange = true;
   bool _isAnonymous = false;
   int? _minParticipationPercent;
   bool _isCommunityWide = true;
@@ -57,12 +57,10 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     super.initState();
     _loadEvents();
 
-    // If editing, populate fields with existing poll data
     if (widget.isEditing) {
       if (widget.pollToEdit != null) {
         _initializeEditingFields();
       } else {
-        // Handle case where pollToEdit is null but isEditing is true
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             SnackbarHelper.showInfo(context, 'Poll data not found');
@@ -83,25 +81,22 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         _selectedType = poll.type;
         _selectedDate = poll.endDate;
         _allowMultipleVotes = poll.allowMultipleVotes;
-        _allowVoteChange = poll.allowVoteChange; // NEW
+        _allowVoteChange = poll.allowVoteChange;
         _isAnonymous = poll.isAnonymous;
         _minParticipationPercent = poll.minParticipationPercent;
 
-        // Initialize options
         _optionControllers.clear();
         for (var option in poll.options) {
           _optionControllers.add(TextEditingController(text: option));
         }
 
-        // Ensure we have at least 2 options
         while (_optionControllers.length < 2) {
           _optionControllers.add(TextEditingController());
         }
 
-        // Set event selection properly
-        if (poll. != null && poll.!.isNotEmpty) {
+        if (poll.eventId != null && poll.eventId!.isNotEmpty) {
           _isCommunityWide = false;
-          _selectedeventId = poll.;
+          _selectedeventId = poll.eventId;
         } else {
           _isCommunityWide = true;
           _selectedeventId = null;
@@ -116,7 +111,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       setState(() => _loadingEvents = true);
 
       final eventProvider = context.read<EventProvider>();
-      await EventProvider.loadCommunityEvents(widget.communityId);
+      await eventProvider.loadEvents(widget.communityId);
 
       if (!mounted) return;
 
@@ -140,7 +135,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     setState(() {
       _optionControllers.add(TextEditingController());
     });
-    // Focus on the new field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_optionControllers.isNotEmpty && mounted) {
         FocusScope.of(context).requestFocus(FocusNode());
@@ -167,12 +161,10 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       lastDate: maxDate,
     );
     if (picked != null && picked != _selectedDate) {
-      // Ensure selected date is not in the past
       if (picked.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
         SnackbarHelper.showInfo(context, 'End date cannot be in the past');
         return;
       }
-      // Validation for too far in future
       if (picked.isAfter(maxDate)) {
         SnackbarHelper.showInfo(context, 'End date cannot be more than 1 year in the future');
         return;
@@ -183,34 +175,31 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     }
   }
 
-  // Helper to determine default allowVoteChange based on poll type
-  bool _getDefaultAllowVoteChangeForTeventType(PollType type) {
+  bool _getDefaultAllowVoteChangeForEventType(PollType type) {
     switch (type) {
       case PollType.expenseApproval:
       case PollType.contribution:
-        return false; // Financial decisions should not allow vote changes
+        return false;
       case PollType.decision:
-        return false; // Important decisions should be final
+        return false;
       case PollType.suggestion:
       case PollType.planning:
       default:
-        return true; // Suggestions and planning can be flexible
+        return true;
     }
   }
 
-  // Helper to determine if allowVoteChange should be enabled based on poll type
-  bool _shouldShowAllowVoteChangeForTeventType(PollType type) {
+  bool _shouldShowAllowVoteChangeForEventType(PollType type) {
     switch (type) {
       case PollType.expenseApproval:
-        return false; // Expense approvals should never allow vote changes
+        return false;
       case PollType.contribution:
-        return false; // Contributions should be binding
+        return false;
       default:
-        return true; // Other Types can have the option
+        return true;
     }
   }
 
-  // Helper to get description for allowVoteChange setting
   String _getAllowVoteChangeDescription(PollType type) {
     switch (type) {
       case PollType.expenseApproval:
@@ -231,7 +220,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   Future<void> _submitPoll() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate options
     final options = <String>[];
     for (var controller in _optionControllers) {
       final text = controller.text.trim();
@@ -251,27 +239,23 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       return;
     }
 
-    // Validate event selection when not community-wide
     if (!_isCommunityWide && (_selectedeventId == null || _selectedeventId!.isEmpty)) {
-      SnackbarHelper.showInfo(context, 'Please select a event');
+      SnackbarHelper.showInfo(context, 'Please select an event');
       return;
     }
 
-    // Validate vote change setting based on poll type
-    final shouldShowVoteChange = _shouldShowAllowVoteChangeForTeventType(_selectedType);
+    final shouldShowVoteChange = _shouldShowAllowVoteChangeForEventType(_selectedType);
     if (!shouldShowVoteChange) {
-      // Force disable vote change for specific poll Types
       _allowVoteChange = false;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final _authProvider = context.read<AppAuthProvider>();
+      final authProvider = context.read<AppAuthProvider>();
       final pollProvider = context.read<PollProvider>();
 
       if (widget.isEditing && widget.pollToEdit != null) {
-        // Update existing poll
         final updatedPoll = widget.pollToEdit!.copyWith(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
@@ -280,7 +264,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           endDate: _selectedDate,
           isAnonymous: _isAnonymous,
           allowMultipleVotes: _allowMultipleVotes,
-          allowVoteChange: _allowVoteChange, // NEW
+          allowVoteChange: _allowVoteChange,
           minParticipationPercent: _minParticipationPercent,
           eventId: _isCommunityWide ? null : _selectedeventId,
           updatedAt: DateTime.now(),
@@ -291,12 +275,11 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
 
         if (success) {
           SnackbarHelper.showSuccess(context, 'Poll updated successfully');
-          Navigator.pop(context, true); // Return true to indicate success
+          Navigator.pop(context, true);
         } else {
           SnackbarHelper.showError(context, 'Failed to update poll');
         }
       } else {
-        // Create new poll
         final poll = await pollProvider.createPoll(
           communityId: widget.communityId,
           eventId: _isCommunityWide ? null : _selectedeventId,
@@ -305,16 +288,16 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           type: _selectedType,
           options: options,
           endDate: _selectedDate,
-          createdBy: _authProvider.user!.uid,
+          createdBy: authProvider.user!.uid,
           allowMultipleVotes: _allowMultipleVotes,
-          allowVoteChange: _allowVoteChange, // NEW
+          allowVoteChange: _allowVoteChange,
           isAnonymous: _isAnonymous,
           minParticipationPercent: _minParticipationPercent,
         );
 
         if (poll != null) {
           SnackbarHelper.showSuccess(context, 'Poll created successfully');
-          Navigator.pop(context, true); // Return true to indicate success
+          Navigator.pop(context, true);
         } else {
           SnackbarHelper.showError(context, 'Failed to create poll');
         }
@@ -332,12 +315,9 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-
-    // Dispose all option controllers
     for (var controller in _optionControllers) {
       controller.dispose();
     }
-
     _optionControllers.clear();
     super.dispose();
   }
@@ -346,7 +326,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final shouldShowAllowVoteChange = _shouldShowAllowVoteChangeForTeventType(_selectedType);
+    final shouldShowAllowVoteChange = _shouldShowAllowVoteChangeForEventType(_selectedType);
 
     return GradientSheetScaffold(
       title: widget.isEditing ? 'Edit Poll' : 'Create New Poll',
@@ -376,7 +356,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Poll type
               _buildSectionHeader('Poll type'),
               _buildPollTypeSelector(isDarkMode),
               if (_selectedType == PollType.expenseApproval ||
@@ -417,44 +396,25 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                     ],
                   ),
                 ),
-
               const SizedBox(height: 24),
-
-              // Basic Info
               _buildSectionHeader('Basic Information'),
               _buildBasicInfoFields(isDarkMode),
-
               const SizedBox(height: 24),
-
-              // event Selection
               if (_events.isNotEmpty || _loadingEvents) ...[
                 _buildSectionHeader('Poll Scope'),
                 _buildScopeSelector(isDarkMode),
                 const SizedBox(height: 24),
               ],
-
-              // Options
               _buildSectionHeader('Options'),
               _buildOptionsList(isDarkMode),
-
               const SizedBox(height: 24),
-
-              // Poll Settings
               _buildSectionHeader('Poll Settings'),
               _buildPollSettings(isDarkMode, shouldShowAllowVoteChange),
-
               const SizedBox(height: 24),
-
-              // End Date
               _buildSectionHeader('End Date'),
               _buildDateSelector(isDarkMode),
-
               const SizedBox(height: 32),
-
-              // Create/Update Button
               _buildSubmitButton(isDarkMode),
-
-              // Cancel button for editing
               if (widget.isEditing) ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -471,7 +431,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 20),
             ],
           ),
@@ -508,11 +467,10 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
                 if (selected) {
                   setState(() {
                     _selectedType = type;
-                    // Set default allowVoteChange based on type
-                    if (!_shouldShowAllowVoteChangeForTeventType(type)) {
+                    if (!_shouldShowAllowVoteChangeForEventType(type)) {
                       _allowVoteChange = false;
                     } else {
-                      _allowVoteChange = _getDefaultAllowVoteChangeForTeventType(type);
+                      _allowVoteChange = _getDefaultAllowVoteChangeForEventType(type);
                     }
                   });
                 }
@@ -535,7 +493,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
         TextFormField(
           controller: _titleController,
           decoration: InputDecoration(
-            labelText: 'Poll Ttitle *',
+            labelText: 'Poll Title *',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             ),
@@ -558,7 +516,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               return 'Please enter a title';
             }
             if (value.length > 100) {
-              return 'Ttitle too long (max 100 chars)';
+              return 'Title too long (max 100 chars)';
             }
             return null;
           },
@@ -627,7 +585,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
           onTap: () => setState(() => _isCommunityWide = true),
         ),
         ListTile(
-          title: const Text('event-specific'),
+          title: const Text('Event-specific'),
           subtitle: _events.isEmpty
               ? const Text('No ongoing events available')
               : null,
@@ -653,7 +611,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _selectedeventId,
-                hint: const Text('Select a event'),
+                hint: const Text('Select an event'),
                 isExpanded: true,
                 items: _events.map((event) {
                   return DropdownMenuItem<String>(
@@ -742,23 +700,18 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
   Widget _buildPollSettings(bool isDarkMode, bool showAllowVoteChange) {
     return Column(
       children: [
-        // Anonymous Voting
         SwitchListTile(
           title: const Text('Anonymous Voting'),
-          subtitle: const Text("Hide voter's nnames (Instagram-style)"),
+          subtitle: const Text("Hide voter's names (Instagram-style)"),
           value: _isAnonymous,
           onChanged: (value) => setState(() => _isAnonymous = value),
         ),
-
-        // Multiple Votes
         SwitchListTile(
           title: const Text('Allow Multiple Votes'),
           subtitle: const Text('Users can select multiple options'),
           value: _allowMultipleVotes,
           onChanged: (value) => setState(() => _allowMultipleVotes = value),
         ),
-
-        // Allow Vote Change - NEW
         if (showAllowVoteChange) ...[
           SwitchListTile(
             title: const Text('Allow Vote Changes'),
@@ -799,8 +752,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               ),
             ),
         ],
-
-        // Minimum Participation
         ListTile(
           title: const Text('Minimum Participation'),
           subtitle: const Text('Percentage of members required to vote (1-100)'),
@@ -821,7 +772,6 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
               maxLength: 3,
               onChanged: (value) {
                 final percent = int.tryParse(value);
-                // Validate percentage range
                 if (percent != null && (percent < 1 || percent > 100)) {
                   SnackbarHelper.showInfo(context, 'Please enter a value between 1 and 100');
                   _minParticipationPercent = null;
@@ -930,8 +880,3 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
-
-
-
-
-

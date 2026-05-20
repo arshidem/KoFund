@@ -213,7 +213,7 @@ void _setupPollSubscription() {
         SnackbarHelper.showError(context, 'Failed to delete poll');
       }
     } catch (e) {
-      debugPrint('Error deleteing poll: $e');
+      debugPrint('Error deleting poll: $e');
       if (mounted) {
         SnackbarHelper.showError(context, 'Error: ${e.toString()}');
       }
@@ -232,7 +232,7 @@ void _setupPollSubscription() {
       MaterialPageRoute(
         builder: (context) => CreatePollScreen(
           communityId: _poll!.communityId,
-          eventId: _poll!.,
+          eventId: _poll!.eventId,
           pollToEdit: _poll,
           isEditing: true,
         ),

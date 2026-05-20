@@ -3,16 +3,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/participant_service.dart';
 import '../../../core/services/contribution_service.dart';
 import '../../../core/services/event_service.dart';
+import '../../../core/services/expense_service.dart';
 import 'dart:async';
 import '../models/event_model.dart';
 import 'package:intl/intl.dart';
 import '../../participants/models/participant_model.dart';
 import '../../contributions/models/contribution_model.dart';
+import '../../expenses/models/expense_model.dart';
 
 class EventProvider with ChangeNotifier {
   final EventService _eventService;
   final ParticipantService _participantService;
   final ContributionService _contributionService;
+  final ExpenseService _expenseService;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   List<EventModel> _events = [];
@@ -34,9 +37,11 @@ class EventProvider with ChangeNotifier {
     required EventService eventService,
     required ParticipantService participantService,
     required ContributionService contributionService,
+    required ExpenseService expenseService,
   })  : _eventService = eventService,
         _participantService = participantService,
-        _contributionService = contributionService;
+        _contributionService = contributionService,
+        _expenseService = expenseService;
 
   void clearError() {
     _error = null;
@@ -326,13 +331,13 @@ class EventProvider with ChangeNotifier {
     return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
       final futures = await Future.wait([
         _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getContributions(eventId),
-        _eventService.getTotalExpenses(eventId),
+        _contributionService.getContributions(eventId).catchError((_) => <ContributionModel>[]),
+        _eventService.getTotalExpenses(eventId).catchError((_) => 0.0),
       ]);
       
       final doc = futures[0] as DocumentSnapshot;
       final allContributionsForCount = futures[1] as List<ContributionModel>;
-      final totalExpenses = futures[2] as double;
+      final totalExpenses = (futures[2] as num).toDouble();
       
       final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
       
@@ -439,7 +444,7 @@ class EventProvider with ChangeNotifier {
         final doc = await _firestore.collection('events').doc(eventId).get();
         final suggestedContribution = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
         
-        final monthlyContributions = await _contributionService.getMonthlyContributionsFo(
+        final monthlyContributions = await _contributionService.getMonthlyContributionsForParticipant(
           eventId,
           monthId,
         );
@@ -739,13 +744,15 @@ class EventProvider with ChangeNotifier {
     return streamParticipantsWithMonthlyContributions(eventId, monthId)
         .asyncMap((participants) async {
       
-      final futures = await Future.wait([
+      final futures = await Future.wait<dynamic>([
         _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getMonthlyContributionsFo(eventId, monthId),
+        _contributionService.getMonthlyContributionsForParticipant(eventId, monthId),
+        _expenseService.getMonthlyExpenses(eventId, monthId),
       ]);
       
       final doc = futures[0] as DocumentSnapshot;
       final monthlyContributions = futures[1] as List<ContributionModel>;
+      final monthlyExpenses = futures[2] as List<ExpenseModel>;
       final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
       
       int paidParticipants = 0;
@@ -753,6 +760,11 @@ class EventProvider with ChangeNotifier {
       for (final p in participants) {
         totalCollected += p.contributionPaid ?? 0.0;
         if (p.hasPaidContribution) paidParticipants++;
+      }
+      
+      double totalExpenses = 0.0;
+      for (final e in monthlyExpenses) {
+        totalExpenses += e.amount;
       }
       
       final totalParticipants = participants.length;
@@ -768,8 +780,9 @@ class EventProvider with ChangeNotifier {
         'contributionCount': monthlyContributions.length,
         'totalContributions': monthlyContributions.length,
         'monthId': monthId,
-        'expenses': 0.0, 
-        'balance': totalCollected,
+        'expenses': totalExpenses, 
+        'totalExpenses': totalExpenses,
+        'balance': totalCollected - totalExpenses,
       };
     });
   }

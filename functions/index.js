@@ -1604,4 +1604,188 @@ exports.sendTargetedNotifications = onCall(
   }
 );
 
-// Unused 'testKoFund' function removed.
+/**
+ * 🚀 SUPER LINK: Fast, standalone HTML page for Public Events
+ * Bypasses Flutter app for instant loading.
+ */
+
+exports.viewEvent = functions.https.onRequest(async (req, res) => {
+  try {
+    const eventId = req.path.split('/').pop();
+    if (!eventId) {
+      return res.status(400).send('Event ID required.');
+    }
+
+    // 📄 Fetch Event Data
+    const eventSnapshot = await db.collection('events').doc(eventId).get();
+    if (!eventSnapshot.exists) {
+      return res.status(404).send('Event not found.');
+    }
+    const event = eventSnapshot.data();
+
+    const templates = require('./templates');
+
+    // 🔒 PRIVACY CHECK (Bug Fix)
+    if (event.isPublicEnabled === false) {
+      if (req.query.json === 'true') {
+        return res.status(403).json({ error: 'This event is private.' });
+      }
+      return res.status(200).send(templates.getPrivateEventHtml({ title: event.title }));
+    }
+
+    // 🖼️ TEMPLATE DATA (ENRICHED)
+    const title = event.title || 'Event Details';
+    const icon = _getEventIcon(event.eventType);
+    const downloadUrl = (event.communityId ? `https://kofund.app/d/${event.communityId}` : "https://kofund.app");
+    const appWebLink = (event.communityId ? `https://kofund.app/communities/${event.communityId}` : "https://kofund.app");
+
+    // Safety check for date
+    let date = event.isMonthlyPayment ? '' : 'To be announced';
+    if (event.eventDate) {
+      const dt = typeof event.eventDate.toDate === 'function' ? event.eventDate.toDate() : new Date((event.eventDate.seconds || 0) * 1000);
+      date = dt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    // 🐚 SHELL HTML (Initial Load)
+    if (req.query.json !== 'true') {
+      const shellHtml = templates.getEventHtml({
+        event: { isPublicEnabled: event.isPublicEnabled, isMonthlyPayment: event.isMonthlyPayment },
+        title,
+        date,
+        icon,
+        eventId,
+        downloadUrl,
+        appWebLink
+      });
+      return res.status(200).send(shellHtml);
+    }
+
+    // 🔐 PASSWORD VERIFICATION (for JSON Data)
+    if (event.isPublicEnabled && event.publicPassword) {
+      const providedPassword = req.query.password || req.body.password;
+      if (providedPassword !== event.publicPassword) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+    }
+
+    // 📊 DATA FETCHING (Only for JSON)
+    const [participantsSnapshot, expensesSnapshot] = await Promise.all([
+      admin.firestore().collection('participants').where('eventId', '==', eventId).get(),
+      admin.firestore().collection('expenses').where('eventId', '==', eventId).get()
+    ]);
+
+    const selectedMonth = req.query.month || 'all';
+
+    // Fetch Contributions (Filtered by Month if applicable)
+    let contributionsQuery = admin.firestore().collection('contributions').where('eventId', '==', eventId);
+    if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
+      contributionsQuery = contributionsQuery.where('monthId', '==', selectedMonth);
+    }
+    const contributionsSnapshot = await contributionsQuery.limit(50).get();
+
+    // Process Participants
+    const participants = participantsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
+        const monthContributions = contributionsSnapshot.docs
+          .map(cdoc => cdoc.data())
+          .filter(c => c.userId === data.userId);
+        data.contributionPaid = monthContributions.reduce((sum, c) => sum + (c.amount || 0), 0);
+      }
+      return data;
+    });
+
+    // Process Contributions
+    const contributions = contributionsSnapshot.docs
+      .map(doc => doc.data())
+      .sort((a, b) => {
+        const timeA = a.createdAt ? (a.createdAt._seconds || a.createdAt.seconds || 0) : 0;
+        const timeB = b.createdAt ? (b.createdAt._seconds || b.createdAt.seconds || 0) : 0;
+        return timeB - timeA;
+      });
+
+    // Process Expenses
+    let expenses = expensesSnapshot.docs.map(doc => doc.data());
+    if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        expenses = expenses.filter(e => {
+            if (!e.expenseDate) return false;
+            const dt = typeof e.expenseDate.toDate === 'function' ? e.expenseDate.toDate() : new Date((e.expenseDate.seconds || 0) * 1000);
+            return dt.getFullYear() === year && (dt.getMonth() + 1) === month;
+        });
+    }
+    expenses.sort((a, b) => {
+        const timeA = a.expenseDate ? (a.expenseDate._seconds || a.expenseDate.seconds || 0) : 0;
+        const timeB = b.expenseDate ? (b.expenseDate._seconds || b.expenseDate.seconds || 0) : 0;
+        return timeB - timeA;
+    });
+
+    const totalCollected = contributionsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    // 🧱 FINAL RESPONSE (JSON)
+    const secureEvent = { ...event };
+    delete secureEvent.publicPassword; // Never leak password in JSON
+
+    return res.status(200).json({
+      event: secureEvent,
+      participants,
+      contributions,
+      expenses,
+      totalCollected,
+      totalExpenses,
+      selectedMonth
+    });
+  } catch (error) {
+    console.error('❌ Super Link error:', error);
+    res.status(500).send('Something went wrong. Please try again later.');
+  }
+});
+
+function _getEventIcon(type) {
+  return (type || 'default').toLowerCase();
+}
+
+function _getPasswordPrompt(eventId, error) {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Locked Event | KoFund</title>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: 'Outfit', sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; }
+        .card { background: white; padding: 40px 30px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+        .icon { font-size: 60px; margin-bottom: 20px; }
+        h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #1E293B; }
+        p { color: #64748B; font-size: 15px; margin-bottom: 24px; }
+        input { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #E2E8F0; font-family: inherit; font-size: 16px; margin-bottom: 20px; outline: none; transition: border-color 0.2s; text-align: center; display: block; box-sizing: border-box; }
+        input:focus { border-color: #00C6A2; }
+        button { width: 100%; background: linear-gradient(135deg, #00C6A2, #00E3C3); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; box-shadow: 0 4px 12px rgba(0, 198, 162, 0.2); display: block; }
+        .error { color: #EF4444; font-size: 13px; margin-bottom: 15px; font-weight: 600; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="icon">
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#00C6A2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h1>Protected Event</h1>
+        <p>This event link is password protected.</p>
+        ${error ? `<div class="error">${error}</div>` : ''}
+        <form method="POST">
+          <input type="password" name="password" placeholder="Enter password" autofocus required>
+          <button type="submit">Unlock Now</button>
+        </form>
+      </div>
+      <script>
+        if ("${error || ''}") {
+          sessionStorage.removeItem('event_pwd_' + "${eventId}");
+        }
+      </script>
+    </body>
+    </html>
+  `;
+}

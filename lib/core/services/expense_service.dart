@@ -113,20 +113,6 @@ Future<void> updateExpense(
       };
     }
     
-    if (currentExpense.category != expense.category) {
-      changes['category'] = {
-        'old': currentExpense.category,
-        'new': expense.category,
-      };
-    }
-    
-    if (currentExpense.paymentMethod != expense.paymentMethod) {
-      changes['paymentMethod'] = {
-        'old': currentExpense.paymentMethod ?? 'Not set',
-        'new': expense.paymentMethod ?? 'Not set',
-      };
-    }
-    
     // Only add edit history if there are actual changes
     if (changes.isNotEmpty) {
       // Get existing edit history
@@ -154,8 +140,6 @@ Future<void> updateExpense(
         'description': expense.description,
         'amount': expense.amount,
         'eventId': expense.eventId,
-        'category': expense.category,
-        'paymentMethod': expense.paymentMethod,
         'expenseDate': Timestamp.fromDate(expense.expenseDate),
         'vendorName': expense.vendorName,
         'referenceNumber': expense.referenceNumber,
@@ -277,32 +261,41 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     }
   }
 
-  // Get expenses by category for a event
-  Future<Map<String, double>> getEventExpensesByCategory(String eventId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('expenses')
-          .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'approved')
-          .get();
-
-      final Map<String, double> categoryTotals = {};
-      for (var doc in snapshot.docs) {
-        final category = doc.data()['category'] ?? 'Other';
-        final amount = (doc.data()['amount'] ?? 0).toDouble();
-        categoryTotals[category] = (categoryTotals[category] ?? 0) + amount;
-      }
-      return categoryTotals;
-    } catch (e) {
-      throw Exception('Failed to get expenses by category: $e');
-    }
-  }
-
   // Stream expenses for real-time updates
   Stream<List<ExpenseModel>> streamEventExpenses(String eventId) {
     return _firestore
         .collection('expenses')
         .where('eventId', isEqualTo: eventId)
+        .orderBy('expenseDate', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
+  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('expenses')
+          .where('eventId', isEqualTo: eventId)
+          .where('monthId', isEqualTo: monthId)
+          .orderBy('expenseDate', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error loading monthly expenses: $e');
+      return [];
+    }
+  }
+
+  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId) {
+    return _firestore
+        .collection('expenses')
+        .where('eventId', isEqualTo: eventId)
+        .where('monthId', isEqualTo: monthId)
         .orderBy('expenseDate', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs

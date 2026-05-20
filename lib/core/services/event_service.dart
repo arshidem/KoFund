@@ -286,6 +286,8 @@ Future<void> updateModel(EventModel event) async {
       'eventType': event.eventType,
       'updatedAt': Timestamp.now(),
       'isMonthlyPayment': event.isMonthlyPayment,
+      'isPublicEnabled': event.isPublicEnabled,
+      'publicPassword': event.publicPassword,
     });
   } catch (e) {
     throw Exception('Failed to update event model: $e');

@@ -8,7 +8,6 @@ class ExpenseModel {
   String title;
   String description;
   double amount;
-  String category;
   String paidBy; // userId
   String paidByName; // userId
   DateTime expenseDate;
@@ -36,7 +35,10 @@ class ExpenseModel {
   // ✅ ADD: Additional metadata
   String? referenceNumber;
   String? vendorName;
-  String? paymentMethod; // cash, bank_transfer, upi, cheque, etc.
+  
+  // ✅ ADD: Monthly fields
+  final String? monthId;
+  final bool isMonthlyExpense;
 
   ExpenseModel({
     required this.expenseId,
@@ -45,12 +47,14 @@ class ExpenseModel {
     required this.title,
     required this.description,
     required this.amount,
-    required this.category,
     required this.paidBy,
     required this.paidByName,
     required this.expenseDate,
     required this.status,
     required this.createdAt,
+    this.monthId,
+    this.isMonthlyExpense = false,
+    this.vendorName,
     
     // New fields with defaults
 
@@ -64,8 +68,6 @@ class ExpenseModel {
     this.receiptUrl,
     this.receiptFileName,
     this.referenceNumber,
-    this.vendorName,
-    this.paymentMethod,
   });
 
   factory ExpenseModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -76,12 +78,14 @@ class ExpenseModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       amount: (map['amount'] ?? 0).toDouble(),
-      category: map['category'] ?? '',
       paidBy: map['paidBy'] ?? '',
       paidByName: map['paidByName'] ?? '',
-      expenseDate: (map['expenseDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      expenseDate: (map['expenseDate'] as Timestamp).toDate(),
       status: map['status'] ?? 'pending',
-      createdAt: map['createdAt'] as Timestamp? ?? Timestamp.now(),
+      createdAt: map['createdAt'] ?? Timestamp.now(),
+      monthId: map['monthId'],
+      isMonthlyExpense: map['isMonthlyExpense'] ?? false,
+      vendorName: map['vendorName'],
       
       // New fields
    
@@ -95,8 +99,6 @@ class ExpenseModel {
       receiptUrl: map['receiptUrl'],
       receiptFileName: map['receiptFileName'],
       referenceNumber: map['referenceNumber'],
-      vendorName: map['vendorName'],
-      paymentMethod: map['paymentMethod'],
     );
   }
 
@@ -107,12 +109,14 @@ class ExpenseModel {
       'title': title,
       'description': description,
       'amount': amount,
-      'category': category,
       'paidBy': paidBy,
       'paidByName': paidByName,
       'expenseDate': Timestamp.fromDate(expenseDate),
       'status': status,
       'createdAt': createdAt,
+      'monthId': monthId,
+      'isMonthlyExpense': isMonthlyExpense,
+      'vendorName': vendorName,
       
       // New fields
 
@@ -126,8 +130,6 @@ class ExpenseModel {
       'receiptUrl': receiptUrl,
       'receiptFileName': receiptFileName,
       'referenceNumber': referenceNumber,
-      'vendorName': vendorName,
-      'paymentMethod': paymentMethod,
     }..removeWhere((key, value) => value == null);
   }
 
@@ -144,7 +146,9 @@ class ExpenseModel {
     DateTime? expenseDate,
     String? status,
     Timestamp? createdAt,
-
+    String? monthId,
+    bool? isMonthlyExpense,
+    String? vendorName,
     Timestamp? addedAt,
     bool? isEdited,
     String? lastEditedByUserId,
@@ -155,8 +159,6 @@ class ExpenseModel {
     String? receiptUrl,
     String? receiptFileName,
     String? referenceNumber,
-    String? vendorName,
-    String? paymentMethod,
   }) {
     return ExpenseModel(
       expenseId: expenseId ?? this.expenseId,
@@ -165,13 +167,14 @@ class ExpenseModel {
       title: title ?? this.title,
       description: description ?? this.description,
       amount: amount ?? this.amount,
-      category: category ?? this.category,
       paidBy: paidBy ?? this.paidBy,
       paidByName: paidByName ?? this.paidByName,
       expenseDate: expenseDate ?? this.expenseDate,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
-
+      monthId: monthId ?? this.monthId,
+      isMonthlyExpense: isMonthlyExpense ?? this.isMonthlyExpense,
+      vendorName: vendorName ?? this.vendorName,
       addedAt: addedAt ?? this.addedAt,
       isEdited: isEdited ?? this.isEdited,
       lastEditedByUserId: lastEditedByUserId ?? this.lastEditedByUserId,
@@ -182,8 +185,6 @@ class ExpenseModel {
       receiptUrl: receiptUrl ?? this.receiptUrl,
       receiptFileName: receiptFileName ?? this.receiptFileName,
       referenceNumber: referenceNumber ?? this.referenceNumber,
-      vendorName: vendorName ?? this.vendorName,
-      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }
