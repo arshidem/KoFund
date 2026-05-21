@@ -442,51 +442,21 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
                       ),
                     const SizedBox(height: 20),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              paidCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "PAID",
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        _buildStatChip(
+                          context,
+                          icon: Icons.check_circle_outline_rounded,
+                          label: "PAID",
+                          value: paidCount.toString(),
+                          color: Colors.white,
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pendingCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "PENDING",
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 8),
+                        _buildStatChip(
+                          context,
+                          icon: Icons.pending_outlined,
+                          label: "PENDING",
+                          value: pendingCount.toString(),
+                          color: Colors.white,
                         ),
                       ],
                     ),
@@ -648,10 +618,12 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
       return eventProvider.streamParticipantsWithMonthlyContributions(
         widget.event.eventId,
         widget.selectedMonth!,
+        communityId: widget.event.communityId,
       );
     } else {
       return eventProvider.streamParticipantsWithContributions(
         widget.event.eventId,
+        communityId: widget.event.communityId,
       );
     }
   }
@@ -688,43 +660,51 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
   // Removed redundant month selector dialog as it is now handled globally in EventDetailsScreen app bar.
 
 
-  Widget _statChip(
+  Widget _buildStatChip(
     BuildContext context, {
     required IconData icon,
     required String label,
-    required int value,
+    required String value,
     required Color color,
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.textCards(context).withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 6),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  value.toString(),
-                  style: TextStyle(
-                    color: AppColors.textCards(context),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 14),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: AppColors.textCards(context).withValues(alpha: 0.85),
-                    fontSize: 10,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    letterSpacing: 1,
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.5,
+              ),
             ),
           ],
         ),
@@ -739,9 +719,13 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
       return eventProvider.streamMonthlyFinancialSummary(
         widget.event.eventId,
         widget.selectedMonth!,
+        communityId: widget.event.communityId,
       );
     } else {
-      return eventProvider.streamFinancialSummary(widget.event.eventId);
+      return eventProvider.streamFinancialSummary(
+        widget.event.eventId,
+        communityId: widget.event.communityId,
+      );
     }
   }
 
@@ -1025,6 +1009,7 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
                           future: _checkParticipantPaidStatus(
                             participant.userId,
                             widget.event.eventId,
+                            communityId: widget.event.communityId,
                           ),
                           builder: (context, snapshot) {
                             final isPaid = snapshot.data ?? false;
@@ -1285,6 +1270,7 @@ Future<void> _togglePaymentStatus(
     final contributions = await contributionProvider.getUserContributionsFo(
       eventId,
       participant.userId,
+      communityId: communityId,
       forceRefresh: true,
     );
 
@@ -1438,6 +1424,7 @@ Future<void> _removeContributions({
     final contributions = await contributionProvider.getUserContributionsFo(
       eventId,
       userId,
+      communityId: widget.event.communityId,
       forceRefresh: true,
     );
     
@@ -1490,7 +1477,11 @@ Future<void> _removeContributions({
   void _removeParticipant(ParticipantModel participant, BuildContext context) async {
     try {
       final eventProvider = context.read<EventProvider>();
-      await eventProvider.leave(participant.eventId, participant.userId);
+      await eventProvider.leave(
+        participant.eventId, 
+        participant.userId,
+        communityId: widget.event.communityId,
+      );
       
       SnackbarHelper.showSuccess(context, 'Removed ${participant.userName} from event');
     } catch (e) {
@@ -1500,8 +1491,9 @@ Future<void> _removeContributions({
 
   Future<bool> _checkParticipantPaidStatus(
     String userId,
-    String eventId,
-  ) async {
+    String eventId, {
+    String? communityId,
+  }) async {
     try {
       final contributionProvider = context.read<ContributionProvider>();
       final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
@@ -1511,6 +1503,7 @@ Future<void> _removeContributions({
       final contributions = await contributionProvider.getUserContributionsFo(
         eventId,
         userId,
+        communityId: communityId,
         forceRefresh: true,
       );
       
@@ -1548,6 +1541,7 @@ Future<void> _removeContributions({
       final contributions = await contributionProvider.getUserContributionsFo(
         widget.event.eventId,
         participant.userId,
+        communityId: widget.event.communityId,
         forceRefresh: true,
       );
       

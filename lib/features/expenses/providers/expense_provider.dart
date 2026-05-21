@@ -38,7 +38,7 @@ class ExpenseProvider with ChangeNotifier {
       }
 
       // ✅ Check if user is in the event
-      final isInEvent = await userService.isUserInEvent(currentUser.uid, expense.eventId);
+      final isInEvent = await userService.isUserInEvent(currentUser.uid, expense.eventId, communityId: expense.communityId);
       if (!isInEvent) {
         throw Exception('You must be a participant in this event to add expenses');
       }
@@ -78,7 +78,7 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   /// Load expenses for a event
-  Future<void> loadEventExpenses(String eventId, {bool forceRefresh = false}) async {
+  Future<void> loadEventExpenses(String eventId, {String? communityId, bool forceRefresh = false}) async {
     // 🚀 OPTIMIZATION: Check cache
     if (!forceRefresh && _listCache.containsKey('event_$eventId')) {
       final cached = _listCache['event_$eventId']!;
@@ -92,7 +92,7 @@ class ExpenseProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _EventExpenses = await expenseService.getExpensesByEvent(eventId);
+      _EventExpenses = await expenseService.getExpensesByEvent(eventId, communityId: communityId);
       _listCache['event_$eventId'] = (data: _EventExpenses, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading event expenses: $e');
@@ -228,13 +228,13 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   }
 
   /// Cached total for a event
-  Future<double> getEventTotalExpenses(String eventId) async {
+  Future<double> getEventTotalExpenses(String eventId, {String? communityId}) async {
     final cacheKey = 'event_$eventId';
     if (_expenseTotalsCache.containsKey(cacheKey)) {
       return _expenseTotalsCache[cacheKey]!;
     }
     try {
-      final total = await expenseService.getEventTotalExpenses(eventId);
+      final total = await expenseService.getEventTotalExpenses(eventId, communityId: communityId);
       _expenseTotalsCache[cacheKey] = total;
       return total;
     } catch (e) {
@@ -282,22 +282,22 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   Stream<List<ExpenseModel>> streamCommunityExpenses(String communityId) =>
       expenseService.streamCommunityExpenses(communityId);
 
-  Stream<List<ExpenseModel>> streamEventExpenses(String eventId) =>
-      expenseService.streamEventExpenses(eventId);
+  Stream<List<ExpenseModel>> streamEventExpenses(String eventId, {String? communityId}) =>
+      expenseService.streamEventExpenses(eventId, communityId: communityId);
 
-  Stream<double> streamEventTotalExpenses(String eventId) =>
-      expenseService.streamTotalExpenses(eventId);
+  Stream<double> streamEventTotalExpenses(String eventId, {String? communityId}) =>
+      expenseService.streamTotalExpenses(eventId, communityId: communityId);
 
-  Future<List<ExpenseModel>> getEventExpenses(String eventId) async {
-    return await expenseService.getExpensesByEvent(eventId);
+  Future<List<ExpenseModel>> getEventExpenses(String eventId, {String? communityId}) async {
+    return await expenseService.getExpensesByEvent(eventId, communityId: communityId);
   }
 
-  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId) async {
-    return await expenseService.getMonthlyExpenses(eventId, monthId);
+  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId, {String? communityId}) async {
+    return await expenseService.getMonthlyExpenses(eventId, monthId, communityId: communityId);
   }
 
-  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId) {
-    return expenseService.streamMonthlyExpenses(eventId, monthId);
+  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId, {String? communityId}) {
+    return expenseService.streamMonthlyExpenses(eventId, monthId, communityId: communityId);
   }
 }
 

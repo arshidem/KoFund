@@ -473,8 +473,8 @@ if (_isLoadingProfile) {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
-                blurRadius: 10,
                 offset: const Offset(0, -4),
+                blurRadius: 4,
               ),
             ],
           ),

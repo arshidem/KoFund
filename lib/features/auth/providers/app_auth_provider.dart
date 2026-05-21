@@ -243,7 +243,8 @@ class AppAuthProvider with ChangeNotifier {
           // Save user data locally when we get it
           final userData = await _authService.getUserData(firebaseUser.uid);
           if (userData != null) {
-            await _saveUserDataLocally(userData);
+            _user = UserModel.fromMap(userData);
+            await _saveUserDataLocally(_user!.toMap());
           }
         } else {
           debugPrint("🔄 Auth state changed: User signed out online");
@@ -292,7 +293,7 @@ class AppAuthProvider with ChangeNotifier {
                 _isOfflineMode = false; // We have freshhh data
 
                 // Save locally for offline use
-                await _saveUserDataLocally(userData);
+                await _saveUserDataLocally(_user!.toMap());
 
                 notifyListeners();
               }
@@ -519,7 +520,7 @@ class AppAuthProvider with ChangeNotifier {
           final userData = await _authService.getUserData(user.uid);
           if (userData != null) {
             _user = UserModel.fromMap(userData);
-            await _saveUserDataLocally(userData);
+            await _saveUserDataLocally(_user!.toMap());
           }
 
           _setLoading(false);
@@ -531,7 +532,7 @@ class AppAuthProvider with ChangeNotifier {
         final userData = await _authService.getUserData(user.uid);
         if (userData != null) {
           _user = UserModel.fromMap(userData);
-          await _saveUserDataLocally(userData);
+          await _saveUserDataLocally(_user!.toMap());
         }
 
         // ✅ REGISTER FCM TOKEN FOR NOTIFICATIONS
@@ -634,7 +635,8 @@ class AppAuthProvider with ChangeNotifier {
         // ✅ CRITICAL: Save user data locally for offline support
         final updatedUserData = await _authService.getUserData(user.uid);
         if (updatedUserData != null) {
-          await _saveUserDataLocally(updatedUserData);
+          _user = UserModel.fromMap(updatedUserData);
+          await _saveUserDataLocally(_user!.toMap());
         }
 
         // ✅ REGISTER FCM TOKEN FOR GOOGLE SIGN-IN USERS

@@ -9,6 +9,8 @@ import '../../../../core/constants/app_dimensions.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:provider/provider.dart';
+import '../../../features/auth/providers/app_auth_provider.dart';
 
 class DeletedContributionsScreen extends StatefulWidget {
   final String eventId;
@@ -33,6 +35,7 @@ class _DeletedContributionsScreenState
   bool _isLoading = false;
   bool showBackButton = true;
   final Map<String, List<DeletedContributionModel>> _groupedByDate = {};
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
@@ -40,9 +43,10 @@ class _DeletedContributionsScreenState
     super.dispose();
   }
 
-  Stream<List<DeletedContributionModel>> _getDeletedContributions() {
+  Stream<List<DeletedContributionModel>> _getDeletedContributions(String communityId) {
     return _deletedService.getDeletedContributions(
       eventId: widget.eventId,
+      communityId: communityId,
     );
   }
 
@@ -917,7 +921,7 @@ String _formatTime(DateTime date) {
   }
 
   Widget _buildSliverAppBar(BuildContext context) {
-    const double toolbarHeight = 64.0;
+    const double toolbarHeight = 84.0;
     const double bottomContentHeight = 64.0;
     const double totalBottomHeight = bottomContentHeight + 24.0;
     const double collapsedHeight = toolbarHeight + totalBottomHeight;
@@ -1024,6 +1028,7 @@ String _formatTime(DateTime date) {
 
   @override
   Widget build(BuildContext context) {
+    final communityId = context.watch<AppAuthProvider>().user?.communityId ?? '';
     return Scaffold(
       backgroundColor: AppColors.background(context),
       body: Stack(
@@ -1033,7 +1038,7 @@ String _formatTime(DateTime date) {
               _buildSliverAppBar(context),
             ],
             body: StreamBuilder<List<DeletedContributionModel>>(
-              stream: _getDeletedContributions(),
+              stream: _getDeletedContributions(communityId),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(

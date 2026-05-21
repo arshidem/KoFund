@@ -294,8 +294,7 @@ class _MembersWidgetState extends State<MembersWidget> {
                   ),
                 ),
                 if (members.length >= 3 && user != null)
-                  InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                  GestureDetector(
                     onTap: () {
                       if (widget.onSeeAll != null) {
                         widget.onSeeAll!();
@@ -303,12 +302,17 @@ class _MembersWidgetState extends State<MembersWidget> {
                         _navigateToAllMembers(context);
                       }
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary(context).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                        border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.25)),
+                      ),
                       child: Text(
                         'See all',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary(context),
                         ),

@@ -20,7 +20,7 @@ class ParticipantProvider with ChangeNotifier {
       : _participantService = participantService;
 
   // ✅ Load event participants
-  Future<void> loadEventParticipants(String eventId, {bool forceRefresh = false}) async {
+  Future<void> loadEventParticipants(String eventId, {String? communityId, bool forceRefresh = false}) async {
     // 🚀 OPTIMIZATION: Check cache
     if (!forceRefresh && _participantCache.containsKey(eventId)) {
       final cached = _participantCache[eventId]!;
@@ -35,7 +35,7 @@ class ParticipantProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      _eventParticipants = await _participantService.getEventParticipants(eventId);
+      _eventParticipants = await _participantService.getEventParticipants(eventId, communityId: communityId);
       _participantCache[eventId] = (data: _eventParticipants, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading participants: $e');
@@ -67,8 +67,8 @@ Future<void> addParticipant(ParticipantModel participant) async {
 }
 
 /// Get participants for a event
-Future<List<ParticipantModel>> getEventParticipants(String eventId) async {
-  await loadEventParticipants(eventId);
+Future<List<ParticipantModel>> getEventParticipants(String eventId, {String? communityId}) async {
+  await loadEventParticipants(eventId, communityId: communityId);
   return _eventParticipants;
 }
 
@@ -82,23 +82,23 @@ ParticipantModel? getParticipantByUserId(String eventId, String userId) {
   }
 }
 
-Stream<int> streamEventParticipantCount(String eventId) {
-  return _participantService.streamEventParticipantCount(eventId);
-}
+  Stream<int> streamEventParticipantCount(String eventId, {String? communityId}) {
+    return _participantService.streamEventParticipantCount(eventId, communityId: communityId);
+  }
 
   // ✅ Leave event
-  Future<void> leaveEvent(String eventId, String userId) async {
+  Future<void> leaveEvent(String eventId, String userId, {String? communityId}) async {
     try {
-      await _participantService.leave(eventId, userId);
+      await _participantService.leave(eventId, userId, communityId: communityId);
       _participantCache.remove(eventId); // Invalidate cache
-      await loadEventParticipants(eventId, forceRefresh: true);
+      await loadEventParticipants(eventId, forceRefresh: true, communityId: communityId);
     } catch (e) {
       rethrow;
     }
   }
 
   // ✅ Check if user joined (Cached)
-  Future<bool> hasUserJoined(String eventId, String userId) async {
+  Future<bool> hasUserJoined(String eventId, String userId, {String? communityId}) async {
     // 🚀 OPTIMIZATION: Check cache first
     if (_participantCache.containsKey(eventId)) {
       final cached = _participantCache[eventId]!;
@@ -106,11 +106,11 @@ Stream<int> streamEventParticipantCount(String eventId) {
         return cached.data.any((p) => p.userId == userId && p.status == 'joined');
       }
     }
-    return await _participantService.hasUserJoinedEvent(eventId, userId);
+    return await _participantService.hasUserJoinedEvent(eventId, userId, communityId: communityId);
   }
 
   // ✅ Get participant count (Cached)
-  Future<int> getParticipantCount(String eventId) async {
+  Future<int> getParticipantCount(String eventId, {String? communityId}) async {
     // 🚀 OPTIMIZATION: Check cache first
     if (_participantCache.containsKey(eventId)) {
       final cached = _participantCache[eventId]!;
@@ -118,7 +118,7 @@ Stream<int> streamEventParticipantCount(String eventId) {
         return cached.data.length;
       }
     }
-    return await _participantService.getParticipantCount(eventId);
+    return await _participantService.getParticipantCount(eventId, communityId: communityId);
   }
 
   // ✅ Update payment status
@@ -130,8 +130,8 @@ Stream<int> streamEventParticipantCount(String eventId) {
   }
 
   // ✅ Stream event participants for real-time updates
-  Stream<List<ParticipantModel>> streamEventParticipants(String eventId) {
-    return _participantService.streamParticipants(eventId);
+  Stream<List<ParticipantModel>> streamEventParticipants(String eventId, {String? communityId}) {
+    return _participantService.streamParticipants(eventId, communityId: communityId);
   }
 
   // ✅ Search participants by name

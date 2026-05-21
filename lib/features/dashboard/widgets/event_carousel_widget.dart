@@ -18,10 +18,12 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class CarouselWidget extends StatefulWidget {
   final bool isAdmin;
+  final VoidCallback? onSeeAll;
 
   const CarouselWidget({
     super.key,
     required this.isAdmin,
+    this.onSeeAll,
   });
 
   @override
@@ -98,6 +100,10 @@ class _CarouselWidgetState extends State<CarouselWidget> {
   }
 
   void _navigateToAll(BuildContext context) {
+    if (widget.onSeeAll != null) {
+      widget.onSeeAll!();
+      return;
+    }
     final user = context.read<AppAuthProvider>().user;
     if (user == null) return;
     Navigator.push(context, MaterialPageRoute(builder: (_) => AllEventsScreen(isAdmin: widget.isAdmin)));
@@ -271,7 +277,6 @@ class _CarouselWidgetState extends State<CarouselWidget> {
   }
 }
 
-// ── Animated page dots ───────────────────────────────────────────────────────
 class _PageDots extends StatefulWidget {
   final PageController controller;
   final int count;
@@ -323,7 +328,6 @@ class _PageDotsState extends State<_PageDots> {
   }
 }
 
-// ── Individual card ──────────────────────────────────────────────────────────
 class _DashboardCard extends StatefulWidget {
   final EventModel event;
   final bool isAdmin;
@@ -377,7 +381,6 @@ class _DashboardCardState extends State<_DashboardCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Row: Avatar & Title & Badges
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -412,7 +415,7 @@ class _DashboardCardState extends State<_DashboardCard> {
                             Icon(Icons.group_rounded, size: 12, color: AppColors.textSecondary(context)),
                             const SizedBox(width: 4),
                             StreamBuilder<int>(
-                              stream: eventProvider.streamParticipantCount(widget.event.eventId),
+                              stream: eventProvider.streamParticipantCount(widget.event.eventId, communityId: widget.event.communityId),
                               builder: (context, snap) {
                                 final count = snap.data ?? widget.event.currentParticipants;
                                 final max = widget.event.maxParticipants;
@@ -432,19 +435,14 @@ class _DashboardCardState extends State<_DashboardCard> {
                       ],
                     ),
                   ),
-
                 ],
               ),
-              
               const Spacer(),
-              
-              // Progress Section
               StreamBuilder<Map<String, dynamic>>(
-                stream: eventProvider.streamProgress(widget.event.eventId),
+                stream: eventProvider.streamProgress(widget.event.eventId, communityId: widget.event.communityId),
                 builder: (context, snap) {
                   final d = snap.data ?? {'collected': 0.0, 'target': 100.0, 'percentage': 0.0};
                   final pct = (d['percentage'] as num).toDouble().clamp(0.0, 1.0);
-                  
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -469,10 +467,7 @@ class _DashboardCardState extends State<_DashboardCard> {
                   );
                 },
               ),
-              
               const SizedBox(height: 16),
-              
-              // Clean Financial Stats (No background boxes)
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
@@ -480,7 +475,7 @@ class _DashboardCardState extends State<_DashboardCard> {
                   borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                 ),
                 child: StreamBuilder<Map<String, dynamic>>(
-                  stream: eventProvider.streamFinancialSummary(widget.event.eventId),
+                  stream: eventProvider.streamFinancialSummary(widget.event.eventId, communityId: widget.event.communityId),
                   builder: (context, snap) {
                     final s = snap.data ?? {'collected': 0.0, 'expenses': 0.0, 'balance': 0.0};
                     return Row(
@@ -496,10 +491,7 @@ class _DashboardCardState extends State<_DashboardCard> {
                   },
                 ),
               ),
-
               const SizedBox(height: 16),
-              
-              // Action Row
               Row(
                 children: [
                   Expanded(
@@ -542,8 +534,7 @@ class _DashboardCardState extends State<_DashboardCard> {
 
   Widget _leaveButton(EventProvider eventProvider, AppAuthProvider authProvider) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 48, height: 48,
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
@@ -605,7 +596,7 @@ class _DashboardCardState extends State<_DashboardCard> {
       HapticHelper.success();
       setState(() => _isLeaving = true);
       try {
-        await eventProvider.leave(widget.event.eventId, user.uid);
+        await eventProvider.leave(widget.event.eventId, user.uid, communityId: widget.event.communityId);
         if (!mounted) return;
         SnackbarHelper.showSuccess(context, 'Left ${widget.event.title}');
         setState(() {});
@@ -627,7 +618,6 @@ class _DashboardCardState extends State<_DashboardCard> {
     final dateOnly = DateTime(date.year, date.month, date.day);
     final nowOnly = DateTime(now.year, now.month, now.day);
     final diff = dateOnly.difference(nowOnly).inDays;
-
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
     if (diff > 1 && diff < 7) return 'In $diff days';

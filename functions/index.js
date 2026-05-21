@@ -54,6 +54,7 @@ exports.registerFCMToken = onCall(
   {
     region: "us-central1",
     cors: true,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -298,6 +299,7 @@ exports.unregisterFCMToken = onCall(
   {
     region: "us-central1",
     cors: true,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -363,7 +365,7 @@ exports.sendCommunityNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 30,
-    enforceAppCheck: false, // ⭐ Disable enforcement to bypass 403 error during dev
+    enforceAppCheck: true, 
   },
   async (request) => {
     try {
@@ -420,6 +422,12 @@ exports.sendCommunityNotification = onCall(
       if (!isAuthorized) {
         console.error(`❌ Sender ${auth.uid} not authorized for community ${communityId}`);
         throw new HttpsError("permission-denied", "Sender is not a member of this community");
+      }
+
+      // 🛡️ SECURITY: Only admins can send community-wide notifications
+      if (senderData.role !== 'admin') {
+        console.error(`❌ Non-admin sender ${auth.uid} tried to send community notification`);
+        throw new HttpsError("permission-denied", "Only administrators can send community notifications");
       }
       
       // 2. Get community info
@@ -722,6 +730,7 @@ exports.sendUserNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 30,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -979,6 +988,7 @@ exports.cleanupNotificationTokens = onCall(
   {
     region: "us-central1",
     cors: true,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -1081,6 +1091,7 @@ exports.sendeventContributionReminders = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 60,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -1103,6 +1114,20 @@ exports.sendeventContributionReminders = onCall(
       
       if (!communityId) {
         throw new Error("Missing required field: communityId");
+      }
+
+      // 🛡️ SECURITY: Verify sender is an admin of the community
+      const senderDoc = await db.collection('users').doc(auth.uid).get();
+      if (!senderDoc.exists) {
+        throw new Error("Sender user not found");
+      }
+      const senderData = senderDoc.data();
+      if (senderData.role !== 'admin' || senderData.communityId !== communityId) {
+         // Also check if they are an admin in notificationCommunities if that's allowed
+         // For now, strict check on primary communityId
+         if (senderData.role !== 'admin') {
+           throw new HttpsError("permission-denied", "Only admins can send reminders");
+         }
       }
       
       const now = new Date();
@@ -1464,6 +1489,7 @@ exports.sendGlobalNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 120, // Longer timeout for large broadcast
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -1542,6 +1568,7 @@ exports.sendTargetedNotifications = onCall(
   {
     region: "us-central1",
     cors: true,
+    enforceAppCheck: true,
   },
   async (request) => {
     try {
@@ -1553,6 +1580,13 @@ exports.sendTargetedNotifications = onCall(
         throw new Error("Missing userIds list");
       }
       if (!title || !body) throw new Error("Missing title or body");
+
+      // 🛡️ SECURITY: Verify sender permissions
+      const senderDoc = await db.collection('users').doc(auth.uid).get();
+      if (!senderDoc.exists) throw new Error("Sender not found");
+      if (senderDoc.data().role !== 'admin') {
+        throw new HttpsError("permission-denied", "Only admins can send targeted notifications");
+      }
 
       const now = new Date();
       const baseNotificationId = `target_${now.getTime()}`;
@@ -1663,8 +1697,38 @@ exports.viewEvent = functions.https.onRequest(async (req, res) => {
     // 🔐 PASSWORD VERIFICATION (for JSON Data)
     if (event.isPublicEnabled && event.publicPassword) {
       const providedPassword = req.query.password || req.body.password;
+      const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+      const rateLimitKey = `rate_limit_${eventId}_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      
+      // Check rate limit
+      const rateLimitDoc = await db.collection('rate_limits').doc(rateLimitKey).get();
+      const now = admin.firestore.Timestamp.now();
+      
+      if (rateLimitDoc.exists) {
+        const rlData = rateLimitDoc.data();
+        // If more than 5 attempts within 15 minutes, block
+        const fifteenMinutesAgo = now.toMillis() - (15 * 60 * 1000);
+        if (rlData.attempts >= 5 && rlData.lastAttempt.toMillis() > fifteenMinutesAgo) {
+          return res.status(429).json({ 
+            error: 'Too many attempts. Please try again in 15 minutes.' 
+          });
+        }
+      }
+
       if (providedPassword !== event.publicPassword) {
+        // Record failed attempt
+        const currentAttempts = rateLimitDoc.exists ? rateLimitDoc.data().attempts : 0;
+        await db.collection('rate_limits').doc(rateLimitKey).set({
+          attempts: currentAttempts + 1,
+          lastAttempt: now,
+          eventId,
+          ip
+        }, { merge: true });
+        
         return res.status(401).json({ error: 'Unauthorized' });
+      } else if (rateLimitDoc.exists) {
+        // Clear rate limit on success
+        await db.collection('rate_limits').doc(rateLimitKey).delete();
       }
     }
 

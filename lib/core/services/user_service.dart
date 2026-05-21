@@ -23,17 +23,21 @@ class UserService {
   }
 
   // In your UserService or ParticipantService
-  Future<bool> isUserInEvent(String userId, String eventId) async {
+  Future<bool> isUserInEvent(String userId, String eventId, {String? communityId}) async {
     try {
       debugPrint('🔍 DEBUG: Checking if user $userId is ACTIVE participant in event $eventId');
       
-      final snapshot = await _firestore
+      var query = _firestore
           .collection('participants')
           .where('userId', isEqualTo: userId)
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'joined')
-          .limit(1)
-          .get();
+          .where('status', isEqualTo: 'joined');
+      
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+      
+      final snapshot = await query.limit(1).get();
       
       final isActiveParticipant = snapshot.docs.isNotEmpty;
       debugPrint('📊 DEBUG: User $userId is ACTIVE participant in event $eventId: $isActiveParticipant');

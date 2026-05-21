@@ -27,164 +27,95 @@ class EventParticipantsSkeleton extends StatelessWidget {
   }
 
   Widget _buildStatsSkeleton(BuildContext context, bool dark) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: dark
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
-              ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
-        ),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            color: dark 
-                ? Colors.black.withValues(alpha: 0.3) 
-                : const Color(0xFF00C6A2).withValues(alpha: 0.25),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _line(context, width: 120, height: 12),
-                  if (isMonthlyy) ...[
-                    const SizedBox(height: 4),
-                    _line(context, width: 100, height: 14),
-                  ],
-                ],
-              ),
-              Container(
-                width: 40,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(11),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: dark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
                 ),
-              ),
-            ],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Amount
-          _line(context, width: 140, height: 34),
-          const SizedBox(height: 8),
-          _line(context, width: 100, height: 12),
-          
-          const SizedBox(height: 16),
-          
-          // Stats chips
-          Row(
-            children: [
-              Expanded(child: _buildStatChipSkeleton(context)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatChipSkeleton(context)),
-            ],
-          ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: dark 
+                  ? Colors.black.withValues(alpha: 0.3) 
+                  : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _line(context, width: 140, height: 11),
+                Container(
+                  width: 40,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _line(context, width: 140, height: 36),
+            const SizedBox(height: 8),
+            _line(context, width: 100, height: 13),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(child: _buildStatChipSkeleton(context)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildStatChipSkeleton(context)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStatChipSkeleton(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 1,
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _line(context, width: 30, height: 14),
-              const SizedBox(height: 2),
-              _line(context, width: 40, height: 10),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonthSelectorSkeleton(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _line(context, width: 100, height: 14),
+              Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              _line(context, width: 30, height: 9),
             ],
           ),
-          Row(
-            children: [
-              Container(
-                width: 80,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 6),
+          _line(context, width: 40, height: 16),
         ],
       ),
     );
@@ -192,37 +123,44 @@ class EventParticipantsSkeleton extends StatelessWidget {
 
   Widget _buildSearchBarSkeleton(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context)),
-      ),
+      padding: const EdgeInsets.only(bottom: 8, top: 4, left: 16, right: 16),
       child: Row(
         children: [
           Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(100), // radiusFull
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                _line(context, width: 150, height: 14),
-              ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  Container(width: 20, height: 20, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle)),
+                  const SizedBox(width: 12),
+                  _line(context, width: 150, height: 14),
+                ],
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Container(
-            width: 60,
-            height: 36,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.surface(context),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: AppColors.border(context).withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle)),
             ),
           ),
         ],
@@ -234,61 +172,47 @@ class EventParticipantsSkeleton extends StatelessWidget {
     return Column(
       children: [
         Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context),
-          ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              // Avatar skeleton
               Container(
-                width: 40,
-                height: 40,
+                width: 44, // Gradient avatar size
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withValues(alpha: 0.15),
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // Content skeleton
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Name
-                    _line(context, width: 120, height: 15),
-                    const SizedBox(height: 4),
-                    
-                    // Payment info
-                    _line(context, width: 100, height: 13),
-                    const SizedBox(height: 4),
-                    
-                    // Progress bar
-                    _line(context, width: double.infinity, height: 4, radius: BorderRadius.circular(2)),
+                    _line(context, width: 140, height: 16, radius: BorderRadius.circular(4)),
+                    const SizedBox(height: 6),
+                    _line(context, width: 100, height: 12, radius: BorderRadius.circular(4)),
                   ],
                 ),
               ),
-              
-              // Status badge
-              Container(
-                width: 60,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _line(context, width: 60, height: 18, radius: BorderRadius.circular(4)),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 40,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        
-        // Divider
-        Container(
-          height: 1,
-          color: AppColors.border(context),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-        ),
+        Divider(height: 1, thickness: 1, color: AppColors.border(context)),
       ],
     );
   }
@@ -303,24 +227,17 @@ class EventParticipantsSkeleton extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: baseColor,
       highlightColor: highlightColor,
-      child: ListView(
+      child: Column(
         children: [
-          // Stats card
           _buildStatsSkeleton(context, dark),
-          
-          // Month selector (if monthly event)
-          if (isMonthlyy) ...[
-            const SizedBox(height: 8),
-            _buildMonthSelectorSkeleton(context),
-            const SizedBox(height: 8),
-          ],
-          
-          // Search bar
           _buildSearchBarSkeleton(context),
-          
-          // Participants list
-          const SizedBox(height: 8),
-          ...List.generate(5, (index) => _buildParticipantItemSkeleton(context, dark)),
+          Expanded(
+            child: ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 8,
+              itemBuilder: (context, index) => _buildParticipantItemSkeleton(context, dark),
+            ),
+          ),
         ],
       ),
     );

@@ -182,6 +182,7 @@ class DeletedContributionService {
     try {
       await _firestore.collection('notifications').add({
         'userId': deletedRecord.userId,
+        'communityId': deletedRecord.communityId, // ✅ ADD: For data isolation
         'title': 'Contribution Deleted',
         'message': 'Admin ${deletedRecord.deletedByUserName} deleted your contribution of ₹${deletedRecord.amount}. Reason: ${deletedRecord.deletionReason}',
         'type': 'contribution_deleted',
@@ -212,6 +213,7 @@ class DeletedContributionService {
     try {
       await _firestore.collection('notifications').add({
         'userId': deletedRecord.userId,
+        'communityId': deletedRecord.communityId, // ✅ ADD: For data isolation
         'title': 'Contribution Restored',
         'message': 'Admin $restoredByAdminName restored your deleted contribution of ₹${deletedRecord.amount}',
         'type': 'contribution_restored',
@@ -231,22 +233,29 @@ class DeletedContributionService {
     }
   }
   // 🔹 Get deleted contributions for a specific event
-Stream<List<DeletedContributionModel>> getDeletedContributions({
-  required String eventId,
-}) {
-  return _firestore
-      .collection('deleted_contributions')
-      .where('eventId', isEqualTo: eventId)
-      .where('isRestored', isEqualTo: false)
-      .orderBy('deletedAt', descending: true)
-      .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => DeletedContributionModel.fromMap(
-                doc.data(),
-                doc.id,
-              ))
-          .toList());
-}
+  Stream<List<DeletedContributionModel>> getDeletedContributions({
+    required String eventId,
+    required String communityId,
+  }) {
+    return _firestore
+        .collection('deleted_contributions')
+        .where('eventId', isEqualTo: eventId)
+        .where('communityId', isEqualTo: communityId)
+        .where('isRestored', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) {
+          final docs = snapshot.docs
+            .map((doc) => DeletedContributionModel.fromMap(
+                  doc.data(),
+                  doc.id,
+                ))
+            .toList();
+          
+          // Sort in memory to avoid needing a composite index
+          docs.sort((a, b) => b.deletedAt.compareTo(a.deletedAt));
+          return docs;
+        });
+  }
 
   // 🔹 Check if user has deleted contributions
   Future<bool> hasDeletedContributions({

@@ -81,7 +81,6 @@ Future<List<EventModel>> getEventsByCommunity(String communityId) async {
     final snapshot = await _firestore
         .collection('events')
         .where('communityId', isEqualTo: communityId)
-        .orderBy('eventDate')
         .limit(100)
         .get();
 
@@ -90,10 +89,17 @@ Future<List<EventModel>> getEventsByCommunity(String communityId) async {
         .map((doc) => EventModel.fromMap(doc.data(), doc.id))
         .toList();
 
+    // Sort in memory to avoid index requirement and excluding events without date
+    events.sort((a, b) {
+      if (a.eventDate == null && b.eventDate == null) return 0;
+      if (a.eventDate == null) return 1;
+      if (b.eventDate == null) return -1;
+      return a.eventDate!.compareTo(b.eventDate!);
+    });
+
     debugPrint('✅ Loaded ${events.length} events from Firestore');
     
     // 🔄 NEW: Sync status for events that need updating
-    // This now returns updated events with computed status
     final updates = await _syncExpiredStatus(events);
     
     return updates;
@@ -171,13 +177,22 @@ Future<List<EventModel>> _syncExpiredStatus(List<EventModel> events) async {
           .collection('events')
           .where('communityId', isEqualTo: communityId)
           .where('status', isEqualTo: 'active')
-          .orderBy('eventDate')
           .limit(50)
           .get();
 
-      return snapshot.docs
+      final events = snapshot.docs
           .map((doc) => EventModel.fromMap(doc.data(), doc.id))
           .toList();
+
+      // Sort in memory
+      events.sort((a, b) {
+        if (a.eventDate == null && b.eventDate == null) return 0;
+        if (a.eventDate == null) return 1;
+        if (b.eventDate == null) return -1;
+        return a.eventDate!.compareTo(b.eventDate!);
+      });
+
+      return events;
     } catch (e) {
       throw Exception('Failed to load active events: $e');
     }
@@ -220,13 +235,22 @@ Stream<List<EventModel>> streamEventsByCommunity(String communityId) {
         .collection('events')
         .where('communityId', isEqualTo: communityId)
         .where('status', isEqualTo: 'active')
-        .orderBy('eventDate')
         .limit(50)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final events = snapshot.docs
           .map((doc) => EventModel.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // Sort in memory
+      events.sort((a, b) {
+        if (a.eventDate == null && b.eventDate == null) return 0;
+        if (a.eventDate == null) return 1;
+        if (b.eventDate == null) return -1;
+        return a.eventDate!.compareTo(b.eventDate!);
+      });
+      
+      return events;
     });
   }
 
@@ -330,7 +354,10 @@ Future<void> updateModel(EventModel event) async {
       if (event == null) throw Exception('event not found');
       
       // Get all participants who haven't fully paid
-      final participants = await getParticipantsWithUnpaidContributions(eventId);
+      final participants = await getParticipantsWithUnpaidContributions(
+        eventId,
+        communityId: event.communityId,
+      );
       
       if (participants.isEmpty) {
         debugPrint('📭 No participants need reminders for event: ${event.title}');
@@ -356,14 +383,19 @@ Future<void> updateModel(EventModel event) async {
     }
   }
 
-  Future<List<ParticipantModel>> getParticipantsWithUnpaidContributions(String eventId) async {
+  Future<List<ParticipantModel>> getParticipantsWithUnpaidContributions(String eventId, {String? communityId}) async {
     try {
       // 🚀 OPTIMIZATION: Filter for unpaid participants at the query level
-      final participantsSnapshot = await _firestore
+      var query = _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'joined')
-          .get();
+          .where('status', isEqualTo: 'joined');
+      
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+      
+      final participantsSnapshot = await query.get();
       
       return participantsSnapshot.docs
           .map((doc) => ParticipantModel.fromMap(doc.data(), doc.id))
@@ -544,18 +576,22 @@ Future<void> sendParticipantReminder(EventModel event, ParticipantModel particip
   }
 
   // 🆕 CHECK AND SEND REMINDERS FOR ALL 
-  Future<void> checkAndSendDueReminders() async {
+  Future<void> checkAndSendDueReminders({String? communityId}) async {
     try {
       debugPrint('🔍 Checking for due reminders...');
       final now = DateTime.now();
       
       // Get all active events with reminders enabled
-      final eventsSnapshot = await _firestore
+      var query = _firestore
           .collection('events')
           .where('enableAutoReminders', isEqualTo: true)
-          .where('status', isEqualTo: 'active')
-          .limit(100)
-          .get();
+          .where('status', isEqualTo: 'active');
+
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+
+      final eventsSnapshot = await query.limit(100).get();
       
       int remindersSent = 0;
       
@@ -728,13 +764,17 @@ Future<void> sendContributionReminders({
   // -------------------------------------------------------------
   // Total Contributions for a event (safely parse map)
   // -------------------------------------------------------------
-  Future<double> getTotalContributions(String eventId) async {
+  Future<double> getTotalContributions(String eventId, {String? communityId}) async {
     try {
-      final aggregateQuery = await _firestore
+      var query = _firestore
           .collection('contributions')
-          .where('eventId', isEqualTo: eventId)
-          .aggregate(sum('amount'))
-          .get();
+          .where('eventId', isEqualTo: eventId);
+      
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+      
+      final aggregateQuery = await query.aggregate(sum('amount')).get();
       return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       rethrow;
@@ -744,14 +784,18 @@ Future<void> sendContributionReminders({
   // -------------------------------------------------------------
   // Total Expenses for a event (safely parse map)
   // -------------------------------------------------------------
-  Future<double> getTotalExpenses(String eventId) async {
+  Future<double> getTotalExpenses(String eventId, {String? communityId}) async {
     try {
-      final aggregateQuery = await _firestore
+      var query = _firestore
           .collection('expenses')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'approved')
-          .aggregate(sum('amount'))
-          .get();
+          .where('status', isEqualTo: 'approved');
+      
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+      
+      final aggregateQuery = await query.aggregate(sum('amount')).get();
       return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
       rethrow;
@@ -761,9 +805,9 @@ Future<void> sendContributionReminders({
   // -------------------------------------------------------------
   // event financial summary
   // -------------------------------------------------------------
-  Future<Map<String, dynamic>> getFinancialSummary(String eventId) async {
-    final totalContributions = await getTotalContributions(eventId);
-    final totalExpenses = await getTotalExpenses(eventId);
+  Future<Map<String, dynamic>> getFinancialSummary(String eventId, {String? communityId}) async {
+    final totalContributions = await getTotalContributions(eventId, communityId: communityId);
+    final totalExpenses = await getTotalExpenses(eventId, communityId: communityId);
     final balance = totalContributions - totalExpenses;
     return {
       'contributions': totalContributions,
@@ -780,7 +824,7 @@ Future<void> sendContributionReminders({
     return streamActiveEventsByCommunity(communityId).asyncMap((events) async {
       final List<Map<String, dynamic>> result = [];
       for (final p in events) {
-        final stats = await getFinancialSummary(p.eventId);
+        final stats = await getFinancialSummary(p.eventId, communityId: communityId);
         result.add({'event': p, 'stats': stats});
       }
       return result;

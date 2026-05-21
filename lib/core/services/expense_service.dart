@@ -17,18 +17,27 @@ class ExpenseService {
   }
 
   // Get expenses by event
-  Future<List<ExpenseModel>> getExpensesByEvent(String eventId, {int limit = 20}) async {
+  Future<List<ExpenseModel>> getExpensesByEvent(String eventId, {int limit = 20, String? communityId}) async {
     try {
-      final snapshot = await _firestore
+      var query = _firestore
           .collection('expenses')
-          .where('eventId', isEqualTo: eventId)
-          .orderBy('expenseDate', descending: true)
+          .where('eventId', isEqualTo: eventId);
+
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+
+      final snapshot = await query
           .limit(limit)
           .get();
 
-      return snapshot.docs
+      final docs = snapshot.docs
           .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // Sort in memory to avoid index requirement
+      docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      return docs;
     } catch (e) {
       throw Exception('Failed to load event expenses: $e');
     }
@@ -40,12 +49,15 @@ class ExpenseService {
       final snapshot = await _firestore
           .collection('expenses')
           .where('communityId', isEqualTo: communityId)
-          .orderBy('expenseDate', descending: true)
           .get();
 
-      return snapshot.docs
+      final docs = snapshot.docs
           .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
+          
+      // Sort in memory
+      docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      return docs;
     } catch (e) {
       throw Exception('Failed to load community expenses: $e');
     }
@@ -230,25 +242,31 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
   }
 
   // Get total expenses for a event
-  Future<double> getEventTotalExpenses(String eventId) async {
+  Future<double> getEventTotalExpenses(String eventId, {String? communityId}) async {
     try {
-      // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
-      final aggregateQuery = await _firestore
+      var query = _firestore
           .collection('expenses')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'approved')
-          .aggregate(sum('amount'))
-          .get();
+          .where('status', isEqualTo: 'approved');
+
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+
+      // 🚀 OPTIMIZATION: Use aggregate query (sum)
+      final aggregateQuery = await query.aggregate(sum('amount')).get();
       return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
-      throw Exception('Failed to calculate event expenses: $e');
+      debugPrint('⚠️ Aggregation failed for event expenses, falling back to manual sum: $e');
+      final expenses = await getExpensesByEvent(eventId, limit: 1000, communityId: communityId);
+      return expenses.fold<double>(0.0, (sum, exp) => sum + exp.amount);
     }
   }
 
   // Get total expenses for a community
   Future<double> getCommunityTotalExpenses(String communityId) async {
     try {
-      // 🚀 OPTIMIZATION: Use aggregate query (sum) instead of reading docs
+      // 🚀 OPTIMIZATION: Use aggregate query (sum)
       final aggregateQuery = await _firestore
           .collection('expenses')
           .where('communityId', isEqualTo: communityId)
@@ -257,50 +275,71 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
           .get();
       return (aggregateQuery.getSum('amount') ?? 0).toDouble();
     } catch (e) {
-      throw Exception('Failed to calculate community expenses: $e');
+      debugPrint('⚠️ Aggregation failed for community expenses, falling back to manual sum: $e');
+      final expenses = await getExpensesByCommunity(communityId);
+      return expenses.fold<double>(0.0, (sum, exp) => sum + exp.amount);
     }
   }
 
   // Stream expenses for real-time updates
-  Stream<List<ExpenseModel>> streamEventExpenses(String eventId) {
-    return _firestore
+  Stream<List<ExpenseModel>> streamEventExpenses(String eventId, {String? communityId}) {
+    var query = _firestore
         .collection('expenses')
-        .where('eventId', isEqualTo: eventId)
-        .orderBy('expenseDate', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
-            .toList());
-  }
+        .where('eventId', isEqualTo: eventId);
 
-  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('expenses')
-          .where('eventId', isEqualTo: eventId)
-          .where('monthId', isEqualTo: monthId)
-          .orderBy('expenseDate', descending: true)
-          .get();
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
 
-      return snapshot.docs
+    return query.snapshots().map((snapshot) {
+      final docs = snapshot.docs
           .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
+      docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      return docs;
+    });
+  }
+
+  Future<List<ExpenseModel>> getMonthlyExpenses(String eventId, String monthId, {String? communityId}) async {
+    try {
+      var query = _firestore
+          .collection('expenses')
+          .where('eventId', isEqualTo: eventId)
+          .where('monthId', isEqualTo: monthId);
+
+      if (communityId != null && communityId.isNotEmpty) {
+        query = query.where('communityId', isEqualTo: communityId);
+      }
+
+      final snapshot = await query.get();
+      final docs = snapshot.docs
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+          .toList();
+      docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      return docs;
     } catch (e) {
       debugPrint('❌ Error loading monthly expenses: $e');
       return [];
     }
   }
 
-  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId) {
-    return _firestore
+  Stream<List<ExpenseModel>> streamMonthlyExpenses(String eventId, String monthId, {String? communityId}) {
+    var query = _firestore
         .collection('expenses')
         .where('eventId', isEqualTo: eventId)
-        .where('monthId', isEqualTo: monthId)
-        .orderBy('expenseDate', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
-            .toList());
+        .where('monthId', isEqualTo: monthId);
+
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
+
+    return query.snapshots().map((snapshot) {
+      final docs = snapshot.docs
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+          .toList();
+      docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      return docs;
+    });
   }
 
   // Stream community expenses for real-time updates
@@ -308,21 +347,30 @@ Future<ExpenseModel?> getExpenseById(String expenseId) async {
     return _firestore
         .collection('expenses')
         .where('communityId', isEqualTo: communityId)
-        .orderBy('expenseDate', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
+        .map((snapshot) {
+          final docs = snapshot.docs
             .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
-            .toList());
+            .toList();
+          
+          // Sort in memory
+          docs.sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+          return docs;
+        });
   }
 
   // Stream total expenses amount for real-time updates
-  Stream<double> streamTotalExpenses(String eventId) {
-    return _firestore
+  Stream<double> streamTotalExpenses(String eventId, {String? communityId}) {
+    var query = _firestore
         .collection('expenses')
         .where('eventId', isEqualTo: eventId)
-        .where('status', isEqualTo: 'approved')
-        .snapshots()
-        .map((snapshot) {
+        .where('status', isEqualTo: 'approved');
+
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
+
+    return query.snapshots().map((snapshot) {
       double total = 0;
       for (var doc in snapshot.docs) {
         total += (doc.data()['amount'] ?? 0).toDouble();

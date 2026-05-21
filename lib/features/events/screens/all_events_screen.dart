@@ -384,8 +384,8 @@ List<EventModel> _applyFilters(List<EventModel> events) {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
-                        blurRadius: 10,
                         offset: const Offset(0, -4),
+                        blurRadius: 4,
                       ),
                     ],
                   ),
@@ -811,7 +811,7 @@ Widget _builCard(
           onTap: () => _viewDetails(event),
           borderRadius: BorderRadius.circular(AppDimensions.radiusExtraLarge),
           child: StreamBuilder<Map<String, dynamic>>(
-                  stream: eventProvider.streamProgress(event.eventId),
+                  stream: eventProvider.streamProgress(event.eventId, communityId: event.communityId),
                   builder: (context, progressSnap) {
                     final progressData = progressSnap.data ?? {
                       'collected': 0.0,
@@ -1131,6 +1131,7 @@ Widget _builCard(
       title: 'Delete event?',
       message: 'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
       confirmLabel: 'Delete',
+      confirmKeyword: 'delete',
       isDestructive: true,
     );
 

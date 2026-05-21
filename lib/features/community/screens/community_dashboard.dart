@@ -1,5 +1,7 @@
 // lib/features/community/screens/community_dashboard.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -15,6 +17,8 @@ import 'package:kofund/features/admin/providers/user_provider.dart';
 // Import your skeleton
 import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 
+
+
 class CommunityDashboard extends StatefulWidget {
   const CommunityDashboard({super.key});
 
@@ -28,10 +32,15 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   bool _forceMembersBackButton = false;
   late PageController _pageController;
 
+  void _navigateToEvents() {
+    _pageController.animateToPage(
+      1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   void _navigateToMembers() {
-    setState(() {
-      _forceMembersBackButton = true;
-    });
     _pageController.animateToPage(
       2,
       duration: const Duration(milliseconds: 300),
@@ -39,24 +48,10 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     );
   }
 
-  void _navigateToDashboard() {
-    setState(() {
-      _forceMembersBackButton = false;
-    });
-    _pageController.animateToPage(
-      0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
   List<Widget> get _tabs => [
-    DashboardTab(onNavigateToMembers: _navigateToMembers),
+    DashboardTab(onNavigateToMembers: _navigateToMembers, onNavigateToEvents: _navigateToEvents),
     const eventsTab(),
-    MembersTab(
-      showBackButton: _forceMembersBackButton,
-      onBackToDashboard: _navigateToDashboard,
-    ),
+    const MembersTab(),
     const ProfileTab(),
   ];
 
@@ -152,7 +147,14 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
         );
 
         if (shouldExit == true && context.mounted) {
-           Navigator.of(context).pop();
+           // Standard way to close the app on Android
+           await SystemChannels.platform.invokeMethod<void>('SystemNavigator.pop', true);
+           
+           // Fallback for some environments where the above might not respond immediately
+           await Future.delayed(const Duration(milliseconds: 200));
+           if (context.mounted) {
+             exit(0);
+           }
         }
       },
       child: Scaffold(

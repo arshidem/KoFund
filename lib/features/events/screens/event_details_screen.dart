@@ -110,6 +110,7 @@ Future<void> _refreshAllData() async {
     // Get providers
     final eventProvider = Provider.of<EventProvider>(context, listen: false);
     
+    final communityId = _cache?.communityId;
     // Clear the cached event to force re-fetch
     setState(() {
       _cache = null;
@@ -124,7 +125,7 @@ Future<void> _refreshAllData() async {
     
     // Method 2: Force re-fetch the event from Firestore
     // This is the most reliable way
-    await eventProvider.loadEvents(_cache?.communityId ?? '');
+    await eventProvider.loadEvents(communityId ?? '');
     
     // Wait a bit for Firestore to update
     await Future.delayed(const Duration(milliseconds: 500));
@@ -188,7 +189,7 @@ Future<void> _refreshAllData() async {
     setState(() => _isLoadingMonths = true);
     try {
       final eventProvider = Provider.of<EventProvider>(context, listen: false);
-      final counts = await eventProvider.getMonthlyPaymentCounts(widget.eventId);
+      final counts = await eventProvider.getMonthlyPaymentCounts(widget.eventId, communityId: _cache?.communityId);
       if (mounted) {
         setState(() {
           _monthPaymentCounts = counts;
@@ -456,7 +457,7 @@ Widget build(BuildContext context) {
         : [
             StreamBuilder<List<ParticipantModel>>(
               stream: Provider.of<ParticipantProvider>(context, listen: false)
-                  .streamEventParticipants(widget.eventId),
+                  .streamEventParticipants(widget.eventId, communityId: _cache?.communityId),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const SizedBox.shrink();
@@ -667,7 +668,7 @@ Widget build(BuildContext context) {
       if (event == null) return;
 
       final participants = await participantProvider
-          .streamEventParticipants(widget.eventId)
+          .streamEventParticipants(widget.eventId, communityId: _cache?.communityId)
           .first;
       final participantCount = participants.length;
 
@@ -735,7 +736,7 @@ Widget build(BuildContext context) {
     if (result == true) {
       HapticHelper.success();
       try {
-        await participantProvider.leaveEvent(widget.eventId, currentUser.uid);
+        await participantProvider.leaveEvent(widget.eventId, currentUser.uid, communityId: _cache?.communityId);
         if (!mounted) return;
 
         // Success snackbar

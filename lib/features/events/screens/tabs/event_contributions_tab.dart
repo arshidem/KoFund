@@ -100,9 +100,16 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
     
     if (widget.event.isMonthlyPayment) {
       final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
-      _contributionsStream = contributionProvider.streamMonthlyContributions(widget.event.eventId, monthId);
+      _contributionsStream = contributionProvider.streamMonthlyContributions(
+        widget.event.eventId,
+        monthId,
+        communityId: widget.event.communityId,
+      );
     } else {
-      _contributionsStream = contributionProvider.streamContributions(widget.event.eventId);
+      _contributionsStream = contributionProvider.streamContributions(
+        widget.event.eventId,
+        communityId: widget.event.communityId,
+      );
     }
     
     _statsStream = _getContributionStatsStream(context);
@@ -627,9 +634,16 @@ Stream<Map<String, dynamic>> _getContributionStatsStream(BuildContext context) {
   
   if (widget.event.isMonthlyPayment) {
     final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
-    return eventProvider.streamMonthlyFinancialSummary(widget.event.eventId, monthId);
+    return eventProvider.streamMonthlyFinancialSummary(
+      widget.event.eventId,
+      monthId,
+      communityId: widget.event.communityId,
+    );
   } else {
-    return eventProvider.streamFinancialSummary(widget.event.eventId);
+    return eventProvider.streamFinancialSummary(
+      widget.event.eventId,
+      communityId: widget.event.communityId,
+    );
   }
 }
 

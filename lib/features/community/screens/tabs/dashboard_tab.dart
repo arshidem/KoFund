@@ -2,15 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:kofund/features/dashboard/screens/dashboard_screen.dart';
 
-class DashboardTab extends StatelessWidget { // Changed to StatelessWidget
+class DashboardTab extends StatelessWidget {
   final VoidCallback? onNavigateToMembers;
+  final VoidCallback? onNavigateToEvents;
   
-  const DashboardTab({super.key, this.onNavigateToMembers});
+  const DashboardTab({super.key, this.onNavigateToMembers, this.onNavigateToEvents});
 
   @override
   Widget build(BuildContext context) {
-    // No auth checks needed - parent CommunityDashboard handles all auth verification
-    return DashboardScreen(onNavigateToMembers: onNavigateToMembers);
+    return DashboardScreen(
+      onNavigateToMembers: onNavigateToMembers,
+      onNavigateToEvents: onNavigateToEvents,
+    );
   }
 }
 

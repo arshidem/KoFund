@@ -53,11 +53,11 @@ class ContributionProvider with ChangeNotifier {
       await _contributionService.addContribution(contribution);
       
       // Clear relevant cache
-      clearCacheForUser(contribution.contributionId, contribution.userId);
+      clearCacheForUser(contribution.eventId, contribution.userId);
       
       // Reload contributions after adding new one
-      if (contribution.contributionId.isNotEmpty) {
-        await loadContributions(contribution.eventId);
+      if (contribution.eventId.isNotEmpty) {
+        await loadContributions(contribution.eventId, communityId: contribution.communityId);
       }
       await loadUserContributions(contribution.userId, contribution.communityId);
       notifyListeners();
@@ -221,7 +221,7 @@ Future<void> updateContribution(
       _updateContributionInLists(updatedContribution);
       
       // Clear cache
-      clearCacheForUser(contribution.contributionId, contribution.userId);
+      clearCacheForUser(contribution.eventId, contribution.userId);
       
       notifyListeners();
       debugPrint('✅ Provider: Local update successful');
@@ -299,7 +299,7 @@ Future<void> deleteContribution(String contributionId, String reason) async {
     );
     
     // 5. Clear relevant cache
-    clearCacheForUser(contribution.contributionId, contribution.userId);
+    clearCacheForUser(contribution.eventId, contribution.userId);
     
     // 6. Remove from local lists
     _removeContributionFromLists(contributionId);
@@ -380,10 +380,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
 
   // ✅ REMOVED: bulkMarkPayments (not needed - all contributions are completed)
 
-  // Get event total contributions
-  Future<double> getTotalContributions(String eventId) async {
+  Future<double> getTotalContributions(String eventId, {String? communityId}) async {
     try {
-      return await _contributionService.getTotalContributions(eventId);
+      return await _contributionService.getTotalContributions(eventId, communityId: communityId);
     } catch (e) {
       debugPrint('Error getting event total contributions: $e');
       return 0.0;
@@ -391,9 +390,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   }
 
   // Get event contributions
-  Future<List<ContributionModel>> getContributions(String eventId) async {
+  Future<List<ContributionModel>> getContributions(String eventId, {String? communityId}) async {
     try {
-      return await _contributionService.getContributions(eventId);
+      return await _contributionService.getContributions(eventId, communityId: communityId);
     } catch (e) {
       debugPrint('Error getting event contributions: $e');
       return [];
@@ -405,7 +404,7 @@ Future<bool> hasDeletedContributions(String communityId) async {
   // -------------------------------
 
   // Load contributions for a event
-  Future<void> loadContributions(String eventId, {bool forceRefresh = false}) async {
+  Future<void> loadContributions(String eventId, {String? communityId, bool forceRefresh = false}) async {
     final cacheKey = 'event_$eventId';
     final now = DateTime.now();
 
@@ -422,8 +421,8 @@ Future<bool> hasDeletedContributions(String communityId) async {
     notifyListeners();
 
     try {
-      _contributions = await _contributionService.getContributions(eventId);
-      _totalContributions = await _contributionService.getTotalContributions(eventId);
+      _contributions = await _contributionService.getContributions(eventId, communityId: communityId);
+      _totalContributions = await _contributionService.getTotalContributions(eventId, communityId: communityId);
       
       // Update cache
       _cache[cacheKey] = CacheEntry(data: _contributions, timestamp: now);
@@ -436,9 +435,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   }
 
   // Load user's contributions for a event
-  Future<void> loadUseContributions(String eventId, String userId) async {
+  Future<void> loadUseContributions(String eventId, String userId, {String? communityId}) async {
     try {
-      _userContributions = await _contributionService.getUseContributions(eventId, userId);
+      _userContributions = await _contributionService.getUseContributions(eventId, userId, communityId: communityId);
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading user event contributions: $e');
@@ -529,9 +528,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   // -------------------------------
 
   // Get user's total contributions for a event
-  Future<double> getUseTotal(String eventId, String userId) async {
+  Future<double> getUseTotal(String eventId, String userId, {String? communityId}) async {
     try {
-      return await _contributionService.getUseTotalContributions(eventId, userId);
+      return await _contributionService.getUseTotalContributions(eventId, userId, communityId: communityId);
     } catch (e) {
       debugPrint('Error getting user event total: $e');
       return 0;
@@ -549,9 +548,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   }
 
   // Get user's payment progress for a event
-  Future<Map<String, dynamic>> getUserPaymentProgress(String eventId, String userId) async {
+  Future<Map<String, dynamic>> getUserPaymentProgress(String eventId, String userId, {String? communityId}) async {
     try {
-      return await _contributionService.getUserPaymentProgress(eventId, userId);
+      return await _contributionService.getUserPaymentProgress(eventId, userId, communityId: communityId);
     } catch (e) {
       debugPrint('Error getting payment progress: $e');
       return {
@@ -566,9 +565,9 @@ Future<bool> hasDeletedContributions(String communityId) async {
   }
 
   // Get event payment summary with participant breakdown
-  Future<Map<String, dynamic>> getPaymentSummary(String eventId) async {
+  Future<Map<String, dynamic>> getPaymentSummary(String eventId, {String? communityId}) async {
     try {
-      return await _contributionService.getPaymentSummary(eventId);
+      return await _contributionService.getPaymentSummary(eventId, communityId: communityId);
     } catch (e) {
       debugPrint('Error getting event payment summary: $e');
       return {};
@@ -673,7 +672,7 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
   Future<List<ContributionModel>> getUserContributionsFo(
     String eventId, 
     String userId,
-    {bool forceRefresh = false}
+    {String? communityId, bool forceRefresh = false}
   ) async {
     final cacheKey = '$eventId-$userId';
     final now = DateTime.now();
@@ -686,13 +685,21 @@ Future<ContributionModel?> getContributionById(String contributionId) async {
       return _cache[cacheKey]!.data;
     }
     
+    if (communityId == null || communityId.isEmpty) {
+      debugPrint('⚠️ getUserContributionsFo: communityId is missing for event $eventId');
+      return []; // Return empty list instead of failing
+    }
+
     try {
       debugPrint('🌐 Fetching freshhh contributions from Firestore for $cacheKey');
       
-      final querySnapshot = await _firestore
+      final query = _firestore
           .collection('contributions')
           .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
+          .where('communityId', isEqualTo: communityId);
+      
+      final querySnapshot = await query
           .limit(50) // Add reasonable limit
           .get(const GetOptions(source: Source.serverAndCache)); // Use cache when possible
       
@@ -798,12 +805,12 @@ void clearAllData() {
   // 🔹 Real-time Streams
   // -------------------------------
 
-  Stream<List<ContributionModel>> streamContributions(String eventId) {
-    return _contributionService.streamContributions(eventId);
+  Stream<List<ContributionModel>> streamContributions(String eventId, {String? communityId}) {
+    return _contributionService.streamContributions(eventId, communityId: communityId);
   }
 
-  Stream<List<ContributionModel>> streamMonthlyContributions(String eventId, String monthId) {
-    return _contributionService.streamMonthlyContributions(eventId, monthId);
+  Stream<List<ContributionModel>> streamMonthlyContributions(String eventId, String monthId, {String? communityId}) {
+    return _contributionService.streamMonthlyContributions(eventId, monthId, communityId: communityId);
   }
 
   Stream<List<ContributionModel>> streamUserContributions(String userId, String communityId) {
@@ -814,8 +821,8 @@ void clearAllData() {
     return _contributionService.streamCommunityContributions(communityId);
   }
 
-  Stream<double> streamTotalContributions(String eventId) {
-    return _contributionService.streamTotalContributions(eventId);
+  Stream<double> streamTotalContributions(String eventId, {String? communityId}) {
+    return _contributionService.streamTotalContributions(eventId, communityId: communityId);
   }
 
   // -------------------------------

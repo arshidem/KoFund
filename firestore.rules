@@ -1,8 +1,153 @@
-// Development rules – open access
+rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // 🛡️ HELPER FUNCTIONS
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return getUserData().role == 'admin';
+    }
+    
+    function isMemberOf(communityId) {
+      return getUserData().communityId == communityId;
+    }
+    
+    function isDeveloper() {
+      // 🚀 OPTIMIZATION: Use token-based check to avoid document fetch during aggregations
+      return request.auth.token.email.matches('.*@kofund\\.in$');
+    }
+
+    // 👤 USERS
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if request.auth.uid == userId || isAdmin() || isDeveloper();
+      
+      // 🔔 User Notifications
+      match /notifications/{notificationId} {
+        // Allow read/write if it's the user's own document OR user is a developer
+        allow read, write: if (isSignedIn() && request.auth.uid == userId) || isDeveloper();
+      }
+      
+      // 📢 Read Announcements
+      match /read_announcements/{announcementId} {
+        allow read, write: if request.auth.uid == userId || isDeveloper();
+      }
+    }
+
+    // 🏘️ COMMUNITIES
+    match /communities/{communityId} {
+      // Allow read for everyone signed in (to support finding by invite code)
+      // or keep it isolated but allow it if they are already a member
+      allow read: if isSignedIn(); 
+      allow write: if isSignedIn() && (isAdmin() && isMemberOf(communityId) || isDeveloper());
+      
+      // 👥 Community Members subcollection
+      match /members/{memberId} {
+        // Allow user to read their own membership record across communities
+        allow read: if isSignedIn() && (request.auth.uid == memberId || isMemberOf(communityId) || isDeveloper());
+        allow write: if isSignedIn() && (isAdmin() && isMemberOf(communityId) || isDeveloper());
+      }
+    }
+
+    // 📢 ANNOUNCEMENTS
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (isAdmin() || isDeveloper());
+    }
+
+    // 📅 EVENTS
+    match /events/{eventId} {
+      // Allow read if user is in the community OR it's a public event OR developer
+      allow read: if isSignedIn() && (isMemberOf(resource.data.communityId) || resource.data.isPublicEnabled == true || isDeveloper());
+      
+      // Allow create/update/delete if user is admin of the community or developer
+      allow write: if isSignedIn() && (
+        isDeveloper() || 
+        (isAdmin() && (
+          (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
+          (resource != null && isMemberOf(resource.data.communityId))
+        ))
+      );
+    }
+
+    // 🤝 PARTICIPANTS
+    match /participants/{participantId} {
+      // Allow read if user is an admin OR a developer OR a member of the community
+      // and the local query filters by communityId
+      allow read: if isSignedIn() && (isMemberOf(resource.data.communityId) || isDeveloper());
+      
+      // Allow create/update if user belongs to the community
+      // Allow delete if user belongs to the community (checked via resource.data)
+      allow write: if isSignedIn() && (
+        (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
+        (resource != null && isMemberOf(resource.data.communityId)) || 
+        isDeveloper()
+      );
+    }
+
+    // 💰 CONTRIBUTIONS
+    match /contributions/{contributionId} {
+      allow read: if isSignedIn() && (isMemberOf(resource.data.communityId) || isDeveloper());
+      allow write: if isSignedIn() && (
+        isDeveloper() || 
+        (isAdmin() && (
+          (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
+          (resource != null && isMemberOf(resource.data.communityId))
+        ))
+      );
+    }
+  
+    // 🗑️ DELETED CONTRIBUTIONS
+    match /deleted_contributions/{contributionId} {
+      allow read: if isSignedIn() && (isMemberOf(resource.data.communityId) || isDeveloper());
+      allow write: if isSignedIn() && (
+        isDeveloper() || 
+        (isAdmin() && (
+          (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
+          (resource != null && isMemberOf(resource.data.communityId))
+        ))
+      );
+    }
+
+    // 💸 EXPENSES
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn() && (isMemberOf(resource.data.communityId) || isDeveloper());
+      allow write: if isSignedIn() && (
+        isDeveloper() || 
+        (isAdmin() && (
+          (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
+          (resource != null && isMemberOf(resource.data.communityId))
+        ))
+      );
+    }
+
+    // 📱 FCM TOKENS
+    match /user_notification_tokens/{token} {
+      // Users can only manage their own tokens
+      allow read, write: if isSignedIn() && (
+        (resource == null || (resource != null && resource.data.userId == request.auth.uid)) ||
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        isDeveloper()
+      );
+    }
+
+    // ⏳ RATE LIMITS (System Only)
+    match /rate_limits/{limitId} {
+      // Only Cloud Functions (Admin SDK) should manage these
+      allow read, write: if false;
+    }
+    
+    // 🛑 DENY ALL BY DEFAULT
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -55,11 +55,12 @@ class UserModel {
       'isDeveloper': isDeveloper,
       'isVirtualUser': isVirtualUser,
       'createdBy': createdBy,
-      'createdByName': createdByName, // 🆕 ADD THIS
-      'createdAt': createdAt ?? Timestamp.now(),
-      'updatedAt': updatedAt ?? FieldValue.serverTimestamp(),
-      'approvedAt': approvedAt,
+      'createdByName': createdByName,
+      'createdAt': createdAt?.millisecondsSinceEpoch,
+      'updatedAt': updatedAt?.millisecondsSinceEpoch,
+      'approvedAt': approvedAt?.millisecondsSinceEpoch,
       'showDetailedProfile': showDetailedProfile,
+      'notificationsEnabled': notificationsEnabled,
     };
   }
 

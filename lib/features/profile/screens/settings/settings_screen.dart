@@ -618,6 +618,7 @@ void _showDeleteAccountDialog(AppAuthProvider _authProvider) async {
     context,
     title: 'Delete Account?',
     confirmLabel: 'Delete Account',
+    confirmKeyword: 'delete',
     isDestructive: true,
     icon: Icons.delete_forever_rounded,
     content: Column(
@@ -972,6 +973,7 @@ void _showReauthenticationRequiredDialog() async {
           TextField(
             controller: passwordController,
             obscureText: true,
+            autofocus: true,
             style: TextStyle(
               color: AppColors.textPrimary(context),
               fontSize: 15,

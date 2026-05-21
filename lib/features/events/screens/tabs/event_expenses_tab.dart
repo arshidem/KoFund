@@ -63,9 +63,16 @@ class _ExpensesTabState extends State<EventExpensesTab> {
     
     if (widget.event.isMonthlyPayment) {
       final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
-      _expensesStream = expenseProvider.streamMonthlyExpenses(widget.event.eventId, monthId);
+      _expensesStream = expenseProvider.streamMonthlyExpenses(
+        widget.event.eventId,
+        monthId,
+        communityId: widget.event.communityId,
+      );
     } else {
-      _expensesStream = expenseProvider.streamEventExpenses(widget.event.eventId);
+      _expensesStream = expenseProvider.streamEventExpenses(
+        widget.event.eventId,
+        communityId: widget.event.communityId,
+      );
     }
     
     _statsStream = _getExpenseStatsStream(context);
@@ -814,9 +821,16 @@ Stream<Map<String, dynamic>> _getExpenseStatsStream(BuildContext context) {
   
   if (widget.event.isMonthlyPayment) {
     final monthId = widget.selectedMonth ?? DateFormat('yyyy-MM').format(DateTime.now());
-    return eventProvider.streamMonthlyFinancialSummary(widget.event.eventId, monthId);
+    return eventProvider.streamMonthlyFinancialSummary(
+      widget.event.eventId,
+      monthId,
+      communityId: widget.event.communityId,
+    );
   } else {
-    return eventProvider.streamFinancialSummary(widget.event.eventId);
+    return eventProvider.streamFinancialSummary(
+      widget.event.eventId,
+      communityId: widget.event.communityId,
+    );
   }
 }
 
@@ -1293,7 +1307,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
         child: GestureDetector(
           onTap: () {}, // P closing when tapping inside
           child: DraggableScrollableSheet(
-            initialChildSize: isEdited ? 0.8 : 0.7,
+            initialChildSize: isEdited ? 0.65 : 0.55,
             minChildSize: 0.5,
             maxChildSize: 0.95,
             snap: true,
@@ -1714,100 +1728,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                   ],
                                 ],
                               ),
-                            // ───── MANAGE EXPENSE SECTION (Admins & Creators Only) ─────
-                            if (isAdmin || isCreator) ...[
-                              const SizedBox(height: 24),
-                              _buildSectionHeader(
-                                context,
-                                title: 'Manage Expense',
-                                icon: Icons.settings_rounded,
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              // Row 1: Primary Actions (Edit)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        _navigateToEditExpense(expense, context);
-                                      },
-                                      icon: const Icon(Icons.edit_rounded, size: 18),
-                                      label: const Text('Edit Details'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary(context),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        elevation: 0,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              
-                              // Row 2: Status Management (Admins Only)
-                              if (isAdmin) ...[
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    if (expense.status != 'approved')
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => _updateExpenseStatusWithHistory(expense, 'approved', context),
-                                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.green),
-                                          label: const Text('Approve', style: TextStyle(color: Colors.green)),
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(color: Colors.green, width: 1),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          ),
-                                        ),
-                                      ),
-                                    if (expense.status != 'approved' && expense.status != 'rejected')
-                                      const SizedBox(width: 8),
-                                    if (expense.status != 'rejected')
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: () => _updateExpenseStatusWithHistory(expense, 'rejected', context),
-                                          icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.red),
-                                          label: const Text('Reject', style: TextStyle(color: Colors.red)),
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(color: Colors.red, width: 1),
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                              
-                              // Row 3: Dangerous Actions (Delete)
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextButton.icon(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        _showDeleteConfirmation(expense, context);
-                                      },
-                                      icon: Icon(Icons.delete_forever_rounded, size: 18, color: Colors.red.shade400),
-                                      label: Text('Delete Expense Record', style: TextStyle(color: Colors.red.shade400)),
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          side: BorderSide(color: Colors.red.withValues(alpha: 0.1)),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+
 
                             // Bottom Padding
                             const SizedBox(height: 40),
@@ -2334,13 +2255,6 @@ String _formatPaymentMethod(String method) {
               return;
             }
 
-            setBottomSheetState(() {
-              _isSubmitting = true;
-              titleError = null;
-              aamountError = null;
-              isLoading = true;
-            });
-
             bool hasError = false;
             if (titleController.text.isEmpty) {
               setBottomSheetState(() { titleError = 'Enter expense title'; hasError = true; });
@@ -2358,43 +2272,27 @@ String _formatPaymentMethod(String method) {
             }
 
             if (hasError) {
-              setBottomSheetState(() => isLoading = false);
               return;
             }
 
-            try {
-              final success = await _createExpense(
-                context: context,
-                authProvider: _authProvider,
-                expenseProvider: expenseProvider,
-                successColor: stableSuccessColor,
-                errorColor: stableErrorColor,
-                title: titleController.text.trim(),
-                description: descriptionController.text.trim(),
-                amount: double.parse(aamountController.text),
-                expenseDate: DateTime.now(),
-                isAdmin: isAdmin,
-                monthId: widget.event.isMonthlyPayment ? selectedMonthId : null,
-                isMonthlyExpense: widget.event.isMonthlyPayment,
-              );
-              
-              if (success && stateContext.mounted) {
-                try {
-                  Navigator.pop(modalContext);
-                } catch (navError) {
-                  debugPrint('Navigation error: $navError');
-                }
-              } else if (stateContext.mounted) {
-                setBottomSheetState(() => isLoading = false);
-              }
-            } catch (e) {
-              if (stateContext.mounted) {
-                setBottomSheetState(() {
-                  isLoading = false;
-                  aamountError = 'Error: $e';
-                });
-              }
-            }
+            // INSTANT CLOSE: Pop the modal immediately
+            Navigator.pop(modalContext);
+
+            // Trigger creation in background using outer context
+            _createExpense(
+              context: context,
+              authProvider: _authProvider,
+              expenseProvider: expenseProvider,
+              successColor: stableSuccessColor,
+              errorColor: stableErrorColor,
+              title: titleController.text.trim(),
+              description: descriptionController.text.trim(),
+              amount: double.parse(aamountController.text),
+              expenseDate: DateTime.now(),
+              isAdmin: isAdmin,
+              monthId: widget.event.isMonthlyPayment ? selectedMonthId : null,
+              isMonthlyExpense: widget.event.isMonthlyPayment,
+            );
           }
 
           return Container(
@@ -2444,6 +2342,7 @@ String _formatPaymentMethod(String method) {
                       errorText: titleError,
                       hintText: 'What was this for?',
                       prefixIcon: const Icon(Icons.title_rounded, size: 20),
+                      counterText: titleController.text.length >= 50 ? null : "",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         borderSide: BorderSide(color: AppColors.border(context)),
@@ -2470,12 +2369,13 @@ String _formatPaymentMethod(String method) {
                       labelText: 'Description (optional)',
                       hintText: 'Additional details...',
                       prefixIcon: const Icon(Icons.description_rounded, size: 20),
+                      counterText: descriptionController.text.length >= 200 ? null : "",
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(color: AppColors.border(context)),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(color: AppColors.border(context)),
                       ),
                       filled: true,

@@ -22,203 +22,167 @@ class EventExpensesSkeleton extends StatelessWidget {
   }
 
   Widget _buildSummarySkeleton(BuildContext context, bool dark) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: dark
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
-              )
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
-              ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
-        ),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            color: dark 
-                ? Colors.black.withValues(alpha: 0.3) 
-                : const Color(0xFF00C6A2).withValues(alpha: 0.25),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _line(context, width: 140, height: 12),
-                  const SizedBox(height: 4),
-                  _line(context, width: 100, height: 14),
-                ],
-              ),
-              Container(
-                width: 40,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(11),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: dark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1A2E2E), Color(0xFF0D1B1A)],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF00C6A2), Color(0xFF00E3C3)],
                 ),
-              ),
-            ],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
           ),
-
-          const SizedBox(height: 16),
-
-          // Amount
-          _line(context, width: 130, height: 34),
-          const SizedBox(height: 8),
-          _line(context, width: 110, height: 12),
-
-          const SizedBox(height: 16),
-
-          // Stats chips
-          Row(
-            children: [
-              Expanded(child: _buildStatChipSkeleton(context)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatChipSkeleton(context)),
-            ],
-          ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: dark 
+                  ? Colors.black.withValues(alpha: 0.3) 
+                  : const Color(0xFF00C6A2).withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _line(context, width: 140, height: 10),
+                    const SizedBox(height: 4),
+                    _line(context, width: 100, height: 14),
+                  ],
+                ),
+                Container(
+                  width: 40,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _line(context, width: 130, height: 36),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _buildStatChipSkeleton(context)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildStatChipSkeleton(context)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildStatChipSkeleton(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 1,
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              _line(context, width: 40, height: 14),
-              const SizedBox(height: 2),
-              _line(context, width: 50, height: 10),
+              Container(width: 14, height: 14, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              _line(context, width: 30, height: 9),
             ],
           ),
+          const SizedBox(height: 6),
+          _line(context, width: 40, height: 16),
         ],
       ),
     );
   }
 
   Widget _buildSearchBarSkeleton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8, top: 4, left: 16, right: 16),
       child: Row(
         children: [
           // Search field
           Expanded(
             flex: 2,
             child: Container(
-              height: 44,
+              height: 48,
               decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border(context)),
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
               child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  _line(context, width: 120, height: 14),
+                  const SizedBox(width: 12),
+                  Container(width: 20, height: 20, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _line(context, height: 14)),
+                  const SizedBox(width: 12),
                 ],
               ),
             ),
           ),
-          
           const SizedBox(width: 8),
-          
           // Status filter
           Expanded(
             child: Container(
-              height: 44,
+              height: 48,
               decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border(context)),
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  _line(context, width: 40, height: 12),
-                ],
+              child: Center(
+                child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle)),
               ),
             ),
           ),
-          
           const SizedBox(width: 8),
-          
           // Category filter
           Expanded(
             child: Container(
-              height: 44,
+              height: 48,
               decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border(context)),
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  _line(context, width: 30, height: 12),
-                ],
+              child: Center(
+                child: Container(width: 24, height: 24, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle)),
               ),
             ),
           ),
@@ -231,140 +195,53 @@ class EventExpensesSkeleton extends StatelessWidget {
     return Column(
       children: [
         Container(
-          decoration: BoxDecoration(
-            color: AppColors.card(context),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icon
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _line(context, width: 100, height: 15),
+                    _line(context, width: 120, height: 15),
+                    const SizedBox(height: 4),
+                    _line(context, width: 100, height: 11),
                     const SizedBox(height: 2),
-                    _line(context, width: 80, height: 11),
-                    const SizedBox(height: 2),
-                    _line(context, width: 120, height: 11),
-                    const SizedBox(height: 2),
-                    _line(context, width: 90, height: 11),
+                    _line(context, width: 140, height: 11),
                   ],
                 ),
               ),
-              
-              // Amount and menu
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _line(context, width: 60, height: 15),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 50,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
+                  _line(context, width: 60, height: 16),
+                  const SizedBox(height: 4),
                   Container(
-                    width: 20,
-                    height: 20,
+                    width: 50,
+                    height: 18,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(width: 8),
+              Container(width: 20, height: 20, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle)),
             ],
           ),
         ),
-        
-        // Divider
-        Container(
-          height: 1,
-          color: AppColors.border(context),
-        ),
+        Divider(height: 1, thickness: 1, color: AppColors.border(context)),
       ],
-    );
-  }
-
-  Widget _buildNotApprovedMessageSkeleton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _line(context, width: 200, height: 12),
-                const SizedBox(height: 4),
-                _line(context, width: 180, height: 10),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyStateSkeleton(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _line(context, width: 150, height: 16),
-          const SizedBox(height: 8),
-          _line(context, width: 200, height: 12),
-        ],
-      ),
     );
   }
 
@@ -377,7 +254,7 @@ class EventExpensesSkeleton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(100),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -385,16 +262,6 @@ class EventExpensesSkeleton extends StatelessWidget {
               offset: const Offset(0, 2),
             ),
           ],
-        ),
-        child: Center(
-          child: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-            ),
-          ),
         ),
       ),
     );
@@ -414,31 +281,20 @@ class EventExpensesSkeleton extends StatelessWidget {
         children: [
           Column(
             children: [
-              // Summary card
               _buildSummarySkeleton(context, dark),
-              
-              // Search bar
-              const SizedBox(height: 0),
               _buildSearchBarSkeleton(context),
-              const SizedBox(height: 0),
-              
-              // Expenses list
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.only(top: 8),
-                  itemCount: 6,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(top: 4),
+                  itemCount: 8,
                   itemBuilder: (context, index) {
                     return _buildExpenseItemSkeleton(context, dark);
                   },
                 ),
               ),
-              
-              // Not approved message skeleton
-              _buildNotApprovedMessageSkeleton(context),
             ],
           ),
-          
-          // FAB skeleton
           _buildFABSkeleton(context),
         ],
       ),

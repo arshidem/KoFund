@@ -1279,7 +1279,7 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
 
   // Contribution Item
   Widget _buildContributionItem(Map<String, dynamic> contribution) {
-    final eventTitle = contribution['eventName'] ?? 'Unnamed Event';
+    final eventTitle = contribution['title'] ?? 'Unnamed Event';
     final amount = (contribution['amount'] ?? 0).toDouble();
     final paymentMethod = contribution['paymentMethod'] ?? 'cash';
     final paidAt =

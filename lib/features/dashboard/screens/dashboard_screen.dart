@@ -51,8 +51,9 @@ import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToMembers;
+  final VoidCallback? onNavigateToEvents;
   
-  const DashboardScreen({super.key, this.onNavigateToMembers});
+  const DashboardScreen({super.key, this.onNavigateToMembers, this.onNavigateToEvents});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -719,6 +720,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
                     CarouselWidget(
                       isAdmin: user?.isAdmin ?? false,
                       key: ValueKey('events-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
+                      onSeeAll: widget.onNavigateToEvents,
                     ),
                     const SizedBox(height: 16),
                     
@@ -832,8 +834,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDarkMode ? 0.15 : 0.08),
-                blurRadius: 10,
                 offset: const Offset(0, -4),
+                blurRadius: 4,
               ),
             ],
           ),

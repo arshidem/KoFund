@@ -3,6 +3,16 @@
  * Designed to match the KoFund App aesthetic.
  */
 
+function escapeHtml(unsafe) {
+  if (unsafe === null || unsafe === undefined) return '';
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLink }) {
   // 🎨 ICONS (Lucide Style)
   const IconCalendar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
@@ -79,7 +89,7 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title} | KoFund</title>
+    <title>${escapeHtml(title)} | KoFund</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
@@ -227,12 +237,12 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
         </div>
         <div class="app-title">KoFund</div>
       </div>
-      <div class="sticky-title">${title}</div>
+      <div class="sticky-title">${escapeHtml(title)}</div>
     </div>
 
     <div class="header" id="main-header">
-      <h1>${title}</h1>
-      <div class="event-date" id="event-date-display">${date}</div>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="event-date" id="event-date-display">${escapeHtml(date)}</div>
       ${monthSelectorHtml}
     </div>
 
@@ -383,9 +393,9 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
         } else {
           ps.innerHTML = participants.map(p => \`
             <div class="member-row">
-              <div class="member-avatar" style="background:#00C6A215;color:#00C6A2">\${(p.userName || 'M').charAt(0)}</div>
-              <div class="member-info"><div class="member-name">\${p.userName}</div></div>
-              <div class="member-amount">₹\${Math.floor(p.contributionPaid || 0)}</div>
+              <div class="member-avatar" style="background:#00C6A215;color:#00C6A2">\${escapeHtml((p.userName || 'M').charAt(0))}</div>
+              <div class="member-info"><div class="member-name">\${escapeHtml(p.userName)}</div></div>
+              <div class="member-amount">₹\${Math.floor(p.contributionPaid || 0).toLocaleString('en-IN')}</div>
             </div>
           \`).join('');
         }
@@ -396,8 +406,8 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
         } else {
           es.innerHTML = '<div class="list-container">' + expenses.map(e => \`
             <div class="list-item">
-              <div class="member-info"><div class="member-name">\${e.title}</div><div class="member-due">\${e.expenseDate ? new Date(e.expenseDate.seconds * 1000).toLocaleDateString() : ''}</div></div>
-              <div class="list-amount expense">-₹\${e.amount}</div>
+              <div class="member-info"><div class="member-name">\${escapeHtml(e.title)}</div><div class="member-due">\${e.expenseDate ? new Date(e.expenseDate.seconds * 1000).toLocaleDateString() : ''}</div></div>
+              <div class="list-amount expense">-₹\${(e.amount || 0).toLocaleString('en-IN')}</div>
             </div>
           \`).join('') + '</div>';
         }
@@ -464,6 +474,17 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
       }
 
       window.onload = init;
+
+      // 🛡️ SECURITY: HTML Escaping for client-side injection
+      function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return String(unsafe)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
     </script>
   </body>
   </html>

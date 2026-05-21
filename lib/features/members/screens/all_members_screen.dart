@@ -576,21 +576,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       elevation: 0,
       backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
-      leading: widget.forceBackButton == true
-          ? Transform.translate(
-              offset: const Offset(0, -40),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-                onPressed: () {
-                  if (widget.onBack != null) {
-                    widget.onBack!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            )
-          : null,
+      leading: null,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
@@ -701,8 +687,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
-                        blurRadius: 10,
                         offset: const Offset(0, -4),
+                        blurRadius: 4,
                       ),
                     ],
                   ),

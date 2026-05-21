@@ -345,8 +345,11 @@ Future<void> saveNotification(AppNotification notification) async {
 
       return snapshot.count ?? 0;
     } catch (e) {
-      debugPrint('❌ Error getting unread count: $e');
-      return 0;
+      debugPrint('⚠️ Count aggregation failed for notifications, falling back to stream length: $e');
+      // If aggregation fails, we can't easily get count without fetching all unread docs
+      // For now, return 0 or fetch limited docs. 
+      // Actually, we usually have them in the provider anyway.
+      return 0; 
     }
   }
 

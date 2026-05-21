@@ -10,11 +10,14 @@ class DialogHelper {
     String message = 'This action cannot be undone. Please confirm if you want to proceed.',
     String confirmLabel = 'Confirm',
     String cancelLabel = 'Cancel',
+    String? confirmKeyword,
+    bool autoFocus = false,
     IconData? icon = Icons.warning_rounded,
     bool isDestructive = false,
     Widget? content,
   }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final TextEditingController keywordController = TextEditingController();
     
     return showGeneralDialog<bool>(
       context: context,
@@ -27,179 +30,237 @@ class DialogHelper {
         final errorColor = AppColors.error(context);
         final badgeColor = isDestructive ? errorColor : primaryColor;
         
-        return Dialog(
-          backgroundColor: AppColors.card(context),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: isDark 
-                ? BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)
-                : BorderSide.none,
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Stack(
-              children: [
-                // Close button at top right
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: AppColors.textTertiary(context),
-                      size: 20,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            bool isConfirmEnabled = confirmKeyword == null || keywordController.text.toLowerCase() == confirmKeyword.toLowerCase();
+
+            return Dialog(
+              backgroundColor: AppColors.card(context),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: isDark 
+                    ? BorderSide(color: Colors.white.withValues(alpha: 0.05), width: 1)
+                    : BorderSide.none,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Stack(
+                  children: [
+                    // Close button at top right
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: AppColors.textTertiary(context),
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(null),
+                      ),
                     ),
-                    onPressed: () => Navigator.of(context).pop(null),
-                  ),
-                ),
-                
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Central Badge Icon with PREMIUM DARK GLOW
-                      _PulseIcon(
-                        child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: badgeColor.withValues(alpha: isDark ? 0.5 : 0.3),
-                                blurRadius: isDark ? 20 : 12,
-                                spreadRadius: isDark ? 2 : 0,
-                                offset: const Offset(0, 4),
-                              ),
-                              // Extra neon glow for dark mode
-                              if (isDark)
-                                BoxShadow(
-                                  color: badgeColor.withValues(alpha: 0.2),
-                                  blurRadius: 40,
-                                  spreadRadius: 5,
-                                ),
-                            ],
-                          ),
-                          child: Icon(
-                            icon,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Ttitle
-                      Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary(context),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Message or Custom Content
-                      if (content != null) ...[
-                        content,
-                      ] else ...[
-                        Text(
-                          message,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary(context),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 32),
-                      
-                      // Action Buttons
-                      Row(
+                    
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (cancelLabel.isNotEmpty) ...[
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  side: BorderSide(
-                                    color: isDark 
-                                        ? Colors.white.withValues(alpha: 0.1)
-                                        : AppColors.border(context).withValues(alpha: 0.5),
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  cancelLabel,
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(context),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                          ],
-                          
-                          // Confirm Button
-                          Expanded(
+                          // Central Badge Icon with PREMIUM DARK GLOW
+                          _PulseIcon(
                             child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
+                                color: badgeColor,
+                                shape: BoxShape.circle,
                                 boxShadow: [
+                                  BoxShadow(
+                                    color: badgeColor.withValues(alpha: isDark ? 0.5 : 0.3),
+                                    blurRadius: isDark ? 20 : 12,
+                                    spreadRadius: isDark ? 2 : 0,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                  // Extra neon glow for dark mode
                                   if (isDark)
                                     BoxShadow(
                                       color: badgeColor.withValues(alpha: 0.2),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+                                      blurRadius: 40,
+                                      spreadRadius: 5,
                                     ),
                                 ],
                               ),
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: badgeColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  confirmLabel,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
+                              child: Icon(
+                                icon,
+                                color: Colors.white,
+                                size: 24,
                               ),
                             ),
                           ),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Ttitle
+                          Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.textPrimary(context),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Message or Custom Content
+                          if (content != null) ...[
+                            content,
+                          ] else ...[
+                            Text(
+                              message,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary(context),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+
+                          if (confirmKeyword != null) ...[
+                             const SizedBox(height: 20),
+                             Text(
+                               'Type "$confirmKeyword" to confirm',
+                               style: TextStyle(
+                                 fontSize: 12,
+                                 fontWeight: FontWeight.w600,
+                                 color: AppColors.textSecondary(context),
+                               ),
+                             ),
+                             const SizedBox(height: 8),
+                             TextField(
+                               controller: keywordController,
+                               autofocus: true,
+                               textAlign: TextAlign.center,
+                               style: TextStyle(
+                                 color: AppColors.textPrimary(context),
+                                 fontWeight: FontWeight.bold,
+                               ),
+                               decoration: InputDecoration(
+                                 hintText: confirmKeyword,
+                                 hintStyle: TextStyle(
+                                   color: AppColors.textTertiary(context).withValues(alpha: 0.5),
+                                 ),
+                                 filled: true,
+                                 fillColor: AppColors.surface(context),
+                                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                 border: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide(color: AppColors.border(context)),
+                                 ),
+                                 enabledBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide(color: AppColors.border(context)),
+                                 ),
+                                 focusedBorder: OutlineInputBorder(
+                                   borderRadius: BorderRadius.circular(12),
+                                   borderSide: BorderSide(color: badgeColor, width: 2),
+                                 ),
+                               ),
+                               onChanged: (value) {
+                                 setState(() {
+                                   isConfirmEnabled = value.toLowerCase() == confirmKeyword.toLowerCase();
+                                 });
+                               },
+                             ),
+                          ],
+
+                          const SizedBox(height: 32),
+                          
+                          // Action Buttons
+                          Row(
+                            children: [
+                              if (cancelLabel.isNotEmpty) ...[
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      side: BorderSide(
+                                        color: isDark 
+                                            ? Colors.white.withValues(alpha: 0.1)
+                                            : AppColors.border(context).withValues(alpha: 0.5),
+                                        width: 1.5,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      cancelLabel,
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary(context),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              
+                              // Confirm Button
+                              Expanded(
+                                child: Opacity(
+                                  opacity: isConfirmEnabled ? 1.0 : 0.5,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        if (isDark && isConfirmEnabled)
+                                          BoxShadow(
+                                            color: badgeColor.withValues(alpha: 0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: isConfirmEnabled ? () => Navigator.of(context).pop(true) : null,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: badgeColor,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        confirmLabel,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -263,8 +324,3 @@ class _PulseIconState extends State<_PulseIcon> with SingleTickerProviderStateMi
     );
   }
 }
-
-
-
-
-

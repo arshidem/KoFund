@@ -97,7 +97,7 @@ Future<void> loadDashboardData(String communityId) async {
     
     // 👉 ONLY load financials if monthly payment event exists
     if (_monthlyPayment != null) {
-      await _loadMonthlyFinancials(_monthlyPayment!.eventId);
+      await _loadMonthlyFinancials(_monthlyPayment!.eventId, communityId);
     } else {
       // 👉 RESET financial data if no monthly event
       _resetMonthlyFinancials();
@@ -155,14 +155,14 @@ Future<void> loadDashboardData(String communityId) async {
   // -------------------------
   // 👉 MONTHLY event FINANCIALS - ONLY FOR MONTHLY PAYMENT event
   // -------------------------
-  Future<void> _loadMonthlyFinancials(String eventId) async {
+  Future<void> _loadMonthlyFinancials(String eventId, String communityId) async {
     try {
       debugPrint('💰 Loading financials for monthly payment event: $eventId');
       
       // 👉 ONLY get financial data for the monthly payment event
-      final contributions = await _contributionService.getTotalContributions(eventId);
-      final expenses = await _expenseService.getEventTotalExpenses(eventId);
-      final contributors = await _getMonthlyContributorsCount(eventId);
+      final contributions = await _contributionService.getTotalContributions(eventId, communityId: communityId);
+      final expenses = await _expenseService.getEventTotalExpenses(eventId, communityId: communityId);
+      final contributors = await _getMonthlyContributorsCount(eventId, communityId: communityId);
 
       _monthlyCollected = contributions;
       _monthlyExpenses = expenses;
@@ -179,10 +179,10 @@ Future<void> loadDashboardData(String communityId) async {
     }
   }
 
-  Future<int> _getMonthlyContributorsCount(String eventId) async {
+  Future<int> _getMonthlyContributorsCount(String eventId, {String? communityId}) async {
     try {
       // Get all contributions for the monthly event and count unique users
-      final contributions = await _contributionService.getContributions(eventId);
+      final contributions = await _contributionService.getContributions(eventId, communityId: communityId);
       final uniqueUserIds = <String>{};
       
       for (final contribution in contributions) {
@@ -260,8 +260,8 @@ Future<void> loadDashboardData(String communityId) async {
 
   // Refresh only monthly event financial data
   Future<void> refreshMonthlyFinancials() async {
-    if (_monthlyPayment != null) {
-      await _loadMonthlyFinancials(_monthlyPayment!.eventId);
+    if (_monthlyPayment != null && _currentCommunity != null) {
+      await _loadMonthlyFinancials(_monthlyPayment!.eventId, _currentCommunity!.communityId);
       notifyListeners();
     }
   }

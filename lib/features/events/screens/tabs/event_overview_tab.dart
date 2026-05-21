@@ -70,12 +70,12 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     try {
       // Fetch all necessary data
       final participants = await participantProvider
-          .streamEventParticipants(widget.event.eventId)
+          .streamEventParticipants(widget.event.eventId, communityId: widget.event.communityId)
           .first;
       final contributions = await contributionProvider
-          .getContributions(widget.event.eventId);
+          .getContributions(widget.event.eventId, communityId: widget.event.communityId);
       final expenses = await expenseProvider
-          .getEventExpenses(widget.event.eventId);
+          .getEventExpenses(widget.event.eventId, communityId: widget.event.communityId);
 
       if (!mounted) return;
 
@@ -177,7 +177,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     bool isOrganizer,
   ) {
     return StreamBuilder<List<ParticipantModel>>(
-      stream: participantProvider.streamEventParticipants(widget.event.eventId),
+      stream: participantProvider.streamEventParticipants(widget.event.eventId, communityId: widget.event.communityId),
       builder: (context, snapshot) {
         final participants = snapshot.data ?? [];
         final participantCount = participants.length;
@@ -383,7 +383,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
             if (!widget.event.isMonthlyPayment) const SizedBox(height: 12),
             if (!widget.event.isMonthlyPayment)
               StreamBuilder<int>(
-                stream: participantProvider.streamEventParticipantCount(widget.event.eventId),
+                stream: participantProvider.streamEventParticipantCount(widget.event.eventId, communityId: widget.event.communityId),
                 builder: (context, snapshot) {
                   final participantCount = snapshot.data ?? 0;
                   return _buildDetailTile(
@@ -396,7 +396,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
               ),
             const SizedBox(height: 12),
             StreamBuilder<int>(
-              stream: participantProvider.streamEventParticipantCount(widget.event.eventId),
+              stream: participantProvider.streamEventParticipantCount(widget.event.eventId, communityId: widget.event.communityId),
               builder: (context, snapshot) {
                 final participantCount = snapshot.data ?? 0;
                 return _buildDetailTile(
@@ -880,9 +880,9 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Cache streams so they survive rebuilds
-    _contributionsStream ??= contributionProvider.streamTotalContributions(widget.event.eventId);
-    _expensesStream ??= expenseProvider.streamEventTotalExpenses(widget.event.eventId);
-    _participantCountStream ??= participantProvider.streamEventParticipantCount(widget.event.eventId);
+    _contributionsStream ??= contributionProvider.streamTotalContributions(widget.event.eventId, communityId: widget.event.communityId);
+    _expensesStream ??= expenseProvider.streamEventTotalExpenses(widget.event.eventId, communityId: widget.event.communityId);
+    _participantCountStream ??= participantProvider.streamEventParticipantCount(widget.event.eventId, communityId: widget.event.communityId);
 
     return StreamBuilder<double>(
       initialData: _cachedTotalCollected,

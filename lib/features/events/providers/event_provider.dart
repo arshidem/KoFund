@@ -69,7 +69,7 @@ class EventProvider with ChangeNotifier {
   }
 
   // ✅ OPTIMIZED: Get event financial summary with Cache
-  Future<Map<String, dynamic>> getFinancialSummary(String eventId, {bool forceRefresh = false}) async {
+  Future<Map<String, dynamic>> getFinancialSummary(String eventId, {String? communityId, bool forceRefresh = false}) async {
     // 🚀 OPTIMIZATION: Check cache first
     if (!forceRefresh && _summaryCache.containsKey(eventId)) {
       final cached = _summaryCache[eventId]!;
@@ -79,9 +79,9 @@ class EventProvider with ChangeNotifier {
     }
 
     try {
-      final totalContributions = await _eventService.getTotalContributions(eventId);
-      final totalExpenses = await _eventService.getTotalExpenses(eventId);
-      final participantCount = await _participantService.getParticipantCount(eventId);
+      final totalContributions = await _eventService.getTotalContributions(eventId, communityId: communityId);
+      final totalExpenses = await _eventService.getTotalExpenses(eventId, communityId: communityId);
+      final participantCount = await _participantService.getParticipantCount(eventId, communityId: communityId);
       
       final event = await _eventService.getEventById(eventId);
       final suggested = event?.suggestedContribution ?? 0.0;
@@ -204,29 +204,41 @@ class EventProvider with ChangeNotifier {
   }
 
   // ✅ Stream for participant count
-  Stream<int> streamParticipantCount(String eventId) {
-    return _participantService.streamParticipants(eventId)
+  Stream<int> streamParticipantCount(String eventId, {String? communityId}) {
+    return _participantService.streamParticipants(eventId, communityId: communityId)
         .map((participants) => participants.length);
   }
 
   // ✅ Stream for total contributions (used in lists)
-  Stream<double> streamTotalContributions(String eventId) {
-    return _firestore
+  Stream<double> streamTotalContributions(String eventId, {String? communityId}) {
+    var query = _firestore
         .collection('contributions')
-        .where('eventId', isEqualTo: eventId)
+        .where('eventId', isEqualTo: eventId);
+    
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
+
+    return query
         .snapshots()
         .asyncMap((snapshot) async {
           // Use the faster aggregate query even for the stream mapping
-          return await _contributionService.getTotalContributions(eventId);
+          return await _contributionService.getTotalContributions(eventId, communityId: communityId);
         });
   }
 
   // 📈 NEW: Unified Progress Stream (Handles Monthly vs Global)
-  Stream<Map<String, dynamic>> streamProgress(String eventId) {
-    // 🚀 OPTIMIZATION: Use snapshots to immediately emit locally cached contributions
-    return _firestore
+  Stream<Map<String, dynamic>> streamProgress(String eventId, {String? communityId}) {
+    var contribQuery = _firestore
         .collection('contributions')
-        .where('eventId', isEqualTo: eventId)
+        .where('eventId', isEqualTo: eventId);
+    
+    if (communityId != null && communityId.isNotEmpty) {
+      contribQuery = contribQuery.where('communityId', isEqualTo: communityId);
+    }
+
+    // 🚀 OPTIMIZATION: Use snapshots to immediately emit locally cached contributions
+    return contribQuery
         .snapshots()
         .asyncMap((contribSnapshot) async {
           
@@ -259,7 +271,11 @@ class EventProvider with ChangeNotifier {
       // Fast local document read for participant count
       int pCount = (data['currentParticipants'] ?? 0) as int;
       try {
-        final pSnap = await _firestore.collection('participants').where('eventId', isEqualTo: eventId).get(const GetOptions(source: Source.cache));
+        var pQuery = _firestore.collection('participants').where('eventId', isEqualTo: eventId);
+        if (communityId != null && communityId.isNotEmpty) {
+          pQuery = pQuery.where('communityId', isEqualTo: communityId);
+        }
+        final pSnap = await pQuery.get(const GetOptions(source: Source.cache));
         if (pSnap.docs.isNotEmpty) pCount = pSnap.docs.length;
       } catch (_) {
         // Fallback to event document's cached count
@@ -308,10 +324,16 @@ class EventProvider with ChangeNotifier {
   }
 
   // 💰 NEW: Expenses stream
-  Stream<double> streamExpenses(String eventId) {
-    return _firestore
+  Stream<double> streamExpenses(String eventId, {String? communityId}) {
+    var query = _firestore
         .collection('expenses')
-        .where('eventId', isEqualTo: eventId)
+        .where('eventId', isEqualTo: eventId);
+    
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
+
+    return query
         .snapshots()
         .map((snapshot) {
           double total = 0.0;
@@ -327,12 +349,12 @@ class EventProvider with ChangeNotifier {
   }
 
   // 📊 NEW: Full Financial Summary Stream
-  Stream<Map<String, dynamic>> streamFinancialSummary(String eventId) {
-    return streamParticipantsWithContributions(eventId).asyncMap((participants) async {
+  Stream<Map<String, dynamic>> streamFinancialSummary(String eventId, {String? communityId}) {
+    return streamParticipantsWithContributions(eventId, communityId: communityId).asyncMap((participants) async {
       final futures = await Future.wait([
         _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getContributions(eventId).catchError((_) => <ContributionModel>[]),
-        _eventService.getTotalExpenses(eventId).catchError((_) => 0.0),
+        _contributionService.getContributions(eventId, communityId: communityId).catchError((_) => <ContributionModel>[]),
+        _eventService.getTotalExpenses(eventId, communityId: communityId).catchError((_) => 0.0),
       ]);
       
       final doc = futures[0] as DocumentSnapshot;
@@ -400,23 +422,30 @@ class EventProvider with ChangeNotifier {
   }
 
   // ✅ Stream for user joined status
-  Stream<bool> streamUserJoinedStatus(String eventId, String userId) {
-    return _firestore
+  Stream<bool> streamUserJoinedStatus(String eventId, String userId, {String? communityId}) {
+    if (communityId == null || communityId.isEmpty) {
+      debugPrint('⚠️ streamUserJoinedStatus: communityId is null or empty for event $eventId');
+      return Stream.value(false);
+    }
+
+    var query = _firestore
         .collection('participants') // FIXED back to participants
         .where('eventId', isEqualTo: eventId)
         .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'joined')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.isNotEmpty);
+        .where('communityId', isEqualTo: communityId)
+        .where('status', isEqualTo: 'joined');
+
+    return query.snapshots().map((snapshot) => snapshot.docs.isNotEmpty);
   }
 
   // ✅ OPTIMIZED: Get participant with real-time contribution data
-  Future<ParticipantModel> getParticipantWithContribution(String eventId, String userId) async {
+  Future<ParticipantModel> getParticipantWithContribution(String eventId, String userId, {String? communityId}) async {
     try {
       final participant = await _participantService.getParticipant(eventId, userId);
       final contributions = await _contributionService.getContributionsByUserAn(
         userId: userId,
         eventId: eventId,
+        communityId: communityId,
       );
       final totalPaid = contributions.fold(0.0, (sum, contribution) => sum + contribution['amount']);
       final doc = await _firestore.collection('events').doc(eventId).get();
@@ -435,9 +464,10 @@ class EventProvider with ChangeNotifier {
   // ✅ Stream with monthly contributions
   Stream<List<ParticipantModel>> streamParticipantsWithMonthlyContributions(
     String eventId, 
-    String monthId
+    String monthId,
+    {String? communityId}
   ) {
-    return _participantService.streamParticipants(eventId).asyncMap((participants) async {
+    return _participantService.streamParticipants(eventId, communityId: communityId).asyncMap((participants) async {
       if (participants.isEmpty) return [];
       
       try {
@@ -447,6 +477,7 @@ class EventProvider with ChangeNotifier {
         final monthlyContributions = await _contributionService.getMonthlyContributionsForParticipant(
           eventId,
           monthId,
+          communityId: communityId,
         );
         
         final Map<String, double> userPaidMap = {};
@@ -470,9 +501,9 @@ class EventProvider with ChangeNotifier {
     });
   }
 
-  Future<Map<String, int>> getMonthlyPaymentCounts(String eventId) async {
+  Future<Map<String, int>> getMonthlyPaymentCounts(String eventId, {String? communityId}) async {
     try {
-      final contributions = await _contributionService.getContributions(eventId);
+      final contributions = await _contributionService.getContributions(eventId, communityId: communityId);
       final counts = <String, int>{};
       for (final contribution in contributions) {
         if (contribution.isMonthlyContribution && contribution.monthId != null) {
@@ -561,14 +592,14 @@ class EventProvider with ChangeNotifier {
     });
   }
 
-  Stream<List<ParticipantModel>> streamParticipantsWithContributions(String eventId) {
-    return _participantService.streamParticipants(eventId).asyncMap((participants) async {
+  Stream<List<ParticipantModel>> streamParticipantsWithContributions(String eventId, {String? communityId}) {
+    return _participantService.streamParticipants(eventId, communityId: communityId).asyncMap((participants) async {
       if (participants.isEmpty) return [];
       
       try {
         final futures = await Future.wait([
           _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-          _contributionService.getContributions(eventId),
+          _contributionService.getContributions(eventId, communityId: communityId),
         ]);
         
         final doc = futures[0] as DocumentSnapshot;
@@ -596,12 +627,12 @@ class EventProvider with ChangeNotifier {
     });
   }
 
-  Future<void> leave(String eventId, String userId) async {
+  Future<void> leave(String eventId, String userId, {String? communityId}) async {
     try {
-      await _participantService.leave(eventId, userId);
+      await _participantService.leave(eventId, userId, communityId: communityId);
       final event = await _eventService.getEventById(eventId);
       if (event != null) {
-        await loadMyParticipations(userId, event.communityId);
+        await loadMyParticipations(userId, communityId ?? event.communityId);
       }
       _summaryCache.remove(eventId);
       notifyListeners();
@@ -740,14 +771,14 @@ class EventProvider with ChangeNotifier {
     });
   }
 
-  Stream<Map<String, dynamic>> streamMonthlyFinancialSummary(String eventId, String monthId) {
-    return streamParticipantsWithMonthlyContributions(eventId, monthId)
+  Stream<Map<String, dynamic>> streamMonthlyFinancialSummary(String eventId, String monthId, {String? communityId}) {
+    return streamParticipantsWithMonthlyContributions(eventId, monthId, communityId: communityId)
         .asyncMap((participants) async {
       
       final futures = await Future.wait<dynamic>([
         _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getMonthlyContributionsForParticipant(eventId, monthId),
-        _expenseService.getMonthlyExpenses(eventId, monthId),
+        _contributionService.getMonthlyContributionsForParticipant(eventId, monthId, communityId: communityId),
+        _expenseService.getMonthlyExpenses(eventId, monthId, communityId: communityId),
       ]);
       
       final doc = futures[0] as DocumentSnapshot;
