@@ -108,7 +108,7 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
               title: const Text('Show on app open (Popup)'),
               subtitle: const Text('High priority; will block app use until dismissed'),
               value: _showOnOpen,
-              activeColor: AppColors.primary(context),
+              activeThumbColor: AppColors.primary(context),
               onChanged: (val) => setState(() => _showOnOpen = val),
             ),
             const SizedBox(height: 20),

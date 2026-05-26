@@ -16,8 +16,8 @@ class LogoutService {
       _clearAllProviderStates(context);
       
       // 2. Get auth provider and sign out from Firebase
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      await _authProvider.signOut(context);
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      await authProvider.signOut(context);
       
       // 3. Clear navigation stack completely
       Navigator.of(context).pushNamedAndRemoveUntil(

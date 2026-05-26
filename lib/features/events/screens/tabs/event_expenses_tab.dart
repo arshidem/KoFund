@@ -12,7 +12,6 @@ import '../../../auth/providers/app_auth_provider.dart';
 import '../../../../core/constants/app_colors.dart'; // Add this import
 import '../../../../core/constants/app_dimensions.dart'; // Add this import
 import '../../../../core/services/network_service.dart';
-import '../event_details_screen.dart';
 import '../../providers/event_provider.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/features/expenses/screens/edit_expense_screen.dart';
@@ -103,8 +102,8 @@ class _ExpensesTabState extends State<EventExpensesTab> {
 
   // ✅ Check if current user is admin
   bool _isAdmin(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = _authProvider.user;
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
     
     if (currentUser == null) return false;
     
@@ -150,9 +149,9 @@ class _ExpensesTabState extends State<EventExpensesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: true);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
     final isAdmin = _isAdmin(context);
-    final currentUser = _authProvider.user;
+    final currentUser = authProvider.user;
     
     return Stack(
       children: [
@@ -452,8 +451,8 @@ Widget _buildExpenseCard(ExpenseModel expense, BuildContext context, bool isAdmi
 
 // Helper to check if current user paid for the expense
 bool _isUserPaidBy(ExpenseModel expense, BuildContext context) {
-  final _authProvider = context.read<AppAuthProvider>();
-  final currentUser = _authProvider.user;
+  final authProvider = context.read<AppAuthProvider>();
+  final currentUser = authProvider.user;
   return currentUser?.uid == expense.paidBy;
 }
 
@@ -1142,8 +1141,8 @@ Stream<Map<String, dynamic>> _getExpenseStatsStream(BuildContext context) {
   }
 
 Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
-  final _authProvider = context.read<AppAuthProvider>();
-  final currentUser = _authProvider.user;
+  final authProvider = context.read<AppAuthProvider>();
+  final currentUser = authProvider.user;
   final canAdd = isAdmin || (currentUser != null && currentUser.isApproved);
 
   return Container(
@@ -1277,8 +1276,8 @@ Widget _buildEmptyState(bool noExpenses, bool isAdmin, BuildContext context) {
 
 // ✅ PREMIUM EXPENSE DETAILS BOTTOM SHEET
 void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
-  final _authProvider = context.read<AppAuthProvider>();
-  final currentUser = _authProvider.user;
+  final authProvider = context.read<AppAuthProvider>();
+  final currentUser = authProvider.user;
   final isAdmin = _isAdmin(context);
   final isCreator = currentUser?.uid == expense.paidBy;
   final canViewEditHistory = isAdmin || isCreator;
@@ -1807,8 +1806,8 @@ Future<void> _updateExpenseStatusWithHistory(
   {String? reason}
 ) async {
   try {
-    final _authProvider = context.read<AppAuthProvider>();
-    final currentUser = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final currentUser = authProvider.user;
     final expenseProvider = context.read<ExpenseProvider>();
     
     if (currentUser == null) {
@@ -2226,7 +2225,7 @@ String _formatPaymentMethod(String method) {
     String? aamountError;
 
     // Capture providers and theme colors using the stable screen context
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final stableSuccessColor = AppColors.success(context);
     final stableErrorColor = AppColors.error(context);
@@ -2238,7 +2237,7 @@ String _formatPaymentMethod(String method) {
       builder: (modalContext) => StatefulBuilder(
         builder: (stateContext, setBottomSheetState) {
           bool isLoading = false;
-          bool _isSubmitting = false; // Local lock for this specific submission attempt
+          bool isSubmitting = false; // Local lock for this specific submission attempt
 
           void clearTtitleError() {
             if (titleError != null) setBottomSheetState(() => titleError = null);
@@ -2248,7 +2247,7 @@ String _formatPaymentMethod(String method) {
           }
 
           Future<void> validateAndSubmit(bool isOnline) async {
-            if (_isSubmitting) return; // Immediate lock
+            if (isSubmitting) return; // Immediate lock
             
             if (!isOnline) {
               setBottomSheetState(() => titleError = 'No internet connection');
@@ -2281,7 +2280,7 @@ String _formatPaymentMethod(String method) {
             // Trigger creation in background using outer context
             _createExpense(
               context: context,
-              authProvider: _authProvider,
+              authProvider: authProvider,
               expenseProvider: expenseProvider,
               successColor: stableSuccessColor,
               errorColor: stableErrorColor,

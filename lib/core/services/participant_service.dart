@@ -69,14 +69,30 @@ class ParticipantService {
 
       final Map<String, Map<String, dynamic>> ataMap = {};
       if (ds.isNotEmpty) {
-        for (var i = 0; i < ds.length; i += 30) {
-          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
-          final eventsQuery = await _firestore
-              .collection('events')
-              .where(FieldPath.documentId, whereIn: chunk)
-              .get();
-          for (var doc in eventsQuery.docs) {
-            ataMap[doc.id] = doc.data();
+        try {
+          for (var i = 0; i < ds.length; i += 30) {
+            final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+            final eventsQuery = await _firestore
+                .collection('events')
+                .where('communityId', isEqualTo: communityId)
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
+            for (var doc in eventsQuery.docs) {
+              ataMap[doc.id] = doc.data();
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ ParticipantService: Batch event query failed, trying individual doc gets: $e');
+          try {
+            final futures = ds.map((id) => _firestore.collection('events').doc(id).get());
+            final docs = await Future.wait(futures);
+            for (var doc in docs) {
+              if (doc.exists && doc.data() != null) {
+                ataMap[doc.id] = doc.data()!;
+              }
+            }
+          } catch (err) {
+            debugPrint('❌ ParticipantService: Fallback individual event gets failed: $err');
           }
         }
       }
@@ -131,19 +147,17 @@ class ParticipantService {
   }
 
   // Get participant by eventId and userId
-  Future<ParticipantModel> getParticipant(String eventId, String userId, {String? communityId}) async {
+  Future<ParticipantModel> getParticipant(String eventId, String userId, {required String communityId}) async {
     try {
-      var query = _firestore
+      final snapshot = await _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
-          .where('status', isEqualTo: 'joined');
+          .where('communityId', isEqualTo: communityId)
+          .where('status', isEqualTo: 'joined')
+          .limit(1)
+          .get();
       
-      if (communityId != null && communityId.isNotEmpty) {
-        query = query.where('communityId', isEqualTo: communityId);
-      }
-      
-      final snapshot = await query.limit(1).get();
       if (snapshot.docs.isEmpty) {
         throw Exception('Participant not found for event $eventId and user $userId');
       }
@@ -210,14 +224,30 @@ class ParticipantService {
 
       final Map<String, Map<String, dynamic>> ataMap = {};
       if (ds.isNotEmpty) {
-        for (var i = 0; i < ds.length; i += 30) {
-          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
-          final eventsQuery = await _firestore
-              .collection('events')
-              .where(FieldPath.documentId, whereIn: chunk)
-              .get();
-          for (var doc in eventsQuery.docs) {
-            ataMap[doc.id] = doc.data();
+        try {
+          for (var i = 0; i < ds.length; i += 30) {
+            final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+            final eventsQuery = await _firestore
+                .collection('events')
+                .where('communityId', isEqualTo: communityId)
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
+            for (var doc in eventsQuery.docs) {
+              ataMap[doc.id] = doc.data();
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ ParticipantService: Batch event query failed, trying individual doc gets: $e');
+          try {
+            final futures = ds.map((id) => _firestore.collection('events').doc(id).get());
+            final docs = await Future.wait(futures);
+            for (var doc in docs) {
+              if (doc.exists && doc.data() != null) {
+                ataMap[doc.id] = doc.data()!;
+              }
+            }
+          } catch (err) {
+            debugPrint('❌ ParticipantService: Fallback individual event gets failed: $err');
           }
         }
       }
@@ -392,55 +422,44 @@ class ParticipantService {
     }
   }
 
-  Future<List<ParticipantModel>> getEventParticipants(String eventId, {String? communityId}) async {
+  Future<List<ParticipantModel>> getEventParticipants(String eventId, {required String communityId}) async {
     try {
-      var query = _firestore
+      final snapshot = await _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'joined');
-
-      if (communityId != null && communityId.isNotEmpty) {
-        query = query.where('communityId', isEqualTo: communityId);
-      }
-
-      final snapshot = await query.get();
+          .where('communityId', isEqualTo: communityId)
+          .where('status', isEqualTo: 'joined')
+          .get();
       return snapshot.docs.map((doc) => ParticipantModel.fromMap(doc.data(), doc.id)).toList();
     } catch (e) {
       throw Exception('Failed to load event participants: $e');
     }
   }
 
-  Future<bool> hasUserJoinedEvent(String eventId, String userId, {String? communityId}) async {
+  Future<bool> hasUserJoinedEvent(String eventId, String userId, {required String communityId}) async {
     try {
-      var query = _firestore
+      final snapshot = await _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
-          .where('status', isEqualTo: 'joined');
-
-      if (communityId != null && communityId.isNotEmpty) {
-        query = query.where('communityId', isEqualTo: communityId);
-      }
-
-      final snapshot = await query.get();
+          .where('communityId', isEqualTo: communityId)
+          .where('status', isEqualTo: 'joined')
+          .get();
       return snapshot.docs.isNotEmpty;
     } catch (e) {
       throw Exception('Failed to check participation: $e');
     }
   }
 
-  Future<int> getParticipantCount(String eventId, {String? communityId}) async {
+  Future<int> getParticipantCount(String eventId, {required String communityId}) async {
     try {
-      var query = _firestore
+      final aggregateQuery = await _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
-          .where('status', isEqualTo: 'joined');
-
-      if (communityId != null && communityId.isNotEmpty) {
-        query = query.where('communityId', isEqualTo: communityId);
-      }
-
-      final aggregateQuery = await query.count().get();
+          .where('communityId', isEqualTo: communityId)
+          .where('status', isEqualTo: 'joined')
+          .count()
+          .get();
       return aggregateQuery.count ?? 0;
     } catch (e) {
       throw Exception('Failed to get participant count: $e');
@@ -511,19 +530,16 @@ class ParticipantService {
     }
   }
 
-  Future<ParticipantModel?> getParticipantBAndUser(String eventId, String userId, {String? communityId}) async {
+  Future<ParticipantModel?> getParticipantBAndUser(String eventId, String userId, {required String communityId}) async {
     try {
-      var query = _firestore
+      final snapshot = await _firestore
           .collection('participants')
           .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
-          .where('status', isEqualTo: 'joined');
+          .where('communityId', isEqualTo: communityId)
+          .where('status', isEqualTo: 'joined')
+          .get();
 
-      if (communityId != null && communityId.isNotEmpty) {
-        query = query.where('communityId', isEqualTo: communityId);
-      }
-
-      final snapshot = await query.get();
       if (snapshot.docs.isNotEmpty) {
         return ParticipantModel.fromMap(snapshot.docs.first.data(), snapshot.docs.first.id);
       }

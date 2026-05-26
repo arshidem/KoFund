@@ -84,8 +84,8 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
     super.didChangeDependencies();
 
     // Check if current user has changed (logout/login scenario)
-    final _authProvider = context.read<AppAuthProvider>();
-    final currentUser = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final currentUser = authProvider.user;
 
     if (currentUser?.uid != _currentUserId) {
       debugPrint(

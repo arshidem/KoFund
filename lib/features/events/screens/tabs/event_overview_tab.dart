@@ -108,7 +108,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     final contributionProvider = Provider.of<ContributionProvider>(context, listen: false);
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final participantProvider = Provider.of<ParticipantProvider>(context);
-    final _userService = Provider.of<UserService>(context, listen: false);
+    final userService = Provider.of<UserService>(context, listen: false);
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     
     final bool isOrganizer = authProvider.user?.uid == widget.event.createdBy || 
@@ -143,7 +143,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                     const SizedBox(height: 12),
                     _builHeader(context, participantProvider, isOrganizer),
                     const SizedBox(height: 12),
-                    _builInfoCard(context, participantProvider, _userService),
+                    _builInfoCard(context, participantProvider, userService),
                     const SizedBox(height: 12),
                     _builStatusCard(context, participantProvider),
 
@@ -328,7 +328,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   Widget _builInfoCard(
     BuildContext context,
     ParticipantProvider participantProvider,
-    UserService _userService,
+    UserService userService,
   ) {
     return Card(
       color: AppColors.card(context),
@@ -411,7 +411,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
             ),
             const SizedBox(height: 12),
             FutureBuilder<UserModel?>(
-              future: _userService.getUserById(widget.event.createdBy),
+              future: userService.getUserById(widget.event.createdBy),
               builder: (context, snapshot) {
                 String displayValue = widget.event.createdBy;
                 if (snapshot.connectionState == ConnectionState.waiting) {

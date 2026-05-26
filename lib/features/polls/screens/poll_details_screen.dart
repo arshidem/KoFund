@@ -149,10 +149,10 @@ void _setupPollSubscription() {
   Future<void> _castVote(String optionIndex) async {
     if (_poll == null) return;
 
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final pollProvider = context.read<PollProvider>();
     
-    if (_authProvider.user == null) {
+    if (authProvider.user == null) {
       SnackbarHelper.showInfo(context, 'Please sign in to vote');
       return;
     }
@@ -172,7 +172,7 @@ void _setupPollSubscription() {
     try {
       final success = await pollProvider.castVote(
         pollId: widget.pollId,
-        userId: _authProvider.user!.uid,
+        userId: authProvider.user!.uid,
         optionIndex: optionIndex,
       );
       
@@ -348,8 +348,8 @@ void _setupPollSubscription() {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
-    final _authProvider = context.watch<AppAuthProvider>();
-    final hasVoted = _poll?.hasUserVoted(_authProvider.user?.uid ?? '') ?? false;
+    final authProvider = context.watch<AppAuthProvider>();
+    final hasVoted = _poll?.hasUserVoted(authProvider.user?.uid ?? '') ?? false;
 
     return GradientSheetScaffold(
       title: 'Poll Details',
@@ -425,7 +425,7 @@ void _setupPollSubscription() {
           ? _buildLoadingState(isDarkMode)
           : _poll == null
               ? _buildErrorState(isDarkMode)
-              : _buildPollDetails(isDarkMode, hasVoted, _authProvider),
+              : _buildPollDetails(isDarkMode, hasVoted, authProvider),
     );
   }
 
@@ -484,13 +484,13 @@ void _setupPollSubscription() {
     );
   }
 
-  Widget _buildPollDetails(bool isDarkMode, bool hasVoted, AppAuthProvider _authProvider) {
+  Widget _buildPollDetails(bool isDarkMode, bool hasVoted, AppAuthProvider authProvider) {
     final poll = _poll!;
     final daysLeft = poll.endDate.difference(DateTime.now()).inDays;
     final isExpired = poll.isExpired;
     final isClosed = poll.status == PollStatus.closed;
     final canVote = !hasVoted && !isClosed && !isExpired && poll.status == PollStatus.active;
-    final currentUserId = _authProvider.user?.uid;
+    final currentUserId = authProvider.user?.uid;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -729,7 +729,7 @@ color: Colors.green.withValues(alpha: 0.1),                borderRadius: BorderR
                 ? (voteCount / poll.totalVotes * 100)
                 : 0.0;
             
-            final userVote = poll.getUserVote(_authProvider.user?.uid ?? '');
+            final userVote = poll.getUserVote(authProvider.user?.uid ?? '');
             final isSelected = userVote == optionIndex;
             final isWinning = poll.winningOptionIndex == optionIndex && hasVoted && poll.totalVotes > 0;
             

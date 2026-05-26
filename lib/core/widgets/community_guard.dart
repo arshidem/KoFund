@@ -13,23 +13,23 @@ class CommunityGuard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context);
+    final authProvider = Provider.of<AppAuthProvider>(context);
     
     // Quick check using cached data (NO network calls)
-    if (_authProvider.isLoading) {
+    if (authProvider.isLoading) {
       return _buildLoadingScreen('Loading user data...');
     }
     
-    if (!_authProvider.canAccessApp) {
+    if (!authProvider.canAccessApp) {
       return _redirectTo(context, RouteNames.login, 'Please sign in');
     }
     
-    if (_authProvider.needsToJoinCommunity) {
+    if (authProvider.needsToJoinCommunity) {
       return _redirectTo(context, RouteNames.joinCommunity, 'Join a community first');
     }
     
-    if (_authProvider.isWaitingForApproval || 
-        _authProvider.user?.isApproved == false) {
+    if (authProvider.isWaitingForApproval || 
+        authProvider.user?.isApproved == false) {
       return _redirectTo(context, RouteNames.pendingApproval, 'Waiting for admin approval');
     }
     

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../expenses/models/expense_model.dart';
@@ -115,8 +114,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final currentUser = _authProvider.user;
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final currentUser = authProvider.user;
 
       final updatedExpense = _expense!.copyWith(
         title: _titleController.text.trim(),

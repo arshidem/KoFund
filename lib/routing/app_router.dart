@@ -65,7 +65,7 @@ class AppRouter {
     final String? routeName = settings.name;
 
     // Handle public event detail with path parameter (e.g., /public-event/EVENT_ID or /p/EVENT_ID)
-    if (routeName != null && (routeName.startsWith(RouteNames.publicEventDetail + '/') || routeName.startsWith('/p/'))) {
+    if (routeName != null && (routeName.startsWith('${RouteNames.publicEventDetail}/') || routeName.startsWith('/p/'))) {
       final parts = routeName.split('/');
       if (parts.length > 2) {
         final eventId = parts[2];
@@ -230,8 +230,8 @@ case RouteNames.joinCommunity:
       case RouteNames.editProfile:
         return MaterialPageRoute(
           builder: (context) {
-            final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-            final user = _authProvider.user;
+            final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+            final user = authProvider.user;
             
             if (user == null) {
               return Scaffold(

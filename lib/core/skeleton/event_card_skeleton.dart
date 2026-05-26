@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 
 class EventCardSkeleton extends StatelessWidget {
@@ -17,6 +16,7 @@ class EventCardSkeleton extends StatelessWidget {
       baseColor: baseColor,
       highlightColor: highlightColor,
       child: Container(
+        height: 332,
         padding: const EdgeInsets.all(16.0),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(

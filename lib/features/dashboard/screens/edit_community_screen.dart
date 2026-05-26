@@ -70,10 +70,10 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     });
 
     final communityProvider = context.read<CommunityProvider>();
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     
     final community = communityProvider.currentCommunity;
-    final user = _authProvider.user;
+    final user = authProvider.user;
 
     if (community == null || user == null) {
       SnackbarHelper.showError(context, 'Community not found');
@@ -400,9 +400,9 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   @override
   Widget build(BuildContext context) {
     final communityProvider = context.watch<CommunityProvider>();
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final community = communityProvider.currentCommunity;
-    final user = _authProvider.user;
+    final user = authProvider.user;
 
     final dashboardProvider = context.read<DashboardProvider>();
     final cid = user?.communityId ?? dashboardProvider.getDashboardStats()['communityId']?.toString();

@@ -49,8 +49,8 @@ class _MembersWidgetState extends State<MembersWidget> {
     if (!_isInitialized) return;
     
     // Listen for auth changes - but only when actually different
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
     
     final newUserId = user?.uid;
     final newCommunityId = user?.communityId;
@@ -109,8 +109,8 @@ class _MembersWidgetState extends State<MembersWidget> {
   void _checkAuthAndLoadData() {
     if (!mounted) return;
     
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
     
     if (user == null) {
       debugPrint('❌ DEBUG: No user found in MembersWidget');
@@ -182,8 +182,8 @@ class _MembersWidgetState extends State<MembersWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.watch<AppAuthProvider>();
+    final user = authProvider.user;
     
     return _buildMembersContent(user);
   }

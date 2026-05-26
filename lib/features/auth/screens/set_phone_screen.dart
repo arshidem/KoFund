@@ -97,8 +97,8 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final success = await _authProvider.updateUserPhoneNumber(phone);
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final success = await authProvider.updateUserPhoneNumber(phone);
 
       if (success && mounted) {
         _showSuccess('Phone number saved successfully!');

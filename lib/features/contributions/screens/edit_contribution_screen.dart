@@ -380,8 +380,8 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
 
     try {
       // Get current user info
-      final _authProvider = context.read<AppAuthProvider>();
-      final currentUser = _authProvider.user;
+      final authProvider = context.read<AppAuthProvider>();
+      final currentUser = authProvider.user;
       
       if (currentUser == null) {
         throw Exception('User not authenticated');

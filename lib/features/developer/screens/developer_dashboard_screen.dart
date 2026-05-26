@@ -19,10 +19,10 @@ class DeveloperDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     
     // Security check
-    if (!_authProvider.isDeveloper) {
+    if (!authProvider.isDeveloper) {
       return Scaffold(
         appBar: AppBar(title: const Text('Access Denied')),
         body: const Center(child: Text('Developer access required')),

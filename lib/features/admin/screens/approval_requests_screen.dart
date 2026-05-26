@@ -46,11 +46,11 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   }
 
   Future<void> _loadMembers() async {
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final userProvider = context.read<UserProvider>();
-    final communityId = _authProvider.user?.communityId;
+    final communityId = authProvider.user?.communityId;
     
-    _currentUser = _authProvider.user; // Store current user
+    _currentUser = authProvider.user; // Store current user
 
     if (communityId != null) {
       await userProvider.loadCommunityMembers(communityId);
@@ -335,11 +335,11 @@ class _ApprovalRequestsScreenState extends State<ApprovalRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final _authProvider = context.read<AppAuthProvider>();
-    final communityId = _authProvider.user?.communityId;
+    final authProvider = context.read<AppAuthProvider>();
+    final communityId = authProvider.user?.communityId;
     
     // Get current user for comparison
-    _currentUser = _authProvider.user;
+    _currentUser = authProvider.user;
 
     if (communityId == null) {
       return Scaffold(

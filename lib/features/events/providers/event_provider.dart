@@ -79,9 +79,17 @@ class EventProvider with ChangeNotifier {
     }
 
     try {
-      final totalContributions = await _eventService.getTotalContributions(eventId, communityId: communityId);
-      final totalExpenses = await _eventService.getTotalExpenses(eventId, communityId: communityId);
-      final participantCount = await _participantService.getParticipantCount(eventId, communityId: communityId);
+      final effectiveCommunityId = communityId ?? '';
+      if (effectiveCommunityId.isEmpty) {
+        debugPrint('⚠️ EventProvider: communityId is required for financial summary');
+        return _emptySummary();
+      }
+
+      final totalContributions = await _eventService.getTotalContributions(eventId, communityId: effectiveCommunityId);
+      final totalExpenses = await _eventService.getTotalExpenses(eventId, communityId: effectiveCommunityId);
+      final participantCount = await _participantService.getParticipantCount(eventId, communityId: effectiveCommunityId);
+      
+      final contributions = await _contributionService.getContributions(eventId, communityId: communityId);
       
       final event = await _eventService.getEventById(eventId);
       final suggested = event?.suggestedContribution ?? 0.0;
@@ -97,23 +105,30 @@ class EventProvider with ChangeNotifier {
         'totalExpected': totalExpected,
         'collectionRate': collectionRate,
         'suggestedContribution': suggested,
+        'totalContributions': contributions.length,
+        'contributionCount': contributions.length,
       };
 
-      // 🚀 Cache result
       _summaryCache[eventId] = (data: summary, timestamp: DateTime.now());
       return summary;
     } catch (e) {
       debugPrint('❌ Error getting financial summary: $e');
-      return {
-        'totalParticipants': 0,
-        'totalCollected': 0.0,
-        'totalExpenses': 0.0,
-        'balance': 0.0,
-        'totalExpected': 0.0,
-        'collectionRate': 0.0,
-        'suggestedContribution': 0.0,
-      };
+      return _emptySummary();
     }
+  }
+
+  Map<String, dynamic> _emptySummary() {
+    return {
+      'totalParticipants': 0,
+      'totalCollected': 0.0,
+      'totalExpenses': 0.0,
+      'balance': 0.0,
+      'totalExpected': 0.0,
+      'collectionRate': 0.0,
+      'suggestedContribution': 0.0,
+      'totalContributions': 0,
+      'contributionCount': 0,
+    };
   }
 
   Future<void> loadEvents(String communityId, {bool forceRefresh = false}) async {
@@ -350,44 +365,40 @@ class EventProvider with ChangeNotifier {
 
   // 📊 NEW: Full Financial Summary Stream
   Stream<Map<String, dynamic>> streamFinancialSummary(String eventId, {String? communityId}) {
-    return streamParticipantsWithContributions(eventId, communityId: communityId).asyncMap((participants) async {
-      final futures = await Future.wait([
-        _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getContributions(eventId, communityId: communityId).catchError((_) => <ContributionModel>[]),
-        _eventService.getTotalExpenses(eventId, communityId: communityId).catchError((_) => 0.0),
-      ]);
-      
-      final doc = futures[0] as DocumentSnapshot;
-      final allContributionsForCount = futures[1] as List<ContributionModel>;
-      final totalExpenses = (futures[2] as num).toDouble();
-      
-      final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
-      
-      final totalContributions = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0.0));
-      
-      int paidParticipants = 0;
-      for (final p in participants) {
-        if (p.hasPaidContribution) paidParticipants++;
+    // 🚀 IMPROVEMENT: Trigger summary on participant, contribution OR expense changes
+    final controller = StreamController<Map<String, dynamic>>();
+    
+    Future<void> update() async {
+      if (controller.isClosed) return;
+      try {
+        final summary = await getFinancialSummary(eventId, communityId: communityId, forceRefresh: true);
+        if (!controller.isClosed) controller.add(summary);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
       }
-      
-      final totalParticipants = participants.length;
-      final totalExpected = suggestedContribution * totalParticipants;
+    }
 
-      return {
-        'totalParticipants': totalParticipants,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': totalParticipants - paidParticipants,
-        'totalCollected': totalContributions, 
-        'collected': totalContributions,      
-        'totalExpected': totalExpected,
-        'expenses': totalExpenses,
-        'totalExpenses': totalExpenses,
-        'balance': totalContributions - totalExpenses,
-        'contributionCount': allContributionsForCount.length,
-        'totalContributions': allContributionsForCount.length, // Alias for UI
-        'participants': totalParticipants.toDouble(),
-      };
-    });
+    // Listen to all relevant collections
+    final sub1 = _participantService.streamParticipants(eventId, communityId: communityId).listen((_) => update());
+    
+    var contribQuery = _firestore.collection('contributions').where('eventId', isEqualTo: eventId);
+    if (communityId != null && communityId.isNotEmpty) contribQuery = contribQuery.where('communityId', isEqualTo: communityId);
+    final sub2 = contribQuery.snapshots().listen((_) => update());
+    
+    var expenseQuery = _firestore.collection('expenses').where('eventId', isEqualTo: eventId);
+    if (communityId != null && communityId.isNotEmpty) expenseQuery = expenseQuery.where('communityId', isEqualTo: communityId);
+    final sub3 = expenseQuery.snapshots().listen((_) => update());
+
+    controller.onCancel = () {
+      sub1.cancel();
+      sub2.cancel();
+      sub3.cancel();
+    };
+
+    // Initial trigger
+    update();
+
+    return controller.stream;
   }
 
   Future<void> create(EventModel event, {bool sendNotification = true}) async {
@@ -441,7 +452,9 @@ class EventProvider with ChangeNotifier {
   // ✅ OPTIMIZED: Get participant with real-time contribution data
   Future<ParticipantModel> getParticipantWithContribution(String eventId, String userId, {String? communityId}) async {
     try {
-      final participant = await _participantService.getParticipant(eventId, userId);
+      final effectiveCommunityId = communityId ?? '';
+      if (effectiveCommunityId.isEmpty) throw Exception('communityId is required');
+      final participant = await _participantService.getParticipant(eventId, userId, communityId: effectiveCommunityId);
       final contributions = await _contributionService.getContributionsByUserAn(
         userId: userId,
         eventId: eventId,
@@ -593,25 +606,33 @@ class EventProvider with ChangeNotifier {
   }
 
   Stream<List<ParticipantModel>> streamParticipantsWithContributions(String eventId, {String? communityId}) {
-    return _participantService.streamParticipants(eventId, communityId: communityId).asyncMap((participants) async {
-      if (participants.isEmpty) return [];
-      
+    final controller = StreamController<List<ParticipantModel>>();
+    
+    Future<void> update() async {
+      if (controller.isClosed) return;
       try {
-        final futures = await Future.wait([
-          _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-          _contributionService.getContributions(eventId, communityId: communityId),
-        ]);
+        final effectiveCommunityId = communityId ?? '';
+        if (effectiveCommunityId.isEmpty) {
+          if (!controller.isClosed) controller.add([]);
+          return;
+        }
+
+        final participants = await _participantService.getEventParticipants(eventId, communityId: effectiveCommunityId);
+        if (participants.isEmpty) {
+          if (!controller.isClosed) controller.add([]);
+          return;
+        }
         
-        final doc = futures[0] as DocumentSnapshot;
-        final allContributions = futures[1] as List<ContributionModel>;
-        final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
+        final doc = await _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get());
+        final allContributions = await _contributionService.getContributions(eventId, communityId: communityId);
+        final suggestedContribution = ((doc.data())?['suggestedContribution'] ?? 0).toDouble();
         
         final Map<String, double> userPaidMap = {};
         for (final contribution in allContributions) {
           userPaidMap[contribution.userId] = (userPaidMap[contribution.userId] ?? 0.0) + contribution.amount;
         }
         
-        return participants.map((participant) {
+        final result = participants.map((participant) {
           final amountPaid = userPaidMap[participant.userId] ?? 0.0;
           final hasPaid = suggestedContribution > 0 ? amountPaid >= suggestedContribution : true;
           
@@ -620,11 +641,27 @@ class EventProvider with ChangeNotifier {
             hasPaidContribution: hasPaid,
           );
         }).toList();
+        
+        if (!controller.isClosed) controller.add(result);
       } catch (e) {
-        debugPrint('❌ Error in optimized participants stream: $e');
-        return participants;
+        if (!controller.isClosed) controller.addError(e);
       }
-    });
+    }
+
+    // 🚀 IMPROVEMENT: Trigger when participants OR contributions change
+    final sub1 = _participantService.streamParticipants(eventId, communityId: communityId).listen((_) => update());
+    
+    var q2 = _firestore.collection('contributions').where('eventId', isEqualTo: eventId);
+    if (communityId != null && communityId.isNotEmpty) q2 = q2.where('communityId', isEqualTo: communityId);
+    final sub2 = q2.snapshots().listen((_) => update());
+    
+    controller.onCancel = () {
+      sub1.cancel();
+      sub2.cancel();
+    };
+    
+    update();
+    return controller.stream;
   }
 
   Future<void> leave(String eventId, String userId, {String? communityId}) async {
@@ -772,50 +809,86 @@ class EventProvider with ChangeNotifier {
   }
 
   Stream<Map<String, dynamic>> streamMonthlyFinancialSummary(String eventId, String monthId, {String? communityId}) {
-    return streamParticipantsWithMonthlyContributions(eventId, monthId, communityId: communityId)
-        .asyncMap((participants) async {
-      
-      final futures = await Future.wait<dynamic>([
-        _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
-        _contributionService.getMonthlyContributionsForParticipant(eventId, monthId, communityId: communityId),
-        _expenseService.getMonthlyExpenses(eventId, monthId, communityId: communityId),
-      ]);
-      
-      final doc = futures[0] as DocumentSnapshot;
-      final monthlyContributions = futures[1] as List<ContributionModel>;
-      final monthlyExpenses = futures[2] as List<ExpenseModel>;
-      final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
-      
-      int paidParticipants = 0;
-      double totalCollected = 0.0;
-      for (final p in participants) {
-        totalCollected += p.contributionPaid ?? 0.0;
-        if (p.hasPaidContribution) paidParticipants++;
+    final controller = StreamController<Map<String, dynamic>>();
+    
+    Future<void> update() async {
+      if (controller.isClosed) return;
+      try {
+        final effectiveCommunityId = communityId ?? '';
+        if (effectiveCommunityId.isEmpty) {
+          if (!controller.isClosed) controller.add({});
+          return;
+        }
+
+        final participants = await _participantService.getEventParticipants(eventId, communityId: effectiveCommunityId);
+        
+        final futures = await Future.wait<dynamic>([
+          _firestore.collection('events').doc(eventId).get(const GetOptions(source: Source.cache)).catchError((_) => _firestore.collection('events').doc(eventId).get()),
+          _contributionService.getMonthlyContributionsForParticipant(eventId, monthId, communityId: communityId),
+          _expenseService.getMonthlyExpenses(eventId, monthId, communityId: communityId),
+        ]);
+        
+        final doc = futures[0] as DocumentSnapshot;
+        final monthlyContributions = futures[1] as List<ContributionModel>;
+        final monthlyExpenses = futures[2] as List<ExpenseModel>;
+        final suggestedContribution = ((doc.data() as Map<String, dynamic>?)?['suggestedContribution'] ?? 0).toDouble();
+        
+        // Map out paid status
+        final Map<String, double> userPaidMap = {};
+        for (final c in monthlyContributions) {
+          userPaidMap[c.userId] = (userPaidMap[c.userId] ?? 0.0) + c.amount;
+        }
+
+        int paidParticipants = 0;
+        double totalCollected = 0.0;
+        for (final p in participants) {
+          final paid = userPaidMap[p.userId] ?? 0.0;
+          totalCollected += paid;
+          if (suggestedContribution > 0 ? paid >= suggestedContribution : true) paidParticipants++;
+        }
+        
+        double totalExpenses = 0.0;
+        for (final e in monthlyExpenses) {
+          totalExpenses += e.amount;
+        }
+
+        final result = {
+          'totalParticipants': participants.length,
+          'paidParticipants': paidParticipants,
+          'pendingParticipants': participants.length - paidParticipants,
+          'totalCollected': totalCollected,
+          'totalExpenses': totalExpenses,
+          'balance': totalCollected - totalExpenses,
+          'totalExpected': suggestedContribution * participants.length,
+          'totalContributions': monthlyContributions.length,
+          'contributionCount': monthlyContributions.length,
+        };
+        
+        if (!controller.isClosed) controller.add(result);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
       }
-      
-      double totalExpenses = 0.0;
-      for (final e in monthlyExpenses) {
-        totalExpenses += e.amount;
-      }
-      
-      final totalParticipants = participants.length;
-      final totalExpected = suggestedContribution * totalParticipants;
-      
-      return {
-        'totalParticipants': totalParticipants,
-        'paidParticipants': paidParticipants,
-        'pendingParticipants': totalParticipants - paidParticipants,
-        'totalCollected': totalCollected,
-        'collected': totalCollected,
-        'totalExpected': totalExpected,
-        'contributionCount': monthlyContributions.length,
-        'totalContributions': monthlyContributions.length,
-        'monthId': monthId,
-        'expenses': totalExpenses, 
-        'totalExpenses': totalExpenses,
-        'balance': totalCollected - totalExpenses,
-      };
-    });
+    }
+
+    // 🚀 IMPROVEMENT: Trigger on relevant changes
+    final sub1 = _participantService.streamParticipants(eventId, communityId: communityId).listen((_) => update());
+    
+    var q2 = _firestore.collection('contributions').where('eventId', isEqualTo: eventId).where('monthId', isEqualTo: monthId);
+    if (communityId != null && communityId.isNotEmpty) q2 = q2.where('communityId', isEqualTo: communityId);
+    final sub2 = q2.snapshots().listen((_) => update());
+    
+    var q3 = _firestore.collection('expenses').where('eventId', isEqualTo: eventId).where('monthId', isEqualTo: monthId);
+    if (communityId != null && communityId.isNotEmpty) q3 = q3.where('communityId', isEqualTo: communityId);
+    final sub3 = q3.snapshots().listen((_) => update());
+
+    controller.onCancel = () {
+      sub1.cancel();
+      sub2.cancel();
+      sub3.cancel();
+    };
+
+    update();
+    return controller.stream;
   }
 
   void clearCache() {

@@ -139,8 +139,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     super.didChangeDependencies();
     print('🔄 DEBUG: didChangeDependencies called');
 
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
 
     // Check if user has changed
     if (user != null && user.uid != _currentUserId) {
@@ -150,16 +150,18 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
       // Reset screen state for new user
       _resetScreenForNewUser();
 
-      // Load members for new user
-      if (mounted) {
+      // Load members for new user after build completes
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkAuthAndLoadMembers();
-      }
+      });
+
     }
 
     if (user != null && _isInitialLoad && _currentUserId == null) {
-      print('👤 DEBUG: First load for user ${user.uid}');
-      _currentUserId = user.uid;
-      _checkAuthAndLoadMembers();
+      // First load for user after build completes
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAuthAndLoadMembers();
+      });
     }
   }
 
@@ -186,8 +188,8 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   void _checkAuthAndLoadMembers() {
     if (!mounted) return;
 
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
 
     print(
       '🔍 DEBUG: Checking auth state - UID: ${user?.uid}, Community: ${user?.communityId}, Approved: ${user?.isApproved}',
@@ -524,6 +526,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   @override
   Widget build(BuildContext context) {
     final memberProvider = context.watch<MemberProvider>();
+    final userProvider = context.watch<UserProvider>();
     final isAdmin = context.read<AppAuthProvider>().user?.isAdmin == true;
     final currentUser = context.read<AppAuthProvider>().user;
 
@@ -929,23 +932,71 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
   Widget _buildFilterTabItem(String label, int index) {
     final bool isSelected = _selectedTab == index;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    Widget tabContent = Text(
+      label,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: isSelected
+            ? (isDark ? AppColors.primary(context) : Colors.white)
+            : (isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.textSecondary(context)),
+        letterSpacing: 0.5,
+      ),
+    );
+
+    if (index == 1) {
+      final userProvider = context.read<UserProvider>();
+      final pendingCount = userProvider.pendingMembers.length;
+      
+      if (pendingCount > 0) {
+        tabContent = Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: isSelected
+                    ? (isDark ? AppColors.primary(context) : Colors.white)
+                    : (isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.textSecondary(context)),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (isDark ? AppColors.primary(context).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.2))
+                    : AppColors.warning(context),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                pendingCount.toString(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? (isDark ? AppColors.primary(context) : Colors.white)
+                      : Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
     return Expanded(
       child: GestureDetector(
         onTap: () => _onTabTap(index),
         child: Container(
           alignment: Alignment.center,
           color: Colors.transparent,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: isSelected
-                  ? (isDark ? AppColors.primary(context) : Colors.white)
-                  : (isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.textSecondary(context)),
-              letterSpacing: 0.5,
-            ),
-          ),
+          child: tabContent,
         ),
       ),
     );

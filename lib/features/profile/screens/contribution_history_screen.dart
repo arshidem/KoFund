@@ -55,8 +55,8 @@ class _ContributionHistoryScreenState extends State<ContributionHistoryScreen> {
     super.didChangeDependencies();
     debugPrint('🔄 DEBUG: didChangeDependencies called');
     
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
     
     // Check if user has changed
     if (user != null && user.uid != _currentUserId) {
@@ -129,8 +129,8 @@ void _debugFirestoreContribution(String contributionId) async {
   void _checkAuthAndLoadHistory() {
     if (!mounted) return;
     
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
     
     debugPrint('🔍 DEBUG: Checking auth state for contributions - UID: ${user?.uid}');
     
@@ -190,9 +190,9 @@ void _debugFirestoreContribution(String contributionId) async {
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final contributionHistory = profileProvider.contributionHistory;
-    final currentUser = _authProvider.user;
+    final currentUser = authProvider.user;
 
     return GradientSheetScaffold(
       title: 'My Contributions',
@@ -206,7 +206,7 @@ void _debugFirestoreContribution(String contributionId) async {
                   onRefresh: _refreshData,
                 ),
                 SliverToBoxAdapter(
-                  child: _buildContent(profileProvider, _authProvider, currentUser),
+                  child: _buildContent(profileProvider, authProvider, currentUser),
                 ),
               ],
             ),
@@ -225,7 +225,7 @@ void _debugFirestoreContribution(String contributionId) async {
     );
   }
 
-Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvider, UserModel? currentUser) {
+Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider authProvider, UserModel? currentUser) {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Add this
 
   // Show loading on initial load
@@ -272,7 +272,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvi
             final contribution = contributionHistory[index];
             return Column(
               children: [
-                _buildContributionListItem(contribution, _authProvider),
+                _buildContributionListItem(contribution, authProvider),
                 if (index < contributionHistory.length - 1) _buildItemDivider(),
               ],
             );
@@ -520,7 +520,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvi
   }
 
   Widget _buildContributionListItem(
-      Map<String, dynamic> contribution, AppAuthProvider _authProvider) {
+      Map<String, dynamic> contribution, AppAuthProvider authProvider) {
     final eventTitle = contribution['title'] ?? 'Unnamed Event';
     final amount = (contribution['amount'] ?? 0).toDouble();
     final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
@@ -534,7 +534,7 @@ Widget _buildContent(ProfileProvider profileProvider, AppAuthProvider _authProvi
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          _showContributionDetails(contribution, _authProvider);
+          _showContributionDetails(contribution, authProvider);
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -681,7 +681,7 @@ void _debugContributionData(Map<String, dynamic> contribution) {
   debugPrint('  - All keys: ${contribution.keys.toList()}');
 }
 // Show contribution details method with premium design - FIXED VERSION
-void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider _authProvider) {
+void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
   final EventTitle = contribution['title'] ?? 'Unnamed Event';
   final amount = (contribution['amount'] ?? 0).toDouble();
   final paymentMethod = contribution['paymentMethod'] ?? 'Unknown';
@@ -1125,7 +1125,7 @@ void _showContributionDetails(Map<String, dynamic> contribution, AppAuthProvider
                               child: ElevatedButton(
                                 onPressed: () {
                                   Navigator.pop(context); // Close details sheet
-                                  _generateReceiptFromContribution(contribution, _authProvider);
+                                  _generateReceiptFromContribution(contribution, authProvider);
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary(context),
@@ -1442,15 +1442,15 @@ String _getFieldDisplayName(String field) {
   return buffer.toString();
 }
 
-Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution, AppAuthProvider _authProvider) async {
+Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution, AppAuthProvider authProvider) async {
   if (!context.mounted) return;
 
   try {
     // 1. Convert to ContributionModel
-    final contributionModel = _convertMapToContributionModel(contribution, _authProvider);
+    final contributionModel = _convertMapToContributionModel(contribution, authProvider);
     
     // 2. Get user name
-    final contributorName = await _getUserName(_authProvider.user?.uid ?? '');
+    final contributorName = await _getUserName(authProvider.user?.uid ?? '');
     
     if (!mounted || !context.mounted) return;
 
@@ -1474,7 +1474,7 @@ Future<void> _generateReceiptFromContribution(Map<String, dynamic> contribution,
   }
 }
 
-ContributionModel _convertMapToContributionModel(Map<String, dynamic> contribution, AppAuthProvider _authProvider) {
+ContributionModel _convertMapToContributionModel(Map<String, dynamic> contribution, AppAuthProvider authProvider) {
   // Debug: Print contribution data
   debugPrint('🔄 Converting contribution: ${contribution['contributionId']}');
   debugPrint('  isEdited value: ${contribution['isEdited']}');
@@ -1484,8 +1484,8 @@ ContributionModel _convertMapToContributionModel(Map<String, dynamic> contributi
     contributionId: contribution['contributionId'] ?? '',
     eventId: contribution['eventId'] ?? '',
     eventName: contribution['eventName'] ?? contribution['EventTitle'] ?? 'Unknown Event',
-    userId: contribution['userId'] ?? _authProvider.user?.uid ?? '',
-    contributorName: contribution['contributorName'] ?? _authProvider.user?.displayName ?? 'User',
+    userId: contribution['userId'] ?? authProvider.user?.uid ?? '',
+    contributorName: contribution['contributorName'] ?? authProvider.user?.displayName ?? 'User',
     communityId: contribution['communityId'] ?? '',
     amount: (contribution['amount'] ?? 0).toDouble(),
     paymentMethod: contribution['paymentMethod'] ?? 'cash',

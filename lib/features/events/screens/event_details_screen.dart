@@ -394,8 +394,8 @@ Future<void> _refreshAllData() async {
 
 @override
 Widget build(BuildContext context) {
-  final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-  final currentUserId = _authProvider.user?.uid;
+  final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+  final currentUserId = authProvider.user?.uid;
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
   return GradientSheetScaffold(
@@ -652,13 +652,13 @@ Widget build(BuildContext context) {
   // Join event method (keep existing)
   Future<void> _join(BuildContext context) async {
     try {
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
       final participantProvider =
           Provider.of<ParticipantProvider>(context, listen: false);
       final eventProvider =
           Provider.of<EventProvider>(context, listen: false);
 
-      final currentUser = _authProvider.user;
+      final currentUser = authProvider.user;
       if (currentUser == null) {
         SnackbarHelper.showError(context, 'Please sign in to join the event');
         return;
@@ -717,11 +717,11 @@ Widget build(BuildContext context) {
 
   // Leave event method (keep existing)
   Future<void> _leave(BuildContext context) async {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     final participantProvider =
         Provider.of<ParticipantProvider>(context, listen: false);
 
-    final currentUser = _authProvider.user;
+    final currentUser = authProvider.user;
     if (currentUser == null) return;
 
     final result = await DialogHelper.showConfirmationDialog(

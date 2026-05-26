@@ -50,8 +50,8 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
   }
 
   Future<void> _assignToMe(String issueId) async {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = _authProvider.user;
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
     
     if (currentUser == null) return;
 
@@ -544,9 +544,9 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     
-    if (!_authProvider.isDeveloper) {
+    if (!authProvider.isDeveloper) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Developer access required')),

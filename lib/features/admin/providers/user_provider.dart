@@ -39,36 +39,36 @@ class UserProvider with ChangeNotifier {
 Future<void> loadCommunityMembers(String communityId) async {
   _setLoading(true);
   try {
-    // Fetch all users belonging to this community (now including unapproved ones for admin)
+    // Fetch all users belonging to this community (including unapproved ones for admin)
     final allUsers = await _userService.getUsersByCommunity(
-      communityId, 
+      communityId,
       includeUnapproved: true,
     );
 
     debugPrint('DEBUG: Total users fetched: ${allUsers.length}');
-    
+
     // ✅ Create NEW lists to avoid reference issues
     final List<UserModel> newApproved = [];
     final List<UserModel> newPending = [];
-    
+
     for (var user in allUsers) {
-      // ✅ Create a freshhh copy of each user
+      // ✅ Create a fresh copy of each user
       final userCopy = user.copyWith();
-      
+
       if (user.isApproved == true) {
         newApproved.add(userCopy);
       } else {
         newPending.add(userCopy);
       }
     }
-    
+
     // ✅ Assign new lists (don't modify in-place)
     _approvedMembers = newApproved;
     _pendingMembers = newPending;
-    
+
     debugPrint('DEBUG: Approved count: ${_approvedMembers.length}');
     debugPrint('DEBUG: Pending count: ${_pendingMembers.length}');
-    
+
     _setMessage('Community members loaded successfully');
   } catch (e) {
     debugPrint('ERROR loading community members: $e');

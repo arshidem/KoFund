@@ -1,7 +1,6 @@
 // lib/core/skeleton/contribution_list_skeleton.dart
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:kofund/core/constants/app_dimensions.dart';
 
 class ContributionListSkeleton extends StatelessWidget {
   const ContributionListSkeleton({super.key});

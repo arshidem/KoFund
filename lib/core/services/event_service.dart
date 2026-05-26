@@ -6,7 +6,6 @@ import 'package:kofund/core/services/notification_service.dart';
 import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/features/participants/models/participant_model.dart';
 import 'package:intl/intl.dart';
-import 'package:kofund/core/services/participant_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';

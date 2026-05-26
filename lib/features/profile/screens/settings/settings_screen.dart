@@ -72,7 +72,7 @@ Future<void> _loadAppInfo() async {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final profileProvider = context.read<ProfileProvider>();
 
@@ -97,12 +97,12 @@ Future<void> _loadAppInfo() async {
                       context: context,
                       title: 'Push Notifications',
                       subtitle: 'Receive event updates and reminders',
-                      value: _authProvider.user?.notificationsEnabled ?? true,
+                      value: authProvider.user?.notificationsEnabled ?? true,
                       onChanged: (value) async {
                         final success =
                             await profileProvider.updateNotificationSettings(value);
                         if (success) {
-                          await _authProvider.refreshUserData();
+                          await authProvider.refreshUserData();
                           setState(() {});
                         }
                       },
@@ -262,21 +262,21 @@ Future<void> _loadAppInfo() async {
                       icon: Icons.exit_to_app_rounded,
                       title: 'Leave Community',
                       onTap: () => _showLeaveCommunityDialog(
-                          context, _authProvider, profileProvider),
+                          context, authProvider, profileProvider),
                     ),
                     _buildItemDivider(),
                     _buildDangerTile(
                       context: context,
                       icon: Icons.delete_forever_rounded,
                       title: 'Delete Account',
-                      onTap: () => _showDeleteAccountDialog(_authProvider),
+                      onTap: () => _showDeleteAccountDialog(authProvider),
                     ),
                     _buildItemDivider(),
                     _buildDangerTile(
                       context: context,
                       icon: Icons.logout_rounded,
                       title: 'Logout',
-                      onTap: () => _showLogoutDialog(_authProvider),
+                      onTap: () => _showLogoutDialog(authProvider),
                     ),
                   ],
                 ),
@@ -564,7 +564,7 @@ Widget _buildDangerTile({
     );
   }
 
-void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider _authProvider, ProfileProvider profileProvider) async {
+void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvider, ProfileProvider profileProvider) async {
   final confirm = await DialogHelper.showConfirmationDialog(
     context,
     title: 'Leave Community?',
@@ -605,7 +605,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider _authProvid
     }
   }
 }
-void _showDeleteAccountDialog(AppAuthProvider _authProvider) async {
+void _showDeleteAccountDialog(AppAuthProvider authProvider) async {
   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
   final user = FirebaseAuth.instance.currentUser;
   
@@ -903,7 +903,7 @@ void _showReauthenticationRequiredDialog() async {
   }
 }
 
-  void _showLogoutDialog(AppAuthProvider _authProvider) async {
+  void _showLogoutDialog(AppAuthProvider authProvider) async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final memberProvider = Provider.of<MemberProvider>(context, listen: false);
     
@@ -934,7 +934,7 @@ void _showReauthenticationRequiredDialog() async {
       memberProvider.clearDataForUserChange();
       
       // 2. Sign out from auth
-      await _authProvider.signOut(context);
+      await authProvider.signOut(context);
       if (!mounted) return;
       
       // 3. Show success message

@@ -90,7 +90,7 @@ class AppUpdateService {
       final cleanVersion = version.split('+').first;
       final parts = cleanVersion.split('.');
       return [
-        if (parts.length > 0) int.tryParse(parts[0]) ?? 0 else 0,
+        if (parts.isNotEmpty) int.tryParse(parts[0]) ?? 0 else 0,
         if (parts.length > 1) int.tryParse(parts[1]) ?? 0 else 0,
         if (parts.length > 2) int.tryParse(parts[2]) ?? 0 else 0,
       ];

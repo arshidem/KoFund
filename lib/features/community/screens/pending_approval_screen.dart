@@ -71,11 +71,11 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   Future<void> _checkStatus() async {
     setState(() => _isCheckingStatus = true);
     try {
-      final _authProvider = context.read<AppAuthProvider>();
-      await _authProvider.refreshUserData();
+      final authProvider = context.read<AppAuthProvider>();
+      await authProvider.refreshUserData();
       if (!mounted) return;
       
-      if (_authProvider.user?.isApproved == true) {
+      if (authProvider.user?.isApproved == true) {
         _navigateToDashboard();
       } else {
         SnackbarHelper.showInfo(context, 'Still waiting for admin approval...');

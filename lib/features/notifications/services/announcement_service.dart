@@ -34,7 +34,7 @@ class AnnouncementService {
       // 3. Filter out read announcements
       return announcementsSnap.docs
           .where((eventId) => !readIds.contains(eventId.id))
-          .map((eventId) => {'id': eventId.id, ...(eventId.data() as Map<String, dynamic>)})
+          .map((eventId) => {'id': eventId.id, ...eventId.data()})
           .toList();
     } catch (e) {
       debugPrint('❌ Error fetching unread announcements: $e');
@@ -65,7 +65,7 @@ class AnnouncementService {
       final readIds = readSnap.docs.map((eventId) => eventId.id).toSet();
 
       return announcementsSnap.docs
-          .map((eventId) => {'id': eventId.id, 'isRead': readIds.contains(eventId.id), ...(eventId.data() as Map<String, dynamic>)})
+          .map((eventId) => {'id': eventId.id, 'isRead': readIds.contains(eventId.id), ...eventId.data()})
           .toList();
     } catch (e) {
       debugPrint('❌ Error fetching all announcements: $e');

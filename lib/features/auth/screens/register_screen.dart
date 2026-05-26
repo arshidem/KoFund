@@ -207,11 +207,11 @@ Future<void> _register() async {
   });
 
   try {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     // Clear any previous provider errors
-    _authProvider.clearError();
+    authProvider.clearError();
     
-    final success = await _authProvider.signUp(
+    final success = await authProvider.signUp(
       email: email,
       password: password,
       name: name,
@@ -240,18 +240,18 @@ Future<void> _register() async {
         ),
       );
     } else {
-      if (_authProvider.user != null && _authProvider.needsEmailVerification) {
+      if (authProvider.user != null && authProvider.needsEmailVerification) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => VerificationPendingScreen(
-              email: _authProvider.currentUserEmail ?? email,
+              email: authProvider.currentUserEmail ?? email,
               pendingInviteCode: widget.pendingInviteCode,
             ),
           ),
         );
       } else {
-        _showError(_authProvider.error ?? 'Registration failed. Please try again.');
+        _showError(authProvider.error ?? 'Registration failed. Please try again.');
       }
     }
   } catch (e) {
@@ -304,8 +304,8 @@ Future<void> _signInWithGoogle() async {
   });
 
   try {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final success = await _authProvider.signInWithGoogle();
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithGoogle();
 
     if (success && mounted) {
       _showSuccess('Welcome to KoFund!');
@@ -342,7 +342,7 @@ Future<void> _signInWithGoogle() async {
       }
     } else {
       // Check if it's a cancellation error
-      final providerError = _authProvider.error ?? '';
+      final providerError = authProvider.error ?? '';
       if (providerError.isNotEmpty && !_isCancellationError(providerError)) {
         _showError(providerError);
       }
@@ -757,8 +757,8 @@ Widget _buildTermsCheckbox() {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context);
-    final isLoading = _authProvider.isLoading || _isLoading;
+    final authProvider = Provider.of<AppAuthProvider>(context);
+    final isLoading = authProvider.isLoading || _isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),

@@ -694,7 +694,7 @@ void _onParticipantsChanged() {
     setState(() => _isLoading = true);
 
     try {
-      final _authProvider = context.read<AppAuthProvider>();
+      final authProvider = context.read<AppAuthProvider>();
       final eventProvider = context.read<EventProvider>();
 
       double? totalAmount;
@@ -715,7 +715,7 @@ void _onParticipantsChanged() {
 
       final event = EventModel(
         eventId: '',
-        communityId: _authProvider.user!.communityId!,
+        communityId: authProvider.user!.communityId!,
         title: _titleController.text,
         description: _descriptionController.text.trim(),
         eventDate: _isMonthlyPayment ? null : _selectedDate,
@@ -732,7 +732,7 @@ void _onParticipantsChanged() {
             : 9999,
         participantType: _participantType,
         status: 'active',
-        createdBy: _authProvider.user!.uid,
+        createdBy: authProvider.user!.uid,
         createdAt: Timestamp.now(),
         currentParticipants: 0,
         eventType: _eventType!,

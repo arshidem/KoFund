@@ -202,7 +202,7 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       _updateStatus('');
 
-      final _authProvider = Provider.of<app_auth.AppAuthProvider>(
+      final authProvider = Provider.of<app_auth.AppAuthProvider>(
         context,
         listen: false,
       );
@@ -214,14 +214,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // ⭐ WAIT for auth provider to be initialized
       debugPrint("⏳ Waiting for auth provider initialization...");
-      await _authProvider.waitForInitialization();
+      await authProvider.waitForInitialization();
       debugPrint("✅ Auth provider initialized");
 
       // ⭐ Ensure we wait at least for the 1-second shimmer to finish
       await splashTimer;
 
       // Now perform navigation
-      await _performInitialization(_authProvider);
+      await _performInitialization(authProvider);
     } catch (e) {
       debugPrint("❌ Splash initialization error: $e");
       if (mounted) _navigateToLogin();
@@ -233,25 +233,25 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _performInitialization(
-    app_auth.AppAuthProvider _authProvider,
+    app_auth.AppAuthProvider authProvider,
   ) async {
     // Artificial delay removed as it's handled by the splashTimer in _initializeAppWithTimeout
 
     debugPrint("=== SPLASH SCREEN INITIALIZATION ===");
     debugPrint("Auth Provider Status:");
-    debugPrint("  - isLoading: ${_authProvider.isLoading}");
-    debugPrint("  - isOfflineMode: ${_authProvider.isOfflineMode}");
-    debugPrint("  - user exists: ${_authProvider.user != null}");
+    debugPrint("  - isLoading: ${authProvider.isLoading}");
+    debugPrint("  - isOfflineMode: ${authProvider.isOfflineMode}");
+    debugPrint("  - user exists: ${authProvider.user != null}");
     debugPrint("  - pending invite code: $_pendingInviteCode");
 
     // Start notification system in BACKGROUND (non-blocking)
     unawaited(_initializeNotificationSystemInBackground());
 
     // Check if user can access app (online OR offline)
-    if (_authProvider.canAccessApp) {
-      final user = _authProvider.user;
+    if (authProvider.canAccessApp) {
+      final user = authProvider.user;
 
-      if (_authProvider.isOfflineMode) {
+      if (authProvider.isOfflineMode) {
         debugPrint("📱 OFFLINE MODE: Using cached data");
         _updateStatus('');
         await Future.delayed(const Duration(milliseconds: 300));

@@ -834,7 +834,7 @@ class AppAuthProvider with ChangeNotifier {
           context,
           listen: false,
         );
-        final _storageService = Provider.of<NotificationStorageService>(
+        final storageService = Provider.of<NotificationStorageService>(
           context,
           listen: false,
         );
@@ -844,7 +844,7 @@ class AppAuthProvider with ChangeNotifier {
         debugPrint("🔕 FCM token detached from user");
 
         // Cleanup notification storage
-        await _storageService.cleanupForUserLogout();
+        await storageService.cleanupForUserLogout();
         debugPrint("🗑️ Notification storage cleaned up");
       } catch (e) {
         debugPrint("⚠️ Notification service cleanup error: $e");

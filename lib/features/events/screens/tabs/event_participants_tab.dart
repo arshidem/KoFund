@@ -10,7 +10,6 @@ import '../../models/event_model.dart';
 import '../../providers/event_provider.dart';
 import '../../../participants/models/participant_model.dart';
 import '../../../auth/models/user_model.dart';
-import '../../../participants/providers/participant_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import 'package:kofund/core/services/user_service.dart';
@@ -87,10 +86,6 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void dispose() {
@@ -124,8 +119,8 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
   }
 
   bool _isAdmin(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = _authProvider.user;
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
     
     if (currentUser == null) return false;
     if (currentUser.uid == widget.event.createdBy) return true;
@@ -208,30 +203,21 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
           ),
         ),
 
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: StreamBuilder<List<ParticipantModel>>(
-            stream: _participantsStream,
-            builder: (context, snapshot) {
-              final participants = snapshot.data ?? [];
-              final filtered = _filterParticipants(participants);
-              return Visibility(
-                visible: isAdmin && filtered.isNotEmpty,
-                child: FloatingActionButton(
-                  onPressed: () => _navigateToAddParticipantScreen(context),
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                  ),
-                  child: const Icon(Icons.add),
-                ),
-              );
-            },
+        if (isAdmin)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () => _navigateToAddParticipantScreen(context),
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+              ),
+              child: const Icon(Icons.add),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1189,8 +1175,8 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
         ),
       );
       
-      final _userService = UserService();
-      final UserModel? member = await _userService.getUserById(participant.userId);
+      final userService = UserService();
+      final UserModel? member = await userService.getUserById(participant.userId);
       
       if (mounted) {
         Navigator.of(context).pop();
@@ -1251,7 +1237,7 @@ Future<void> _togglePaymentStatus(
     final isMonthlyy = widget.event.isMonthlyPayment;
     final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
     
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final contributionProvider = context.read<ContributionProvider>();
 
     if (suggestedAmount <= 0) {
@@ -1313,7 +1299,7 @@ Future<void> _togglePaymentStatus(
           amount: remaining,
           monthId: widget.selectedMonth,
           isMonthlyy: true,
-          authProvider: _authProvider,
+          authProvider: authProvider,
         );
       }
     } else {
@@ -1345,7 +1331,7 @@ Future<void> _togglePaymentStatus(
           amount: remaining,
           monthId: null,
           isMonthlyy: false,
-          authProvider: _authProvider,
+          authProvider: authProvider,
         );
       }
     }

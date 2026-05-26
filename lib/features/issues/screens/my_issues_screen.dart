@@ -43,11 +43,11 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
   }
 
   Future<void> _loadMyIssues() async {
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final issueProvider = context.read<IssueProvider>();
     
-    if (_authProvider.user != null) {
-      await issueProvider.loadMyIssues(_authProvider.user!.uid);
+    if (authProvider.user != null) {
+      await issueProvider.loadMyIssues(authProvider.user!.uid);
     }
   }
 
@@ -574,10 +574,10 @@ String _getTimeAgo(Timestamp timestamp) {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final issueProvider = context.watch<IssueProvider>();
     
-    if (_authProvider.user == null) {
+    if (authProvider.user == null) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Please log in to view your issues')),

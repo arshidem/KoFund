@@ -32,17 +32,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     
     if (!_formKey.currentState!.validate()) return;
 
-    final _authProvider = context.read<AppAuthProvider>();
-    _authProvider.clearError();
+    final authProvider = context.read<AppAuthProvider>();
+    authProvider.clearError();
     
-    final success = await _authProvider.sendPasswordResetEmail(_emailController.text.trim());
+    final success = await authProvider.sendPasswordResetEmail(_emailController.text.trim());
 
     if (success && mounted) {
       setState(() {
         _emailSent = true;
       });
-    } else if (mounted && _authProvider.error != null) {
-      final error = _authProvider.error!;
+    } else if (mounted && authProvider.error != null) {
+      final error = authProvider.error!;
       if (error.toLowerCase().contains('email') || error.toLowerCase().contains('user')) {
         setState(() {
           _emailError = error;
@@ -137,18 +137,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           
           // Reset Button
           Consumer<AppAuthProvider>(
-            builder: (context, _authProvider, child) {
+            builder: (context, authProvider, child) {
               return SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _authProvider.isLoading ? null : _submitResetRequest,
+                  onPressed: authProvider.isLoading ? null : _submitResetRequest,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                     ),
                   ),
-                  child: _authProvider.isLoading
+                  child: authProvider.isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,

@@ -274,7 +274,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
                   children: [
                     // Collection dropdown
                     DropdownButtonFormField<String>(
-                      value: _selectedCollection,
+                      initialValue: _selectedCollection,
                       decoration: InputDecoration(
                         labelText: 'Collection',
                         prefixIcon: const Icon(Icons.folder_rounded, size: 18),
@@ -429,9 +429,9 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
               const SizedBox(height: 8),
               // If a field is selected, show a focused list of that field's values
               if (_selectedField != null)
-                ..._queryResults.map((doc) => _buildFieldValueCard(context, doc)).toList()
+                ..._queryResults.map((doc) => _buildFieldValueCard(context, doc))
               else
-                ..._queryResults.map((doc) => _buildDocCard(context, doc)).toList(),
+                ..._queryResults.map((doc) => _buildDocCard(context, doc)),
             ],
 
             const SizedBox(height: 28),

@@ -31,11 +31,16 @@ class ParticipantProvider with ChangeNotifier {
       }
     }
 
-    _isLoading = true;
-    notifyListeners();
-    
     try {
-      _eventParticipants = await _participantService.getEventParticipants(eventId, communityId: communityId);
+      final effectiveCommunityId = communityId ?? '';
+      if (effectiveCommunityId.isEmpty) {
+        debugPrint('⚠️ ParticipantProvider: communityId is required for loading participants');
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      
+      _eventParticipants = await _participantService.getEventParticipants(eventId, communityId: effectiveCommunityId);
       _participantCache[eventId] = (data: _eventParticipants, timestamp: DateTime.now());
     } catch (e) {
       debugPrint('Error loading participants: $e');
@@ -50,7 +55,7 @@ class ParticipantProvider with ChangeNotifier {
     try {
       await _participantService.join(participant);
       _participantCache.remove(participant.eventId); // Invalidate cache
-      await loadEventParticipants(participant.eventId, forceRefresh: true);
+      await loadEventParticipants(participant.eventId, forceRefresh: true, communityId: participant.communityId);
     } catch (e) {
       rethrow;
     }
@@ -60,7 +65,7 @@ Future<void> addParticipant(ParticipantModel participant) async {
   try {
     await _participantService.addParticipant(participant);
     _participantCache.remove(participant.eventId); // Invalidate cache
-    await loadEventParticipants(participant.eventId, forceRefresh: true);
+    await loadEventParticipants(participant.eventId, forceRefresh: true, communityId: participant.communityId);
   } catch (e) {
     rethrow;
   }
@@ -97,8 +102,9 @@ ParticipantModel? getParticipantByUserId(String eventId, String userId) {
     }
   }
 
-  // ✅ Check if user joined (Cached)
   Future<bool> hasUserJoined(String eventId, String userId, {String? communityId}) async {
+    if (communityId == null || communityId.isEmpty) return false;
+    
     // 🚀 OPTIMIZATION: Check cache first
     if (_participantCache.containsKey(eventId)) {
       final cached = _participantCache[eventId]!;
@@ -110,7 +116,7 @@ ParticipantModel? getParticipantByUserId(String eventId, String userId) {
   }
 
   // ✅ Get participant count (Cached)
-  Future<int> getParticipantCount(String eventId, {String? communityId}) async {
+  Future<int> getParticipantCount(String eventId, {required String communityId}) async {
     // 🚀 OPTIMIZATION: Check cache first
     if (_participantCache.containsKey(eventId)) {
       final cached = _participantCache[eventId]!;

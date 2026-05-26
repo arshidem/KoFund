@@ -200,12 +200,30 @@ class ContributionService {
 
       final Map<String, Map<String, dynamic>> ataMap = {};
       if (ds.isNotEmpty) {
-        for (var i = 0; i < ds.length; i += 30) {
-          final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
-          final eventsQuery =
-              await _firestore.collection('events').where(FieldPath.documentId, whereIn: chunk).get();
-          for (var doc in eventsQuery.docs) {
-            ataMap[doc.id] = doc.data();
+        try {
+          for (var i = 0; i < ds.length; i += 30) {
+            final chunk = ds.sublist(i, (i + 30) > ds.length ? ds.length : (i + 30));
+            final eventsQuery = await _firestore
+                .collection('events')
+                .where('communityId', isEqualTo: communityId)
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
+            for (var doc in eventsQuery.docs) {
+              ataMap[doc.id] = doc.data();
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ ContributionService: Batch event query failed, trying individual doc gets: $e');
+          try {
+            final futures = ds.map((id) => _firestore.collection('events').doc(id).get());
+            final docs = await Future.wait(futures);
+            for (var doc in docs) {
+              if (doc.exists && doc.data() != null) {
+                ataMap[doc.id] = doc.data()!;
+              }
+            }
+          } catch (err) {
+            debugPrint('❌ ContributionService: Fallback individual event gets failed: $err');
           }
         }
       }
@@ -535,18 +553,44 @@ class ContributionService {
         }
       }
 
+      final Map<String, Map<String, dynamic>> ap = {};
       if (ds.isNotEmpty) {
-        final eventsSnapshot =
-            await _firestore.collection('events').where(FieldPath.documentId, whereIn: ds.toList()).get();
-
-        final ap = {
-          for (var doc in eventsSnapshot.docs)
-            doc.id: {
-              'title': doc.data()['title'] ?? 'Unknown event',
-              'eventType': doc.data()['eventType'] ?? 'general',
-              'suggestedContribution': (doc.data()['suggestedContribution'] ?? 0).toDouble(),
+        try {
+          final listDs = ds.toList();
+          for (var i = 0; i < listDs.length; i += 30) {
+            final chunk = listDs.sublist(i, (i + 30) > listDs.length ? listDs.length : (i + 30));
+            final eventsQuery = await _firestore
+                .collection('events')
+                .where('communityId', isEqualTo: communityId)
+                .where(FieldPath.documentId, whereIn: chunk)
+                .get();
+            for (var doc in eventsQuery.docs) {
+              ap[doc.id] = {
+                'title': doc.data()['title'] ?? 'Unknown event',
+                'eventType': doc.data()['eventType'] ?? 'general',
+                'suggestedContribution': (doc.data()['suggestedContribution'] ?? 0).toDouble(),
+              };
             }
-        };
+          }
+        } catch (e) {
+          debugPrint('⚠️ ContributionService: Batch event query failed in getUserPaymentHistoryWithDetails, trying individual doc gets: $e');
+          try {
+            final futures = ds.map((id) => _firestore.collection('events').doc(id).get());
+            final docs = await Future.wait(futures);
+            for (var doc in docs) {
+              if (doc.exists && doc.data() != null) {
+                final docData = doc.data()!;
+                ap[doc.id] = {
+                  'title': docData['title'] ?? 'Unknown event',
+                  'eventType': docData['eventType'] ?? 'general',
+                  'suggestedContribution': (docData['suggestedContribution'] ?? 0).toDouble(),
+                };
+              }
+            }
+          } catch (err) {
+            debugPrint('❌ ContributionService: Fallback individual event gets failed in getUserPaymentHistoryWithDetails: $err');
+          }
+        }
 
         for (var contribution in paymentHistory) {
           final eventId = contribution['eventId'];

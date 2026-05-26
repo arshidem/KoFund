@@ -107,22 +107,20 @@ class _AllEventsScreenState extends State<AllEventsScreen> {
     );
   }
 
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ✅ Reactive Loading: If auth data arrives late or changed, trigger load
-    final _authProvider = Provider.of<AppAuthProvider>(context);
+    // Defer loading events until after the current build cycle to avoid setState during build
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     final eventProvider = Provider.of<EventProvider>(context, listen: false);
-    
-    final communityId = _authProvider.user?.communityId;
-    
-    if (communityId != null && 
-        !_initialLoadAttempted && 
-        !eventProvider.isLoading) {
-      // debugPrint('🚀 DEBUG: Initial events load triggered in AllEventsScreen');
+    final communityId = authProvider.user?.communityId;
+    if (communityId != null && !_initialLoadAttempted && !eventProvider.isLoading) {
       _initialLoadAttempted = true;
-      _loadEvents();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadEvents();
+        }
+      });
     }
   }
 
@@ -130,17 +128,17 @@ class _AllEventsScreenState extends State<AllEventsScreen> {
     // Ensure we don't call this if the widget is not mounted or in a precarious state
     if (!mounted) return;
     
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final eventProvider = context.read<EventProvider>();
     
-    final communityId = _authProvider.user?.communityId;
+    final communityId = authProvider.user?.communityId;
     if (communityId != null) {
       // debugPrint('📥 Loading events for community: $communityId (forceRefresh: true)');
       await eventProvider.loadEvents(communityId, forceRefresh: true);
       
       if (mounted) {
         await eventProvider.loadMyParticipations(
-          _authProvider.user!.uid, 
+          authProvider.user!.uid, 
           communityId,
         );
         
@@ -1172,14 +1170,14 @@ Widget _builCard(
   Future<void> _join(
       EventModel event,
       EventProvider eventProvider,
-      AppAuthProvider _authProvider) async {
+      AppAuthProvider authProvider) async {
     try {
       await eventProvider.join(
         event,
-        _authProvider.user!.uid,
-        _authProvider.user!.displayName ?? 'Member',
-        _authProvider.user!.email,
-        _authProvider.user!.communityId!,
+        authProvider.user!.uid,
+        authProvider.user!.displayName ?? 'Member',
+        authProvider.user!.email,
+        authProvider.user!.communityId!,
       );
       SnackbarHelper.showSuccess(context, 'Joined ${event.title}');
     } catch (e) {
@@ -1190,7 +1188,7 @@ Widget _builCard(
   Future<void> _leave(
       EventModel event,
       EventProvider eventProvider,
-      AppAuthProvider _authProvider) async {
+      AppAuthProvider authProvider) async {
     final confirm = await DialogHelper.showConfirmationDialog(
       context,
       title: 'Leave event?',
@@ -1201,7 +1199,7 @@ Widget _builCard(
 
     if (confirm == true) {
       try {
-        await eventProvider.leave(event.eventId, _authProvider.user!.uid);
+        await eventProvider.leave(event.eventId, authProvider.user!.uid);
         if (!mounted) return;
         SnackbarHelper.showInfo(context, 'Left ${event.title}');
       } catch (e) {

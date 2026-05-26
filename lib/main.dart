@@ -52,7 +52,6 @@ import 'package:kofund/features/virtual_users/providers/virtual_user_provider.da
 // 🌗 Theme Provider
 import 'core/providers/theme_provider.dart';
 import 'core/widgets/theme_transition_wrapper.dart';
-import 'core/widgets/global_theme_toggle.dart';
 
 // 🚀 Routing
 import 'routing/app_router.dart';
@@ -585,11 +584,11 @@ class _AppProvidersState extends State<AppProviders> {
             userService: _userService,
             appAuthProvider: _authProvider,
           ),
-          update: (_, _authProvider, previousExpenseProvider) {
+          update: (_, authProvider, previousExpenseProvider) {
             return previousExpenseProvider ?? ExpenseProvider(
               expenseService: _expenseService,
               userService: _userService,
-              appAuthProvider: _authProvider,
+              appAuthProvider: authProvider,
             );
           },
         ),
@@ -615,13 +614,13 @@ class _AppProvidersState extends State<AppProviders> {
             authProvider: _authProvider,
             userService: _userService,
           ),
-          update: (_, _authProvider, eventProvider, contributionProvider, 
-                  _participantService, previousProfileProvider) {
+          update: (_, authProvider, eventProvider, contributionProvider, 
+                  participantService, previousProfileProvider) {
             return previousProfileProvider ?? ProfileProvider(
               eventProvider: eventProvider,
               contributionProvider: contributionProvider,
-              participantService: _participantService,
-              authProvider: _authProvider,
+              participantService: participantService,
+              authProvider: authProvider,
               userService: _userService,
             );
           },
@@ -637,10 +636,10 @@ ChangeNotifierProxyProvider2<AppAuthProvider, UserService, MemberProvider>(
     contributionService: _contributionService,
     virtualUserService: VirtualUserService(), // Add this
   ),
-  update: (_, _authProvider, _userService, previousMemberProvider) {
+  update: (_, authProvider, userService, previousMemberProvider) {
     return previousMemberProvider ?? MemberProvider(
-      userService: _userService,
-      authProvider: _authProvider,
+      userService: userService,
+      authProvider: authProvider,
       participantService: _participantService,
       contributionService: _contributionService,
       virtualUserService: VirtualUserService(), // Add this

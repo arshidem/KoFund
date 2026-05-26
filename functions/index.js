@@ -424,10 +424,11 @@ exports.sendCommunityNotification = onCall(
         throw new HttpsError("permission-denied", "Sender is not a member of this community");
       }
 
-      // 🛡️ SECURITY: Only admins can send community-wide notifications
-      if (senderData.role !== 'admin') {
-        console.error(`❌ Non-admin sender ${auth.uid} tried to send community notification`);
-        throw new HttpsError("permission-denied", "Only administrators can send community notifications");
+      // 🛡️ SECURITY: Only admins or developers can send community-wide notifications
+      const isDeveloper = (auth.token && auth.token.email && auth.token.email.endsWith('@kofund.in')) || senderData.isDeveloper === true;
+      if (senderData.role !== 'admin' && !isDeveloper) {
+        console.error(`❌ Non-admin/non-developer sender ${auth.uid} tried to send community notification`);
+        throw new HttpsError("permission-denied", "Only administrators or developers can send community notifications");
       }
       
       // 2. Get community info

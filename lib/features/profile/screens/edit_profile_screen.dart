@@ -47,7 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
 
     try {
       // ✅ Show loading in ProfileScreen via callback
@@ -75,7 +75,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
       // Refresh auth data in background
-      await _authProvider.refreshUserData();
+      await authProvider.refreshUserData();
       if (!mounted) return;
 
       // ✅ SHOW SUCCESS AFTER UPDATE COMPLETES

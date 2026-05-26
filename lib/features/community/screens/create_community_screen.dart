@@ -111,20 +111,20 @@ Future<void> _createCommunity() async {
   });
 
   try {
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     final communityProvider = context.read<CommunityProvider>();
 
-    if (_authProvider.user == null) {
+    if (authProvider.user == null) {
       SnackbarHelper.showError(context, 'User not authenticated');
       return;
     }
 
-    final String adminName = _authProvider.getUserDisplayName;
+    final String adminName = authProvider.getUserDisplayName;
 
     final success = await communityProvider.createCommunity(
       name: _nameController.text.trim(),
-      adminId: _authProvider.user!.uid,
-      adminEmail: _authProvider.user!.email,
+      adminId: authProvider.user!.uid,
+      adminEmail: authProvider.user!.email,
       adminName: adminName,
       type: _selectedType!,
       description: _descriptionController.text.trim().isNotEmpty 
@@ -136,12 +136,12 @@ Future<void> _createCommunity() async {
     if (success && communityProvider.currentCommunity != null) {
       final community = communityProvider.currentCommunity!;
       
-      await _authProvider.setUserAsCommunityAdmin(
+      await authProvider.setUserAsCommunityAdmin(
         communityId: community.communityId,
         communityName: community.name,
       );
 
-      await _authProvider.refreshUserData();
+      await authProvider.refreshUserData();
       if (!mounted) return;
 
       if (mounted) {
@@ -268,50 +268,60 @@ Widget _buildCommunityTeventTypeDropdown() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 8),
-        child: Text(
-          'Community Category *',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: _TypeError != null ? Colors.red : AppColors.textPrimary(context),
+      InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Community Category *',
+          labelStyle: TextStyle(
+            color: AppColors.textSecondary(context),
             fontSize: 14,
-            letterSpacing: 0.5,
+          ),
+          floatingLabelStyle: TextStyle(
+            color: AppColors.primary(context),
+            fontWeight: FontWeight.w600,
+          ),
+          prefixIcon: Icon(
+            Icons.category,
+            color: AppColors.primary(context),
+            size: 20,
+          ),
+          filled: true,
+          fillColor: AppColors.surface(context),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 4,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: BorderSide(color: AppColors.border(context)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: BorderSide(color: AppColors.border(context)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+            borderSide: BorderSide(
+              color: AppColors.primary(context),
+              width: 2,
+            ),
+          ),
+          errorText: _TypeError,
+          errorStyle: const TextStyle(
+            fontSize: 12,
+            height: 1.2,
           ),
         ),
-      ),
-      Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          border: Border.all(
-            color: _TypeError != null 
-                ? Colors.red.withValues(alpha: 0.8) 
-                : AppColors.border(context),
-            width: _TypeError != null ? 1.5 : 1,
-          ),
-          color: AppColors.surface(context),
-        ),
+        isEmpty: _selectedType == null,
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String?>(
             value: _selectedType,
             isExpanded: true,
             icon: Icon(
               Icons.arrow_drop_down_rounded,
-              color: _TypeError != null 
-                  ? Colors.red 
-                  : AppColors.primary(context),
+              color: AppColors.primary(context),
             ),
             dropdownColor: AppColors.card(context),
-            borderRadius: BorderRadius.circular(24),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            hint: Text(
-              'Select community type',
-              style: TextStyle(
-                color: AppColors.textTertiary(context),
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
             items: CommunityType.allTypes.map((type) {
               return DropdownMenuItem<String?>(
                 value: type,
@@ -327,7 +337,7 @@ Widget _buildCommunityTeventTypeDropdown() {
                       type,
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -344,20 +354,6 @@ Widget _buildCommunityTeventTypeDropdown() {
           ),
         ),
       ),
-      if (_TypeError != null)
-        Padding(
-          padding: const EdgeInsets.only(left: 6, top: 8),
-          child: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                _TypeError!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
       const SizedBox(height: 16),
     ],
   );
@@ -366,10 +362,9 @@ Widget _buildCommunityTeventTypeDropdown() {
 Widget build(BuildContext context) {
   return GradientSheetScaffold(
     title: 'Create Community',
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SingleChildScrollView(
           child: Column(
             children: [
               // ✅ Logo Header (similar to LoginScreen)
@@ -404,14 +399,6 @@ Widget build(BuildContext context) {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Create Community',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary(context),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -427,28 +414,21 @@ Widget build(BuildContext context) {
               ),
               const SizedBox(height: 24),
 
-              Form(
+                Form(
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 key: _formKey,
                 child: Column(
                   children: [
                     // Rest of your form fields remain exactly the same...
 // Community Name - Clear with hint
-_buildInputField(
-  controller: _nameController,
-  label: 'Community Name',
-  icon: Icons.group,
-  hint: 'e.g., Tech Enthusiasts Club, Fitness Group',
-  isRequired: true,
-  validator: (value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a community name';
-    }
-    if (value.length < 3) {
-      return 'Name must be at least 3 characters';
-    }
-    return null;
-  },
-),
+ _buildInputField(
+   controller: _nameController,
+   label: 'Community Name',
+   icon: Icons.group,
+   hint: 'e.g., Tech Enthusiasts Club, Fitness Group',
+   isRequired: true,
+ ),
+                      const SizedBox(height: 16),
                       _buildCommunityTeventTypeDropdown(),
 
 // Description - Detailed hint
@@ -480,83 +460,7 @@ _buildInputField(
     return null;
   },
 ),
-
-                      const SizedBox(height: 16),
-
-                      // Info Card
-Container(
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-
-    // ✅ Same soft gradient pattern
-    gradient: LinearGradient(
-      colors: [
-        Colors.blue.withValues(alpha: 0.15),
-        Colors.blue.withValues(alpha: 0.05),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-
-    // ✅ Same border style
-    border: Border.all(
-      color: Colors.blue.withValues(alpha: 0.25),
-    ),
-
-    // ✅ Same soft shadow
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.06),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  ),
-  child: Padding(
-    padding: const EdgeInsets.all(18),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.info_outline_rounded,
-          color: Colors.blue.shade700,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Community Features',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.blue.shade800,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '• Auto-generated unique invite code\n'
-                '• You become the community admin\n'
-                '• Invite members with the generated code\n'
-                '• Manage events and members\n'
-                '• Choose from ${CommunityType.allTypes.length} community Types',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.blue.shade800,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
 // Replace your StreamBuilder with this:
 FutureBuilder<bool>(
@@ -697,6 +601,80 @@ FutureBuilder<bool>(
 ),
 
 
+                      const SizedBox(height: 24),
+
+                      // Info Card
+Container(
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+
+    // ✅ Same soft gradient pattern
+    gradient: LinearGradient(
+      colors: [
+        Colors.blue.withValues(alpha: 0.15),
+        Colors.blue.withValues(alpha: 0.05),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+
+    // ✅ Same border style
+    border: Border.all(
+      color: Colors.blue.withValues(alpha: 0.25),
+    ),
+
+    // ✅ Same soft shadow
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.06),
+        blurRadius: 12,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: Padding(
+    padding: const EdgeInsets.all(18),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline_rounded,
+          color: Colors.blue.shade700,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Community Features',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.blue.shade800,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '• Auto-generated unique invite code\n'
+                '• You become the community admin\n'
+                '• Invite members with the generated code\n'
+                '• Manage events and members\n'
+                '• Choose from ${CommunityType.allTypes.length} community Types',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue.shade800,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -705,8 +683,7 @@ FutureBuilder<bool>(
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

@@ -33,6 +33,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   late PageController _pageController;
 
   void _navigateToEvents() {
+    HapticFeedback.selectionClick();
     _pageController.animateToPage(
       1,
       duration: const Duration(milliseconds: 300),
@@ -41,6 +42,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   }
 
   void _navigateToMembers() {
+    HapticFeedback.selectionClick();
     _pageController.animateToPage(
       2,
       duration: const Duration(milliseconds: 300),
@@ -49,16 +51,16 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   }
 
   List<Widget> get _tabs => [
-    DashboardTab(onNavigateToMembers: _navigateToMembers, onNavigateToEvents: _navigateToEvents),
-    const eventsTab(),
-    const MembersTab(),
-    const ProfileTab(),
+    DashboardTab(key: const PageStorageKey('dashboard'), onNavigateToMembers: _navigateToMembers, onNavigateToEvents: _navigateToEvents),
+    const EventsTab(key: PageStorageKey('events')),
+    const MembersTab(key: PageStorageKey('members')),
+    const ProfileTab(key: PageStorageKey('profile')),
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _currentIndex);
+    _pageController = PageController();
     _checkAuthStatus();
   }
 
@@ -81,7 +83,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // 🧩 1️⃣ Show Skeleton while checking auth status
@@ -90,7 +92,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 2️⃣ If the user is logged out
-    if (_authProvider.user == null) {
+    if (authProvider.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -104,8 +106,8 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 3️⃣ If the user hasn't joined a community
-    if (_authProvider.user?.communityId == null || 
-        _authProvider.user!.communityId!.isEmpty) {
+    if (authProvider.user?.communityId == null || 
+        authProvider.user!.communityId!.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushReplacementNamed(
@@ -118,7 +120,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     }
 
     // 🧩 4️⃣ If user is not yet approved
-    if (_authProvider.user?.isApproved == false) {
+    if (authProvider.user?.isApproved == false) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushReplacementNamed(
@@ -165,8 +167,10 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
               child: PageView(
                 controller: _pageController,
                 onPageChanged: (index) {
+                  HapticFeedback.selectionClick();
                   setState(() {
                     _currentIndex = index;
+                    _forceMembersBackButton = false;
                   });
                 },
                 children: _tabs,
@@ -182,13 +186,13 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
             ),
           ],
         ),
-        bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, _authProvider),
+        bottomNavigationBar: _buildBottomNavigationBar(isDarkMode, authProvider),
       ),
     );
   }
 
   // Bottom Navigation Bar (unchanged)
-  Widget _buildBottomNavigationBar(bool isDarkMode, AppAuthProvider _authProvider) {
+  Widget _buildBottomNavigationBar(bool isDarkMode, AppAuthProvider authProvider) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -202,14 +206,16 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          HapticFeedback.selectionClick();
           setState(() {
             _forceMembersBackButton = false;
+            _currentIndex = index;
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
           });
-          _pageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
@@ -240,7 +246,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
             icon: Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 final pendingCount = userProvider.pendingMembers.length;
-                final isAdmin = _authProvider.user?.isAdmin ?? false;
+                final isAdmin = authProvider.user?.isAdmin ?? false;
                 
                 if (isAdmin && pendingCount > 0) {
                   return Badge(
@@ -255,7 +261,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
             activeIcon: Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 final pendingCount = userProvider.pendingMembers.length;
-                final isAdmin = _authProvider.user?.isAdmin ?? false;
+                final isAdmin = authProvider.user?.isAdmin ?? false;
                 
                 if (isAdmin && pendingCount > 0) {
                   return Badge(
@@ -279,8 +285,6 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     );
   }
 }
-
-
 
 
 

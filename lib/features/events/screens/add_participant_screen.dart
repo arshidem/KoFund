@@ -56,7 +56,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       final allMembers = memberProvider.members;
       
       final participantProvider = context.read<ParticipantProvider>();
-      await participantProvider.loadEventParticipants(widget.event.eventId);
+      await participantProvider.loadEventParticipants(widget.event.eventId, communityId: widget.event.communityId);
       final participants = participantProvider.participants;
       
       if (mounted) {
@@ -77,20 +77,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
     }
   }
 
-  List<UserModel> get _nonParticipants {
-    final currentParticipantIds = _participantsNotifier.value.map((p) => p.userId).toSet();
-    return _allCommunityUsers.where((user) => !currentParticipantIds.contains(user.uid)).toList();
-  }
 
-  List<UserModel> get _filteredNonParticipants {
-    if (_searchQuery.isEmpty) return _nonParticipants;
-    return _nonParticipants.where((user) {
-      final name = user.displayName?.toLowerCase() ?? '';
-      final email = user.email.toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return name.contains(query) || email.contains(query);
-    }).toList();
-  }
 
   Future<void> _addParticipant(String userId, String userName, String userEmail) async {
     if (_addingParticipants.contains(userId)) return;
@@ -183,7 +170,7 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       developer.log('❌ AddParticipantScreen Error removing participant: $e', error: e, stackTrace: stackTrace);
       if (mounted) {
         // Revert UI update on failure
-        _participantsNotifier.value = [..._participantsNotifier.value, participantToRemove!];
+        _participantsNotifier.value = [..._participantsNotifier.value, participantToRemove];
         SnackbarHelper.showError(context, 'Failed to remove participant: $e');
       }
     }
@@ -479,7 +466,9 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                 valueListenable: _participantsNotifier,
                 builder: (context, participants, _) {
                   final filteredParticipants = participants.where((p) {
-                    return p.userName.toLowerCase().contains(localSearchQuery) || p.userEmail.toLowerCase().contains(localSearchQuery);
+                    final isJoined = p.status == 'joined' || p.status == 'active';
+                    final matchesSearch = p.userName.toLowerCase().contains(localSearchQuery) || p.userEmail.toLowerCase().contains(localSearchQuery);
+                    return isJoined && matchesSearch;
                   }).toList();
 
                   return Container(
@@ -614,33 +603,35 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
                         ),
                       ],
                     ),
-                    if (currentParticipants.isNotEmpty)
-                      Positioned(
-                        left: 16, right: 16, bottom: 24,
-                        child: GestureDetector(
-                          onTap: _showCurrentParticipantsSheet,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary(context), borderRadius: BorderRadius.circular(30),
-                              boxShadow: [BoxShadow(color: AppColors.primary(context).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.group, color: Colors.white, size: 20),
-                                    const SizedBox(width: 12),
-                                    Text('${currentParticipants.length} Participants Added', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                                  ],
-                                ),
-                                const Text('View', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.normal, fontSize: 13)),
-                              ],
-                            ),
+                    Positioned(
+                      left: 16, right: 16, bottom: 24,
+                      child: GestureDetector(
+                        onTap: _showCurrentParticipantsSheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary(context), borderRadius: BorderRadius.circular(30),
+                            boxShadow: [BoxShadow(color: AppColors.primary(context).withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.group, color: Colors.white, size: 20),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${currentParticipants.where((p) => p.status == 'joined' || p.status == 'active').length} Participants Added',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                ],
+                              ),
+                              const Text('View', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.normal, fontSize: 13)),
+                            ],
                           ),
                         ),
                       ),
+                    ),
                   ],
                 );
               },
@@ -650,15 +641,23 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
 
   // Helper to filter non-participants given current list
   List<UserModel> _getFilteredNonParticipants(List<ParticipantModel> currentParticipants) {
-    final currentParticipantIds = currentParticipants.map((p) => p.userId).toSet();
-    final nonParticipants = _allCommunityUsers.where((user) => !currentParticipantIds.contains(user.uid)).toList();
+    // Collect IDs of participants who have already joined
+    final joinedParticipantIds = currentParticipants
+        .where((p) => p.status == 'joined' || p.status == 'active')
+        .map((p) => p.userId)
+        .toSet();
+        
+    // Filter available members to exclude those who have already joined
+    final nonParticipants = _allCommunityUsers.where((user) {
+      return !joinedParticipantIds.contains(user.uid);
+    }).toList();
     
     if (_searchQuery.isEmpty) return nonParticipants;
     
+    final query = _searchQuery.toLowerCase();
     return nonParticipants.where((user) {
       final name = user.displayName?.toLowerCase() ?? '';
       final email = user.email.toLowerCase();
-      final query = _searchQuery.toLowerCase();
       return name.contains(query) || email.contains(query);
     }).toList();
   }

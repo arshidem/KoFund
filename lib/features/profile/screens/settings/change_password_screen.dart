@@ -36,8 +36,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _changePassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final _authProvider = context.read<AppAuthProvider>();
-    final success = await _authProvider.changePassword(
+    final authProvider = context.read<AppAuthProvider>();
+    final success = await authProvider.changePassword(
       currentPassword: _currentPasswordController.text.trim(),
       newPassword: _newPasswordController.text.trim(),
     );
@@ -81,8 +81,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       actions: [
         if (!_passwordChanged)
           Consumer<AppAuthProvider>(
-            builder: (context, _authProvider, child) {
-              return _authProvider.isLoading
+            builder: (context, authProvider, child) {
+              return authProvider.isLoading
                   ? Padding(
                       padding: const EdgeInsets.only(right: 16),
                       child: SizedBox(
@@ -125,9 +125,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Widget _buildFormUI() {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
 
-    if (_authProvider.isGoogleOnlyUser) {
+    if (authProvider.isGoogleOnlyUser) {
       return _buildGoogleAuthMessage();
     }
 
@@ -261,10 +261,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             const SizedBox(height: 32),
             
             Consumer<AppAuthProvider>(
-              builder: (context, _authProvider, child) {
+              builder: (context, authProvider, child) {
                 return Column(
                   children: [
-                    if (_authProvider.error != null) ...[
+                    if (authProvider.error != null) ...[
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -279,7 +279,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _authProvider.error!,
+                                authProvider.error!,
                                 style: TextStyle(
                                   color: AppColors.error(context),
                                   fontSize: 13,

@@ -380,7 +380,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
       child: const Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               'Sending global notifications can disturb all users. Use only for critical announcements.',

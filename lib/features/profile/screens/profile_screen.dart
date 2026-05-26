@@ -53,8 +53,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   void _checkUserAndLoadData() {
-    final _authProvider = context.read<AppAuthProvider>();
-    final currentUserId = _authProvider.user?.uid;
+    final authProvider = context.read<AppAuthProvider>();
+    final currentUserId = authProvider.user?.uid;
     
     if (currentUserId != null && currentUserId != _lastLoadedUserId) {
       debugPrint('🔄 User changed from $_lastLoadedUserId to $currentUserId');
@@ -71,9 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     
     try {
       final profileProvider = context.read<ProfileProvider>();
-      final _authProvider = context.read<AppAuthProvider>();
+      final authProvider = context.read<AppAuthProvider>();
       
-      final currentUser = _authProvider.user;
+      final currentUser = authProvider.user;
       if (currentUser == null) {
         debugPrint('❌ No user logged in');
         return;
@@ -210,21 +210,21 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final profileProvider = context.watch<ProfileProvider>();
 
     // No back button needed in profile screen main view
     final bool showBackButton = false;
 
    // With this:
-if (_isInitialLoad || _authProvider.user == null) {
+if (_isInitialLoad || authProvider.user == null) {
   return ProfileScreenSkeleton(
     isDarkMode: Theme.of(context).brightness == Brightness.dark,
     showBackButton: showBackButton,
   );
 }
 
-    final user = _authProvider.user!;
+    final user = authProvider.user!;
     
     // TEMPORARY FIX: Show loading only if we're actively loading
     // Remove the profileProvider.isDataForCurrentUser check for now

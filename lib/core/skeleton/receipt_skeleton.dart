@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:kofund/core/constants/app_colors.dart';
 
 class ReceiptSkeleton extends StatelessWidget {
   const ReceiptSkeleton({super.key});

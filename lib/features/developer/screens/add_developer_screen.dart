@@ -95,7 +95,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
         for (var doc in snapshot.docs) {
           if (seenUids.contains(doc.id)) continue;
           
-          final data = doc.data() as Map<String, dynamic>;
+          final data = doc.data();
           final name = (data['displayName'] ?? data['name'] ?? '').toString().toLowerCase();
           final email = (data['email'] ?? '').toString().toLowerCase();
           final phone = (data['phoneNumber'] ?? '').toString().toLowerCase();
@@ -283,9 +283,9 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     
-    if (!_authProvider.isDeveloper) {
+    if (!authProvider.isDeveloper) {
       return const Scaffold(
         body: Center(child: Text('Access denied')),
       );
@@ -384,7 +384,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
                             value: _selectedUser!['isDeveloper'] == true,
                             onChanged: (value) => 
                                 _makeDeveloper(_selectedUser!['uid'], value),
-                            activeColor: AppColors.primary(context),
+                            activeThumbColor: AppColors.primary(context),
                           ),
                         ),
                       ),

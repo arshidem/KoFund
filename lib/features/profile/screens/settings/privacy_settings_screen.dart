@@ -28,8 +28,8 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   }
 
   void _loadCurrentSettings() {
-    final _authProvider = context.read<AppAuthProvider>();
-    final user = _authProvider.user;
+    final authProvider = context.read<AppAuthProvider>();
+    final user = authProvider.user;
     
     if (user != null) {
       setState(() {
@@ -41,7 +41,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   Future<void> _updatePrivacySetting(bool newValue) async {
     final profileProvider = context.read<ProfileProvider>();
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
 
     try {
       final success = await profileProvider.updatePrivacySettings(newValue);
@@ -53,7 +53,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
         SnackbarHelper.showSuccess(context, 'Privacy settings updated!');
 
         // Refresh the user data in AppAuthProvider using the captured provider
-        await _authProvider.refreshUserData();
+        await authProvider.refreshUserData();
         if (!mounted) return;
       } else {
         SnackbarHelper.showError(context, profileProvider.error ?? 'Failed to update privacy settings');
@@ -68,9 +68,9 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     final profileProvider = context.watch<ProfileProvider>();
-    final user = _authProvider.user;
+    final user = authProvider.user;
 
     if (user == null || !_initialized) {
       return GradientSheetScaffold(

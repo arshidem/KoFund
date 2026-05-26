@@ -17,10 +17,8 @@ import '../../../../features/events/widgets/add_contribution_modal.dart';
 import 'package:kofund/features/contributions/screens/edit_contribution_screen.dart';
 import 'package:kofund/features/events/utils/contribution_receipt_image.dart';
 import 'package:kofund/core/skeleton/history_list_skeleton.dart';
-import '../../../../core/skeleton/receipt_skeleton.dart';
 import '../../../participants/providers/participant_provider.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
-import 'package:kofund/features/contributions/screens/event_deleted_contributions_screen.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 class EventContributionsTab extends StatefulWidget {
   final EventModel event;
@@ -135,8 +133,8 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
 
   // ✅ Check if current user is admin
   bool _isAdmin(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = _authProvider.user;
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
     
     if (currentUser == null) return false;
     
@@ -160,16 +158,16 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
 
   // Check if current user is the contributor
   bool _isContributor(ContributionModel contribution, BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final currentUser = _authProvider.user;
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final currentUser = authProvider.user;
     return currentUser?.uid == contribution.userId;
   }
 
   // Get user name for display
   Future<String> _getUserName(String userId, BuildContext context) async {
     try {
-      final _userService = UserService();
-      final user = await _userService.getUserById(userId);
+      final userService = UserService();
+      final user = await userService.getUserById(userId);
       
       if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
         return user.displayName!;
@@ -275,7 +273,7 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 0),
-                      child: _buildContributionSummary(context),
+                      child: _buildContributionSummary(context, allContributions),
                     ),
                   ),
 
@@ -363,7 +361,11 @@ class _ContributionsTabState extends State<EventContributionsTab> with Automatic
 }
 
 
-Widget _buildContributionSummary(BuildContext context) {
+Widget _buildContributionSummary(BuildContext context, List<ContributionModel> allContributions) {
+  // 🚀 INSTANT CALCULATION: Sum up amounts from the live list we already have
+  final double liveTotalCollected = allContributions.fold(0.0, (sum, c) => sum + c.amount);
+  final int liveTotalContributionsCount = allContributions.length;
+
   return StreamBuilder<Map<String, dynamic>>(
     key: ValueKey(
       'contribution-summary-${widget.event.eventId}',
@@ -375,19 +377,16 @@ Widget _buildContributionSummary(BuildContext context) {
         _cachedStats = snapshot.data;
       }
       
-      // Show shimmer only on first load with no cache
-      if ((snapshot.connectionState == ConnectionState.waiting || snapshot.hasError) && _cachedStats == null) {
-        return _buildShimmerContributionStats(context);
-      }
-
-      // ALWAYS prefer cached data — never fall through to zero defaults
+      // Use cached/snapshot data BUT OVERRIDE with instant live values for key stats
+      // if they are available from the outer list.
       final data = _cachedStats ?? snapshot.data ?? {
         'totalCollected': 0.0,
         'totalContributions': 0,
       };
 
-      final double totalCollected = data['totalCollected'] ?? 0.0;
-      final int totalContributions = data['totalContributions'] ?? 0;
+      // 🚀 Prefer live values for instant updates
+      final double totalCollected = liveTotalCollected;
+      final int totalContributions = liveTotalContributionsCount;
 
       // ✅ FIX: Get participant count from provider
       final participantProvider = Provider.of<ParticipantProvider>(context, listen: false);
@@ -1087,8 +1086,8 @@ void _navigateToDeletedContributions(BuildContext context) {
             child: Row(
               children: [
                 Icon(Icons.info_outline, size: 18),
-                const SizedBox(width: 8),
-                const Text('View Details'),
+                SizedBox(width: 8),
+                Text('View Details'),
               ],
             ),
           ),
@@ -1102,8 +1101,8 @@ void _navigateToDeletedContributions(BuildContext context) {
               child: Row(
                 children: [
                   Icon(Icons.edit_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Edit'),
+                  SizedBox(width: 8),
+                  Text('Edit'),
                 ],
               ),
             ),
@@ -1118,8 +1117,8 @@ void _navigateToDeletedContributions(BuildContext context) {
               child: Row(
                 children: [
                   Icon(Icons.receipt_long_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Get Receipt'),
+                  SizedBox(width: 8),
+                  Text('Get Receipt'),
                 ],
               ),
             ),
@@ -1137,8 +1136,8 @@ void _navigateToDeletedContributions(BuildContext context) {
               child: Row(
                 children: [
                   Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                  const SizedBox(width: 8),
-                  const Text('Delete', style: TextStyle(color: Colors.red)),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
                 ],
               ),
             ),

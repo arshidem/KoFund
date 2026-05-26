@@ -41,10 +41,10 @@ Future<void> _submitIssue() async {
   if (!_formKey.currentState!.validate()) return;
 
   final issueProvider = Provider.of<IssueProvider>(context, listen: false);
-  final _authProvider = Provider.of<AppAuthProvider>(context, listen: false); // Add this
+  final authProvider = Provider.of<AppAuthProvider>(context, listen: false); // Add this
 
   // Check if user is logged in
-  if (_authProvider.user == null) {
+  if (authProvider.user == null) {
     SnackbarHelper.showError(context, 'Please log in to report an issue');
     return;
   }
@@ -58,7 +58,7 @@ Future<void> _submitIssue() async {
           ? _stepsController.text 
           : null,
       screenshotUrl: _includeScreenshot ? 'todo://upload-screenshot' : null,
-      userId: _authProvider.user!.uid, // Add this line
+      userId: authProvider.user!.uid, // Add this line
     );
 
     // Show success dialog

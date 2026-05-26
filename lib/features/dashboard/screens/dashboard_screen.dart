@@ -28,7 +28,6 @@ import 'package:kofund/core/services/user_service.dart';
 import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/core/services/participant_service.dart';
 import 'package:kofund/core/services/community_firestore_service.dart';
-import 'dart:ui' as dart_ui;
 import 'package:kofund/features/community/providers/community_provider.dart';
 import 'package:kofund/features/dashboard/widgets/invite_members_dialog.dart';
 import 'package:kofund/core/skeleton/members_skeleton.dart';
@@ -44,7 +43,6 @@ import 'package:kofund/features/notifications/widgets/announcement_bottom_sheet.
 import 'package:kofund/features/notifications/widgets/announcement_on_open_modal.dart';
 import 'package:kofund/features/notifications/widgets/app_update_dialog.dart';
 import 'package:kofund/core/services/app_update_service.dart';
-import 'package:kofund/features/notifications/services/announcement_service.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 
 // 🆕 ADD INVITE IMPORTS
@@ -296,8 +294,8 @@ void _initializeWidgetProviders(String userId, String communityId) {
   // 🆕 Load invite information
   Future<void> _loadInviteInfo(String communityId) async {
     try {
-      final _authProvider = context.read<AppAuthProvider>();
-      final user = _authProvider.user;
+      final authProvider = context.read<AppAuthProvider>();
+      final user = authProvider.user;
       final userProvider = context.read<UserProvider>();
       final communityProvider = context.read<CommunityProvider>();
       
@@ -709,20 +707,20 @@ void _initializeWidgetProviders(String userId, String communityId) {
                   
                   if (showSkeleton) ...[
                     StatsCardSkeleton(isDarkMode: isDarkMode),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppDimensions.spaceLarge),
                     EventCardSkeleton(isDarkMode: isDarkMode),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppDimensions.spaceLarge),
                     MembersSkeleton(isDarkMode: isDarkMode),
                   ] else ...[
                     _buildStatsCard(stats, isDarkMode),
-                    const SizedBox(height: AppDimensions.spaceMedium),
+                    const SizedBox(height: AppDimensions.spaceLarge),
                     
-                    CarouselWidget(
+                    EventCarouselWidget(
                       isAdmin: user?.isAdmin ?? false,
                       key: ValueKey('events-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),
                       onSeeAll: widget.onNavigateToEvents,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppDimensions.spaceLarge),
                     
                     MembersWidget(
                       key: ValueKey('members-$userId-$cid-${_isManualRefreshing ? "ref" : "stable"}'),

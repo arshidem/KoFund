@@ -65,8 +65,7 @@ Future<String?> _getTokenWithRetry({int maxAttempts = 5}) async {
   }
   return null;
 }
-  // ⭐ UPDATED: Store token with community context
-// ⭐ UPDATED: Store token with community context
+  // ⭐ UPDATED: Store token with community context (Cloud Function prioritized)
 Future<void> storeCurrentUserToken({
   required List<String> communityIds,
   String? deviceId,
@@ -75,19 +74,17 @@ Future<void> storeCurrentUserToken({
     final user = _auth.currentUser;
     if (user == null) return;
     
-    // ⭐ CHANGE THIS: Use retry method instead of direct getToken()
-    // final token = await _messaging.getToken(); // OLD
-    final token = await _getTokenWithRetry(maxAttempts: 3); // NEW
+    // Get token with retry logic
+    final token = await _getTokenWithRetry(maxAttempts: 3);
     
     if (token == null) {
       debugPrint("⚠️ No FCM token available after retries");
       return;
     }
     
-    debugPrint("📱 Storing token for user: ${user.uid}");
-    debugPrint("   Communities: ${communityIds.join(', ')}");
+    debugPrint("📱 Registering token for user: ${user.uid}");
     
-    // ⭐ CRITICAL: Store current user ID for validation
+    // Store current user ID locally for validation
     await _storeUserId(user.uid);
     
     // 🚀 OPTIMIZATION: Only proceed if token or communities changed
@@ -103,49 +100,34 @@ Future<void> storeCurrentUserToken({
       return;
     }
     
-    // Rest of your method stays the same...
-      // ⭐ CRITICAL: Clean token from other users FIRST
-      await _cleanTokenFromOtherUsers(token, user.uid);
-      
-      // Then add to current user WITH COMMUNITY CONTEXT
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .update({
-            'fcmTokens': FieldValue.arrayUnion([token]),
-            'updatedAt': FieldValue.serverTimestamp(),
-            // ⭐ NEW: Store user's communities for targeted notifications
-            'notificationCommunities': communityIds,
-            'lastTokenUpdate': FieldValue.serverTimestamp(),
-          });
-      
-      // Also store in a dedicated collection for better querying
-      await _firestore
-          .collection('user_notification_tokens')
-          .doc(token)
-          .set({
-            'token': token,
-            'userId': user.uid,
-            'communityIds': communityIds,
-            'deviceId': deviceId ?? await _getDeviceIdentifier(),
-            'isActive': true,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-      
-      debugPrint('✅ Token stored with community context for user: ${user.uid}');
-      
-      // Also register with Cloud Function if available
-      await _registerTokenWithCloudFunction(token, user.uid, communityIds);
-      
-      // Update sync state
-      await prefs.setString('last_synced_fcm_token', token);
-      await prefs.setStringList('last_synced_communities', communityIds);
-      
+    // 🛰️ PRIMARY: Register via Cloud Function
+    // This handles cleaning up old users and community mapping safely on the server
+    await _registerTokenWithCloudFunction(token, user.uid, communityIds);
+    
+    // 📝 SECONDARY: Simplified local sync for immediate access (if rules allow)
+    // We only update the current user doc. The 'user_notification_tokens' collection
+    // is now primarily managed by the Cloud Function to avoid rules permission errors.
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'fcmTokens': FieldValue.arrayUnion([token]),
+        'notificationCommunities': communityIds,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      });
+      debugPrint("✅ Local user document updated with token");
     } catch (e) {
-      debugPrint('❌ Error storing token: $e');
+      debugPrint("⚠️ Local user doc update failed (non-critical): $e");
     }
+    
+    // Update sync state
+    await prefs.setString('last_synced_fcm_token', token);
+    await prefs.setStringList('last_synced_communities', communityIds);
+    
+    debugPrint('🎉 Token registration sequence completed');
+    
+  } catch (e) {
+    debugPrint('❌ Error storing token: $e');
   }
+}
 
   // ⭐ UPDATED: Clean token from other users with community context
   Future<void> _cleanTokenFromOtherUsers(String token, String currentUserId) async {

@@ -445,8 +445,11 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
             ListTile(
               onTap: () {
                 Navigator.pop(context);
-                if (isSharing) _shareReport(isPdf: false);
-                else _downloadReport(isPdf: false);
+                if (isSharing) {
+                  _shareReport(isPdf: false);
+                } else {
+                  _downloadReport(isPdf: false);
+                }
               },
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               leading: Container(
@@ -465,8 +468,11 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
             ListTile(
               onTap: () {
                 Navigator.pop(context);
-                if (isSharing) _shareReport(isPdf: true);
-                else _downloadReport(isPdf: true);
+                if (isSharing) {
+                  _shareReport(isPdf: true);
+                } else {
+                  _downloadReport(isPdf: true);
+                }
               },
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               leading: Container(

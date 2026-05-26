@@ -67,10 +67,10 @@ Future<void> _loadDevelopers({bool silent = false}) async {
 }
 
   Future<void> _removeDeveloper(String userId, String email) async {
-    final _authProvider = context.read<AppAuthProvider>();
+    final authProvider = context.read<AppAuthProvider>();
     
     // P removing yourself
-    if (userId == _authProvider.user?.uid) {
+    if (userId == authProvider.user?.uid) {
       SnackbarHelper.showError(context, 'You cannot remove yourself as developer');
       return;
     }
@@ -187,8 +187,8 @@ Future<void> _loadDevelopers({bool silent = false}) async {
   }
 
   Widget _buildDeveloperCard(Map<String, dynamic> developer) {
-    final _authProvider = context.read<AppAuthProvider>();
-    final isCurrentUser = developer['id'] == _authProvider.user?.uid;
+    final authProvider = context.read<AppAuthProvider>();
+    final isCurrentUser = developer['id'] == authProvider.user?.uid;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -321,9 +321,9 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = context.watch<AppAuthProvider>();
+    final authProvider = context.watch<AppAuthProvider>();
     
-    if (!_authProvider.isDeveloper) {
+    if (!authProvider.isDeveloper) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         body: const Center(child: Text('Access denied')),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_colors.dart';
-import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/services/app_update_service.dart';
 
 class AppUpdateDialog extends StatelessWidget {

@@ -10,6 +10,7 @@ class VirtualUserProvider extends ChangeNotifier {
   final List<String> _errorMessages = [];
   int _successfulCreations = 0;
   List<UserModel> _virtualUsers = [];
+  final List<Map<String, dynamic>> _failedUsers = [];
   
   // State for individual operations
   bool _isDeleting = false;
@@ -27,6 +28,7 @@ class VirtualUserProvider extends ChangeNotifier {
   String? get editError => _editError; // Add this getter
   int get successfulCreations => _successfulCreations;
   List<UserModel> get virtualUsers => _virtualUsers;
+  List<Map<String, dynamic>> get failedUsers => _failedUsers;
   
   VirtualUserProvider(this._service);
   // ==================== BULK CREATION METHODS ====================
@@ -39,6 +41,7 @@ Future<void> createMultipleUsers(
 ) async {
   _isLoading = true;
   _errorMessages.clear();
+  _failedUsers.clear();
   _successfulCreations = 0;
   notifyListeners();
 
@@ -54,22 +57,67 @@ Future<void> createMultipleUsers(
 
       // Validation
       if (name == null || name.trim().isEmpty) {
-        _errorMessages.add('User ${i + 1}: Name is required');
+        final err = _formatError(i, 'Name is required', 'Please enter a name for the member.');
+        _errorMessages.add(err);
+        _failedUsers.add({'name': '', 'phone': phone, 'email': email, 'error': err});
         continue;
       }
       
       if (name.length < 2) {
-        _errorMessages.add('User ${i + 1}: Name must be at least 2 characters');
+        final err = _formatError(i, 'Name must be at least 2 characters', 'A longer name helps identify the member.');
+        _errorMessages.add(err);
+        _failedUsers.add({'name': name, 'phone': phone, 'email': email, 'error': err});
         continue;
       }
       
       if (phone.isNotEmpty && !_isValidPhoneNumber(phone)) {
-        _errorMessages.add('User ${i + 1}: Invalid phone number format');
+        final err = _formatError(i, 'Invalid phone number format', 'Enter a valid phone, e.g., +1234567890.');
+        _errorMessages.add(err);
+        _failedUsers.add({'name': name, 'phone': phone, 'email': email, 'error': err});
         continue;
       }
       
       if (email.isNotEmpty && !_isValidEmail(email)) {
-        _errorMessages.add('User ${i + 1}: Invalid email format');
+        final err = _formatError(i, 'Invalid email format', 'Enter a correct email like name@example.com.');
+        _errorMessages.add(err);
+        _failedUsers.add({'name': name, 'phone': phone, 'email': email, 'error': err});
+        continue;
+      }
+
+      // Check duplicates within the batch data itself
+      final isDuplicateInList = usersData.any((u) => 
+        (u['name'] as String).toLowerCase() == name.toLowerCase() ||
+        (u['phone'] != null && phone.isNotEmpty && u['phone'] == phone) ||
+        (u['email'] != null && email.isNotEmpty && (u['email'] as String).toLowerCase() == email.toLowerCase())
+      );
+      if (isDuplicateInList) {
+        final err = _formatError(i, 'Duplicate entry in list', 'This member details (name, email, or phone) are already entered in this form. Please use unique details.');
+        _errorMessages.add(err);
+        _failedUsers.add({'name': name, 'phone': phone, 'email': email, 'error': err});
+        continue;
+      }
+
+      // Check if user already exists in current local cache list
+      String? localDuplicateError;
+      for (final cacheUser in _virtualUsers) {
+        if (cacheUser.displayName?.toLowerCase() == name.toLowerCase()) {
+          localDuplicateError = 'Member with name "$name" already exists in this community. Please use a different name or add initials (e.g. "$name A").';
+          break;
+        }
+        if (phone.isNotEmpty && cacheUser.phoneNumber == phone) {
+          localDuplicateError = 'Member "$name" has phone "$phone" which already exists in this community. Please use a different phone number.';
+          break;
+        }
+        if (email.isNotEmpty && cacheUser.email.toLowerCase() == email.toLowerCase()) {
+          localDuplicateError = 'Member "$name" has email "$email" which already exists in this community. Please use a different email.';
+          break;
+        }
+      }
+
+      if (localDuplicateError != null) {
+        final err = _formatError(i, 'Member already exists', localDuplicateError);
+        _errorMessages.add(err);
+        _failedUsers.add({'name': name, 'phone': phone, 'email': email, 'error': err});
         continue;
       }
 
@@ -80,30 +128,23 @@ Future<void> createMultipleUsers(
       });
     }
 
-    if (_errorMessages.isNotEmpty) {
-      _isLoading = false;
-      notifyListeners();
-      return;
+    if (usersData.isNotEmpty) {
+      // Call the service method - returns a VirtualUserCreationResult
+      final result = await _service.createMultipleVirtualUsers(
+        communityId: communityId,
+        adminUid: adminUid,
+        adminName: adminName, // Pass admin name here
+        usersData: usersData,
+      );
+      
+      _successfulCreations = result.createdUsers.length;
+      _virtualUsers.addAll(result.createdUsers);
+      
+      for (final failed in result.failedUsers) {
+        _failedUsers.add(failed);
+        _errorMessages.add(failed['error'] as String? ?? 'Unknown error');
+      }
     }
-
-    if (usersData.isEmpty) {
-      _errorMessages.add('No valid users to create');
-      _isLoading = false;
-      notifyListeners();
-      return;
-    }
-
-    // Call the service method - pass adminName
-    final createdUsers = await _service.createMultipleVirtualUsers(
-      communityId: communityId,
-      adminUid: adminUid,
-      adminName: adminName, // Pass admin name here
-      usersData: usersData,
-    );
-    
-    _successfulCreations = createdUsers.length;
-    _virtualUsers.addAll(createdUsers);
-    
   } catch (e) {
     _errorMessages.add('Failed to create users: $e');
   } finally {
@@ -435,8 +476,13 @@ Future<bool> createVirtualUser({
   }
 
   bool _isValidEmail(String email) {
-    return _service.isValidEmail(email);
-  }
+  return _service.isValidEmail(email);
+}
+
+// Formats error messages with user-friendly suggestions
+String _formatError(int userIndex, String title, String suggestion) {
+  return 'User \\${userIndex + 1}: \\$title – \\$suggestion';
+}
     void clearEditError() {
     _editError = null;
     notifyListeners();

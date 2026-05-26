@@ -175,11 +175,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
       // Clear previous provider errors
-      _authProvider.clearError();
+      authProvider.clearError();
       
-      final success = await _authProvider.signIn(
+      final success = await authProvider.signIn(
         email: email,
         password: password,
       );
@@ -201,18 +201,18 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacementNamed(context, RouteNames.splash);
         }
       } else if (mounted) {
-        if (_authProvider.shouldNavigateToVerification) {
+        if (authProvider.shouldNavigateToVerification) {
           _showError('Please verify your email to continue.');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => VerificationPendingScreen(
-                email: _authProvider.currentUserEmail ?? email,
+                email: authProvider.currentUserEmail ?? email,
               ),
             ),
           );
         } else {
-          _showError(_authProvider.error ?? 'Login failed. Please try again.');
+          _showError(authProvider.error ?? 'Login failed. Please try again.');
         }
       }
     } catch (e) {
@@ -262,14 +262,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final _authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-      final success = await _authProvider.signInWithGoogle();
+      final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+      final success = await authProvider.signInWithGoogle();
 
       if (success && mounted) {
         _showSuccess('Welcome to KoFund!');
 
         // ⭐ CHECK FOR MISSING PHONE NUMBER
-        final currentUser = _authProvider.user;
+        final currentUser = authProvider.user;
         final needsPhone =
             currentUser?.phoneNumber == null ||
             currentUser!.phoneNumber!.isEmpty;
@@ -300,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         // Check provider error - ONLY show if not a cancellation
-        final providerError = _authProvider.error ?? '';
+        final providerError = authProvider.error ?? '';
         if (providerError.isNotEmpty && !_isCancellationError(providerError)) {
           if (mounted) {
             setState(() {
@@ -781,8 +781,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final _authProvider = Provider.of<AppAuthProvider>(context);
-    final isLoading = _authProvider.isLoading || _isLoading;
+    final authProvider = Provider.of<AppAuthProvider>(context);
+    final isLoading = authProvider.isLoading || _isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),

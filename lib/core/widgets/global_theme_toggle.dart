@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import '../constants/app_colors.dart';
 
 class GlobalThemeToggle extends StatelessWidget {
   const GlobalThemeToggle({super.key});

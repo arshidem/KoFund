@@ -4,6 +4,16 @@ import 'dart:developer' as developer;
 import '../../../features/auth/models/user_model.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
+class VirtualUserCreationResult {
+  final List<UserModel> createdUsers;
+  final List<Map<String, dynamic>> failedUsers; // Each map has name, phone, email, and error
+
+  VirtualUserCreationResult({
+    required this.createdUsers,
+    required this.failedUsers,
+  });
+}
+
 class VirtualUserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Uuid _uuid = Uuid();
@@ -36,18 +46,22 @@ Future<UserModel> createVirtualUser({
       final sanitizedName = _sanitizeNnameForEmail(displayName);
       final virtualEmail = email ?? '$sanitizedName@virtual.kofund.app';
 
-      // Check for duplicate in transaction
-      final query = _firestore
-          .collection('users')
-          .where('communityId', isEqualTo: communityId)
-          .where('displayName', isEqualTo: displayName.trim())
-          .where('isVirtualUser', isEqualTo: true)
-          .limit(1);
-      
-      final duplicateCheck = await query.get();
-
-      if (duplicateCheck.docs.isNotEmpty) {
-        throw Exception('A virtual user with name "$displayName" already exists in this community');
+      // Check for duplicates in this community
+      final existingMembers = await _getExistingCommunityMembers(communityId);
+      for (final existing in existingMembers) {
+        final existingName = existing['displayName'] as String;
+        final existingPhone = existing['phoneNumber'] as String;
+        final existingEmail = existing['email'] as String;
+        
+        if (existingName.toLowerCase() == displayName.trim().toLowerCase()) {
+          throw Exception('Member with name "$displayName" already exists in this community. Please use a different name or add initials (e.g. "$displayName A").');
+        }
+        if (phoneNumber != null && phoneNumber.isNotEmpty && existingPhone == phoneNumber.trim()) {
+          throw Exception('Member "$displayName" has phone "$phoneNumber" which already exists in this community. Please use a different phone number.');
+        }
+        if (email != null && email.isNotEmpty && existingEmail.toLowerCase() == email.trim().toLowerCase()) {
+          throw Exception('Member "$displayName" has email "$email" which already exists in this community. Please use a different email.');
+        }
       }
 
       final virtualUser = UserModel(
@@ -111,114 +125,152 @@ Future<UserModel> createVirtualUser({
 }
 
   // Create multiple virtual users with batch operation
-Future<List<UserModel>> createMultipleVirtualUsers({
-  required String communityId,
-  required String adminUid,
-  required String adminName, // Add this parnameter
-  required List<Map<String, dynamic>> usersData,
-}) async {
-  developer.log('Creating ${usersData.length} virtual users for community: $communityId');
+  Future<VirtualUserCreationResult> createMultipleVirtualUsers({
+    required String communityId,
+    required String adminUid,
+    required String adminName, // Add this parnameter
+    required List<Map<String, dynamic>> usersData,
+  }) async {
+    developer.log('Creating ${usersData.length} virtual users for community: $communityId');
 
-  try {
-    // Validate all users first
-    for (int i = 0; i < usersData.length; i++) {
-      final user = usersData[i];
-      final name = user['name'] as String? ?? '';
-      final phone = user['phone'] as String?;
-      final email = user['email'] as String?;
-
-      _validateUserInputs(
-        displayName: name,
-        phoneNumber: phone,
-        email: email,
-      );
-    }
-
-    // Check for duplicates before starting batch
-    final existingNnames = await _getExistingVirtualUserNnames(communityId);
-    final duplicateNnames = <String>[];
-    
-    for (final userData in usersData) {
-      final name = (userData['name'] as String).trim();
-      if (existingNnames.contains(name)) {
-        duplicateNnames.add(name);
-      }
-    }
-
-    if (duplicateNnames.isNotEmpty) {
-      throw Exception('Duplicate nnames found: ${duplicateNnames.join(', ')}. Please use unique names.');
-    }
-
-    final batch = _firestore.batch();
     final createdUsers = <UserModel>[];
+    final failedUsers = <Map<String, dynamic>>[];
 
-    for (final userData in usersData) {
-      final virtualUserId = 'virtual_${_uuid.v4()}';
-      final displayName = (userData['name'] as String).trim();
-      final phoneNumber = userData['phone'] as String?;
-      final email = userData['email'] as String?;
-      final sanitizedName = _sanitizeNnameForEmail(displayName);
-      final virtualEmail = email ?? '$sanitizedName@virtual.kofund.app';
+    try {
+      // Check for duplicates before starting batch against all members in this community
+      final existingMembers = await _getExistingCommunityMembers(communityId);
+      final batch = _firestore.batch();
+      bool hasBatchData = false;
 
-      final virtualUser = UserModel(
-        uid: virtualUserId,
-        email: virtualEmail,
-        displayName: displayName,
-        phoneNumber: phoneNumber?.trim(),
-        communityId: communityId,
-        communityName: null,
-        role: 'member',
-        isApproved: true,
-        isAdmin: false,
-        isDeveloper: false,
-        isVirtualUser: true,
-        createdBy: adminUid,
-        createdByName: adminName.trim(), // Add admin name here
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        showDetailedProfile: false,
+      for (final userData in usersData) {
+        final name = (userData['name'] as String? ?? '').trim();
+        final phone = userData['phone'] as String?;
+        final email = userData['email'] as String?;
+
+        if (name.isEmpty) {
+          failedUsers.add({
+            'name': name,
+            'phone': phone,
+            'email': email,
+            'error': 'Display name cannot be empty',
+          });
+          continue;
+        }
+
+        String? duplicateError;
+        for (final existing in existingMembers) {
+          final existingName = existing['displayName'] as String;
+          final existingPhone = existing['phoneNumber'] as String;
+          final existingEmail = existing['email'] as String;
+
+          if (existingName.toLowerCase() == name.toLowerCase()) {
+            duplicateError = 'Member with name "$name" already exists in this community. Please use a different name or add initials (e.g. "$name A").';
+            break;
+          }
+          if (phone != null && phone.isNotEmpty && existingPhone == phone) {
+            duplicateError = 'Member "$name" has phone "$phone" which already exists in this community. Please use a different phone number.';
+            break;
+          }
+          if (email != null && email.isNotEmpty && existingEmail.toLowerCase() == email.toLowerCase()) {
+            duplicateError = 'Member "$name" has email "$email" which already exists in this community. Please use a different email.';
+            break;
+          }
+        }
+
+        if (duplicateError != null) {
+          failedUsers.add({
+            'name': name,
+            'phone': phone,
+            'email': email,
+            'error': duplicateError,
+          });
+          continue;
+        }
+
+        // Validate user inputs
+        try {
+          _validateUserInputs(
+            displayName: name,
+            phoneNumber: phone,
+            email: email,
+          );
+        } catch (e) {
+          failedUsers.add({
+            'name': name,
+            'phone': phone,
+            'email': email,
+            'error': e.toString(),
+          });
+          continue;
+        }
+
+        // Add valid user to batch
+        final virtualUserId = 'virtual_${_uuid.v4()}';
+        final sanitizedName = _sanitizeNnameForEmail(name);
+        final virtualEmail = email ?? '$sanitizedName@virtual.kofund.app';
+
+        final virtualUser = UserModel(
+          uid: virtualUserId,
+          email: virtualEmail,
+          displayName: name,
+          phoneNumber: phone?.trim(),
+          communityId: communityId,
+          communityName: null,
+          role: 'member',
+          isApproved: true,
+          isAdmin: false,
+          isDeveloper: false,
+          isVirtualUser: true,
+          createdBy: adminUid,
+          createdByName: adminName.trim(),
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          showDetailedProfile: false,
+        );
+
+        final userRef = _firestore.collection('users').doc(virtualUserId);
+        batch.set(userRef, virtualUser.toMap());
+
+        final communityUserRef = _firestore
+            .collection('communities')
+            .doc(communityId)
+            .collection('virtualUsers')
+            .doc(virtualUserId);
+        
+        batch.set(communityUserRef, {
+          'uid': virtualUserId,
+          'displayName': name,
+          'phoneNumber': phone?.trim(),
+          'email': virtualEmail,
+          'createdBy': adminUid,
+          'createdByName': adminName.trim(),
+          'createdAt': Timestamp.now(),
+          'isActive': true,
+          'status': 'active',
+          'updatedAt': Timestamp.now(),
+        });
+
+        createdUsers.add(virtualUser);
+        hasBatchData = true;
+      }
+
+      if (hasBatchData) {
+        await batch.commit();
+        _clearCacheForCommunity(communityId);
+      }
+
+      developer.log('Batch creation finished: ${createdUsers.length} succeeded, ${failedUsers.length} failed.');
+      return VirtualUserCreationResult(
+        createdUsers: createdUsers,
+        failedUsers: failedUsers,
       );
-
-      // Add to batch
-      final userRef = _firestore.collection('users').doc(virtualUserId);
-      batch.set(userRef, virtualUser.toMap());
-
-      final communityUserRef = _firestore
-          .collection('communities')
-          .doc(communityId)
-          .collection('virtualUsers')
-          .doc(virtualUserId);
-      
-      batch.set(communityUserRef, {
-        'uid': virtualUserId,
-        'displayName': displayName,
-        'phoneNumber': phoneNumber?.trim(),
-        'email': virtualEmail,
-        'createdBy': adminUid,
-        'createdByName': adminName.trim(), // Add here too
-        'createdAt': Timestamp.now(),
-        'isActive': true,
-        'status': 'active',
-        'updatedAt': Timestamp.now(),
-      });
-
-      createdUsers.add(virtualUser);
+    } catch (e, stackTrace) {
+      developer.log('Failed to create multiple virtual users: $e', 
+                    error: e, 
+                    stackTrace: stackTrace);
+      rethrow;
     }
-
-    await batch.commit();
-    
-    // Clear cache for this community
-    _clearCacheForCommunity(communityId);
-    
-    developer.log('Successfully created ${createdUsers.length} virtual users');
-    return createdUsers;
-  } catch (e, stackTrace) {
-    developer.log('Failed to create multiple virtual users: $e', 
-                  error: e, 
-                  stackTrace: stackTrace);
-    rethrow;
   }
-}
   Future<void> updateVirtualUser({
     required String userId,
     required String displayName,
@@ -566,6 +618,21 @@ Future<List<UserModel>> createMultipleVirtualUsers({
         .map((doc) => (doc.data()['displayName'] as String?)?.trim() ?? '')
         .where((name) => name.isNotEmpty)
         .toSet();
+  }
+
+  Future<List<Map<String, dynamic>>> _getExistingCommunityMembers(String communityId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .where('communityId', isEqualTo: communityId)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return {
+        'displayName': data['displayName'] as String? ?? '',
+        'phoneNumber': data['phoneNumber'] as String? ?? '',
+        'email': data['email'] as String? ?? '',
+      };
+    }).toList();
   }
 }
 
