@@ -319,7 +319,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
   Widget _buildStatBadge(String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withOpacity(0.2), width: 1)),
+      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(AppDimensions.radiusFull), border: Border.all(color: color.withOpacity(0.2), width: 1)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -388,7 +388,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
                 foregroundColor: AppColors.primary(context),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: BorderSide(color: AppColors.primary(context), width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull)),
               ),
             ),
           );
@@ -554,11 +554,11 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
             fillColor: AppColors.surface(context),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context).withOpacity(0.6)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
             ),
           ),

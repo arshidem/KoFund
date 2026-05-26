@@ -12,6 +12,8 @@ import '../../../features/contributions/models/contribution_model.dart';
 import '../../../features/events/models/event_model.dart';
 import '../../../features/auth/models/user_model.dart';
 import '../../../features/contributions/providers/contribution_provider.dart'; // Add this
+import '../../../features/participants/providers/participant_provider.dart';
+import '../../../features/participants/models/participant_model.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/skeleton/member_list_skeleton.dart';
@@ -1670,6 +1672,25 @@ Future<void> _submitContribution() async {
     // Get current user info for entry tracking
     final auth = Provider.of<AppAuthProvider>(context, listen: false);
     final currentUser = auth.user;
+    // Ensure contributor is a participant of the event
+    final participantProvider = Provider.of<ParticipantProvider>(context, listen: false);
+    final hasJoined = await participantProvider.hasUserJoined(_selectedEvent!.eventId, _selectedUser!.uid, communityId: auth.user?.communityId ?? '');
+    if (!hasJoined) {
+      final participant = ParticipantModel(
+        participantId: '',
+        eventId: _selectedEvent!.eventId,
+        eventName: _selectedEvent!.title,
+        userId: _selectedUser!.uid,
+        userName: _selectedUser!.displayName ?? '',
+        userEmail: _selectedUser!.email,
+        communityId: auth.user?.communityId ?? '',
+        joinedAt: DateTime.now(),
+        status: 'joined',
+        contributionPaid: null,
+        hasPaidContribution: false,
+      );
+      await participantProvider.addParticipant(participant);
+    }
 
     final contribution = ContributionModel(
       contributionId: '', // Will be set by Firestore

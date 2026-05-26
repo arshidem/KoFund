@@ -86,7 +86,6 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     }
   }
 
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -288,7 +287,6 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
       },
     );
   }
-
 
   Widget _buildParticipantsStats(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>(
@@ -614,7 +612,6 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     }
   }
 
-
   Widget _buildLegendItem(Color color, String text, BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -644,7 +641,6 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
   }
 
   // Removed redundant month selector dialog as it is now handled globally in EventDetailsScreen app bar.
-
 
   Widget _buildStatChip(
     BuildContext context, {
@@ -847,236 +843,236 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     );
   }
 
-Widget _buildParticipantCard(ParticipantModel participant, BuildContext context) {
-  final userName = participant.userName.isNotEmpty ? participant.userName : 'Unknown User';
-  final contributionPaid = participant.contributionPaid ?? 0;
-  final suggestedContribution = widget.event.suggestedContribution ?? 0;
-  final hasPaidFull = suggestedContribution > 0 && contributionPaid >= suggestedContribution;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildParticipantCard(ParticipantModel participant, BuildContext context) {
+    final userName = participant.userName.isNotEmpty ? participant.userName : 'Unknown User';
+    final contributionPaid = participant.contributionPaid ?? 0;
+    final suggestedContribution = widget.event.suggestedContribution ?? 0;
+    final hasPaidFull = suggestedContribution > 0 && contributionPaid >= suggestedContribution;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  return Column(
-    children: [
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            _navigateToMemberProfile(participant, context);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Avatar
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary(context),
-                        AppColors.primary(context).withValues(alpha: 0.7),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      userName.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              _navigateToMemberProfile(participant, context);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Avatar
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary(context),
+                          AppColors.primary(context).withValues(alpha: 0.7),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-                  ),
-                ),
-                
-                const SizedBox(width: 14),
-                
-                // Name and subtle status indication
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        userName,
-                        style: TextStyle(
+                    child: Center(
+                      child: Text(
+                        userName.substring(0, 1).toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppColors.textPrimary(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (suggestedContribution > 0) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: hasPaidFull 
-                                    ? AppColors.success(context)
-                                    : AppColors.warning(context),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              hasPaidFull 
-                                ? 'Fully Paid' 
-                                : 'Due: ₹${(suggestedContribution - contributionPaid).toStringAsFixed(0)}',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(context),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Big Contributed Amount
-                if (suggestedContribution > 0)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '₹${contributionPaid.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: hasPaidFull ? AppColors.success(context) : AppColors.textPrimary(context),
+                          fontSize: 18,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                   
-                const SizedBox(width: 8),
-
-                // Menu
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: AppColors.textTertiary(context),
-                    size: 20,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  color: AppColors.card(context),
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                  ),
-                  offset: const Offset(-8, 40),
-                  onSelected: (value) async {
-                    if (value == 'toggle_payment') {
-                      _togglePaymentStatus(participant, context);
-                    } else if (value == 'remove') {
-                      _showRemoveConfirmation(participant, context);
-                    }
-                  },
-                  itemBuilder: (BuildContext context) {
-                    return [
-                      PopupMenuItem<String>(
-                        value: 'toggle_payment',
-                        child: FutureBuilder<bool>(
-                          future: _checkParticipantPaidStatus(
-                            participant.userId,
-                            widget.event.eventId,
-                            communityId: widget.event.communityId,
+                  const SizedBox(width: 14),
+                  
+                  // Name and subtle status indication
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          userName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.textPrimary(context),
                           ),
-                          builder: (context, snapshot) {
-                            final isPaid = snapshot.data ?? false;
-                            return FutureBuilder<String?>(
-                              future: _getPaymentSubtitleWithRealData(participant),
-                              builder: (context, subtitleSnapshot) {
-                                final subtitle = subtitleSnapshot.data;
-                                return Row(
-                                  children: [
-                                    Icon(
-                                      isPaid ? Icons.payment : Icons.payment_outlined,
-                                      color: isPaid ? AppColors.success(context) : AppColors.warning(context),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            isPaid ? 'Mark as Pending' : 'Mark as Paid',
-                                            style: TextStyle(
-                                              color: AppColors.textPrimary(context),
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          if (subtitle != null && subtitle.isNotEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 2),
-                                              child: Text(
-                                                subtitle,
-                                                style: TextStyle(
-                                                  color: AppColors.textSecondary(context),
-                                                  fontSize: 12,
-                                                ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (suggestedContribution > 0) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: hasPaidFull 
+                                      ? AppColors.success(context)
+                                      : AppColors.warning(context),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                hasPaidFull 
+                                  ? 'Fully Paid' 
+                                  : 'Due: ₹${(suggestedContribution - contributionPaid).toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // Big Contributed Amount
+                  if (suggestedContribution > 0)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '₹${contributionPaid.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: hasPaidFull ? AppColors.success(context) : AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                  const SizedBox(width: 8),
+
+                  // Menu
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: AppColors.textTertiary(context),
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    color: AppColors.card(context),
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                    ),
+                    offset: const Offset(-8, 40),
+                    onSelected: (value) async {
+                      if (value == 'toggle_payment') {
+                        await _togglePaymentStatus(participant, context);
+                      } else if (value == 'remove') {
+                        _showRemoveConfirmation(participant, context);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) {
+                      return [
+                        PopupMenuItem<String>(
+                          value: 'toggle_payment',
+                          child: FutureBuilder<bool>(
+                            future: _checkParticipantPaidStatus(
+                              participant.userId,
+                              widget.event.eventId,
+                              communityId: widget.event.communityId,
+                            ),
+                            builder: (context, snapshot) {
+                              final isPaid = snapshot.data ?? false;
+                              return FutureBuilder<String?>(
+                                future: _getPaymentSubtitleWithRealData(participant),
+                                builder: (context, subtitleSnapshot) {
+                                  final subtitle = subtitleSnapshot.data;
+                                  return Row(
+                                    children: [
+                                      Icon(
+                                        isPaid ? Icons.payment : Icons.payment_outlined,
+                                        color: isPaid ? AppColors.success(context) : AppColors.warning(context),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              isPaid ? 'Mark as Pending' : 'Mark as Paid',
+                                              style: TextStyle(
+                                                color: AppColors.textPrimary(context),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
-                                        ],
+                                            if (subtitle != null && subtitle.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 2),
+                                                child: Text(
+                                                  subtitle,
+                                                  style: TextStyle(
+                                                    color: AppColors.textSecondary(context),
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'remove',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.remove_circle_outline,
-                              color: AppColors.error(context),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Remove from event',
-                              style: TextStyle(
+                        PopupMenuItem<String>(
+                          value: 'remove',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.remove_circle_outline,
                                 color: AppColors.error(context),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                                size: 20,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 12),
+                              Text(
+                                'Remove from event',
+                                style: TextStyle(
+                                  color: AppColors.error(context),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ];
-                  },
-                ),
-              ],
+                      ];
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      Divider(height: 1, thickness: 1, color: AppColors.border(context)),
-    ],
-  );
-}
+        Divider(height: 1, thickness: 1, color: AppColors.border(context)),
+      ],
+    );
+  }
 
   Widget _buildEmptyState(bool noParticipants, BuildContext context) {
     final isAdmin = _isAdmin(context);
@@ -1227,223 +1223,253 @@ Widget _buildParticipantCard(ParticipantModel participant, BuildContext context)
     }
   }
 
-Future<void> _togglePaymentStatus(
-  ParticipantModel participant,
-  BuildContext context,
-) async {
-  try {
-    final eventId = widget.event.eventId;
-    final communityId = widget.event.communityId;
-    final isMonthlyy = widget.event.isMonthlyPayment;
-    final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
-    
-    final authProvider = context.read<AppAuthProvider>();
-    final contributionProvider = context.read<ContributionProvider>();
+  Future<void> _togglePaymentStatus(
+    ParticipantModel participant,
+    BuildContext context,
+  ) async {
+    try {
+      final eventId = widget.event.eventId;
+      final communityId = widget.event.communityId;
+      final isMonthlyy = widget.event.isMonthlyPayment;
+      final suggestedAmount = widget.event.suggestedContribution ?? 0.0;
+      
+      final authProvider = context.read<AppAuthProvider>();
+      final contributionProvider = context.read<ContributionProvider>();
 
-    if (suggestedAmount <= 0) {
-      if (mounted) {
-        SnackbarHelper.showInfo(context, 'This event has no suggested contribution amount');
-      }
-      return;
-    }
-
-    setState(() {
-      _updatingParticipants[participant.userId] = true;
-    });
-
-    contributionProvider.clearCacheForUser(eventId, participant.userId);
-
-    final contributions = await contributionProvider.getUserContributionsFo(
-      eventId,
-      participant.userId,
-      communityId: communityId,
-      forceRefresh: true,
-    );
-
-    if (isMonthlyy) {
-      if (widget.selectedMonth == null) {
-        SnackbarHelper.showWarning(context, 'Please select a month first');
+      if (suggestedAmount <= 0) {
+        if (mounted) {
+          SnackbarHelper.showInfo(context, 'This event has no suggested contribution amount');
+        }
         return;
       }
 
-      final monthlyContributions = contributions.where(
-        (c) => c.isMonthlyContribution && c.monthId == widget.selectedMonth,
-      ).toList();
+      setState(() {
+        _updatingParticipants[participant.userId] = true;
+      });
 
-      final totalPaid = monthlyContributions.fold<double>(
-        0.0,
-        (sum, c) => sum + c.amount,
+      contributionProvider.clearCacheForUser(eventId, participant.userId);
+
+      final contributions = await contributionProvider.getUserContributionsFo(
+        eventId,
+        participant.userId,
+        communityId: communityId,
+        forceRefresh: true,
       );
 
-      if (totalPaid >= suggestedAmount) {
-        await _removeContributions(
-          contributionProvider: contributionProvider,
-          context: context,
-          eventId: eventId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          monthId: widget.selectedMonth,
-          isMonthlyy: true,
-          reason: 'Marked as pending by admin',
-        );
+      if (isMonthlyy) {
+        if (widget.selectedMonth == null) {
+          SnackbarHelper.showWarning(context, 'Please select a month first');
+          return;
+        }
+
+        // Filter contributions for the selected month
+        final monthlyContributions = contributions.where(
+          (c) => c.isMonthlyContribution && c.monthId == widget.selectedMonth,
+        ).toList();
+
+        // Calculate total paid for the month
+        final totalPaid = monthlyContributions.fold<double>(0.0, (sum, c) => sum + c.amount);
+
+        if (totalPaid >= suggestedAmount) {
+          // Already fully paid – ask for confirmation to mark as pending (remove contributions)
+          final confirm = await DialogHelper.showConfirmationDialog(
+            context,
+            title: 'Mark as pending?',
+            message: 'Are you sure you want to mark ${participant.userName} as pending? This will remove their contributions for the selected month.',
+            confirmLabel: 'Confirm',
+            cancelLabel: 'Cancel',
+            isDestructive: false,
+          );
+          if (confirm == true) {
+            await _removeContributions(
+              contributionProvider: contributionProvider,
+              context: context,
+              eventId: eventId,
+              userId: participant.userId,
+              participantName: participant.userName,
+              monthId: widget.selectedMonth,
+              isMonthlyy: true,
+              reason: 'Marked as pending by admin',
+            );
+          }
+        } else {
+          // Not fully paid – create a contribution for the remaining amount
+          final remaining = suggestedAmount - totalPaid;
+          await _createContribution(
+            contributionProvider: contributionProvider,
+            context: context,
+            eventId: eventId,
+            eventName: widget.event.title,
+            communityId: communityId,
+            userId: participant.userId,
+            participantName: participant.userName,
+            amount: remaining,
+            monthId: widget.selectedMonth,
+            isMonthlyy: true,
+            authProvider: authProvider,
+          );
+        }
       } else {
-        final remaining = suggestedAmount - totalPaid;
-        await _createContribution(
-          contributionProvider: contributionProvider,
-          context: context,
-          eventId: eventId,
-          eventName: widget.event.title,
-          communityId: communityId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          amount: remaining,
-          monthId: widget.selectedMonth,
-          isMonthlyy: true,
-          authProvider: authProvider,
-        );
-      }
-    } else {
-      final totalPaid = contributions
-          .where((c) => !c.isMonthlyContribution)
-          .fold<double>(0.0, (sum, c) => sum + c.amount);
+        final totalPaid = contributions
+            .where((c) => !c.isMonthlyContribution)
+            .fold<double>(0.0, (sum, c) => sum + c.amount);
 
-      if (totalPaid >= suggestedAmount) {
-        await _removeContributions(
-          contributionProvider: contributionProvider,
-          context: context,
-          eventId: eventId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          monthId: null,
-          isMonthlyy: false,
-          reason: 'Marked as pending by admin',
-        );
+        if (totalPaid >= suggestedAmount) {
+          // Show confirmation before marking as pending
+          final confirm = await DialogHelper.showConfirmationDialog(
+            context,
+            title: 'Mark as pending?',
+            message: 'Are you sure you want to mark ${participant.userName} as pending? This will remove their contributions.',
+            confirmLabel: 'Confirm',
+            cancelLabel: 'Cancel',
+            isDestructive: true,
+          );
+          if (confirm == true) {
+            await _removeContributions(
+              contributionProvider: contributionProvider,
+              context: context,
+              eventId: eventId,
+              userId: participant.userId,
+              participantName: participant.userName,
+              monthId: null,
+              isMonthlyy: false,
+              reason: 'Marked as pending by admin',
+            );
+          }
+        } else {
+          final remaining = suggestedAmount - totalPaid;
+          await _createContribution(
+            contributionProvider: contributionProvider,
+            context: context,
+            eventId: eventId,
+            eventName: widget.event.title,
+            communityId: communityId,
+            userId: participant.userId,
+            participantName: participant.userName,
+            amount: remaining,
+            monthId: null,
+            isMonthlyy: false,
+            authProvider: authProvider,
+          );
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to update payment status');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _updatingParticipants.remove(participant.userId);
+          _streamKey++;
+        });
+      }
+    }
+  }
+
+  Future<void> _createContribution({
+    required ContributionProvider contributionProvider,
+    required BuildContext context,
+    required String eventId,
+    required String eventName,
+    required String communityId,
+    required String userId,
+    required String participantName,
+    required double amount,
+    required String? monthId,
+    required bool isMonthlyy,
+    required AppAuthProvider authProvider,
+  }) async {
+    try {
+      final contributionId = '${DateTime.now().millisecondsSinceEpoch}_$userId';
+      
+      final contribution = ContributionModel(
+        contributionId: contributionId,
+        eventId: eventId,
+        eventName: eventName,
+        userId: userId,
+        contributorName: participantName,
+        communityId: communityId,
+        amount: amount,
+        paymentMethod: 'cash',
+        isMonthlyContribution: isMonthlyy,
+        monthId: monthId,
+        addedByUserId: authProvider.user?.uid,
+        addedByUserName: authProvider.getUserDisplayName,
+        addedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
+      );
+      
+      await contributionProvider.addContribution(contribution);
+      contributionProvider.clearCacheForUser(eventId, userId);
+      
+      String message = monthId != null
+          ? 'Marked $participantName as paid for ${_formatMonthDisplay(monthId)}'
+          : 'Marked $participantName as paid';
+      
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, message);
+      }
+    } catch (error) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to create contribution');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _removeContributions({
+    required ContributionProvider contributionProvider,
+    required BuildContext context,
+    required String eventId,
+    required String userId,
+    required String participantName,
+    required String? monthId,
+    required bool isMonthlyy,
+    required String reason,
+  }) async {
+    try {
+      final contributions = await contributionProvider.getUserContributionsFo(
+        eventId,
+        userId,
+        communityId: widget.event.communityId,
+        forceRefresh: true,
+      );
+      
+      List<String> contributionsToDelete = [];
+      
+      if (isMonthlyy && monthId != null) {
+        contributionsToDelete = contributions
+            .where((c) => c.isMonthlyContribution && c.monthId == monthId)
+            .map((c) => c.contributionId)
+            .toList();
       } else {
-        final remaining = suggestedAmount - totalPaid;
-        await _createContribution(
-          contributionProvider: contributionProvider,
-          context: context,
-          eventId: eventId,
-          eventName: widget.event.title,
-          communityId: communityId,
-          userId: participant.userId,
-          participantName: participant.userName,
-          amount: remaining,
-          monthId: null,
-          isMonthlyy: false,
-          authProvider: authProvider,
-        );
+        contributionsToDelete = contributions
+            .where((c) => !c.isMonthlyContribution)
+            .map((c) => c.contributionId)
+            .toList();
       }
-    }
-  } catch (error) {
-    if (mounted) {
-      SnackbarHelper.showError(context, 'Failed to update payment status');
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _updatingParticipants.remove(participant.userId);
-        _streamKey++;
-      });
+      
+      for (final contributionId in contributionsToDelete) {
+        await contributionProvider.deleteContribution(contributionId, reason);
+      }
+      
+      contributionProvider.clearCacheForUser(eventId, userId);
+      
+      String message = isMonthlyy && monthId != null
+          ? 'Marked $participantName as pending for ${_formatMonthDisplay(monthId)}'
+          : 'Marked $participantName as pending';
+      
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, message);
+      }
+    } catch (error) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to update payment status');
+      }
+      rethrow;
     }
   }
-}
-
-Future<void> _createContribution({
-  required ContributionProvider contributionProvider,
-  required BuildContext context,
-  required String eventId,
-  required String eventName,
-  required String communityId,
-  required String userId,
-  required String participantName,
-  required double amount,
-  required String? monthId,
-  required bool isMonthlyy,
-  required AppAuthProvider authProvider,
-}) async {
-  try {
-    final contributionId = '${DateTime.now().millisecondsSinceEpoch}_$userId';
-    
-    final contribution = ContributionModel(
-      contributionId: contributionId,
-      eventId: eventId,
-      eventName: eventName,
-      userId: userId,
-      contributorName: participantName,
-      communityId: communityId,
-      amount: amount,
-      paymentMethod: 'cash',
-      isMonthlyContribution: isMonthlyy,
-      monthId: monthId,
-      addedByUserId: authProvider.user?.uid,
-      addedByUserName: authProvider.getUserDisplayName,
-      addedAt: Timestamp.now(),
-      createdAt: Timestamp.now(),
-    );
-    
-    await contributionProvider.addContribution(contribution);
-    contributionProvider.clearCacheForUser(eventId, userId);
-    
-    String message = monthId != null
-        ? 'Marked $participantName as paid for ${_formatMonthDisplay(monthId)}'
-        : 'Marked $participantName as paid';
-    
-    SnackbarHelper.showSuccess(context, message);
-  } catch (error) {
-    SnackbarHelper.showError(context, 'Failed to create contribution');
-    rethrow;
-  }
-}
-
-Future<void> _removeContributions({
-  required ContributionProvider contributionProvider,
-  required BuildContext context,
-  required String eventId,
-  required String userId,
-  required String participantName,
-  required String? monthId,
-  required bool isMonthlyy,
-  required String reason,
-}) async {
-  try {
-    final contributions = await contributionProvider.getUserContributionsFo(
-      eventId,
-      userId,
-      communityId: widget.event.communityId,
-      forceRefresh: true,
-    );
-    
-    List<String> contributionsToDelete = [];
-    
-    if (isMonthlyy && monthId != null) {
-      contributionsToDelete = contributions
-          .where((c) => c.isMonthlyContribution && c.monthId == monthId)
-          .map((c) => c.contributionId)
-          .toList();
-    } else {
-      contributionsToDelete = contributions
-          .where((c) => !c.isMonthlyContribution)
-          .map((c) => c.contributionId)
-          .toList();
-    }
-    
-    for (final contributionId in contributionsToDelete) {
-      await contributionProvider.deleteContribution(contributionId, reason);
-    }
-    
-    contributionProvider.clearCacheForUser(eventId, userId);
-    
-    String message = isMonthlyy && monthId != null
-        ? 'Marked $participantName as pending for ${_formatMonthDisplay(monthId)}'
-        : 'Marked $participantName as pending';
-    
-    SnackbarHelper.showSuccess(context, message);
-  } catch (error) {
-    SnackbarHelper.showError(context, 'Failed to update payment status');
-    rethrow;
-  }
-}
 
   void _showRemoveConfirmation(ParticipantModel participant, BuildContext context) async {
     final result = await DialogHelper.showConfirmationDialog(
@@ -1469,9 +1495,13 @@ Future<void> _removeContributions({
         communityId: widget.event.communityId,
       );
       
-      SnackbarHelper.showSuccess(context, 'Removed ${participant.userName} from event');
+      if (mounted) {
+        SnackbarHelper.showSuccess(context, 'Removed ${participant.userName} from event');
+      }
     } catch (e) {
-      SnackbarHelper.showError(context, 'Failed to remove participant');
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to remove participant');
+      }
     }
   }
 

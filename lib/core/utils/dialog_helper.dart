@@ -184,6 +184,7 @@ class DialogHelper {
                           const SizedBox(height: 32),
                           
                           // Action Buttons
+                                                    // Action Buttons
                           Row(
                             children: [
                               if (cancelLabel.isNotEmpty) ...[
@@ -199,7 +200,7 @@ class DialogHelper {
                                         width: 1.5,
                                       ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(40),
                                       ),
                                     ),
                                     child: Text(
@@ -220,7 +221,7 @@ class DialogHelper {
                                   opacity: isConfirmEnabled ? 1.0 : 0.5,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(40),
                                       boxShadow: [
                                         if (isDark && isConfirmEnabled)
                                           BoxShadow(
@@ -238,7 +239,7 @@ class DialogHelper {
                                         elevation: 0,
                                         padding: const EdgeInsets.symmetric(vertical: 14),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(40),
                                         ),
                                       ),
                                       child: Text(
