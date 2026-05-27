@@ -542,25 +542,11 @@ class _SplashScreenState extends State<SplashScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: Container(
-                        width: 170,
-                        height: 170,
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withValues(alpha: 0.4),
-                              blurRadius: 50,
-                              spreadRadius: 6,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: const AnimatedLogo(
-                          size: 90,
-                          loopAnimation: true,
-                        ),
+                      child: AnimatedLogo(
+                        size: 90,
+                        showBackground: true,
+                        backgroundColor: primaryColor,
+                        loopAnimation: true,
                       ),
                     ),
                   ),

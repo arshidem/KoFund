@@ -238,8 +238,11 @@ class _MembersWidgetState extends State<MembersWidget> {
           debugPrint('   First member community: ${members.first.communityId}');
         }
         
-        // If no members
+        // If no members - show skeleton if still loading, empty state otherwise
         if (members.isEmpty) {
+          if (memberProvider.isLoading) {
+            return _buildLoadingState(context);
+          }
           return _buildEmptyState(
             icon: Icons.people_outline,
             title: 'No Members Found',

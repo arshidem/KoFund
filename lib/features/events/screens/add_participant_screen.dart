@@ -56,7 +56,11 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
       final allMembers = memberProvider.members;
       
       final participantProvider = context.read<ParticipantProvider>();
-      await participantProvider.loadEventParticipants(widget.event.eventId, communityId: widget.event.communityId);
+      await participantProvider.loadEventParticipants(
+        widget.event.eventId,
+        communityId: widget.event.communityId,
+        forceRefresh: true,
+      );
       final participants = participantProvider.participants;
       
       if (mounted) {
@@ -161,7 +165,11 @@ class _AddParticipantScreenState extends State<AddParticipantScreen> {
 
     try {
       final participantProvider = context.read<ParticipantProvider>();
-      await participantProvider.leaveEvent(widget.event.eventId, userId);
+      await participantProvider.leaveEvent(
+        widget.event.eventId,
+        userId,
+        communityId: widget.event.communityId,
+      );
       
       if (mounted) {
         SnackbarHelper.showSuccess(context, 'Removed ${participantToRemove.userName} from event');

@@ -790,7 +790,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (lowerKey == 'id' || lowerKey.endsWith('id') || lowerKey.contains('_id') || lowerKey == 'pendinguserid' || lowerKey == 'contributionid') return true;
     
     // 🆕 Hide fields already in summary
-    if (lowerKey == 'eventname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'aamountrecorded' || lowerKey == 'targetaamount' || lowerKey == 'recordedby') return true;
+    if (lowerKey == 'eventname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'aamountrecorded' || lowerKey == 'amountrecorded' || lowerKey == 'targetamount' || lowerKey == 'targetaamount' || lowerKey == 'recordedby') return true;
 
     return false;
   }

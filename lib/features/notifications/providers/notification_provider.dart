@@ -87,7 +87,8 @@ class NotificationProvider extends ChangeNotifier {
       if (user != null) {
         _loadUserCommunities();
         _loadNotifications();
-        _loadUnreadCount();
+        // _loadUnreadCount is no longer needed separately — _applyFilters
+        // already computes _unreadCount on every stream emission.
       } else {
         _clearUserData();
       }
@@ -107,6 +108,7 @@ class NotificationProvider extends ChangeNotifier {
         _userCommunities = cached;
         debugPrint('🏘️ Loaded user communities from cache: ${_userCommunities.join(', ')}');
         _applyFilters();
+        notifyListeners();
       } else {
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -137,7 +139,8 @@ class NotificationProvider extends ChangeNotifier {
                 if (!listEquals(_userCommunities, updatedCommunities)) {
                   _userCommunities = updatedCommunities;
                   debugPrint('🔄 User communities updated: ${_userCommunities.join(', ')}');
-                  _applyFilters(); // Reapply filters with new communities
+                  _applyFilters();
+                  notifyListeners();
                 }
               }
             });
@@ -173,7 +176,9 @@ class NotificationProvider extends ChangeNotifier {
     
     _isLoading = true;
     _hasError = false;
-    notifyListeners();
+    // Don't call notifyListeners() here — the stream callback below will
+    // notify once data arrives, avoiding a double-rebuild that exhausts
+    // the ImageReader buffer on Android.
 
     try {
       final user = _auth.currentUser;
@@ -214,7 +219,8 @@ class NotificationProvider extends ChangeNotifier {
           
           _notifications = filteredNotifications;
           
-          // ⭐ NEW: Apply additional filters (unread only)
+          // Apply additional filters (unread only) — _applyFilters does NOT
+          // call notifyListeners, so we batch both updates into one rebuild.
           _applyFilters();
           
           _isLoading = false;
@@ -237,6 +243,9 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   // ⭐ NEW: Apply filters to notifications
+  // NOTE: This method intentionally does NOT call notifyListeners().
+  // Callers are responsible for batching the notification after all
+  // state mutations are complete, to avoid multiple rebuilds.
   void _applyFilters() {
     List<AppNotification> filtered = List.from(_notifications);
     
@@ -408,9 +417,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void refresh() {
+    // Reload notifications (this re-subscribes to the stream).
+    // _loadUnreadCount is no longer needed separately — _applyFilters
+    // already computes _unreadCount on every stream emission.
     _loadUserCommunities();
     _loadNotifications();
-    _loadUnreadCount();
   }
 
   // ⭐ UPDATED: Add local notification with community validation

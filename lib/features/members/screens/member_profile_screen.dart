@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/member_provider.dart';
+import 'package:kofund/features/members/widgets/convert_user_dialog.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -590,8 +591,14 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
         onSelected: (value) => _handleMenuAction(value, member, isVirtualUser),
         itemBuilder: (context) {
           if (isVirtualUser) {
-            // Virtual user menu
+            // Virtual user menu with Convert option
             return [
+              buildPopupMenuItem(
+                value: 'convert',
+                icon: Icons.swap_horiz,
+                label: 'Convert to Real User',
+                color: Colors.green,
+              ),
               buildPopupMenuItem(
                 value: 'edit',
                 icon: Icons.edit_rounded,
@@ -770,6 +777,11 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
     final memberProvider = context.read<MemberProvider>();
 
     switch (action) {
+      case 'convert':
+        if (isVirtualUser) {
+          _showConvertDialog(member);
+        }
+        break;
       case 'edit':
         if (isVirtualUser) {
           _navigateToEditVirtualUser(member);
@@ -797,11 +809,10 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
           _showRemoveConfirmation(member);
         }
         break;
+      default:
+        debugPrint('Unhandled admin action: $action');
     }
   }
-  // Alternative: Pass provider via constructor
-
-  // In member_profile_screen.dart:
 
   void _navigateToEditVirtualUser(UserModel member) async {
     final virtualUserProvider = context.read<VirtualUserProvider>();
@@ -900,77 +911,22 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
     );
   }
 
-  // Add this new method to create phone info with call icon
-  Widget _buildPhoneInfoItem(UserModel member) {
-    final phoneNumber = member.phoneNumber;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.phone_outlined,
-            size: 18,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Phone',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary(context),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                if (phoneNumber != null && phoneNumber.isNotEmpty)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          phoneNumber,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textPrimary(context),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          Icons.phone_outlined,
-                          size: 18,
-                          color: AppColors.primary(context),
-                        ),
-                        onPressed: () => _makePhoneCall(phoneNumber),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Call',
-                      ),
-                    ],
-                  )
-                else
-                  Text(
-                    'Not provided',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+  // Show conversion dialog for virtual user
+  Future<void> _showConvertDialog(UserModel virtualUser) async {
+    final currentUserId = context.read<AppAuthProvider>().user?.uid;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => ConvertUserDialog(
+        virtualUser: virtualUser,
+        currentUserId: currentUserId,
       ),
     );
-  }
+    if (result == true && mounted) {
+      // Refresh data after successful conversion
+      _refreshMemberData();
+    }
+  } // <-- FIX: Added missing closing brace
+
 
   // Participation History Card
   Widget _buildParticipationHistoryCard(MemberProvider memberProvider) {
@@ -1689,6 +1645,19 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
     );
   }
 
+  IconData _getPaymentMethodIcon(String paymentMethod) {
+    switch (paymentMethod.toLowerCase()) {
+      case 'cash':
+        return Icons.money;
+      case 'online':
+        return Icons.payment;
+      case 'card':
+        return Icons.credit_card;
+      default:
+        return Icons.receipt;
+    }
+  }
+
   Widget _buildEmptyState({
     required IconData icon,
     required String title,
@@ -1732,6 +1701,15 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatDateFromTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'Unknown';
+    return _formatDate(timestamp.toDate());
   }
 
   // Admin Action Methods
@@ -1913,53 +1891,4 @@ class _MemberProfileScreenBodyState extends State<_MemberProfileScreenBody> {
       (route) => false,
     );
   }
-
-  // Helper Methods
-  String _formatDateFromTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return 'Unknown';
-    final date = timestamp.toDate();
-    return '${_getDay(date.day)} ${_getMonth(date.month)} ${date.year}';
-  }
-
-  String _formatDate(DateTime date) {
-    return '${_getDay(date.day)} ${_getMonth(date.month)} ${date.year}';
-  }
-
-  String _getDay(int day) {
-    return day.toString().padLeft(2, '0');
-  }
-
-  String _getMonth(int month) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
-  }
-
-  IconData _getPaymentMethodIcon(String paymentMethod) {
-    switch (paymentMethod.toLowerCase()) {
-      case 'cash':
-        return Icons.money;
-      case 'upi':
-        return Icons.phone_android;
-      default:
-        return Icons.payment;
-    }
-  }
 }
-
-
-
-
-

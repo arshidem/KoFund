@@ -61,7 +61,7 @@ Widget _buildInviteBanner() {
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
       color: Colors.blue.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
     ),
     child: Row(
       children: [

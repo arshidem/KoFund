@@ -174,7 +174,7 @@ Future<void> _checkForPendingInvite() async {
       margin: const EdgeInsets.only(bottom: 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
         gradient: LinearGradient(
           colors: [
             AppColors.primary(context).withValues(alpha: 0.15),

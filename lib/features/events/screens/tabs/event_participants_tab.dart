@@ -168,123 +168,130 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     final isAdmin = _isAdmin(context);
     _updateStreamsIfNeeded(context);
 
-    return Stack(
-      children: [
-        Container(
-          color: AppColors.background(context),
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              CupertinoSliverRefreshControl(
-                onRefresh: () async {
-                  HapticHelper.light();
-                  _onRefresh();
-                  await Future.delayed(const Duration(milliseconds: 500));
-                },
-              ),
-              
-              SliverToBoxAdapter(
-                child: _buildParticipantsStats(context),
-              ),
-
-              // STICKY HEADER for Search & Filter
-              _buildPinnedSearchFilter(context),
-
-              _buildParticipantsListSliver(context),
-
-              // Bottom padding
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 88),
-              ),
-            ],
-          ),
-        ),
-
-        if (isAdmin)
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: () => _navigateToAddParticipantScreen(context),
-              backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              ),
-              child: const Icon(Icons.add),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildParticipantsListSliver(BuildContext context) {
     return StreamBuilder<List<ParticipantModel>>(
       key: ValueKey('participants-${widget.event.eventId}-${widget.selectedMonth ?? 'regular'}-$_streamKey'),
       initialData: _cachedParticipants,
       stream: _participantsStream,
       builder: (context, snapshot) {
-        // Smart-cache: only overwrite if new data is non-empty or no cache yet
+        // Always update cache with fresh stream data (including empty lists)
         if (snapshot.hasData) {
-          final newData = snapshot.data!;
-          if (newData.isNotEmpty || _cachedParticipants.isEmpty) {
-            _cachedParticipants = List.from(newData);
-          }
+          _cachedParticipants = List.from(snapshot.data!);
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting && _cachedParticipants.isEmpty) {
-          return SliverToBoxAdapter(
-            child: _buildShimmerSkeleton(),
-          );
-        }
+        // Use live snapshot data if available, fall back to cache only before first emission
+        final participants = snapshot.hasData
+            ? snapshot.data!
+            : _cachedParticipants;
+        
+        final hasParticipants = participants.isNotEmpty;
 
-        if (snapshot.hasError && _cachedParticipants.isEmpty) {
-          return SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, color: AppColors.error(context), size: 48),
-                    const SizedBox(height: 8),
-                    Text('Error loading participants', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text('${snapshot.error}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)), textAlign: TextAlign.center),
-                  ],
+        return Stack(
+          children: [
+            Container(
+              color: AppColors.background(context),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
+                slivers: [
+                  CupertinoSliverRefreshControl(
+                    onRefresh: () async {
+                      HapticHelper.light();
+                      _onRefresh();
+                      await Future.delayed(const Duration(milliseconds: 500));
+                    },
+                  ),
+                  
+                  SliverToBoxAdapter(
+                    child: _buildParticipantsStats(context),
+                  ),
+
+                  // STICKY HEADER for Search & Filter
+                  _buildPinnedSearchFilter(context),
+
+                  _buildParticipantsListSliver(context, snapshot),
+
+                  // Bottom padding
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 88),
+                  ),
+                ],
               ),
             ),
-          );
-        }
 
-        // Use cached or live data
-        final participants = _cachedParticipants.isNotEmpty
-            ? _cachedParticipants
-            : (snapshot.data ?? []);
-        
-        final filteredParticipants = _filterParticipants(participants);
-
-        if (filteredParticipants.isEmpty) {
-          return SliverFillRemaining(
-            hasScrollBody: false,
-            child: _buildEmptyState(participants.isEmpty, context),
-          );
-        }
-
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return _buildParticipantCard(filteredParticipants[index], context);
-            },
-            childCount: filteredParticipants.length,
-          ),
+            if (isAdmin && hasParticipants)
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: FloatingActionButton(
+                  onPressed: () => _navigateToAddParticipantScreen(context),
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+                  ),
+                  child: const Icon(Icons.add),
+                ),
+              ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildParticipantsListSliver(
+    BuildContext context,
+    AsyncSnapshot<List<ParticipantModel>> snapshot,
+  ) {
+    if (snapshot.connectionState == ConnectionState.waiting && _cachedParticipants.isEmpty) {
+      return SliverToBoxAdapter(
+        child: _buildShimmerSkeleton(),
+      );
+    }
+
+    if (snapshot.hasError && _cachedParticipants.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error, color: AppColors.error(context), size: 48),
+                const SizedBox(height: 8),
+                Text('Error loading participants', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('${snapshot.error}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Use live snapshot data if available, fall back to cache only before first emission
+    final participants = snapshot.hasData
+        ? snapshot.data!
+        : _cachedParticipants;
+    
+    final filteredParticipants = _filterParticipants(participants);
+
+    if (filteredParticipants.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _buildEmptyState(participants.isEmpty, context),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return _buildParticipantCard(filteredParticipants[index], context);
+        },
+        childCount: filteredParticipants.length,
+      ),
     );
   }
 

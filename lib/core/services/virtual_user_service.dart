@@ -634,7 +634,46 @@ Future<UserModel> createVirtualUser({
       };
     }).toList();
   }
+  // Convert virtual user to real user by merging data and deleting virtual entry
+  Future<void> convertVirtualUser(String virtualUserId, String realUserId) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // Fetch virtual user data
+        final virtualUserRef = _firestore.collection('users').doc(virtualUserId);
+        final virtualUserSnap = await transaction.get(virtualUserRef);
+        if (!virtualUserSnap.exists) {
+          throw Exception('Virtual user not found');
+        }
+        final virtualData = virtualUserSnap.data()!;
+        // Ensure real user exists
+        final realUserRef = _firestore.collection('users').doc(realUserId);
+        final realUserSnap = await transaction.get(realUserRef);
+        if (!realUserSnap.exists) {
+          throw Exception('Real user not found');
+        }
+        // TODO: Transfer contributions, events, etc. from virtual to real as needed.
+        // For now, just delete the virtual user.
+        transaction.delete(virtualUserRef);
+        // Delete from community virtualUsers subcollection if exists
+        final communityId = virtualData['communityId'] as String?;
+        if (communityId != null) {
+          final communityVirtualRef = _firestore
+              .collection('communities')
+              .doc(communityId)
+              .collection('virtualUsers')
+              .doc(virtualUserId);
+          transaction.delete(communityVirtualRef);
+        }
+      });
+      // Optionally clear cache
+      // _clearCacheForCommunity(...);
+    } catch (e, stackTrace) {
+      developer.log('Failed to convert virtual user: $e', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
 }
+
 
 
 

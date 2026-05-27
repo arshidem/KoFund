@@ -286,12 +286,15 @@ class EventProvider with ChangeNotifier {
       // Fast local document read for participant count
       int pCount = (data['currentParticipants'] ?? 0) as int;
       try {
-        var pQuery = _firestore.collection('participants').where('eventId', isEqualTo: eventId);
+        var pQuery = _firestore
+            .collection('participants')
+            .where('eventId', isEqualTo: eventId)
+            .where('status', isEqualTo: 'joined');
         if (communityId != null && communityId.isNotEmpty) {
           pQuery = pQuery.where('communityId', isEqualTo: communityId);
         }
         final pSnap = await pQuery.get(const GetOptions(source: Source.cache));
-        if (pSnap.docs.isNotEmpty) pCount = pSnap.docs.length;
+        pCount = pSnap.docs.length;
       } catch (_) {
         // Fallback to event document's cached count
       }

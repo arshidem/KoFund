@@ -41,7 +41,15 @@ class ContributionService {
         double totalPaidSoFar = 0;
         double totalDue = 0;
         try {
-          totalPaidSoFar = await getUseTotalContributions(contribution.eventId, contribution.userId);
+          totalPaidSoFar = await getUseTotalContributions(
+            contribution.eventId, 
+            contribution.userId, 
+            communityId: contribution.communityId,
+            monthId: contribution.isMonthlyContribution ? contribution.monthId : null,
+          );
+          if (totalPaidSoFar < contribution.amount) {
+            totalPaidSoFar = contribution.amount;
+          }
           final doc = await _firestore.collection('events').doc(contribution.eventId).get();
           if (doc.exists) {
             totalDue = (doc.data()?['suggestedContribution'] ?? 0).toDouble();
@@ -353,30 +361,46 @@ class ContributionService {
     }
   }
 
-  Future<double> getUseTotalContributions(String eventId, String userId, {String? communityId}) async {
+  Future<double> getUseTotalContributions(String eventId, String userId, {String? communityId, String? monthId}) async {
     if (communityId == null || communityId.isEmpty) {
       debugPrint('⚠️ getUseTotalContributions: communityId is missing for event $eventId');
       return 0.0;
     }
 
     try {
-      final query = _firestore
+      var query = _firestore
           .collection('contributions')
           .where('eventId', isEqualTo: eventId)
           .where('userId', isEqualTo: userId)
           .where('communityId', isEqualTo: communityId);
+
+      if (monthId != null && monthId.isNotEmpty) {
+        query = query.where('monthId', isEqualTo: monthId);
+      }
 
       // 🚀 OPTIMIZATION: Use aggregate query (sum)
       final aggregateQuery = await query.aggregate(sum('amount')).get();
       final total = (aggregateQuery.getSum('amount') ?? 0).toDouble();
       
       if (total == 0) {
-        final docs = await getUseContributions(eventId, userId, communityId: communityId);
+        List<ContributionModel> docs;
+        if (monthId != null && monthId.isNotEmpty) {
+          docs = await getMonthlyContributionsForParticipant(eventId, monthId, communityId: communityId);
+          docs = docs.where((c) => c.userId == userId).toList();
+        } else {
+          docs = await getUseContributions(eventId, userId, communityId: communityId);
+        }
         return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
       }
       return total;
     } catch (e) {
-      final docs = await getUseContributions(eventId, userId, communityId: communityId);
+      List<ContributionModel> docs;
+      if (monthId != null && monthId.isNotEmpty) {
+        docs = await getMonthlyContributionsForParticipant(eventId, monthId, communityId: communityId);
+        docs = docs.where((c) => c.userId == userId).toList();
+      } else {
+        docs = await getUseContributions(eventId, userId, communityId: communityId);
+      }
       return docs.fold<double>(0.0, (sum, c) => sum + c.amount);
     }
   }

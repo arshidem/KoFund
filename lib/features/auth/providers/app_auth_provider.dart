@@ -289,13 +289,37 @@ class AppAuthProvider with ChangeNotifier {
             (doc) async {
               if (doc.exists) {
                 final userData = doc.data()!;
-                _user = UserModel.fromMap(userData);
+                final serverUser = UserModel.fromMap(userData);
+
+                // If local user has communityId but server does not, sync it to server
+                if (_user != null &&
+                    _user!.communityId != null &&
+                    _user!.communityId!.isNotEmpty &&
+                    (serverUser.communityId == null || serverUser.communityId!.isEmpty)) {
+                  debugPrint('🔄 Syncing local communityId to server for user $uid');
+                  await _firestore.collection('users').doc(uid).update({
+                    'communityId': _user!.communityId,
+                    'communityName': _user!.communityName,
+                    'role': _user!.role,
+                    'isApproved': _user!.isApproved,
+                  });
+                  return; // The next snapshot event will update _user
+                }
+
+                _user = serverUser;
                 _isOfflineMode = false; // We have freshhh data
 
                 // Save locally for offline use
                 await _saveUserDataLocally(_user!.toMap());
 
                 notifyListeners();
+              } else {
+                debugPrint('⚠️ User document does not exist in Firestore for UID: $uid');
+                // Recreate user document from local cache if available
+                if (_user != null) {
+                  debugPrint('🔄 Recreating user document in Firestore from local cache...');
+                  await _firestore.collection('users').doc(uid).set(_user!.toMap());
+                }
               }
             },
             onError: (error) {

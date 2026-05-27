@@ -169,60 +169,81 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     if (!mounted) return;
     
     if (virtualUserProvider.errorMessages.isNotEmpty) {
-      final failedList = virtualUserProvider.failedUsers.map((u) => {
-        'name': u['name'] as String? ?? '',
-        'phone': u['phone'] as String? ?? '',
-        'email': u['email'] as String? ?? '',
-      }).toList();
+        final failedList = virtualUserProvider.failedUsers.map((u) => {
+          'name': u['name'] as String? ?? '',
+          'phone': u['phone'] as String? ?? '',
+          'email': u['email'] as String? ?? '',
+        }).toList();
 
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Creation Errors'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.grey[900],
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
               children: [
-                Text('Successfully created ${virtualUserProvider.successfulCreations} users, ${virtualUserProvider.errorMessages.length} failed.'),
-                const SizedBox(height: 12),
-                const Text('Please change duplicate/invalid details for the failed members:'),
-                const SizedBox(height: 8),
-                ...virtualUserProvider.errorMessages.map((e) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text('• $e'))),
+                Icon(Icons.error_outline, color: Colors.redAccent),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Couldn't Add Some Members",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                setState(() {
-                  _users.clear();
-                  if (failedList.isNotEmpty) {
-                    _users.addAll(failedList);
-                  } else {
-                    _users.add({'name': '', 'phone': '', 'email': ''});
-                  }
-                });
-                virtualUserProvider.resetCreationState();
-              },
-              child: const Text('OK'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '1 member wasn\'t added — a duplicate name was found.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    virtualUserProvider.errorMessages.first,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      );
-    } else {
-      SnackbarHelper.showSuccess(context, '✅ Successfully created ${virtualUserProvider.successfulCreations} virtual users');
-      Future.delayed(const Duration(seconds: 1), () {
-        if (!mounted) return;
-        setState(() {
-          _users.clear();
-          _users.add({'name': '', 'phone': '', 'email': ''});
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _users.clear();
+                    if (failedList.isNotEmpty) {
+                      _users.addAll(failedList);
+                    } else {
+                      _users.add({'name': '', 'phone': '', 'email': ''});
+                    }
+                  });
+                  virtualUserProvider.resetCreationState();
+                },
+                child: const Text('Edit & Retry'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        SnackbarHelper.showSuccess(context, '✅ Successfully created ${virtualUserProvider.successfulCreations} virtual users');
+        Future.delayed(const Duration(seconds: 1), () {
+          if (!mounted) return;
+          setState(() {
+            _users.clear();
+            _users.add({'name': '', 'phone': '', 'email': ''});
+          });
+          virtualUserProvider.resetCreationState();
+          if (mounted) Navigator.of(context).pop(virtualUserProvider.successfulCreations);
         });
-        virtualUserProvider.resetCreationState();
-        if (mounted) Navigator.of(context).pop(virtualUserProvider.successfulCreations);
-      });
-    }
+      }
   }
 
   @override

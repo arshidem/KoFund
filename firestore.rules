@@ -38,6 +38,7 @@ service cloud.firestore {
 
     // 🏘️ COMMUNITIES
     match /communities/{communityId} {
+      allow read: if isSignedIn();
       // Anyone signed in can create a community
       allow create: if isSignedIn();
       // Only admins (who are members) can update or delete
@@ -73,7 +74,12 @@ service cloud.firestore {
 
     // 📅 EVENTS
     match /events/{eventId} {
+      // Allow read if:
+      // 1. resource is null (list/query — communityId filter is enforced by the query itself)
+      // 2. resource exists and the user is a member of that community
+      // 3. the event is public
       allow read: if isSignedIn() && (
+        resource == null ||
         isMemberOf(resource.data.communityId) || 
         resource.data.isPublicEnabled == true
       );
@@ -90,11 +96,7 @@ service cloud.firestore {
     match /participants/{participantId} {
       allow read: if isSignedIn() && (
         resource == null ||
-        request.auth.uid == resource.data.userId || 
-        (isMemberOf(resource.data.communityId) && (
-          isAdmin() || 
-          get(/databases/$(database)/documents/users/$(resource.data.userId)).data.showDetailedProfile == true
-        ))
+        isMemberOf(resource.data.communityId)
       );
       
       allow write: if isSignedIn() && (
@@ -107,11 +109,7 @@ service cloud.firestore {
     match /contributions/{contributionId} {
       allow read: if isSignedIn() && (
         resource == null ||
-        request.auth.uid == resource.data.userId || 
-        (isMemberOf(resource.data.communityId) && (
-          isAdmin() || 
-          get(/databases/$(database)/documents/users/$(resource.data.userId)).data.showDetailedProfile == true
-        ))
+        isMemberOf(resource.data.communityId)
       );
       allow write: if isSignedIn() && (
         isAdmin() && (
@@ -123,7 +121,10 @@ service cloud.firestore {
   
     // 🗑️ DELETED CONTRIBUTIONS
     match /deleted_contributions/{contributionId} {
-      allow read: if isSignedIn() && isMemberOf(resource.data.communityId);
+      allow read: if isSignedIn() && (
+        resource == null ||
+        isMemberOf(resource.data.communityId)
+      );
       allow write: if isSignedIn() && (
         isAdmin() && (
           (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
@@ -134,7 +135,10 @@ service cloud.firestore {
 
     // 💸 EXPENSES
     match /expenses/{expenseId} {
-      allow read: if isSignedIn() && isMemberOf(resource.data.communityId);
+      allow read: if isSignedIn() && (
+        resource == null ||
+        isMemberOf(resource.data.communityId)
+      );
       allow write: if isSignedIn() && (
         isAdmin() && (
           (request.resource != null && isMemberOf(request.resource.data.communityId)) || 

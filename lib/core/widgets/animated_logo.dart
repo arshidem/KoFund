@@ -89,9 +89,10 @@ class _AnimatedLogoState extends State<AnimatedLogo>
 
   @override
   Widget build(BuildContext context) {
+    final double logoBgSize = widget.size * 1.888888; // 90 * 1.888888 = 170
     return SizedBox(
-      width: widget.size * 2.5, // Much larger for the waves
-      height: widget.size * 2.5,
+      width: widget.size * 5.0, // Much larger to ensure waves are not clipped
+      height: widget.size * 5.0,
       child: Center(
         child: Stack(
           alignment: Alignment.center,
@@ -101,10 +102,29 @@ class _AnimatedLogoState extends State<AnimatedLogo>
               ...List.generate(3, (index) {
                 return _WaveCircle(
                   delay: index * 0.4, // Staggered start
-                  size: widget.size,
+                  size: widget.showBackground ? logoBgSize : widget.size,
                   color: const Color(0xFF00BFA6),
                 );
               }),
+
+            // 🟢 Solid rounded background container (on top of waves, under the logo)
+            if (widget.showBackground)
+              Container(
+                width: logoBgSize,
+                height: logoBgSize,
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.backgroundColor.withValues(alpha: 0.4),
+                      blurRadius: 50,
+                      spreadRadius: 6,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+              ),
 
             // 🚀 The Logo itself
             AnimatedBuilder(
@@ -197,7 +217,7 @@ class _WaveCircleState extends State<_WaveCircle>
         return Opacity(
           opacity: (1.0 - _animation.value) * 0.4,
           child: Transform.scale(
-            scale: 1.0 + (_animation.value * 2.0),
+            scale: 1.0 + (_animation.value * 0.8),
             child: Container(
               width: widget.size,
               height: widget.size,

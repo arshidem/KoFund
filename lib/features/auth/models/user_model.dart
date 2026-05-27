@@ -13,6 +13,7 @@ class UserModel {
   final bool isDeveloper;
   final bool isVirtualUser;
   final String? createdBy; // Who created this virtual user (admin UID)
+  final String? mergedIntoUserId; // Real user ID this virtual user was merged into
   final String? createdByName; // 🆕 ADD THIS: admin's display name
   final Timestamp? createdAt;
   final Timestamp? updatedAt;
@@ -32,14 +33,17 @@ class UserModel {
     this.isAdmin = false,
     this.isDeveloper = false,
     this.isVirtualUser = false,
-    this.createdBy, // 🆕 Keep this for UID reference
-    this.createdByName, // 🆕 ADD THIS - for displaying admin name without extra query
+    this.createdBy,
+    this.mergedIntoUserId,
+    this.createdByName,
     this.createdAt,
     this.updatedAt,
     this.approvedAt,
     this.showDetailedProfile = false,
     this.notificationsEnabled = true,
   });
+
+
 
   Map<String, dynamic> toMap() {
     return {
@@ -54,7 +58,7 @@ class UserModel {
       'isAdmin': isAdmin,
       'isDeveloper': isDeveloper,
       'isVirtualUser': isVirtualUser,
-      'createdBy': createdBy,
+      'mergedIntoUserId': mergedIntoUserId,
       'createdByName': createdByName,
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'updatedAt': updatedAt?.millisecondsSinceEpoch,
@@ -93,6 +97,7 @@ class UserModel {
       isDeveloper: map['isDeveloper'] ?? false,
       isVirtualUser: map['isVirtualUser'] ?? false,
       createdBy: map['createdBy'],
+      mergedIntoUserId: map['mergedIntoUserId'],
       createdByName: map['createdByName'], // 🆕 ADD THIS
       createdAt: parseTimestamp(map['createdAt']),
       updatedAt: parseTimestamp(map['updatedAt']),
@@ -115,7 +120,9 @@ class UserModel {
     bool? isDeveloper,
     bool? isVirtualUser,
     String? createdBy,
-    String? createdByName, // 🆕 ADD THIS
+String? mergedIntoUserId,
+String? createdByName, // 🆕 ADD THIS
+
     Timestamp? createdAt,
     Timestamp? updatedAt,
     Timestamp? approvedAt,
@@ -135,7 +142,9 @@ class UserModel {
       isDeveloper: isDeveloper ?? this.isDeveloper,
       isVirtualUser: isVirtualUser ?? this.isVirtualUser,
       createdBy: createdBy ?? this.createdBy,
-      createdByName: createdByName ?? this.createdByName, // 🆕 ADD THIS
+mergedIntoUserId: mergedIntoUserId ?? this.mergedIntoUserId,
+createdByName: createdByName ?? this.createdByName, // 🆕 ADD THIS
+
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       approvedAt: approvedAt ?? this.approvedAt,
