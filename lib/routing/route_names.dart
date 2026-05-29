@@ -12,7 +12,6 @@ class RouteNames {
   static const String communityDashboard = '/community-dashboard';
   static const String editCommunity = '/edit-community';
   static const String pendingApproval = '/pending-approval';
-  static const String approvalRequests = '/approval-requests';
   static const String createEvent = '/create-event';
   static const String eventDetails = '/event-details';
   

@@ -7,6 +7,7 @@ import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+
 class AddDeveloperScreen extends StatefulWidget {
   const AddDeveloperScreen({super.key});
 
@@ -78,8 +79,9 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
 
       void addResults(QuerySnapshot snap) {
         for (var doc in snap.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['isVirtualUser'] == true) continue;
           if (!seenUids.contains(doc.id)) {
-            final data = doc.data() as Map<String, dynamic>;
             data['uid'] = doc.id;
             matches.add(data);
             seenUids.add(doc.id);
@@ -96,6 +98,8 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
           if (seenUids.contains(doc.id)) continue;
           
           final data = doc.data();
+          if (data['isVirtualUser'] == true) continue;
+          
           final name = (data['displayName'] ?? data['name'] ?? '').toString().toLowerCase();
           final email = (data['email'] ?? '').toString().toLowerCase();
           final phone = (data['phoneNumber'] ?? '').toString().toLowerCase();
@@ -434,8 +438,3 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
     );
   }
 }
-
-
-
-
-

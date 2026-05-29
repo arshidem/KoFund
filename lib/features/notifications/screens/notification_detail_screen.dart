@@ -9,6 +9,7 @@ import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/services/virtual_user_service.dart';
 import 'package:kofund/features/participants/providers/participant_provider.dart';
 import 'package:kofund/features/participants/models/participant_model.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
@@ -32,6 +33,8 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   bool? _hasAlreadyJoined; // null = loading, false = not joined, true = joined
   bool? _isPendingUserResolved; // null = loading, false = pending, true = approved/rejected
   bool _isFetchingReceipt = false;
+  bool? _isConversionResolved; // null = loading, false = pending, true = resolved
+  bool _isProcessingConversion = false;
 
   @override
   void initState() {
@@ -64,6 +67,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (notification.type == NotificationType.pendingUser) {
       await _checkPendingUserStatus(notification.data);
     }
+
+    // Check conversion request status
+    if (notification.type == NotificationType.conversionRequest) {
+      await _checkConversionRequestStatus(notification.data);
+    }
   }
 
   Future<void> _checkPendingUserStatus(Map<String, dynamic> data) async {
@@ -93,6 +101,117 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isPendingUserResolved = true);
+    }
+  }
+
+  Future<void> _checkConversionRequestStatus(Map<String, dynamic> data) async {
+    final virtualUserId = data['virtualUserId'];
+    if (virtualUserId == null) {
+      if (mounted) setState(() => _isConversionResolved = true);
+      return;
+    }
+
+    try {
+      // If the virtual user no longer exists, the conversion was already done
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(virtualUserId).get();
+      if (!userDoc.exists) {
+        if (mounted) setState(() => _isConversionResolved = true);
+        return;
+      }
+      if (mounted) setState(() => _isConversionResolved = false);
+    } catch (e) {
+      if (mounted) setState(() => _isConversionResolved = true);
+    }
+  }
+
+  Future<void> _handleConversionAccept(Map<String, dynamic> data) async {
+    setState(() => _isProcessingConversion = true);
+    HapticHelper.heavy();
+
+    try {
+      final virtualUserId = data['virtualUserId'] as String?;
+      final realUserId = data['realUserId'] as String?;
+      final adminId = data['adminId'] as String?;
+      final virtualUserName = data['virtualUserName'] as String? ?? 'Virtual User';
+
+      if (virtualUserId == null || realUserId == null) {
+        throw Exception('Missing user IDs for conversion');
+      }
+
+      // Perform the actual merge
+      final virtualUserService = VirtualUserService();
+      await virtualUserService.convertVirtualUser(virtualUserId, realUserId);
+
+      // Notify the admin that the conversion was accepted
+      if (adminId != null && adminId.isNotEmpty) {
+        final auth = context.read<AppAuthProvider>();
+        final currentUserName = auth.user?.displayName ?? 'User';
+        NotificationService().sendUserNotification(
+          userId: adminId,
+          title: 'Merge Accepted ✅',
+          body: '$currentUserName accepted the merge of virtual member "$virtualUserName" into their account.',
+          type: NotificationType.update,
+          communityId: data['communityId']?.toString(),
+          senderName: currentUserName,
+          data: {
+            'virtualUserName': virtualUserName,
+            'realUserName': currentUserName,
+          },
+        ).catchError((e) {
+          debugPrint('⚠️ Failed to notify admin about merge acceptance: $e');
+        });
+      }
+
+      if (mounted) {
+        setState(() => _isConversionResolved = true);
+        HapticHelper.success();
+        SnackbarHelper.showSuccess(context, 'Account merged successfully! 🎉');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Merge failed: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingConversion = false);
+    }
+  }
+
+  Future<void> _handleConversionReject(Map<String, dynamic> data) async {
+    setState(() => _isProcessingConversion = true);
+    HapticHelper.medium();
+
+    try {
+      final adminId = data['adminId'] as String?;
+      final virtualUserName = data['virtualUserName'] as String? ?? 'Virtual User';
+
+      // Notify the admin that the conversion was rejected
+      if (adminId != null && adminId.isNotEmpty) {
+        final auth = context.read<AppAuthProvider>();
+        final currentUserName = auth.user?.displayName ?? 'User';
+        await NotificationService().sendUserNotification(
+          userId: adminId,
+          title: 'Merge Rejected ❌',
+          body: '$currentUserName rejected the merge of virtual member "$virtualUserName" into their account.',
+          type: NotificationType.update,
+          communityId: data['communityId']?.toString(),
+          senderName: currentUserName,
+          data: {
+            'virtualUserName': virtualUserName,
+            'realUserName': currentUserName,
+          },
+        );
+      }
+
+      if (mounted) {
+        setState(() => _isConversionResolved = true);
+        SnackbarHelper.showSuccess(context, 'Merge request rejected');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Failed to reject: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingConversion = false);
     }
   }
 
@@ -330,6 +449,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
               _buildRefinedDataCard(context, notification.data),
             ],
             
+            // 🆕 Conversion Request Details
+            if (notification.type == NotificationType.conversionRequest) ...[
+              const SizedBox(height: 28),
+              _buildConversionRequestCard(context, notification.data),
+            ],
+
             // 🆕 Contribution Detail (if type is contribution)
             if (notification.type == NotificationType.contribution) ...[
               const SizedBox(height: 32),
@@ -524,6 +649,72 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     );
   }
 
+  // ── Conversion Request Card ─────────────────────────────────────────────
+  Widget _buildConversionRequestCard(BuildContext context, Map<String, dynamic> data) {
+    final primary = AppColors.primary(context);
+    final virtualUserName = data['virtualUserName']?.toString() ?? 'Unknown';
+    final virtualUserEmail = data['virtualUserEmail']?.toString() ?? '';
+    final virtualUserPhone = data['virtualUserPhone']?.toString() ?? '';
+    final adminName = data['adminName']?.toString() ?? 'Admin';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            primary.withValues(alpha: 0.08),
+            primary.withValues(alpha: 0.03),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.merge_type_rounded, color: primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Virtual User Details',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildSummaryRow(context, Icons.person_rounded, 'Name', virtualUserName),
+          if (virtualUserEmail.isNotEmpty) ...[
+            const Divider(height: 24, thickness: 0.5),
+            _buildSummaryRow(context, Icons.email_rounded, 'Email', virtualUserEmail),
+          ],
+          if (virtualUserPhone.isNotEmpty) ...[
+            const Divider(height: 24, thickness: 0.5),
+            _buildSummaryRow(context, Icons.phone_rounded, 'Phone', virtualUserPhone),
+          ],
+          const Divider(height: 24, thickness: 0.5),
+          _buildSummaryRow(context, Icons.admin_panel_settings_rounded, 'Requested By', adminName),
+        ],
+      ),
+    );
+  }
+
   // ── Action Buttons ────────────────────────────────────────────────────────
   Widget _buildActionButtons(BuildContext context, NotificationProvider provider, AppNotification notification) {
     // 1. Pending User Approval Actions (for Admin)
@@ -588,6 +779,89 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 ),
                 child: const Text('Approve',
                     style: TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 1b. Conversion Request Approval Actions (for Real User)
+    if (notification.type == NotificationType.conversionRequest) {
+      if (_isConversionResolved == null) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        );
+      }
+
+      if (_isConversionResolved == true) {
+        return const SizedBox.shrink(); // Already processed
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isProcessingConversion
+                    ? null
+                    : () => _handleConversionReject(notification.data),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.redAccent, width: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusFull)),
+                ),
+                child: _isProcessingConversion
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.redAccent),
+                        ),
+                      )
+                    : const Text('Reject',
+                        style: TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w900)),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isProcessingConversion
+                    ? null
+                    : () => _handleConversionAccept(notification.data),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusFull)),
+                ),
+                child: _isProcessingConversion
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Text('Accept & Merge',
+                        style: TextStyle(fontWeight: FontWeight.w900)),
               ),
             ),
           ],
@@ -791,6 +1065,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     
     // 🆕 Hide fields already in summary
     if (lowerKey == 'eventname' || lowerKey == 'period' || lowerKey == 'runningtotal' || lowerKey == 'aamountrecorded' || lowerKey == 'amountrecorded' || lowerKey == 'targetamount' || lowerKey == 'targetaamount' || lowerKey == 'recordedby') return true;
+
+    // 🆕 Hide conversion request fields (shown in dedicated card)
+    if (lowerKey == 'virtualusername' || lowerKey == 'virtualuseremail' || lowerKey == 'virtualuserphone' || lowerKey == 'realusername' || lowerKey == 'adminname') return true;
 
     return false;
   }

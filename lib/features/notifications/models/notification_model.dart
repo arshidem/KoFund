@@ -182,6 +182,8 @@ class AppNotification {
         return Icons.currency_rupee;
       case NotificationType.pendingUser:
         return Icons.person_add;
+      case NotificationType.conversionRequest:
+        return Icons.merge_type_rounded;
     }
   }
 

@@ -257,7 +257,7 @@ String _formatTime(DateTime date) {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.surface(context),
+            color: AppColors.card(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: AppColors.border(context),
@@ -339,7 +339,7 @@ String _formatTime(DateTime date) {
                 return Container(
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF0F1F1D)
+                        ? AppColors.background(context)
                         : const Color(0xFFF8FDFC),
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(28),
@@ -426,7 +426,7 @@ String _formatTime(DateTime date) {
                                 margin: const EdgeInsets.only(bottom: 24),
                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface(context),
+                                  color: AppColors.card(context),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
                                     color: Colors.red.shade200,
@@ -618,7 +618,7 @@ String _formatTime(DateTime date) {
                       Container(
                         padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
                         decoration: BoxDecoration(
-                          color: AppColors.surface(context),
+                          color: AppColors.card(context),
                           border: Border(
                             top: BorderSide(
                               color: AppColors.border(context),
@@ -920,43 +920,68 @@ String _formatTime(DateTime date) {
     setState(() {});
   }
 
+  Widget _buildCollapsedSearchIcon(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () {
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          },
+          child: Center(
+            child: Icon(
+              Icons.search,
+              color: AppColors.textSecondary(context),
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSliverAppBar(BuildContext context) {
-    const double toolbarHeight = 84.0;
-    const double bottomContentHeight = 64.0;
-    const double totalBottomHeight = bottomContentHeight + 24.0;
-    const double collapsedHeight = toolbarHeight + totalBottomHeight;
-    const double expandedHeight = collapsedHeight + 36.0;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    const double expandedHeightConfig = 170.0;
+    const double collapsedHeightConfig = 72.0 + 18.0; // toolbar + bottom curve
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SliverAppBar(
-      expandedHeight: expandedHeight,
-      toolbarHeight: toolbarHeight,
+      expandedHeight: expandedHeightConfig,
+      toolbarHeight: collapsedHeightConfig,
       floating: false,
       pinned: true,
       stretch: true,
       elevation: 0,
-      centerTitle: true,
       backgroundColor: AppColors.background(context),
       automaticallyImplyLeading: false,
-      leading: showBackButton 
-            ? IconButton(
-                icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : AppColors.textPrimary(context)),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
+      leading: null,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final double top = constraints.biggest.height;
-          final double currentHeight = top;
-          final double progress = ((currentHeight - collapsedHeight) / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
-          final double fontSize = 18 + (2 * progress);
+          final double expandedHeight = expandedHeightConfig + statusBarHeight;
+          final double collapsedHeight = collapsedHeightConfig + statusBarHeight;
+
+          final double rawProgress = (top - collapsedHeight) / (expandedHeight - collapsedHeight);
+          final double progress = rawProgress.clamp(0.0, 1.0);
+
+          final double titleTop = statusBarHeight + 16 + (4 * progress);
+          final double titleFontSize = 20 + (4 * progress);
 
           return Stack(
             fit: StackFit.expand,
             children: [
+              // Background gradient
               Container(
                 decoration: BoxDecoration(
-                  gradient: isDark 
+                  gradient: isDark
                       ? const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -969,59 +994,182 @@ String _formatTime(DateTime date) {
                   color: isDark ? null : AppColors.background(context),
                 ),
               ),
-              FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground],
-                centerTitle: true,
-                titlePadding: EdgeInsets.only(bottom: totalBottomHeight + 10),
-                title: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
+
+              // Back button + Title row — always visible at top
+              Positioned(
+                top: titleTop,
+                left: 0,
+                right: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      'Deleted Contributions',
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : AppColors.textPrimary(context),
-                        letterSpacing: -0.5 - (0.5 * progress),
-                      ),
-                    ),
-                    if (progress > 0.5)
-                      Text(
-                        widget.name,
+                    // Back button
+                    if (showBackButton)
+                      SizedBox(
+                        width: 56,
+                        height: 44,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => Navigator.pop(context),
+                            child: Center(
+                              child: Icon(
+                                Icons.arrow_back,
+                                color: isDark ? Colors.white : AppColors.textPrimary(context),
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 56),
+                    // Title — centered between back button and search icon placeholder
+                    Expanded(
+                      child: Text(
+                        'Deleted Contributions',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.normal,
-                          color: isDark ? Colors.white.withValues(alpha: 0.8) : AppColors.textSecondary(context),
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : AppColors.textPrimary(context),
+                          letterSpacing: -0.5,
                         ),
                       ),
+                    ),
+                    // Right side placeholder (same width as back button for symmetry)
+                    const SizedBox(width: 56),
                   ],
+                ),
+              ),
+
+              // Collapsed: Search icon fades in at top-right
+              Positioned(
+                top: statusBarHeight + 10,
+                right: 8.0,
+                child: Opacity(
+                  opacity: (0.5 - progress).clamp(0.0, 0.5) * 2.0,
+                  child: IgnorePointer(
+                    ignoring: progress > 0.5,
+                    child: _buildCollapsedSearchIcon(context),
+                  ),
+                ),
+              ),
+
+              // Expanded: Full search bar fades in at bottom
+              Positioned(
+                bottom: 30.0,
+                left: 24.0,
+                right: 24.0,
+                child: Opacity(
+                  opacity: (progress - 0.5).clamp(0.0, 0.5) * 2.0,
+                  child: IgnorePointer(
+                    ignoring: progress < 0.5,
+                    child: _buildExpandedSearchBar(context),
+                  ),
+                ),
+              ),
+
+              // Rounded bottom cap
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.background(context),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(50),
+                      topRight: Radius.circular(50),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.08),
+                        offset: const Offset(0, -4),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           );
         },
       ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(totalBottomHeight),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: _buildModernSearchBar(),
-            ),
-            Container(
-              height: 24,
-              decoration: BoxDecoration(
-                color: AppColors.background(context),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(AppDimensions.radiusExtraLarge),
-                  topRight: Radius.circular(AppDimensions.radiusExtraLarge),
-                ),
-              ),
-            ),
-          ],
+    );
+  }
+
+  Widget _buildExpandedSearchBar(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color searchBg = isDark ? Colors.white.withValues(alpha: 0.12) : AppColors.surface(context).withValues(alpha: 0.8);
+    final Color searchBorder = isDark ? Colors.white.withValues(alpha: 0.2) : AppColors.border(context);
+    final Color textColor = isDark ? Colors.white : AppColors.textPrimary(context);
+    final Color iconColorVal = isDark ? Colors.white70 : Colors.black;
+
+    return Container(
+      height: 52,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: searchBg,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: searchBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+          letterSpacing: 0.3,
         ),
+        cursorColor: textColor,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          hintText: 'Search deleted contributions...',
+          filled: false,
+          hintStyle: TextStyle(
+            color: iconColorVal,
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: iconColorVal,
+            size: 20,
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: iconColorVal,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
+        onChanged: (val) {
+          setState(() {
+            _searchQuery = val.toLowerCase();
+          });
+        },
       ),
     );
   }

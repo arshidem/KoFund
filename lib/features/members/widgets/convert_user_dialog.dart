@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
 import 'package:kofund/core/services/user_service.dart';
-import 'package:kofund/core/services/virtual_user_service.dart';
+import 'package:kofund/core/services/notification_service.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ConvertUserDialog extends StatefulWidget {
   final UserModel virtualUser;
@@ -21,7 +23,7 @@ class ConvertUserDialog extends StatefulWidget {
 
 class _ConvertUserDialogState extends State<ConvertUserDialog> {
   final UserService _userService = UserService();
-  final VirtualUserService _virtualUserService = VirtualUserService();
+  final NotificationService _notificationService = NotificationService();
   List<UserModel> _realUsers = [];
   List<UserModel> _filteredUsers = [];
   UserModel? _selectedUser;
@@ -75,11 +77,35 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
     HapticHelper.light();
     setState(() => _isLoading = true);
     try {
-      await _virtualUserService.convertVirtualUser(widget.virtualUser.uid, _selectedUser!.uid);
-      SnackbarHelper.showSuccess(context, 'User converted successfully');
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final adminName = currentUser?.displayName ?? 'Admin';
+
+      // Send a conversion request notification to the real user
+      await _notificationService.sendUserNotification(
+        userId: _selectedUser!.uid,
+        title: 'Account Merge Request',
+        body: 'Admin "$adminName" wants to merge the virtual member "${widget.virtualUser.displayName}" into your account. All data from the virtual user will be transferred to you.',
+        type: NotificationType.conversionRequest,
+        communityId: widget.virtualUser.communityId,
+        senderName: adminName,
+        data: {
+          'virtualUserId': widget.virtualUser.uid,
+          'virtualUserName': widget.virtualUser.displayName ?? 'Unknown',
+          'virtualUserEmail': widget.virtualUser.email,
+          'virtualUserPhone': widget.virtualUser.phoneNumber ?? '',
+          'realUserId': _selectedUser!.uid,
+          'realUserName': _selectedUser!.displayName ?? _selectedUser!.email,
+          'communityId': widget.virtualUser.communityId ?? '',
+          'adminId': currentUser?.uid ?? '',
+          'adminName': adminName,
+        },
+      );
+
+      HapticHelper.success();
+      SnackbarHelper.showSuccess(context, 'Conversion request sent to ${_selectedUser!.displayName ?? _selectedUser!.email}');
       Navigator.of(context).pop(true);
     } catch (e) {
-      SnackbarHelper.showError(context, 'Conversion failed: $e');
+      SnackbarHelper.showError(context, 'Failed to send request: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -153,7 +179,7 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _selectedUser == null || _isLoading ? null : _convert,
-                    child: const Text('Convert'),
+                    child: const Text('Send Request'),
                   ),
                 ],
               ),

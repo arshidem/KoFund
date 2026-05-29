@@ -69,9 +69,6 @@ class UserService {
       
       if (filterTeventType == 'virtual') {
         query = query.where('isVirtualUser', isEqualTo: true);
-      } else if (filterTeventType == 'real') {
-        // 🚀 OPTIMIZATION: Use direct filter for real users too
-        query = query.where('isVirtualUser', isEqualTo: false);
       }
       
       query = query.orderBy('displayName').limit(200);
@@ -79,12 +76,17 @@ class UserService {
       final snapshot = await query.get();
       debugPrint('✅ DEBUG: Retrieved ${snapshot.docs.length} $filterTeventType users');
       
-      return snapshot.docs.map((doc) {
+      final users = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         data['isVirtualUser'] = data['isVirtualUser'] ?? false;
         data['isApproved'] = data['isApproved'] ?? true;
         return UserModel.fromMap(data);
       }).toList();
+
+      if (filterTeventType == 'real') {
+        return users.where((u) => !u.isVirtualUser).toList();
+      }
+      return users;
       
     } catch (e) {
       debugPrint('❌ DEBUG: Error fetching community members: $e');

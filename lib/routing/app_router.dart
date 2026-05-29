@@ -14,7 +14,6 @@ import '../features/community/screens/join_community_screen.dart';
 import '../features/community/screens/community_dashboard.dart';
 import '../core/widgets/community_guard.dart';
 import '../features/community/screens/pending_approval_screen.dart';
-import '../features/admin/screens/approval_requests_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/dashboard/screens/edit_community_screen.dart';
 
@@ -192,8 +191,6 @@ case RouteNames.joinCommunity:
         return MaterialPageRoute(builder: (_) => const EditCommunityScreen());
       case RouteNames.pendingApproval:
         return MaterialPageRoute(builder: (_) => const PendingApprovalScreen());
-      case RouteNames.approvalRequests:
-        return MaterialPageRoute(builder: (_) => const ApprovalRequestsScreen());
       
       // MEMBER ROUTES
       case RouteNames.allMembers:

@@ -1315,7 +1315,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
               return Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF0F1F1D)
+                      ? AppColors.background(context)
                       : const Color(0xFFF8FDFC),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(28),
@@ -1436,7 +1436,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                               margin: const EdgeInsets.only(bottom: 24),
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                               decoration: BoxDecoration(
-                                color: AppColors.surface(context),
+                                color: AppColors.card(context),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: AppColors.border(context),
@@ -1525,7 +1525,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                     decoration: BoxDecoration(
-                                      color: AppColors.surface(context),
+                                      color: AppColors.card(context),
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
                                         color: AppColors.border(context),
@@ -1700,7 +1700,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
                                     Container(
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        color: AppColors.surface(context),
+                                        color: AppColors.card(context),
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: AppColors.border(context),
@@ -1743,7 +1743,7 @@ void _showExpenseDetails(ExpenseModel expense, BuildContext context) {
 Container(
   padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
   decoration: BoxDecoration(
-    color: AppColors.surface(context),
+    color: AppColors.card(context),
     border: Border(
       top: BorderSide(
         color: AppColors.border(context),
@@ -1922,7 +1922,7 @@ Widget _buildExpenseEditHistoryItem(BuildContext context, Map<String, dynamic> e
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-    color: AppColors.surface(context),
+    color: AppColors.card(context),
     borderRadius: BorderRadius.circular(16),
     border: Border.all(
       color: AppColors.border(context),

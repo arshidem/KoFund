@@ -380,13 +380,19 @@ Future<void> loadMembers({String filterTeventType = 'all', bool reset = false}) 
     // 1. Optimistic Update
     final index = _members.indexWhere((member) => member.uid == uid);
     UserModel? removedMember;
+    bool isVirtual = false;
     if (index != -1) {
       removedMember = _members.removeAt(index);
+      isVirtual = removedMember.isVirtualUser;
       _safeNotifyListeners();
     }
 
     try {
-      await _userService.removeFromCommunity(uid, communityId);
+      if (isVirtual) {
+        await _virtualUserService.deleteVirtualUser(uid);
+      } else {
+        await _userService.removeFromCommunity(uid, communityId);
+      }
       return true;
     } catch (e) {
       // 2. Revert on failure
@@ -505,8 +511,12 @@ Future<void> loadMembers({String filterTeventType = 'all', bool reset = false}) 
     _safeNotifyListeners();
 
     try {
-      for (final uid in uids) {
-        await _userService.removeFromCommunity(uid, communityId);
+      for (final member in removedMembers) {
+        if (member.isVirtualUser) {
+          await _virtualUserService.deleteVirtualUser(member.uid);
+        } else {
+          await _userService.removeFromCommunity(member.uid, communityId);
+        }
       }
       return true;
     } catch (e) {

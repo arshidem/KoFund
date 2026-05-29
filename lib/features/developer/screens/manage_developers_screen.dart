@@ -27,49 +27,57 @@ class _ManageDevelopersScreenState extends State<ManageDevelopersScreen> {
     _loadDevelopers();
   }
 
-Future<void> _loadDevelopers({bool silent = false}) async {
-  if (!silent) {
-    setState(() => _isLoading = true);
-  } else {
-    HapticHelper.light();
+  /// Safely convert a Firestore field that may be a Timestamp, int (ms), or null.
+  DateTime? _toDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    return null;
   }
 
-  try {
-    final query = await _firestore
-        .collection('users')
-        .where('isDeveloper', isEqualTo: true)
-        .orderBy('updatedAt', descending: true)
-        .get();
+  Future<void> _loadDevelopers({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isLoading = true);
+    } else {
+      HapticHelper.light();
+    }
 
-    if (!mounted) return;
+    try {
+      final query = await _firestore
+          .collection('users')
+          .where('isDeveloper', isEqualTo: true)
+          .orderBy('updatedAt', descending: true)
+          .get();
 
-    setState(() {
-      _developers = query.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'email': data['email'] ?? 'No email',
-          'name': data['displayName'] ?? data['name'] ?? 'Unknown',
-          'phone': data['phoneNumber'] ?? data['phone'] ?? '',
-          'isAdmin': data['isAdmin'] ?? false,
-          'createdAt': (data['createdAt'] as Timestamp?)?.toDate(),
-          'updatedAt': (data['updatedAt'] as Timestamp?)?.toDate(),
-          'lastActive': (data['lastActive'] as Timestamp?)?.toDate(),
-        };
-      }).toList();
-      _isLoading = false;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    SnackbarHelper.showError(context, 'Error loading developers: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _developers = query.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            'email': data['email'] ?? 'No email',
+            'name': data['displayName'] ?? data['name'] ?? 'Unknown',
+            'phone': data['phoneNumber'] ?? data['phone'] ?? '',
+            'isAdmin': data['isAdmin'] ?? false,
+            'createdAt': _toDate(data['createdAt']),
+            'updatedAt': _toDate(data['updatedAt']),
+            'lastActive': _toDate(data['lastActive']),
+          };
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      SnackbarHelper.showError(context, 'Error loading developers: $e');
+    }
   }
-}
 
   Future<void> _removeDeveloper(String userId, String email) async {
     final authProvider = context.read<AppAuthProvider>();
-    
-    // P removing yourself
+
+    // Prevent removing yourself
     if (userId == authProvider.user?.uid) {
       SnackbarHelper.showError(context, 'You cannot remove yourself as developer');
       return;
@@ -107,10 +115,9 @@ Future<void> _loadDevelopers({bool silent = false}) async {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // Refresh list
       await _loadDevelopers();
       if (!mounted) return;
-      
+
       SnackbarHelper.showSuccess(context, 'Developer access removed');
     } catch (e) {
       SnackbarHelper.showError(context, 'Error: $e');
@@ -129,7 +136,7 @@ Future<void> _loadDevelopers({bool silent = false}) async {
             children: [
               _buildDetailItem('Name', developer['name']),
               _buildDetailItem('Email', developer['email']),
-              if (developer['phone'].isNotEmpty)
+              if ((developer['phone'] as String).isNotEmpty)
                 _buildDetailItem('Phone', developer['phone']),
               _buildDetailItem('User ID', developer['id']),
               _buildDetailItem(
@@ -139,12 +146,12 @@ Future<void> _loadDevelopers({bool silent = false}) async {
               if (developer['createdAt'] != null)
                 _buildDetailItem(
                   'Joined',
-                  DateFormat('dd MMM yyyy').format(developer['createdAt']!),
+                  DateFormat('dd MMM yyyy').format(developer['createdAt'] as DateTime),
                 ),
               if (developer['lastActive'] != null)
                 _buildDetailItem(
                   'Last Active',
-                  DateFormat('dd MMM yyyy - hh:mm a').format(developer['lastActive']!),
+                  DateFormat('dd MMM yyyy - hh:mm a').format(developer['lastActive'] as DateTime),
                 ),
             ],
           ),
@@ -224,7 +231,7 @@ Future<void> _loadDevelopers({bool silent = false}) async {
             ),
             if (developer['createdAt'] != null)
               Text(
-                'Added: ${DateFormat('dd MMM yyyy').format(developer['createdAt']!)}',
+                'Added: ${DateFormat('dd MMM yyyy').format(developer['createdAt'] as DateTime)}',
                 style: TextStyle(
                   color: AppColors.textTertiary(context),
                   fontSize: 10,
@@ -240,10 +247,11 @@ Future<void> _loadDevelopers({bool silent = false}) async {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-color: Colors.blue.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue, width: 1),
                 ),
-                child: Text(
+                child: const Text(
                   'Admin',
                   style: TextStyle(
                     fontSize: 10,
@@ -253,16 +261,17 @@ color: Colors.blue.withValues(alpha: 0.1),                  borderRadius: Border
                 ),
               ),
             const SizedBox(width: 8),
-            
+
             // Current user badge
             if (isCurrentUser)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-color: Colors.green.withValues(alpha: 0.1),                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green, width: 1),
                 ),
-                child: Text(
+                child: const Text(
                   'You',
                   style: TextStyle(
                     fontSize: 10,
@@ -272,7 +281,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
                 ),
               ),
             const SizedBox(width: 8),
-            
+
             // Actions menu
             PopupMenuButton<String>(
               icon: Icon(
@@ -280,25 +289,25 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
                 color: AppColors.textSecondary(context),
               ),
               itemBuilder: (context) => [
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'details',
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 18),
-                      const SizedBox(width: 8),
-                      const Text('View Details'),
+                      Icon(Icons.info_outline, size: 18),
+                      SizedBox(width: 8),
+                      Text('View Details'),
                     ],
                   ),
                 ),
                 if (!isCurrentUser) ...[
                   const PopupMenuDivider(),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                     value: 'remove',
                     child: Row(
                       children: [
-                        const Icon(Icons.person_remove, size: 18, color: Colors.red),
-                        const SizedBox(width: 8),
-                        const Text('Remove Access', style: TextStyle(color: Colors.red)),
+                        Icon(Icons.person_remove, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Remove Access', style: TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),
@@ -322,7 +331,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AppAuthProvider>();
-    
+
     if (!authProvider.isDeveloper) {
       return Scaffold(
         backgroundColor: AppColors.background(context),
@@ -387,7 +396,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
                                   children: [
                                     Text(
                                       _developers
-                                          .where((eventId) => eventId['isAdmin'])
+                                          .where((d) => d['isAdmin'] == true)
                                           .length
                                           .toString(),
                                       style: const TextStyle(
@@ -412,7 +421,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
 
                         const SizedBox(height: 24),
 
-                        // Developers List
+                        // Developers List header
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -468,7 +477,7 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
 
                         const SizedBox(height: 24),
 
-                        // Instructions
+                        // Info card
                         Card(
                           color: AppColors.surface(context),
                           shape: RoundedRectangleBorder(
@@ -523,9 +532,3 @@ color: Colors.green.withValues(alpha: 0.1),                  borderRadius: Borde
     );
   }
 }
-
-
-
-
-
-

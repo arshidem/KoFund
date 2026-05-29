@@ -10,6 +10,8 @@ import 'package:kofund/features/issues/screens/my_issues_screen.dart'; // Add th
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_styles.dart';
 
+import 'package:kofund/core/utils/dialog_helper.dart';
+
 class ReportIssueScreen extends StatefulWidget {
   const ReportIssueScreen({super.key});
 
@@ -72,56 +74,18 @@ Future<void> _submitIssue() async {
 }
 
   void _showSuccessDialog(String issueId) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Issue Submitted'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle,
-              size: 60,
-              color: AppColors.success(context),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Thank you for reporting this issue!',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Issue ID: ${issueId.substring(0, 8)}...',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Our developers will review it and update you soon.',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _clearForm();
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Issue Submitted',
+      message: 'Thank you for reporting this issue!\n\nIssue ID: ${issueId.substring(0, 8)}...\n\nOur developers will review it and update you soon.',
+      confirmLabel: 'OK',
+      cancelLabel: '',
+      icon: Icons.check_circle,
+    ).then((_) {
+      if (mounted) {
+        _clearForm();
+      }
+    });
   }
 
   void _clearForm() {

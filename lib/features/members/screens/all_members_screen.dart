@@ -1311,33 +1311,39 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                       .toList();
                   final hasAdmins = selectedMembers.any((m) => m.isAdmin);
                   final hasNonAdmins = selectedMembers.any((m) => !m.isAdmin);
+                  // Hide admin/unapprove options if any selected member is a virtual user
+                  final hasVirtualUsers = selectedMembers.any((m) => m.isVirtualUser);
+                  final hasRealUsers = selectedMembers.any((m) => !m.isVirtualUser);
 
                   return [
-                    if (hasNonAdmins)
+                    if (!hasVirtualUsers && hasNonAdmins)
                       _buildPopupMenuItem(
                         value: 'make_admin',
                         icon: Icons.admin_panel_settings_rounded,
                         label: 'Make Admin',
                         color: AppColors.primary(context),
                       ),
-                    if (hasAdmins)
+                    if (!hasVirtualUsers && hasAdmins)
                       _buildPopupMenuItem(
                         value: 'remove_admin',
                         icon: Icons.person_remove_alt_1_rounded,
                         label: 'Remove Admin',
                         color: AppColors.warning(context),
                       ),
-                    _buildPopupMenuItem(
-                      value: 'unapprove',
-                      icon: Icons.block_flipped,
-                      label: 'Unapprove',
-                      color: AppColors.error(context),
-                    ),
+                    if (!hasVirtualUsers)
+                      _buildPopupMenuItem(
+                        value: 'unapprove',
+                        icon: Icons.block_flipped,
+                        label: 'Unapprove',
+                        color: AppColors.error(context),
+                      ),
                     _buildPopupMenuItem(
                       value: 'remove_community',
                       icon: Icons.person_remove_rounded,
-                      label: 'Remove Community',
-                      color: Colors.purple,
+                      label: hasVirtualUsers && !hasRealUsers
+                          ? 'Delete Virtual User${_selectedMemberIds.length > 1 ? 's' : ''}'
+                          : 'Remove From Community',
+                      color: Colors.red,
                     ),
                   ];
                 },

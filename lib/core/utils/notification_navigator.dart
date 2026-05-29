@@ -46,8 +46,14 @@ class NotificationNavigator {
       return;
     }
 
+    // conversionRequest → stay on notification detail (has Accept/Reject)
+    if (type.contains('conversionRequest')) {
+      Navigator.pushNamed(context, RouteNames.notifications);
+      return;
+    }
+
     if (type.contains('pendingUser') || type.contains('request')) {
-      Navigator.pushNamed(context, RouteNames.approvalRequests);
+      Navigator.pushNamed(context, RouteNames.allMembers);
       return;
     }
 

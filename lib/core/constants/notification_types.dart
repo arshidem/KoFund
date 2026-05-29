@@ -12,6 +12,7 @@ enum NotificationType {
   contribution,
   event,
   pendingUser,
+  conversionRequest,
 }
 
 enum NotificationPriority {

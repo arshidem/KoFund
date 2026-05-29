@@ -69,6 +69,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Contribution Notifications';
       case NotificationType.pendingUser:
         return 'New Member Requests';
+      case NotificationType.conversionRequest:
+        return 'Account Merge Requests';
     }
   }
 
@@ -100,6 +102,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Icons.currency_rupee;
       case NotificationType.pendingUser:
         return Icons.person_add_rounded;
+      case NotificationType.conversionRequest:
+        return Icons.merge_type_rounded;
     }
   }
 
@@ -131,6 +135,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return Colors.lightGreen;
       case NotificationType.pendingUser:
         return Colors.orangeAccent;
+      case NotificationType.conversionRequest:
+        return Colors.teal;
     }
   }
 
@@ -316,6 +322,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         return 'Contribution updates and confirmations';
       case NotificationType.pendingUser:
         return 'Alerts for new member join requests (Admins only)';
+      case NotificationType.conversionRequest:
+        return 'Requests to merge a virtual user into your account';
     }
   }
 }

@@ -16,14 +16,26 @@ service cloud.firestore {
       return getUserData().role == 'admin';
     }
     
+    function isDeveloper() {
+      return getUserData().isDeveloper == true;
+    }
+    
     function isMemberOf(communityId) {
       return getUserData().communityId == communityId;
+    }
+
+    // Helper: is this a virtual-to-real user merge update?
+    function isVirtualUserMerge() {
+      return resource.data.userId.matches('virtual_.*') && 
+             request.resource.data.userId == request.auth.uid;
     }
 
     // 👤 USERS
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if request.auth.uid == userId || isAdmin();
+      allow write: if request.auth.uid == userId || isAdmin() || isDeveloper();
+      // Allow community members to delete virtual users (merge approval flow)
+      allow delete: if isSignedIn() && resource.data.isVirtualUser == true;
       
       // 🔔 User Notifications
       match /notifications/{notificationId} {
@@ -55,8 +67,10 @@ service cloud.firestore {
       // 🧑‍💻 Virtual Users subcollection
       match /virtualUsers/{virtualUserId} {
         allow read: if isSignedIn();
-        // Only admins can create, update, delete virtual user entries
-        allow create, update, delete: if isSignedIn() && isAdmin() && isMemberOf(communityId);
+        // Only admins can create/update virtual user entries
+        allow create, update: if isSignedIn() && isAdmin() && isMemberOf(communityId);
+        // Allow community members to delete (merge approval flow)
+        allow delete: if isSignedIn();
       }
       
 
@@ -103,6 +117,8 @@ service cloud.firestore {
         (request.resource != null && isMemberOf(request.resource.data.communityId)) || 
         (resource != null && isMemberOf(resource.data.communityId))
       );
+      // Allow community members to update during virtual user merge
+      allow update: if isSignedIn() && resource.data.userId.matches('virtual_.*') && request.resource.data.userId == request.auth.uid;
     }
 
     // 💰 CONTRIBUTIONS
@@ -117,6 +133,8 @@ service cloud.firestore {
           (resource != null && isMemberOf(resource.data.communityId))
         )
       );
+      // Allow community members to update during virtual user merge
+      allow update: if isSignedIn() && isVirtualUserMerge();
     }
   
     // 🗑️ DELETED CONTRIBUTIONS
@@ -131,6 +149,8 @@ service cloud.firestore {
           (resource != null && isMemberOf(resource.data.communityId))
         )
       );
+      // Allow community members to update during virtual user merge
+      allow update: if isSignedIn() && isVirtualUserMerge();
     }
 
     // 💸 EXPENSES
@@ -145,11 +165,32 @@ service cloud.firestore {
           (resource != null && isMemberOf(resource.data.communityId))
         )
       );
+      // Allow community members to update during virtual user merge (paidBy field)
+      allow update: if isSignedIn() && 
+        resource.data.paidBy.matches('virtual_.*') && 
+        request.resource.data.paidBy == request.auth.uid;
     }
 
     // 📱 FCM TOKENS
     match /user_notification_tokens/{token} {
       allow read, write: if isSignedIn();
+    }
+
+    // 🐛 ISSUES
+    match /issues/{issueId} {
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource == null ||
+        resource.data.reporterId == request.auth.uid || 
+        isAdmin() ||
+        isDeveloper()
+      );
+      allow update: if isSignedIn() && (
+        resource.data.reporterId == request.auth.uid || 
+        isAdmin() ||
+        isDeveloper()
+      );
+      allow delete: if isSignedIn() && (isAdmin() || isDeveloper());
     }
 
     // ⏳ RATE LIMITS (System Only)

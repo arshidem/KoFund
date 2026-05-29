@@ -395,25 +395,93 @@ Future<UserModel> createVirtualUser({
   }
 
 
+  // Helper: Erase all related contributions, participants, deleted contributions, and expenses
+  Future<void> _deleteVirtualUserData(String userId, String? communityId) async {
+    try {
+      final List<QuerySnapshot> snapshotsToClean = [];
+
+      // Get all contributions
+      var contributionsQuery = _firestore
+          .collection('contributions')
+          .where('userId', isEqualTo: userId);
+      if (communityId != null) {
+        contributionsQuery = contributionsQuery.where('communityId', isEqualTo: communityId);
+      }
+      snapshotsToClean.add(await contributionsQuery.get());
+
+      // Get all participants
+      var participantsQuery = _firestore
+          .collection('participants')
+          .where('userId', isEqualTo: userId);
+      if (communityId != null) {
+        participantsQuery = participantsQuery.where('communityId', isEqualTo: communityId);
+      }
+      snapshotsToClean.add(await participantsQuery.get());
+
+      // Get all deleted_contributions
+      var deletedContribQuery = _firestore
+          .collection('deleted_contributions')
+          .where('userId', isEqualTo: userId);
+      if (communityId != null) {
+        deletedContribQuery = deletedContribQuery.where('communityId', isEqualTo: communityId);
+      }
+      snapshotsToClean.add(await deletedContribQuery.get());
+
+      // Get all expenses
+      var expensesQuery = _firestore
+          .collection('expenses')
+          .where('paidBy', isEqualTo: userId);
+      if (communityId != null) {
+        expensesQuery = expensesQuery.where('communityId', isEqualTo: communityId);
+      }
+      snapshotsToClean.add(await expensesQuery.get());
+
+      final batch = _firestore.batch();
+      int operationCount = 0;
+
+      for (final snapshot in snapshotsToClean) {
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+          operationCount++;
+          if (operationCount >= 400) {
+            await batch.commit();
+            operationCount = 0;
+          }
+        }
+      }
+
+      if (operationCount > 0) {
+        await batch.commit();
+      }
+      developer.log('🧹 Cleaned up associated data for virtual user $userId');
+    } catch (e) {
+      developer.log('Error deleting virtual user related data: $e');
+    }
+  }
+
   // Delete virtual user
   Future<void> deleteVirtualUser(String userId) async {
     developer.log('Deleting virtual user: $userId');
 
     try {
+      // 1. Fetch community ID first
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw Exception('User not found');
+      }
+
+      final userData = userDoc.data()!;
+      final communityId = userData['communityId'] as String?;
+
+      if (communityId == null) {
+        throw Exception('Community ID not found for user');
+      }
+
+      // 2. Erase all related contributions, participants, expenses, etc.
+      await _deleteVirtualUserData(userId, communityId);
+
+      // 3. Delete virtual user documents
       await _firestore.runTransaction((transaction) async {
-        // Get current user data
-        final userDoc = await transaction.get(_firestore.collection('users').doc(userId));
-        if (!userDoc.exists) {
-          throw Exception('User not found');
-        }
-
-        final userData = userDoc.data()!;
-        final communityId = userData['communityId'] as String?;
-        
-        if (communityId == null) {
-          throw Exception('Community ID not found for user');
-        }
-
         // First, delete from users collection
         transaction.delete(_firestore.collection('users').doc(userId));
 
@@ -446,10 +514,9 @@ Future<UserModel> createVirtualUser({
     try {
       if (userIds.isEmpty) return;
 
-      final batch = _firestore.batch();
       final Set<String> communityIds = {};
 
-      // First, get all users to find their community IDs
+      // First, get all users to find their community IDs and erase their related data
       for (final userId in userIds) {
         final userDoc = await _firestore.collection('users').doc(userId).get();
         if (userDoc.exists) {
@@ -457,6 +524,18 @@ Future<UserModel> createVirtualUser({
           if (communityId != null) {
             communityIds.add(communityId);
             
+            // Erase related contributions, participants, etc.
+            await _deleteVirtualUserData(userId, communityId);
+          }
+        }
+      }
+
+      final batch = _firestore.batch();
+      for (final userId in userIds) {
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          final communityId = userDoc.data()?['communityId'] as String?;
+          if (communityId != null) {
             // Delete from users collection
             batch.delete(_firestore.collection('users').doc(userId));
 
@@ -478,7 +557,7 @@ Future<UserModel> createVirtualUser({
         _clearCacheForCommunity(communityId);
       }
 
-      developer.log('Successfully deleted ${userIds.length} virtual users');
+      developer.log('Successfully deleted multiple virtual users');
     } catch (e, stackTrace) {
       developer.log('Failed to delete multiple virtual users: $e', 
                     error: e, 
@@ -634,39 +713,133 @@ Future<UserModel> createVirtualUser({
       };
     }).toList();
   }
-  // Convert virtual user to real user by merging data and deleting virtual entry
+  // Convert virtual user to real user by transferring all data and deleting virtual entry
   Future<void> convertVirtualUser(String virtualUserId, String realUserId) async {
+    developer.log('Converting virtual user $virtualUserId → real user $realUserId');
+
     try {
+      // 1. Fetch both user documents first
+      final virtualUserSnap = await _firestore.collection('users').doc(virtualUserId).get();
+      if (!virtualUserSnap.exists) {
+        throw Exception('Virtual user not found');
+      }
+      final virtualData = virtualUserSnap.data()!;
+      final communityId = virtualData['communityId'] as String?;
+
+      final realUserSnap = await _firestore.collection('users').doc(realUserId).get();
+      if (!realUserSnap.exists) {
+        throw Exception('Real user not found');
+      }
+      final realData = realUserSnap.data()!;
+      final realUserName = realData['displayName'] as String? ?? realData['email'] as String? ?? 'User';
+      final realUserEmail = realData['email'] as String? ?? '';
+
+      // 2. Transfer contributions (userId → realUserId)
+      var contributionsQuery = _firestore
+          .collection('contributions')
+          .where('userId', isEqualTo: virtualUserId);
+      if (communityId != null) {
+        contributionsQuery = contributionsQuery.where('communityId', isEqualTo: communityId);
+      }
+      final contributionsSnap = await contributionsQuery.get();
+
+      if (contributionsSnap.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final doc in contributionsSnap.docs) {
+          batch.update(doc.reference, {
+            'userId': realUserId,
+            'contributorName': realUserName,
+          });
+        }
+        await batch.commit();
+        developer.log('✅ Transferred ${contributionsSnap.docs.length} contributions');
+      }
+
+      // 3. Transfer participants (userId, userName, userEmail → real user)
+      var participantsQuery = _firestore
+          .collection('participants')
+          .where('userId', isEqualTo: virtualUserId);
+      if (communityId != null) {
+        participantsQuery = participantsQuery.where('communityId', isEqualTo: communityId);
+      }
+      final participantsSnap = await participantsQuery.get();
+
+      if (participantsSnap.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final doc in participantsSnap.docs) {
+          batch.update(doc.reference, {
+            'userId': realUserId,
+            'userName': realUserName,
+            'userEmail': realUserEmail,
+          });
+        }
+        await batch.commit();
+        developer.log('✅ Transferred ${participantsSnap.docs.length} participants');
+      }
+
+      // 4. Transfer deleted_contributions
+      var deletedContribQuery = _firestore
+          .collection('deleted_contributions')
+          .where('userId', isEqualTo: virtualUserId);
+      if (communityId != null) {
+        deletedContribQuery = deletedContribQuery.where('communityId', isEqualTo: communityId);
+      }
+      final deletedContribSnap = await deletedContribQuery.get();
+
+      if (deletedContribSnap.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final doc in deletedContribSnap.docs) {
+          batch.update(doc.reference, {
+            'userId': realUserId,
+            'contributorName': realUserName,
+          });
+        }
+        await batch.commit();
+        developer.log('✅ Transferred ${deletedContribSnap.docs.length} deleted contributions');
+      }
+
+      // 5. Transfer expenses (paidBy, paidByName)
+      var expensesQuery = _firestore
+          .collection('expenses')
+          .where('paidBy', isEqualTo: virtualUserId);
+      if (communityId != null) {
+        expensesQuery = expensesQuery.where('communityId', isEqualTo: communityId);
+      }
+      final expensesSnap = await expensesQuery.get();
+
+      if (expensesSnap.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final doc in expensesSnap.docs) {
+          batch.update(doc.reference, {
+            'paidBy': realUserId,
+            'paidByName': realUserName,
+          });
+        }
+        await batch.commit();
+        developer.log('✅ Transferred ${expensesSnap.docs.length} expenses');
+      }
+
+      // 6. Delete virtual user (transaction for atomicity)
       await _firestore.runTransaction((transaction) async {
-        // Fetch virtual user data
-        final virtualUserRef = _firestore.collection('users').doc(virtualUserId);
-        final virtualUserSnap = await transaction.get(virtualUserRef);
-        if (!virtualUserSnap.exists) {
-          throw Exception('Virtual user not found');
-        }
-        final virtualData = virtualUserSnap.data()!;
-        // Ensure real user exists
-        final realUserRef = _firestore.collection('users').doc(realUserId);
-        final realUserSnap = await transaction.get(realUserRef);
-        if (!realUserSnap.exists) {
-          throw Exception('Real user not found');
-        }
-        // TODO: Transfer contributions, events, etc. from virtual to real as needed.
-        // For now, just delete the virtual user.
-        transaction.delete(virtualUserRef);
-        // Delete from community virtualUsers subcollection if exists
-        final communityId = virtualData['communityId'] as String?;
+        transaction.delete(_firestore.collection('users').doc(virtualUserId));
+
         if (communityId != null) {
-          final communityVirtualRef = _firestore
-              .collection('communities')
-              .doc(communityId)
-              .collection('virtualUsers')
-              .doc(virtualUserId);
-          transaction.delete(communityVirtualRef);
+          transaction.delete(
+            _firestore
+                .collection('communities')
+                .doc(communityId)
+                .collection('virtualUsers')
+                .doc(virtualUserId),
+          );
         }
       });
-      // Optionally clear cache
-      // _clearCacheForCommunity(...);
+
+      // 7. Clear cache
+      if (communityId != null) {
+        _clearCacheForCommunity(communityId);
+      }
+
+      developer.log('✅ Successfully converted virtual user $virtualUserId → $realUserId');
     } catch (e, stackTrace) {
       developer.log('Failed to convert virtual user: $e', error: e, stackTrace: stackTrace);
       rethrow;

@@ -33,7 +33,6 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   late PageController _pageController;
 
   void _navigateToEvents() {
-    HapticFeedback.selectionClick();
     _pageController.animateToPage(
       1,
       duration: const Duration(milliseconds: 300),
@@ -42,7 +41,6 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   }
 
   void _navigateToMembers() {
-    HapticFeedback.selectionClick();
     _pageController.animateToPage(
       2,
       duration: const Duration(milliseconds: 300),
@@ -206,7 +204,6 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          HapticFeedback.selectionClick();
           setState(() {
             _forceMembersBackButton = false;
             _currentIndex = index;
