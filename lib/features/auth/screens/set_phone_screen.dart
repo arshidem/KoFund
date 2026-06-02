@@ -5,6 +5,8 @@ import 'package:kofund/core/constants/app_colors.dart';
 import '../providers/app_auth_provider.dart';
 import 'splash_screen.dart';
 import 'package:kofund/features/community/screens/join_community_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../routing/route_names.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
@@ -55,17 +57,9 @@ class _SetPhoneScreenState extends State<SetPhoneScreen> {
   void _navigateToNextScreen() {
     if (_cachedInviteCode != null) {
       _clearPendingInviteCode();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => JoinCommunityScreen(inviteCode: _cachedInviteCode),
-        ),
-      );
+      context.go('${RouteNames.joinCommunity}?code=$_cachedInviteCode');
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SplashScreen()),
-      );
+      context.go(RouteNames.splash);
     }
   }
 

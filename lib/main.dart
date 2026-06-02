@@ -56,9 +56,11 @@ import 'core/widgets/theme_transition_wrapper.dart';
 // 🚀 Routing
 import 'routing/app_router.dart';
 import 'routing/route_names.dart';
+import 'routing/go_router_config.dart';
 import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb, kDebugMode;
+import 'package:go_router/go_router.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> navigatorKey = GoRouterConfig.rootNavigatorKey;
 
 // ✨ Extract invite code from web URL (kIsWeb-safe)
 String? extractWebInviteCode() {
@@ -713,6 +715,20 @@ class _MyAppState extends State<MyApp> {
   }
   
 void _handleDdeepLink(Uri uri) {
+  // Ignore public pages so they don't get processed as app deep links
+  final publicPaths = [
+    '/termsOfService',
+    '/privacyPolicy',
+    '/support',
+    '/dataSafety',
+    '/about',
+    '/deleteAccount'
+  ];
+  if (publicPaths.contains(uri.path)) {
+    debugPrint('ℹ️ Public page deep link ignored (handled by web server/browser): ${uri.path}');
+    return;
+  }
+
   debugPrint('📱 Deep link received: $uri');
   debugPrint('Full URI parse - Scheme: ${uri.scheme}, Host: "${uri.host}", Path: "${uri.path}", Query: ${uri.queryParameters}');
   
@@ -812,17 +828,10 @@ void _navigateToSplashWithInvite(String? inviteCode) async {
   await prefs.setString('pending_invite_code', inviteCode);
   
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (navigatorKey.currentState == null) {
-      debugPrint('❌ Navigator not ready yet');
-      return;
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      GoRouter.of(context).go('/splash?code=$inviteCode');
     }
-    
-    // Use '/' as the route name (or RouteNames.splash)
-    navigatorKey.currentState!.pushNamedAndRemoveUntil(
-      '/',  // Changed to root route
-      (route) => false,
-      arguments: {'inviteCode': inviteCode},
-    );
   });
 }
 
@@ -838,17 +847,7 @@ void _navigateToEventOrSplash({required String eventId, bool isPublic = false}) 
       if (authProvider.user != null) {
         debugPrint('🚀 App is warm and user logged in - pushing event details directly: $eventId');
         
-        if (isPublic) {
-          navigatorKey.currentState?.pushNamed(
-            RouteNames.publicEventDetail,
-            arguments: eventId,
-          );
-        } else {
-          navigatorKey.currentState?.pushNamed(
-            RouteNames.eventDetails,
-            arguments: eventId,
-          );
-        }
+        GoRouter.of(context).go(isPublic ? '/p/$eventId' : '/e/$eventId');
         return;
       }
     } catch (e) {
@@ -870,16 +869,10 @@ void _navigateToSplashWithEvent(String? eventId) async {
   await prefs.setString('pending_event_id', eventId);
   
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (navigatorKey.currentState == null) {
-      debugPrint('❌ Navigator not ready yet');
-      return;
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      GoRouter.of(context).go('/splash?eventId=$eventId');
     }
-    
-    navigatorKey.currentState!.pushNamedAndRemoveUntil(
-      '/',
-      (route) => false,
-      arguments: {'eventId': eventId},
-    );
   });
 }
 
@@ -898,11 +891,13 @@ void _navigateToSplashWithEvent(String? eventId) async {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return MaterialApp(
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final router = GoRouterConfig.createRouter(authProvider);
+
+    return MaterialApp.router(
       title: 'KoFund',
       debugShowCheckedModeBanner: false,
-      navigatorKey: navigatorKey,
-      onGenerateRoute: AppRouter.onGenerateRoute,
+      routerConfig: router,
       themeMode: themeProvider.themeMode,
       builder: (context, child) {
         return ThemeTransitionWrapper(

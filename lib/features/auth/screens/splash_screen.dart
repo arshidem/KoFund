@@ -19,6 +19,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/fcm_token_service.dart';
 import '../../../features/notifications/providers/notification_provider.dart';
 import '../../../core/widgets/animated_logo.dart';
+import 'package:go_router/go_router.dart';
+import '../../../routing/route_names.dart';
 
 void unawaited(Future<void> future) {}
 
@@ -33,6 +35,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   bool _isInitializing = true;
+  bool _hasNavigated = false;
   String _status = '';
   String? _pendingInviteCode;
   String? _pendingEventId;
@@ -404,17 +407,11 @@ class _SplashScreenState extends State<SplashScreen> {
   // ⭐ NEW: Navigate to verification pending screen
   void _navigateToVerificationPending(String email) {
     if (!mounted) return;
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to VerificationPendingScreen');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => VerificationPendingScreen(
-          email: email,
-          pendingInviteCode: _pendingInviteCode,
-        ),
-      ),
-    );
+    debugPrint('🚀 Navigating to VerificationPendingScreen via GoRouter');
+    final queryCode = _pendingInviteCode != null ? '&code=$_pendingInviteCode' : '';
+    context.go('${RouteNames.verificationPending}?email=$email$queryCode');
   }
 
   // Navigation helpers
@@ -423,56 +420,44 @@ class _SplashScreenState extends State<SplashScreen> {
       debugPrint('❌ Cannot navigate - widget not mounted');
       return;
     }
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to LoginScreen');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => LoginScreen(pendingInviteCode: _pendingInviteCode),
-      ),
-    );
+    debugPrint('🚀 Navigating to LoginScreen via GoRouter');
+    final queryCode = _pendingInviteCode != null ? '?code=$_pendingInviteCode' : '';
+    context.go('${RouteNames.login}$queryCode');
   }
 
   void _navigateToSetPhone() {
     if (!mounted) return;
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to SetPhoneScreen');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SetPhoneScreen(pendingInviteCode: _pendingInviteCode),
-      ),
-    );
+    debugPrint('🚀 Navigating to SetPhoneScreen via GoRouter');
+    final queryCode = _pendingInviteCode != null ? '?code=$_pendingInviteCode' : '';
+    context.go('${RouteNames.setPhone}$queryCode');
   }
 
   void _navigateToJoinCommunity() {
     if (!mounted) return;
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to JoinCommunityScreen');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => JoinCommunityScreen(
-          inviteCode: _pendingInviteCode, // Pass invite code if exists
-        ),
-      ),
-    );
+    debugPrint('🚀 Navigating to JoinCommunityScreen via GoRouter');
+    final queryCode = _pendingInviteCode != null ? '?code=$_pendingInviteCode' : '';
+    context.go('${RouteNames.joinCommunity}$queryCode');
   }
 
   void _navigateToPendingApproval() {
     if (!mounted) return;
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to PendingApprovalScreen');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
-    );
+    debugPrint('🚀 Navigating to PendingApprovalScreen via GoRouter');
+    context.go(RouteNames.pendingApproval);
   }
 
   void _navigateToDashboard() {
     if (!mounted) return;
+    _hasNavigated = true;
 
-    debugPrint('🚀 Navigating to CommunityDashboard');
+    debugPrint('🚀 Navigating to CommunityDashboard via GoRouter');
 
     // Don't clear the invite code when going to dashboard
     // Keep it saved for when user manually navigates to JoinCommunityScreen
@@ -480,35 +465,21 @@ class _SplashScreenState extends State<SplashScreen> {
       debugPrint('💾 Keeping invite code in storage for future use');
     }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const CommunityDashboard()),
-    );
+    context.go(RouteNames.communityDashboard);
   }
 
   void _navigateToEventDetails() async {
-    if (!mounted || _pendingEventId == null) return;
-    
-    debugPrint('🚀 Navigating directly to EventDetailsScreen for: $_pendingEventId');
-    
-    // Clear it so it doesn't persist forever
+    if (!mounted || _pendingEventId == null || _hasNavigated) return;
+    _hasNavigated = true;
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('pending_event_id');
-    
-    // Push the dashboard as the root
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const CommunityDashboard()),
-    );
-    
-    // Then immediately push the event details on top
-    // This allows the user to press the back button and go to the dashboard instead of exiting
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EventDetailsScreen(eventId: _pendingEventId!),
-      ),
-    );
+    final eventId = _pendingEventId!;
+
+    if (!mounted) return;
+
+    debugPrint('🚀 Navigating to CommunityDashboard with event ID via GoRouter');
+    context.go('${RouteNames.communityDashboard}?eventId=$eventId');
   }
 
   void _updateStatus(String message) {

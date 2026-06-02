@@ -1854,3 +1854,245 @@ function _getPasswordPrompt(eventId, error) {
     </html>
   `;
 }
+
+exports.privacyPolicy = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getPrivacyPolicyHtml());
+});
+
+exports.termsOfService = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getTermsOfServiceHtml());
+});
+
+// ==================== PUBLIC PAGES (Super Links) ====================
+
+/**
+ * Support / Help page
+ * GET /support
+ */
+exports.support = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getSupportHtml());
+});
+
+/**
+ * Data Safety page
+ * GET /dataSafety
+ */
+exports.dataSafety = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getDataSafetyHtml());
+});
+
+/**
+ * About KoFund page
+ * GET /about
+ */
+exports.about = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getAboutHtml());
+});
+
+/**
+ * Delete Account Page
+ * GET /deleteAccount  — renders the interactive HTML form
+ */
+exports.deleteAccount = functions.https.onRequest((req, res) => {
+  if (req.method !== 'GET') {
+    return res.status(405).send('Method Not Allowed');
+  }
+  // Derive the base URL so the form can POST to deleteAccountData
+  const baseUrl = `${req.protocol}://${req.hostname}`;
+  const templates = require('./templates');
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(templates.getDeleteAccountHtml(baseUrl));
+});
+
+/**
+ * Delete Account Data (API)
+ * POST /deleteAccountData
+ * Body: { email: string, uid?: string }
+ *
+ * Deletes the user's DOCUMENTS from the `users` Firestore collection.
+ * Also deactivates their FCM tokens and removes in-app notifications.
+ * Does NOT delete the Firebase Authentication account.
+ */
+exports.deleteAccountData = functions.https.onRequest(async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  try {
+    const { email, uid } = req.body || {};
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ error: 'Invalid email address format.' });
+    }
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    console.log(`🗑️ Delete account data request for email: ${sanitizedEmail}, uid: ${uid || 'not provided'}`);
+
+    // ── 1. Find user document(s) by email (or uid if provided) ──
+    let userDocs = [];
+
+    if (uid && typeof uid === 'string' && uid.trim().length > 0) {
+      // Try direct UID lookup first
+      const directDoc = await db.collection('users').doc(uid.trim()).get();
+      if (directDoc.exists) {
+        const data = directDoc.data();
+        // Verify email matches for security
+        if ((data.email || '').toLowerCase() === sanitizedEmail) {
+          userDocs = [directDoc];
+          console.log(`✅ Found user by UID: ${uid.trim()}`);
+        } else {
+          console.log(`⚠️ UID ${uid.trim()} found but email doesn't match. Falling back to email search.`);
+        }
+      }
+    }
+
+    // Fallback: search by email
+    if (userDocs.length === 0) {
+      const emailQuery = await db
+        .collection('users')
+        .where('email', '==', sanitizedEmail)
+        .limit(5)
+        .get();
+
+      if (!emailQuery.empty) {
+        userDocs = emailQuery.docs;
+        console.log(`✅ Found ${userDocs.length} user doc(s) by email: ${sanitizedEmail}`);
+      }
+    }
+
+    if (userDocs.length === 0) {
+      // No user found — still return success to avoid leaking info,
+      // but log it so we can investigate
+      console.log(`ℹ️ No user found for email: ${sanitizedEmail}. Returning success.`);
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with this email exists, its data has been queued for deletion.',
+        deletedCount: 0,
+      });
+    }
+
+    let totalDeleted = 0;
+
+    for (const userDoc of userDocs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+      console.log(`🗑️ Processing deletion for userId: ${userId}`);
+
+      const batch = db.batch();
+
+      // ── 2. Deactivate all FCM tokens for this user ──
+      const tokenSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('userId', '==', userId)
+        .get();
+
+      for (const tokenDoc of tokenSnapshot.docs) {
+        batch.update(tokenDoc.ref, {
+          isActive: false,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          deactivatedReason: 'account_deleted_by_user',
+        });
+      }
+      console.log(`   📱 Deactivating ${tokenSnapshot.size} FCM token(s)`);
+
+      // ── 3. Delete in-app notifications subcollection ──
+      const notificationsSnapshot = await db
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .limit(500)
+        .get();
+
+      for (const notifDoc of notificationsSnapshot.docs) {
+        batch.delete(notifDoc.ref);
+      }
+      console.log(`   🔔 Deleting ${notificationsSnapshot.size} notification(s)`);
+
+      // ── 4. Anonymize / delete the user document itself ──
+      // We replace personal data with anonymized placeholders
+      // rather than hard-deleting, to preserve community integrity
+      batch.update(userDoc.ref, {
+        displayName: 'Deleted User',
+        email: `deleted_${userId}@kofund.deleted`,
+        phoneNumber: null,
+        photoUrl: null,
+        fcmTokens: [],
+        isDeleted: true,
+        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+        deletionRequestEmail: sanitizedEmail,
+        // Clear sensitive fields
+        notificationCommunities: [],
+      });
+
+      await batch.commit();
+      totalDeleted++;
+      console.log(`✅ Successfully anonymized userId: ${userId}`);
+
+      // ── 5. Log the deletion request for audit trail ──
+      await db.collection('account_deletion_requests').add({
+        userId,
+        email: sanitizedEmail,
+        requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+        tokensDeactivated: tokenSnapshot.size,
+        notificationsDeleted: notificationsSnapshot.size,
+        status: 'completed',
+        note: 'User document anonymized. Firebase Auth account NOT deleted. Contact support for full deletion.',
+      });
+    }
+
+    console.log(`✅ Account data deletion completed. Processed ${totalDeleted} user(s).`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your account data has been successfully removed from our systems.',
+      deletedCount: totalDeleted,
+      note: 'Historical contribution records in shared communities are retained for transparency. Contact kofundapp@gmail.com for complete account removal including Firebase Authentication.',
+    });
+
+  } catch (error) {
+    console.error('❌ Error in deleteAccountData:', error);
+    return res.status(500).json({
+      error: 'An unexpected error occurred. Please try again or contact support at kofundapp@gmail.com',
+    });
+  }
+});
+

@@ -14,6 +14,7 @@ import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/features/community/screens/join_community_screen.dart';
 import 'package:kofund/core/services/network_service.dart';
 import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:kofund/features/profile/screens/settings/terms_of_service_screen.dart';
 import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
@@ -663,14 +664,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   1.5, // ⭐ Control underline thickness
                             ),
                             recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        TermsOfServiceScreen(),
-                                  ),
-                                );
+                              ..onTap = () async {
+                                final url = Uri.parse('https://kofund-153ba.web.app/termsOfService');
+                                try {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                } catch (e) {
+                                  debugPrint('Could not launch $url: $e');
+                                }
                               },
                           ),
                           const TextSpan(text: ' and '),
@@ -683,15 +683,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               decorationThickness:
                                   1.5, // ⭐ Control underline thickness
                             ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => PrivacyPolicyScreen(),
-                                  ),
-                                );
-                              },
+                             recognizer: TapGestureRecognizer()
+                               ..onTap = () async {
+                                 final url = Uri.parse('https://kofund-153ba.web.app/privacyPolicy');
+                                 try {
+                                   await launchUrl(url, mode: LaunchMode.externalApplication);
+                                 } catch (e) {
+                                   debugPrint('Could not launch $url: $e');
+                                 }
+                               },
                           ),
                         ],
                       ),

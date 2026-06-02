@@ -120,7 +120,7 @@ Future<void> _loadAppInfo() async {
                           ),
                         ),
                         child: Text(
-                          'Last updated: December 2025',
+                          'Last updated: December 2026',
                           style: TextStyle(
                             color: AppColors.primary(context),
                             fontSize: 13,
@@ -420,7 +420,7 @@ Card(
               // Version Info
               Center(
                 child: Text(
-                  'Version $appVersion • KoFund © 2025',
+                  'Version $appVersion • KoFund © 2026',
                   style: TextStyle(
                     color: AppColors.textTertiary(context),
                     fontSize: 12,

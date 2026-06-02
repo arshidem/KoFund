@@ -6,6 +6,7 @@ class RouteNames {
   static const String verificationPending = '/verification-pending';
   // Add this to your RouteNames class
   static const String forgotPassword = '/forgot-password';
+  static const String setPhone = '/set-phone';
   static const String dashboard = '/dashboard';
   static const String createCommunity = '/create-community';
   static const String joinCommunity = '/join-community';

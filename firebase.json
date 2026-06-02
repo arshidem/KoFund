@@ -39,6 +39,30 @@
         "function": "viewEvent"
       },
       {
+        "source": "/privacyPolicy",
+        "function": "privacyPolicy"
+      },
+      {
+        "source": "/termsOfService",
+        "function": "termsOfService"
+      },
+      {
+        "source": "/support",
+        "function": "support"
+      },
+      {
+        "source": "/dataSafety",
+        "function": "dataSafety"
+      },
+      {
+        "source": "/about",
+        "function": "about"
+      },
+      {
+        "source": "/deleteAccount",
+        "function": "deleteAccount"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

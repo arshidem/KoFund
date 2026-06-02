@@ -19,8 +19,11 @@ import 'package:kofund/core/skeleton/dashboard_skeleton.dart';
 
 
 
+import 'package:kofund/features/events/screens/event_details_screen.dart';
+
 class CommunityDashboard extends StatefulWidget {
-  const CommunityDashboard({super.key});
+  final String? pendingEventId;
+  const CommunityDashboard({super.key, this.pendingEventId});
 
   @override
   State<CommunityDashboard> createState() => _CommunityDashboardState();
@@ -58,8 +61,22 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _currentIndex = widget.pendingEventId != null ? 1 : 0;
+    _pageController = PageController(initialPage: _currentIndex);
     _checkAuthStatus();
+
+    if (widget.pendingEventId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EventDetailsScreen(eventId: widget.pendingEventId!),
+            ),
+          );
+        }
+      });
+    }
   }
 
   @override

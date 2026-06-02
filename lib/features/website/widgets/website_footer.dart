@@ -1,0 +1,215 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
+import 'responsive_layout.dart';
+
+class WebsiteFooter extends StatelessWidget {
+  const WebsiteFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = ResponsiveLayout.isDesktop(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.border(context).withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Logo, Slogan, and Rights
+              Expanded(
+                flex: isDesktop ? 2 : 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'KoFund',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Manage Community Funds Without WhatsApp Confusion.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isDesktop) const Spacer(),
+
+              // Quick Links Section 1: Legal
+              Expanded(
+                flex: isDesktop ? 1 : 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Legal',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _FooterLink(
+                      title: 'Privacy Policy',
+                      onTap: () => context.go('/privacyPolicy'),
+                    ),
+                    _FooterLink(
+                      title: 'Terms of Service',
+                      onTap: () => context.go('/termsOfService'),
+                    ),
+                    _FooterLink(
+                      title: 'Delete Account',
+                      onTap: () => context.go('/deleteAccount'),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Quick Links Section 2: Resources
+              Expanded(
+                flex: isDesktop ? 1 : 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Resources',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _FooterLink(
+                      title: 'Data Safety',
+                      onTap: () => context.go('/dataSafety'),
+                    ),
+                    _FooterLink(
+                      title: 'Support',
+                      onTap: () => context.go('/support'),
+                    ),
+                    _FooterLink(
+                      title: 'About Us',
+                      onTap: () => context.go('/about'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 48),
+          const Divider(),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '© ${DateTime.now().year} KoFund. All rights reserved.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.textTertiary(context),
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Built with ',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary(context),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.red,
+                    size: 12,
+                  ),
+                  Text(
+                    ' using Flutter',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FooterLink extends StatefulWidget {
+  final String title;
+  final VoidCallback onTap;
+
+  const _FooterLink({
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  State<_FooterLink> createState() => _FooterLinkState();
+}
+
+class _FooterLinkState extends State<_FooterLink> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Text(
+            widget.title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: _isHovered
+                  ? AppColors.primary(context)
+                  : AppColors.textSecondary(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../providers/app_auth_provider.dart';
@@ -695,13 +696,13 @@ Widget _buildTermsCheckbox() {
                             decorationThickness: 1.5,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TermsOfServiceScreen(),
-                                ),
-                              );
+                            ..onTap = () async {
+                              final url = Uri.parse('https://kofund-153ba.web.app/termsOfService');
+                              try {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                debugPrint('Could not launch $url: $e');
+                              }
                             },
                         ),
                         const TextSpan(text: ' and '),
@@ -714,13 +715,13 @@ Widget _buildTermsCheckbox() {
                             decorationThickness: 1.5,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PrivacyPolicyScreen(),
-                                ),
-                              );
+                            ..onTap = () async {
+                              final url = Uri.parse('https://kofund-153ba.web.app/privacyPolicy');
+                              try {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                debugPrint('Could not launch $url: $e');
+                              }
                             },
                         ),
                       ],

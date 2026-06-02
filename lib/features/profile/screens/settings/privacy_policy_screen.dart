@@ -123,7 +123,7 @@ Future<void> _loadAppInfo() async {
                           ),
                         ),
                         child: Text(
-                          'Effective: December 2025',
+                          'Effective: December 2026',
                           style: TextStyle(
                             color: AppColors.primary(context),
                             fontSize: 13,
@@ -438,7 +438,7 @@ Future<void> _loadAppInfo() async {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version $appVersion • Last updated: December 2025',
+                      'Version $appVersion • Last updated: December 2026',
                       style: TextStyle(
                         color: AppColors.textTertiary(context),
                         fontSize: 11,
@@ -446,7 +446,7 @@ Future<void> _loadAppInfo() async {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '© 2025 KoFund. All rights reserved.',
+                      '© 2026 KoFund. All rights reserved.',
                       style: TextStyle(
                         color: AppColors.textTertiary(context),
                         fontSize: 11,

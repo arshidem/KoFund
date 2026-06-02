@@ -91,7 +91,7 @@ Future<void> _loadAppInfo() async {
                           ),
                         ),
                         child: Text(
-                          'Last updated: December 2025',
+                          'Last updated: December 2026',
                           style: TextStyle(
                             color: AppColors.primary(context),
                             fontSize: 13,

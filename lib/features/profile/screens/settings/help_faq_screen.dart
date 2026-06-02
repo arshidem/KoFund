@@ -191,7 +191,7 @@ Future<void> _loadAppInfo() async {
                       ),
                       const SizedBox(height: 12),
                       _buildAppInfoItem('App Version', appVersion),
-                      _buildAppInfoItem('Last Updated', 'December 2025'),
+                      _buildAppInfoItem('Last Updated', 'December 2026'),
                       _buildAppInfoItem('Developer', 'Kofund Team'),
                       _buildAppInfoItem('Support Hours', 'Mon-Fri, 9 AM - 6 PM'),
                     ],
