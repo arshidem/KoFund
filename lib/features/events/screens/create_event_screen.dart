@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -806,7 +807,7 @@ void _onParticipantsChanged() {
         ),
       ],
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: AppStyles.screenPadding,
         child: SingleChildScrollView(
             child: Column(
               children: [

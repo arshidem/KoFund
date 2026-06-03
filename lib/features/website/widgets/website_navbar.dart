@@ -56,7 +56,7 @@ class WebsiteNavbar extends StatelessWidget implements PreferredSizeWidget {
                     color: primaryColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(8),
                   child: SvgPicture.asset(
                     'assets/logos/KoFund.svg',
                   ),

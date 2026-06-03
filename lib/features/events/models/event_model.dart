@@ -172,7 +172,7 @@ Map<String, dynamic> toMap() {
     'enableAdminEscalation': enableAdminEscalation,
     'escalationDaysAfter': escalationDaysAfter,
     'isPublicEnabled': isPublicEnabled,
-    if (publicPassword != null) 'publicPassword': publicPassword,
+    'publicPassword': publicPassword,
   };
 }
 
@@ -210,6 +210,7 @@ Map<String, dynamic> toMap() {
     int? escalationDaysAfter,
     bool? isPublicEnabled,
     String? publicPassword,
+    bool clearPassword = false,
   }) {
     return EventModel(
       eventId: eventId ?? this.eventId,
@@ -243,7 +244,7 @@ Map<String, dynamic> toMap() {
       enableAdminEscalation: enableAdminEscalation ?? this.enableAdminEscalation,
       escalationDaysAfter: escalationDaysAfter ?? this.escalationDaysAfter,
       isPublicEnabled: isPublicEnabled ?? this.isPublicEnabled,
-      publicPassword: publicPassword ?? this.publicPassword,
+      publicPassword: clearPassword ? null : (publicPassword ?? this.publicPassword),
     );
   }
 

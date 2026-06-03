@@ -1182,6 +1182,7 @@ String _formatTime(DateTime date) {
       body: Stack(
         children: [
           NestedScrollView(
+            controller: _scrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               _buildSliverAppBar(context),
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/features/notifications/models/notification_model.dart';
@@ -343,7 +344,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         ),
       ],
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

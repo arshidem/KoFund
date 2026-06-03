@@ -461,9 +461,15 @@ Widget _buildThreeDotMenu(ExpenseModel expense, BuildContext context, bool isAdm
   return PopupMenuButton<String>(
     icon: Icon(
       Icons.more_vert,
-      color: AppColors.textSecondary(context),
-      size: 20,
+      color: AppColors.textTertiary(context),
+      size: 22,
     ),
+    offset: const Offset(0, 40),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    elevation: 4,
+    color: AppColors.card(context),
     onSelected: (value) {
       _handleMenuSelection(value, expense, context, isAdmin);
     },
@@ -471,28 +477,20 @@ Widget _buildThreeDotMenu(ExpenseModel expense, BuildContext context, bool isAdm
       final List<PopupMenuEntry<String>> menuItems = [];
       
       // Always show View Details
-      menuItems.add(const PopupMenuItem<String>(
+      menuItems.add(_buildPopupMenuItem(
         value: 'view_details',
-        child: Row(
-          children: [
-            Icon(Icons.visibility_outlined, size: 20),
-            SizedBox(width: 8),
-            Text('View Details'),
-          ],
-        ),
+        icon: Icons.visibility_rounded,
+        label: 'View Details',
+        color: AppColors.primary(context),
       ));
       
       // Only admins or the user who paid can edit
       if (isAdmin || _isUserPaidBy(expense, context)) {
-        menuItems.add(const PopupMenuItem<String>(
+        menuItems.add(_buildPopupMenuItem(
           value: 'edit_expense',
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 20),
-              SizedBox(width: 8),
-              Text('Edit Expense'),
-            ],
-          ),
+          icon: Icons.edit_rounded,
+          label: 'Edit Expense',
+          color: AppColors.primary(context),
         ));
       }
       
@@ -516,41 +514,29 @@ Widget _buildThreeDotMenu(ExpenseModel expense, BuildContext context, bool isAdm
         
         // Status options as separate menu items
         if (expense.status != 'pending') {
-          menuItems.add(PopupMenuItem<String>(
+          menuItems.add(_buildPopupMenuItem(
             value: 'pending',
-            child: Row(
-              children: [
-                Icon(Icons.pending, size: 20, color: Colors.orange),
-                const SizedBox(width: 8),
-                const Text('Mark as Pending'),
-              ],
-            ),
+            icon: Icons.pending_rounded,
+            label: 'Mark as Pending',
+            color: Colors.orange,
           ));
         }
         
         if (expense.status != 'approved') {
-          menuItems.add(PopupMenuItem<String>(
+          menuItems.add(_buildPopupMenuItem(
             value: 'approved',
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, size: 20, color: Colors.green),
-                const SizedBox(width: 8),
-                const Text('Mark as Approved'),
-              ],
-            ),
+            icon: Icons.check_circle_rounded,
+            label: 'Mark as Approved',
+            color: Colors.green,
           ));
         }
         
         if (expense.status != 'rejected') {
-          menuItems.add(PopupMenuItem<String>(
+          menuItems.add(_buildPopupMenuItem(
             value: 'rejected',
-            child: Row(
-              children: [
-                Icon(Icons.cancel, size: 20, color: Colors.red),
-                const SizedBox(width: 8),
-                const Text('Mark as Rejected'),
-              ],
-            ),
+            icon: Icons.cancel_rounded,
+            label: 'Mark as Rejected',
+            color: AppColors.error(context),
           ));
         }
       }
@@ -558,20 +544,49 @@ Widget _buildThreeDotMenu(ExpenseModel expense, BuildContext context, bool isAdm
       // Only admins can delete
       if (isAdmin || _isUserPaidBy(expense, context))  {
         menuItems.add(const PopupMenuDivider());
-        menuItems.add(const PopupMenuItem<String>(
+        menuItems.add(_buildPopupMenuItem(
           value: 'delete_expense',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, color: Colors.red, size: 20),
-              SizedBox(width: 8),
-              Text('Delete Expense', style: TextStyle(color: Colors.red)),
-            ],
-          ),
+          icon: Icons.delete_outline_rounded,
+          label: 'Delete Expense',
+          color: AppColors.error(context),
         ));
       }
       
       return menuItems;
     },
+  );
+}
+
+PopupMenuItem<String> _buildPopupMenuItem({
+  required String value,
+  required IconData icon,
+  required String label,
+  required Color color,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    height: 44,
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

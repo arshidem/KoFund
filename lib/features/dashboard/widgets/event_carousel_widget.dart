@@ -596,13 +596,10 @@ class _EventDashboardCardState extends State<_EventDashboardCard> {
       builder: (context, hasJoined, _) {
         final eventProvider = Provider.of<EventProvider>(context, listen: false);
         final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-        final canJoin = _canJoinEvent(hasJoined);
-        
         return _buildModernCard(
           context,
           user,
           hasJoined,
-          canJoin,
           eventProvider,
           authProvider,
         );
@@ -610,21 +607,10 @@ class _EventDashboardCardState extends State<_EventDashboardCard> {
     );
   }
 
-  bool _canJoinEvent(bool hasJoined) {
-    if (hasJoined) return false;
-    if (!widget.event.canJoin) return false;
-    if (widget.event.isFixedParticipants && 
-        widget.event.currentParticipants >= widget.event.maxParticipants) {
-      return false;
-    }
-    return true;
-  }
-
   Widget _buildModernCard(
     BuildContext context,
     UserModel? user,
     bool hasJoined,
-    bool canJoin,
     EventProvider eventProvider,
     AppAuthProvider authProvider,
   ) {
@@ -669,7 +655,6 @@ class _EventDashboardCardState extends State<_EventDashboardCard> {
                   context,
                   user,
                   hasJoined,
-                  canJoin,
                   eventProvider,
                   authProvider,
                 ),
@@ -936,43 +921,57 @@ Widget _buildCleanStat(String label, double value, Color titleColor, {bool isBol
     BuildContext context,
     UserModel? user,
     bool hasJoined,
-    bool canJoin,
     EventProvider eventProvider,
     AppAuthProvider authProvider,
   ) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _viewDetails,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary(context),
-              side: BorderSide(
-                color: AppColors.border(context),
-                width: 1.5,
+    return StreamBuilder<int>(
+      stream: eventProvider.streamParticipantCount(
+        widget.event.eventId,
+        communityId: widget.event.communityId,
+      ),
+      builder: (context, snapshot) {
+        final currentParticipants = snapshot.data ?? widget.event.currentParticipants;
+        final isFull = widget.event.isFixedParticipants && 
+            currentParticipants >= widget.event.maxParticipants;
+        final canJoin = !hasJoined && 
+            widget.event.canJoin && 
+            (!widget.event.isFixedParticipants || !isFull);
+
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _viewDetails,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary(context),
+                  side: BorderSide(
+                    color: AppColors.border(context),
+                    width: 1.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text(
+                  'View Details',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text(
-              'View Details',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 12),
+            if (hasJoined)
+              _buildLeaveButton(eventProvider, authProvider)
+            else
+              Expanded(
+                child: _buildJoinButton(canJoin, isFull, eventProvider, authProvider),
               ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        if (hasJoined)
-          _buildLeaveButton(eventProvider, authProvider)
-        else
-          Expanded(
-            child: _buildJoinButton(canJoin, eventProvider, authProvider),
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -1002,13 +1001,10 @@ Widget _buildCleanStat(String label, double value, Color titleColor, {bool isBol
     );
   }
 
-  Widget _buildJoinButton(bool canJoin, EventProvider eventProvider, AppAuthProvider authProvider) {
-    final isFull = widget.event.isFixedParticipants && 
-        widget.event.currentParticipants >= widget.event.maxParticipants;
-    
+  Widget _buildJoinButton(bool canJoin, bool isFull, EventProvider eventProvider, AppAuthProvider authProvider) {
     String buttonText;
     if (!canJoin && isFull) {
-      buttonText = 'Event Full';
+      buttonText = 'Full';
     } else {
       buttonText = 'Join Event';
     }

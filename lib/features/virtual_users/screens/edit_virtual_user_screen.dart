@@ -2,6 +2,7 @@
 // FIXED VERSION
 
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/features/auth/models/user_model.dart';
@@ -152,7 +153,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
         ),
       ],
       body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: AppStyles.screenPadding,
           child: Form(
             key: _formKey,
             child: Column(
@@ -161,7 +162,7 @@ class _EditVirtualUserScreenState extends State<EditVirtualUserScreen> {
                 // Virtual User Info Card
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: AppStyles.screenPadding,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
                     // ✅ FIXED: Replace .withValues(alpha: ) with Color.fromRGBO()

@@ -1,5 +1,6 @@
 // lib/features/expenses/screens/edit_expense_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -368,7 +369,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       ],
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: AppStyles.screenPadding,
           child: _isLoading
               ? EditContributionSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
               : _hasError

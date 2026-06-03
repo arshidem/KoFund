@@ -13,7 +13,7 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return getUserData().role == 'admin';
+      return getUserData().role == 'admin' || getUserData().isAdmin == true;
     }
     
     function isDeveloper() {
@@ -39,7 +39,9 @@ service cloud.firestore {
       
       // 🔔 User Notifications
       match /notifications/{notificationId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && request.auth.uid == userId;
       }
       
       // 📢 Read Announcements
@@ -53,15 +55,29 @@ service cloud.firestore {
       allow read: if isSignedIn();
       // Anyone signed in can create a community
       allow create: if isSignedIn();
-      // Only admins (who are members) can update or delete
-      allow update, delete: if isSignedIn() && isAdmin() && isMemberOf(communityId);
+      // Allow updates if user is admin, creator, or if member is updating only membership count/activity
+      allow update: if isSignedIn() && (
+        (isAdmin() && isMemberOf(communityId)) ||
+        (request.auth.uid == resource.data.createdBy) ||
+        (isMemberOf(communityId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalMembers', 'lastActivityAt']))
+      );
+      // Only admins or community creator can delete
+      allow delete: if isSignedIn() && (
+        (isAdmin() && isMemberOf(communityId)) ||
+        (request.auth.uid == resource.data.createdBy)
+      );
+      
       // 👥 Community Members subcollection
       match /members/{memberId} {
         allow read: if isSignedIn();
         // Allow any signed-in user to create a member document (e.g., admin on community creation)
         allow create: if isSignedIn();
-        // Only admins can update or delete existing member docs
-        allow update, delete: if isSignedIn() && isAdmin() && isMemberOf(communityId);
+        // Admins, community creator, and users can update/delete member docs
+        allow update, delete: if isSignedIn() && (
+          request.auth.uid == memberId ||
+          (isAdmin() && isMemberOf(communityId)) ||
+          (request.auth.uid == get(/databases/$(database)/documents/communities/$(communityId)).data.createdBy)
+        );
       }
 
       // 🧑‍💻 Virtual Users subcollection

@@ -779,7 +779,8 @@ Future<void> sendCommunityNotification({
         ?.map((e) => e.toString())
         .toList() ?? [];
     
-    final isAuthorized = userPrimaryCommunityId == communityId || 
+    final isAuthorized = type == NotificationType.pendingUser ||
+                         userPrimaryCommunityId == communityId || 
                          userNotificationCommunities.contains(communityId);
                          
     if (!isAuthorized) {
@@ -852,6 +853,7 @@ Future<void> sendCommunityNotification({
       data: data,
       eventId: eventId,
       senderName: senderName,
+      targetRole: targetRole,
     );
   } catch (e, stackTrace) {
     debugPrint("❌ Error calling Cloud Function: $e");
@@ -868,6 +870,7 @@ Future<void> _sendCommunityNotificationLocalFallback({
   Map<String, dynamic> data = const {},
   String? eventId,
   String? senderName,
+  String? targetRole,
 }) async {
   try {
     debugPrint("🔄 [Fallback] Starting robust delivery to community: $communityId");
@@ -890,6 +893,9 @@ Future<void> _sendCommunityNotificationLocalFallback({
     for (final userDoc in usersSnapshot.docs) {
       final userData = userDoc.data();
       if (userData['isVirtualUser'] == true) continue;
+      
+      // Filter by role if specified
+      if (targetRole != null && userData['role'] != targetRole) continue;
       
       final userId = userDoc.id;
       final notificationId = '${baseNotificationId}_$userId';

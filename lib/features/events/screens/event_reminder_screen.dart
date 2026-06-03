@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -650,7 +651,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
               if (_enableRetries) ...[
                 const Divider(height: 1),
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: AppStyles.screenPadding,
                   child: Row(
                     children: [
                       Expanded(
@@ -702,7 +703,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
               if (_enableEscalation) ...[
                 const Divider(height: 1),
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: AppStyles.screenPadding,
                   child: Row(
                     children: [
                       Expanded(
@@ -1060,7 +1061,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: AppStyles.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

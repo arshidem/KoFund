@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/widgets/premium_switch.dart';
 import 'package:kofund/features/profile/providers/profile_provider.dart';
@@ -85,7 +86,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
       title: 'Profile Privacy',
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

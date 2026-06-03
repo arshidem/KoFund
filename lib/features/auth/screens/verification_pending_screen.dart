@@ -1,5 +1,6 @@
 // lib/features/auth/screens/verification_pending_screen.dart
 import 'dart:async';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -282,42 +283,40 @@ Future<void> _checkForPendingInvite() async {
         onPressed: _signOut,
         tooltip: 'Sign Out',
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: Padding(
+        padding: AppStyles.screenPadding,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              // ✅ Consistent with PendingApprovalScreen layout
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 20),
-                      
-                      // Status Icon (similar to PendingApprovalScreen)
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.mark_email_unread_outlined,
-                          size: 60,
-                          color: AppColors.primary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
+              const SizedBox(height: 24),
+              // Concentric Circle Icon
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(context).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.mark_email_unread_outlined,
+                      size: 48,
+                      color: AppColors.primary(context),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
 
-                      // Status Ttitle
-                      Text(
-                        'Verify Your Email Address',
+              // Status Ttitle
+              Text(
+                'Verify Your Email Address',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
@@ -456,10 +455,10 @@ Future<void> _checkForPendingInvite() async {
                       // Auto-check status indicator
                // Auto-check status indicator with rotating icon
 Container(
-  padding: const EdgeInsets.all(16),
+  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
   decoration: BoxDecoration(
     color: AppColors.surface(context),
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
     border: Border.all(
       color: AppColors.border(context),
     ),
@@ -616,12 +615,8 @@ Container(
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+        );
   }
 }
 

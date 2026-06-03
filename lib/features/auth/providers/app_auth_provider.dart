@@ -284,30 +284,30 @@ class AppAuthProvider with ChangeNotifier {
       _firestore
           .collection('users')
           .doc(uid)
-          .snapshots()
+          .snapshots(includeMetadataChanges: true)
           .listen(
             (doc) async {
               if (doc.exists) {
                 final userData = doc.data()!;
                 final serverUser = UserModel.fromMap(userData);
 
-                // If local user has communityId but server does not, sync it to server
-                if (_user != null &&
-                    _user!.communityId != null &&
-                    _user!.communityId!.isNotEmpty &&
-                    (serverUser.communityId == null || serverUser.communityId!.isEmpty)) {
-                  debugPrint('🔄 Syncing local communityId to server for user $uid');
-                  await _firestore.collection('users').doc(uid).update({
-                    'communityId': _user!.communityId,
-                    'communityName': _user!.communityName,
-                    'role': _user!.role,
-                    'isApproved': _user!.isApproved,
-                  });
-                  return; // The next snapshot event will update _user
+                // ⭐ CRITICAL: If snapshot is from cache, check for stale community data.
+                // After leaving a community, the cache still has the old communityId.
+                // Don't let stale cache overwrite the correct _user state.
+                if (doc.metadata.isFromCache && _user != null) {
+                  final currentHasCommunity = _user!.communityId != null && _user!.communityId!.isNotEmpty;
+                  final cachedHasCommunity = serverUser.communityId != null && serverUser.communityId!.isNotEmpty;
+                  
+                  // If current _user has NO community but cached data shows one,
+                  // skip this stale cache update — wait for server data.
+                  if (!currentHasCommunity && cachedHasCommunity) {
+                    debugPrint('⚠️ Skipping stale cached snapshot (has old communityId: ${serverUser.communityId})');
+                    return;
+                  }
                 }
 
                 _user = serverUser;
-                _isOfflineMode = false; // We have freshhh data
+                _isOfflineMode = false; // We have fresh data
 
                 // Save locally for offline use
                 await _saveUserDataLocally(_user!.toMap());
@@ -315,11 +315,10 @@ class AppAuthProvider with ChangeNotifier {
                 notifyListeners();
               } else {
                 debugPrint('⚠️ User document does not exist in Firestore for UID: $uid');
-                // Recreate user document from local cache if available
-                if (_user != null) {
-                  debugPrint('🔄 Recreating user document in Firestore from local cache...');
-                  await _firestore.collection('users').doc(uid).set(_user!.toMap());
-                }
+                // ⭐ Do NOT recreate user doc from cache — it may contain stale
+                // community fields that were intentionally deleted.
+                _user = null;
+                notifyListeners();
               }
             },
             onError: (error) {
@@ -898,13 +897,23 @@ class AppAuthProvider with ChangeNotifier {
       }
 
       // ------------------------------------------------------------------
-      // 4. Firebase Auth Sign Out
+      // 4. Clear secure storage auth state
+      // ------------------------------------------------------------------
+      try {
+        await _authService.clearLocalAuthState();
+        debugPrint('🗑️ Secure auth storage cleared');
+      } catch (e) {
+        debugPrint('⚠️ Error clearing secure auth storage: $e');
+      }
+
+      // ------------------------------------------------------------------
+      // 5. Firebase Auth Sign Out
       // ------------------------------------------------------------------
       await _authService.signOut();
       debugPrint("🟦 FirebaseAuth: Signed out");
 
       // ------------------------------------------------------------------
-      // 5. Clear Local State
+      // 6. Clear Local State
       // ------------------------------------------------------------------
       _user = null;
       _isOfflineMode = false;
@@ -912,7 +921,7 @@ class AppAuthProvider with ChangeNotifier {
       _error = null;
 
       // ------------------------------------------------------------------
-      // 6. Clear SharedPreferences (CRITICAL for notification cleanup)
+      // 7. Clear SharedPreferences (CRITICAL for notification cleanup)
       // ------------------------------------------------------------------
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -1022,18 +1031,27 @@ class AppAuthProvider with ChangeNotifier {
       await _firestore.collection('users').doc(_user!.uid).update({
         'communityId': FieldValue.delete(),
         'communityName': FieldValue.delete(),
+        'communityCode': FieldValue.delete(),
         'role': FieldValue.delete(),
         'isApproved': false,
+        'isAdmin': false,
+        'approvedAt': FieldValue.delete(),
+        'leftAt': FieldValue.serverTimestamp(),
       });
 
+      // ⭐ Use clearCommunity: true so communityId/Name are actually set to null
       _user = _user!.copyWith(
-        communityId: null,
-        communityName: null,
+        clearCommunity: true,
         role: 'member',
         isApproved: false,
+        isAdmin: false,
       );
 
+      // Clear local cached data too
+      await _saveUserDataLocally(_user!.toMap());
+
       _setLoading(false);
+      notifyListeners();
       return true;
     } catch (e) {
       _setError('Failed to leave community: $e');

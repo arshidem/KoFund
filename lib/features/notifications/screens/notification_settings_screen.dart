@@ -1,4 +1,5 @@
 import 'package:kofund/core/widgets/premium_switch.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -158,7 +159,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Widget _buildContent() {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      padding: AppStyles.screenPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

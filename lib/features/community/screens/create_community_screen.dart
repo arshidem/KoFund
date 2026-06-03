@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/community_Types.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/app_styles.dart';
 import '../../../core/widgets/gradient_sheet_scaffold.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -150,7 +152,7 @@ Future<void> _createCommunity() async {
           context, 
           'Community "${_nameController.text.trim()}" created successfully!'
         );
-        Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
+        context.go(RouteNames.communityDashboard);
       }
     } else {
       if (mounted) {
@@ -364,7 +366,7 @@ Widget build(BuildContext context) {
   return GradientSheetScaffold(
     title: 'Create Community',
     body: Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: AppStyles.screenPadding,
       child: SingleChildScrollView(
           child: Column(
             children: [

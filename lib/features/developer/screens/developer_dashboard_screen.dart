@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -32,7 +33,7 @@ class DeveloperDashboardScreen extends StatelessWidget {
     return GradientSheetScaffold(
       title: 'Developer Dashboard',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

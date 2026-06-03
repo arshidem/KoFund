@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -24,7 +25,7 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
     return GradientSheetScaffold(
       title: 'Announcement Manager',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -50,7 +51,7 @@ class _AnnouncementManagerScreenState extends State<AnnouncementManagerScreen> {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

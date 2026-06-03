@@ -550,12 +550,14 @@ void _initializeWidgetProviders(String userId, String communityId) {
   String _getGreetingText(String? name) {
     final hour = DateTime.now().hour;
     String timeGreeting;
-    if (hour < 12) {
+    if (hour >= 5 && hour < 12) {
       timeGreeting = "Morning";
-    } else if (hour < 17) {
+    } else if (hour >= 12 && hour < 17) {
       timeGreeting = "Afternoon";
-    } else {
+    } else if (hour >= 17 && hour < 21) {
       timeGreeting = "Evening";
+    } else {
+      timeGreeting = "Night";
     }
     
     final displayName = (name != null && name.isNotEmpty) ? name.split(' ').first : 'there';

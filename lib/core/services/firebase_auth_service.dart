@@ -449,17 +449,32 @@ Future<void> _cleanFCMTokensOnLogout(String userId) async {
       debugPrint('⚠️ Error initializing auth service: $e');
     }
   }
-  // Get user data from Firestore
+  // Get user data from Firestore (force server read to avoid stale cache)
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+      // ⭐ CRITICAL: Force server read to avoid stale cached data
+      // (e.g. after leaving a community, the cached doc still has the old communityId)
+      DocumentSnapshot userDoc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.server));
       if (userDoc.exists) {
-        debugPrint('✅ User data retrieved from Firestore');
+        debugPrint('✅ User data retrieved from Firestore (server)');
         return userDoc.data() as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      debugPrint('❌ Error getting user data: $e');
+      debugPrint('⚠️ Server read failed, falling back to cache: $e');
+      // Fallback to default (cache + server) if server-only read fails
+      try {
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+        if (userDoc.exists) {
+          debugPrint('✅ User data retrieved from Firestore (cache fallback)');
+          return userDoc.data() as Map<String, dynamic>;
+        }
+      } catch (e2) {
+        debugPrint('❌ Error getting user data (fallback): $e2');
+      }
       return null;
     }
   }

@@ -291,6 +291,11 @@ function getEventHtml({ event, title, date, icon, eventId, downloadUrl, appWebLi
       }
 
       async function init() {
+        const hasPassword = ${!!event.hasPassword};
+        if (!hasPassword) {
+          await fetchData('');
+          return;
+        }
         const session = getSession();
         if (session && session.password) {
           const success = await fetchData(session.password);

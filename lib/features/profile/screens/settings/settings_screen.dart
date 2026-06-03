@@ -587,15 +587,18 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
       return;
     }
     
-    final scaffoldMessenger = SnackbarHelper.showWarning(context, 'Leaving community...');
+    SnackbarHelper.showWarning(context, 'Leaving community...');
 
     final success = await profileProvider.leaveCommunity();
     if (!mounted) return;
     
     if (success) {
+      // ⭐ Just refresh auth provider state (don't sign out)
+      await authProvider.refreshUserData();
+      if (!mounted) return;
       SnackbarHelper.showSuccess(context, 'Successfully left community');
-      
-      context.go(RouteNames.login);
+      // Navigate to join community — user stays authenticated
+      context.go(RouteNames.joinCommunity);
     } else {
       SnackbarHelper.showError(context, 'Failed to leave community: ${profileProvider.error}');
     }

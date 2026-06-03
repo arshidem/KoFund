@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -116,7 +117,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
               const SizedBox(height: 12),
               Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border(context), borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppStyles.screenPadding,
                 child: Row(
                   children: [
                     Icon(Icons.filter_list_rounded, color: AppColors.primary(context)),
@@ -138,7 +139,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
               Flexible(
                 child: GridView.builder(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.all(16),
+                  padding: AppStyles.screenPadding,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     childAspectRatio: 3.2,
@@ -253,7 +254,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -269,7 +270,7 @@ class _DatabaseToolsScreenState extends State<DatabaseToolsScreen> {
               color: AppColors.card(context),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: AppStyles.screenPadding,
                 child: Column(
                   children: [
                     // Collection dropdown

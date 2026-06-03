@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -214,7 +215,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _isSearching 
                ? Container(
-                   padding: const EdgeInsets.all(12),
+                   padding: AppStyles.screenPadding,
                    width: 20,
                    height: 20,
                    child: const CircularProgressIndicator(strokeWidth: 2),
@@ -302,7 +303,7 @@ class _AddDeveloperScreenState extends State<AddDeveloperScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
+        padding: AppStyles.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

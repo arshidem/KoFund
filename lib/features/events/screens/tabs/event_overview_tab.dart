@@ -31,8 +31,7 @@ class EventOverviewTab extends StatefulWidget {
 
 class _EventOverviewTabState extends State<EventOverviewTab> {
   final GlobalKey<MilestoneCelebrationOverlayState> _celebrationKey = GlobalKey();
-  double _previousProgress = 0.0;
-  static const List<double> _milestones = [50.0, 75.0, 100.0];
+  bool _previousTargetReached = false;
   bool _isExporting = false;
   double? _cachedTotalCollected;
   double? _cachedTotalExpenses;
@@ -41,22 +40,19 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
   // Cache streams to prevent re-creation on every rebuild
   Stream<double>? _contributionsStream;
   Stream<double>? _expensesStream;
-  Stream<int>? _participantCountStream;
+  Stream<List<ParticipantModel>>? _participantsStream;
 
   void _onRefresh() {
     setState(() {});
   }
 
-  /// Checks if progress has crossed a milestone threshold and triggers celebration.
-  void _checkMilestone(double currentProgress) {
-    for (final milestone in _milestones) {
-      if (_previousProgress < milestone && currentProgress >= milestone) {
-        debugPrint('🎉 Milestone reached: ${milestone.toInt()}%');
-        _celebrationKey.currentState?.triggerCelebration();
-        break; // Only trigger once per update
-      }
+  /// Checks if target collection is reached and triggers celebration.
+  void _checkTargetReachedCelebration(bool currentTargetReached) {
+    if (!_previousTargetReached && currentTargetReached) {
+      debugPrint('🎉 Collection target reached! Triggering celebration.');
+      _celebrationKey.currentState?.triggerCelebration();
     }
-    _previousProgress = currentProgress;
+    _previousTargetReached = currentTargetReached;
   }
 
   Future<void> _handleExport({
@@ -229,8 +225,9 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                       icon: Icons.calendar_today_rounded,
                       title: 'Date',
                       value: DateFormat('MMM dd, yyyy').format(widget.event.eventDate!),
-                      valueColor: AppColors.primary(context),
-                    ),
+  valueColor: widget.event.suggestedContribution != null
+                        ? AppColors.textPrimary(context)
+                        : AppColors.textSecondary(context),                    ),
                   _buildHeaderInfoTile(
                     context,
                     icon: Icons.monetization_on_rounded,
@@ -251,11 +248,9 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                         : widget.event.isCompleted
                             ? 'Completed'
                             : 'Inactive',
-                    valueColor: widget.event.isActive
-                        ? AppColors.primary(context)
-                        : widget.event.isCompleted
-                            ? AppColors.textTertiary(context)
-                            : AppColors.error(context),
+                     valueColor: widget.event.suggestedContribution != null
+                        ? AppColors.textPrimary(context)
+                        : AppColors.textSecondary(context),
                   ),
                   if (!widget.event.isMonthlyPayment)
                     _buildHeaderInfoTile(
@@ -541,8 +536,8 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Stack(
+                  alignment: Alignment.center,
                   children: [
                     Text(
                       'Share Event',
@@ -552,9 +547,12 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                         color: AppColors.textPrimary(context),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(context)),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(context)),
+                      ),
                     ),
                   ],
                 ),
@@ -642,17 +640,17 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                                     ? 'Minimum 4 characters required'
                                     : null,
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(30),
                                   borderSide: BorderSide(color: AppColors.border(context)),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(30),
                                   borderSide: BorderSide(color: AppColors.border(context)),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(30),
                                   borderSide: BorderSide(color: AppColors.primary(context)),
                                 ),
                               ),
@@ -676,10 +674,10 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.background(context),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(30),
                       border: Border.all(color: AppColors.border(context)),
                     ),
                     child: Row(
@@ -737,8 +735,10 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                         await eventProvider.update(widget.event.copyWith(
                           isPublicEnabled: isPublic,
                           publicPassword: pwd.isEmpty ? null : pwd,
+                          clearPassword: pwd.isEmpty,
                         ));
-                        if (context.mounted) {
+                         if (context.mounted) {
+                          Navigator.pop(context);
                           SnackbarHelper.showSuccess(context, 'Settings saved successfully!');
                         }
                       } catch (e) {
@@ -755,7 +755,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                       disabledBackgroundColor: isSaving ? AppColors.primary(context).withValues(alpha: 0.7) : null,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: hasChanges ? 2 : 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                     child: isSaving
                         ? const SizedBox(
@@ -882,7 +882,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     // Cache streams so they survive rebuilds
     _contributionsStream ??= contributionProvider.streamTotalContributions(widget.event.eventId, communityId: widget.event.communityId);
     _expensesStream ??= expenseProvider.streamEventTotalExpenses(widget.event.eventId, communityId: widget.event.communityId);
-    _participantCountStream ??= participantProvider.streamEventParticipantCount(widget.event.eventId, communityId: widget.event.communityId);
+    _participantsStream ??= participantProvider.streamEventParticipants(widget.event.eventId, communityId: widget.event.communityId);
 
     return StreamBuilder<double>(
       initialData: _cachedTotalCollected,
@@ -917,24 +917,23 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
             }
             
             final balanceAamount = totalCollected - totalExpenses;
-            return StreamBuilder<int>(
-              initialData: widget.event.currentParticipants,
-              stream: _participantCountStream,
+            return StreamBuilder<List<ParticipantModel>>(
+              stream: _participantsStream,
               builder: (context, participantSnapshot) {
-                if (participantSnapshot.hasData && (participantSnapshot.data ?? 0) > 0) {
-                  _cachedParticipantCount = participantSnapshot.data;
-                } else if (_cachedParticipantCount == null && participantSnapshot.hasData) {
-                  _cachedParticipantCount = participantSnapshot.data;
+                final participants = participantSnapshot.data ?? [];
+                if (participantSnapshot.hasData && participants.isNotEmpty) {
+                  _cachedParticipantCount = participants.length;
                 }
-                final participantCount = _cachedParticipantCount ?? participantSnapshot.data ?? widget.event.currentParticipants;
+                final participantCount = _cachedParticipantCount ?? (participantSnapshot.hasData ? participants.length : widget.event.currentParticipants);
                 final double totalExpected = widget.event.isMonthlyPayment 
                     ? 0.0 
                     : ((widget.event.totalAmount ?? 0.0) > 0 ? widget.event.totalAmount! : (widget.event.suggestedContribution ?? 0.0) * (participantCount > 0 ? participantCount : (widget.event.isFixedParticipants ? widget.event.maxParticipants : 1)));
-                final progressPercentage = totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0.0;
 
-                // Check for milestone crossing
+                final bool targetReached = totalExpected > 0 && totalCollected >= totalExpected;
+
+                // Check for celebration
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _checkMilestone(progressPercentage);
+                  _checkTargetReachedCelebration(targetReached);
                 });
 
                 return MilestoneCelebrationOverlay(
@@ -1028,6 +1027,7 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
                               minHeight: 8,
                               backgroundColor: Colors.white.withValues(alpha: 0.2), 
                               valueColor: const AlwaysStoppedAnimation(Colors.white),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
 
@@ -1156,9 +1156,3 @@ class _EventOverviewTabState extends State<EventOverviewTab> {
     );
   }
 }
-
-
-
-
-
-

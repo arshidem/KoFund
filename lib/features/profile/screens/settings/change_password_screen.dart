@@ -115,9 +115,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ),
       ],
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: AppStyles.screenPadding,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
+          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: <Widget>[
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
           child: _passwordChanged ? _buildSuccessUI() : _buildFormUI(),
         ),
       ),
@@ -139,6 +148,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 24),
             // Decorative Header
             Center(
               child: Column(

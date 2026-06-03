@@ -54,7 +54,7 @@ exports.registerFCMToken = onCall(
   {
     region: "us-central1",
     cors: true,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -299,7 +299,7 @@ exports.unregisterFCMToken = onCall(
   {
     region: "us-central1",
     cors: true,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -365,7 +365,7 @@ exports.sendCommunityNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 30,
-    enforceAppCheck: true, 
+    enforceAppCheck: false, 
   },
   async (request) => {
     try {
@@ -416,7 +416,8 @@ exports.sendCommunityNotification = onCall(
       const senderCommunities = senderData.notificationCommunities || [];
       const senderPrimaryCommunity = senderData.communityId;
       
-      const isAuthorized = senderPrimaryCommunity === communityId || 
+      const isAuthorized = type === 'pendingUser' ||
+                          senderPrimaryCommunity === communityId || 
                           senderCommunities.includes(communityId);
       
       if (!isAuthorized) {
@@ -424,9 +425,9 @@ exports.sendCommunityNotification = onCall(
         throw new HttpsError("permission-denied", "Sender is not a member of this community");
       }
 
-      // 🛡️ SECURITY: Only admins or developers can send community-wide notifications
+      // 🛡️ SECURITY: Only admins or developers can send community-wide notifications (except join requests)
       const isDeveloper = (auth.token && auth.token.email && auth.token.email.endsWith('@kofund.in')) || senderData.isDeveloper === true;
-      if (senderData.role !== 'admin' && !isDeveloper) {
+      if (type !== 'pendingUser' && senderData.role !== 'admin' && !isDeveloper) {
         console.error(`❌ Non-admin/non-developer sender ${auth.uid} tried to send community notification`);
         throw new HttpsError("permission-denied", "Only administrators or developers can send community notifications");
       }
@@ -731,7 +732,7 @@ exports.sendUserNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 30,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -989,7 +990,7 @@ exports.cleanupNotificationTokens = onCall(
   {
     region: "us-central1",
     cors: true,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -1092,7 +1093,7 @@ exports.sendeventContributionReminders = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 60,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -1490,7 +1491,7 @@ exports.sendGlobalNotification = onCall(
     region: "us-central1",
     cors: true,
     timeoutSeconds: 120, // Longer timeout for large broadcast
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -1569,7 +1570,7 @@ exports.sendTargetedNotifications = onCall(
   {
     region: "us-central1",
     cors: true,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
   },
   async (request) => {
     try {
@@ -1684,7 +1685,11 @@ exports.viewEvent = functions.https.onRequest(async (req, res) => {
     // 🐚 SHELL HTML (Initial Load)
     if (req.query.json !== 'true') {
       const shellHtml = templates.getEventHtml({
-        event: { isPublicEnabled: event.isPublicEnabled, isMonthlyPayment: event.isMonthlyPayment },
+        event: { 
+          isPublicEnabled: event.isPublicEnabled, 
+          isMonthlyPayment: event.isMonthlyPayment,
+          hasPassword: !!(event.publicPassword && event.publicPassword.trim())
+        },
         title,
         date,
         icon,
@@ -1696,7 +1701,7 @@ exports.viewEvent = functions.https.onRequest(async (req, res) => {
     }
 
     // 🔐 PASSWORD VERIFICATION (for JSON Data)
-    if (event.isPublicEnabled && event.publicPassword) {
+    if (event.isPublicEnabled && event.publicPassword && event.publicPassword.trim() !== '') {
       const providedPassword = req.query.password || req.body.password;
       const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
       const rateLimitKey = `rate_limit_${eventId}_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -1735,7 +1740,7 @@ exports.viewEvent = functions.https.onRequest(async (req, res) => {
 
     // 📊 DATA FETCHING (Only for JSON)
     const [participantsSnapshot, expensesSnapshot] = await Promise.all([
-      admin.firestore().collection('participants').where('eventId', '==', eventId).get(),
+      admin.firestore().collection('participants').where('eventId', '==', eventId).where('status', '==', 'joined').get(),
       admin.firestore().collection('expenses').where('eventId', '==', eventId).get()
     ]);
 

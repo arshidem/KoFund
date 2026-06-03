@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:screenshot/screenshot.dart';
@@ -160,46 +161,199 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
 
   Future<Uint8List> _generatePdf(Uint8List imageBytes) async {
     final pdf = pw.Document();
-    
-    // Exact Design System (Matches reference image)
+
+    pw.Font? iconFont;
+    try {
+      final fontData = await rootBundle.load('packages/flutter/fonts/MaterialIcons-Regular.otf');
+      iconFont = pw.Font.ttf(fontData);
+    } catch (e) {
+      try {
+        final fontData = await rootBundle.load('packages/flutter/fonts/MaterialIcons-Regular.ttf');
+        iconFont = pw.Font.ttf(fontData);
+      } catch (e2) {
+        debugPrint('Error loading icons font: $e2');
+      }
+    }
+
     final teal = PdfColor.fromHex('#00BFA6');
     final red = PdfColor.fromHex('#FF5252');
-    final dark = PdfColor.fromHex('#0D1B1A');
-    final grey = PdfColor.fromHex('#9E9E9E');
-    final amountFmt = NumberFormat.currency(symbol: 'Rs', decimalDigits: 0);
-    final dateFmt = DateFormat('dd MMM yyyy • hh:mm a');
+    final dark = PdfColor.fromHex('#0D1B2A');
+    final grey400 = PdfColor.fromHex('#BDBDBD');
+    final grey200 = PdfColor.fromHex('#EEEEEE');
+    final grey100 = PdfColor.fromHex('#F5F5F5');
 
-    // ── Components ───────────────────────────────────────────────────────
-    pw.Widget buildSectionHeader(String title) {
-      return pw.Row(
-        children: [
-          pw.Text(title, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey400, letterSpacing: 1.5)),
-          pw.SizedBox(width: 10),
-          pw.Expanded(child: pw.Divider(color: PdfColors.grey100, thickness: 1)),
-        ],
+    final amountFormat = NumberFormat.currency(symbol: '', decimalDigits: 0);
+    final dateFormat = DateFormat('dd MMM yyyy • hh:mm a');
+
+    pw.Widget buildDotsGrid() {
+      return pw.Column(
+        children: List.generate(3, (i) => pw.Row(
+          children: List.generate(3, (j) => pw.Container(
+            width: 4,
+            height: 4,
+            margin: const pw.EdgeInsets.all(3),
+            decoration: pw.BoxDecoration(color: grey200, shape: pw.BoxShape.circle),
+          )),
+        )),
       );
     }
 
-    pw.Widget buildSolidMetricBox(String label, double amount, PdfColor color) {
+    pw.Widget buildMetricBox(String label, double amount, PdfColor color) {
       return pw.Expanded(
         child: pw.Container(
-          padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          padding: const pw.EdgeInsets.all(10),
           decoration: pw.BoxDecoration(
-            color: color,
-            borderRadius: pw.BorderRadius.circular(16),
+            color: PdfColor(color.red, color.green, color.blue, 0.05),
+            borderRadius: pw.BorderRadius.circular(14),
+            border: pw.Border.all(color: color, width: 1),
           ),
           child: pw.Column(
             children: [
-              pw.Text(label, style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1, 0.7), letterSpacing: 0.8)),
+              pw.Text(
+                label,
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  fontWeight: pw.FontWeight.bold,
+                  color: color,
+                  letterSpacing: 0.8,
+                ),
+              ),
               pw.SizedBox(height: 2),
-              pw.Text(amountFmt.format(amount), style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+              pw.Text(
+                '${amountFormat.format(amount)}/-',
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),
       );
     }
 
-    pw.Widget buildDetailItem({required String label, required String value, required PdfColor color}) {
+    pw.Widget buildBalanceBox(double amount, PdfColor color) {
+      return pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(vertical: 14),
+        decoration: pw.BoxDecoration(
+          color: color,
+          borderRadius: pw.BorderRadius.circular(16),
+        ),
+        child: pw.Column(
+          children: [
+            pw.Text(
+              'CURRENT BALANCE',
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor(1, 1, 1, 0.7),
+                letterSpacing: 1.2,
+              ),
+            ),
+            pw.SizedBox(height: 2),
+            pw.Text(
+              '${amountFormat.format(amount)}/-',
+              style: pw.TextStyle(
+                fontSize: 22,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget buildSectionHeader(String title) {
+      return pw.Row(
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: grey400,
+              letterSpacing: 1.5,
+            ),
+          ),
+          pw.SizedBox(width: 12),
+          pw.Expanded(
+            child: pw.Divider(color: grey100, thickness: 1),
+          ),
+        ],
+      );
+    }
+
+    pw.Widget buildDetailItem(String label, String value, PdfColor color) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 5),
+        child: pw.Row(
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.all(6),
+              decoration: pw.BoxDecoration(
+                color: PdfColor(color.red, color.green, color.blue, 0.08),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: iconFont != null
+                  ? pw.Text(
+                      String.fromCharCode(0xef6e), // receipt_long icon code point
+                      style: pw.TextStyle(
+                        font: iconFont,
+                        fontSize: 12,
+                        color: color,
+                      ),
+                    )
+                  : pw.Container(
+                      width: 12,
+                      height: 12,
+                      decoration: pw.BoxDecoration(
+                        color: color,
+                        shape: pw.BoxShape.circle,
+                      ),
+                    ),
+            ),
+            pw.SizedBox(width: 8),
+            pw.Expanded(
+              child: pw.Text(
+                label,
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: dark,
+                ),
+              ),
+            ),
+            pw.Text(
+              value,
+              style: pw.TextStyle(
+                fontSize: 12,
+                fontWeight: pw.FontWeight.bold,
+                color: dark,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget buildMemberItem(String name, String value, PdfColor color) {
+      final initials = () {
+        if (name.isEmpty) return '??';
+        final parts = name.trim().split(' ');
+        if (parts.length >= 2) {
+          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+      }();
+
+      final capitalizedName = name.split(' ').map((word) {
+        if (word.isEmpty) return word;
+        return word[0].toUpperCase() + word.substring(1).toLowerCase();
+      }).join(' ');
+
       return pw.Padding(
         padding: const pw.EdgeInsets.symmetric(vertical: 6),
         child: pw.Row(
@@ -210,152 +364,191 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
               decoration: pw.BoxDecoration(
                 color: PdfColor(color.red, color.green, color.blue, 0.1),
                 shape: pw.BoxShape.circle,
+                border: pw.Border.all(
+                  color: PdfColor(color.red, color.green, color.blue, 0.2),
+                ),
               ),
-              child: pw.Center(child: pw.Container(width: 12, height: 12, decoration: pw.BoxDecoration(color: color, shape: pw.BoxShape.circle))),
+              child: pw.Center(
+                child: pw.Text(
+                  initials,
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
             ),
-            pw.SizedBox(width: 12),
-            pw.Expanded(child: pw.Text(label, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: dark))),
-            pw.Text(value, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: dark)),
+            pw.SizedBox(width: 10),
+            pw.Expanded(
+              child: pw.Text(
+                capitalizedName,
+                style: pw.TextStyle(
+                  fontSize: 13,
+                  fontWeight: pw.FontWeight.bold,
+                  color: dark,
+                ),
+              ),
+            ),
+            pw.Text(
+              value,
+              style: pw.TextStyle(
+                fontSize: 13,
+                fontWeight: pw.FontWeight.bold,
+                color: dark,
+              ),
+            ),
           ],
         ),
       );
     }
 
-    pw.Widget buildMemberRow(String name, double paid) {
-      final initials = () {
-        if (name.isEmpty) return '??';
-        final parts = name.trim().split(' ');
-        return parts.length >= 2
-            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-            : name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
-      }();
-      return pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 8),
-        child: pw.Row(
-          children: [
-            pw.Container(
-              width: 36,
-              height: 36,
-              decoration: pw.BoxDecoration(
-                color: teal,
-                shape: pw.BoxShape.circle,
-              ),
-              child: pw.Center(child: pw.Text(initials, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.white))),
-            ),
-            pw.SizedBox(width: 14),
-            pw.Expanded(child: pw.Text(name, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: dark))),
-            pw.Text(amountFmt.format(paid), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: dark)),
-          ],
-        ),
-      );
-    }
-
-    final dotsGrid = pw.Column(
-      children: List.generate(3, (i) => pw.Row(
-        children: List.generate(3, (j) => pw.Container(
-          width: 4,
-          height: 4,
-          margin: const pw.EdgeInsets.all(3),
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200, shape: pw.BoxShape.circle),
-        )),
-      )),
-    );
-
-    // ── Build Content ────────────────────────────────────────────────────
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(0),
+        margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) => [
-          pw.Container(
-            padding: const pw.EdgeInsets.all(32),
-            child: pw.Column(
-              children: [
-                // Header (Dots on top-left as per image)
-                pw.Stack(
-                  children: [
-                    pw.Align(alignment: pw.Alignment.topLeft, child: dotsGrid),
-                    pw.Center(
-                      child: pw.Column(
-                        children: [
-                          if (widget.communityName != null)
-                            pw.Text(
-                              widget.communityName!.toUpperCase(),
-                              style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColor(teal.red, teal.green, teal.blue, 0.5), letterSpacing: 2),
-                            ),
-                          pw.SizedBox(height: 4),
-                          pw.Text(
-                            widget.event.title.toUpperCase(),
-                            textAlign: pw.TextAlign.center,
-                            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 0.5),
-                          ),
-                          pw.Text(
-                            _selectedMonthId != null ? _formatMonth(_selectedMonthId!).toUpperCase() : 'EVENT SUMMARY REPORT',
-                            style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor(teal.red, teal.green, teal.blue, 0.6), letterSpacing: 2),
-                          ),
-                          pw.SizedBox(height: 20),
-                          // Capsule centered badge
-                          pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            decoration: pw.BoxDecoration(color: teal, borderRadius: pw.BorderRadius.circular(30)),
-                            child: pw.Text('${widget.participants.length} MEMBERS', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white, letterSpacing: 1)),
-                          ),
-                        ],
+          pw.Stack(
+            children: [
+              pw.Positioned(
+                top: 4,
+                right: 0,
+                child: buildDotsGrid(),
+              ),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  if (widget.communityName != null) ...[
+                    pw.Text(
+                      widget.communityName!.toUpperCase(),
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor(teal.red, teal.green, teal.blue, 0.5),
+                        letterSpacing: 2.0,
                       ),
                     ),
+                    pw.SizedBox(height: 4),
                   ],
-                ),
-                pw.SizedBox(height: 32),
-
-                // Financial Summary (Top two solid boxes)
-                pw.Row(
-                  children: [
-                    buildSolidMetricBox('COLLECTED', _totalCollected, teal),
-                    pw.SizedBox(width: 10),
-                    buildSolidMetricBox('EXPENSES', _totalExpenses, red),
-                  ],
-                ),
-                pw.SizedBox(height: 10),
-                // Main Balance Box
-                pw.Container(
-                  width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 18),
-                  decoration: pw.BoxDecoration(color: teal, borderRadius: pw.BorderRadius.circular(18)),
-                  child: pw.Column(
+                  pw.Text(
+                    widget.event.title.toUpperCase(),
+                    textAlign: pw.TextAlign.center,
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                      color: dark,
+                      letterSpacing: 0.5,
+                      lineSpacing: 1.1,
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
-                      pw.Text('CURRENT BALANCE', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColor(1, 1, 1, 0.7), letterSpacing: 1.5)),
-                      pw.SizedBox(height: 4),
-                      pw.Text(amountFmt.format(_balance), style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor(teal.red, teal.green, teal.blue, 0.1),
+                          borderRadius: pw.BorderRadius.circular(20),
+                        ),
+                        child: pw.Row(
+                          mainAxisSize: pw.MainAxisSize.min,
+                          children: [
+                            if (iconFont != null) ...[
+                              pw.Text(
+                                String.fromCharCode(0xe7ef), // group icon code point
+                                style: pw.TextStyle(
+                                  font: iconFont,
+                                  fontSize: 10,
+                                  color: teal,
+                                ),
+                              ),
+                              pw.SizedBox(width: 4),
+                            ],
+                            pw.Text(
+                              '${widget.participants.length} MEMBERS',
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                fontWeight: pw.FontWeight.bold,
+                                color: teal,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                pw.SizedBox(height: 32),
-
-                // Breakdown Header
-                buildSectionHeader('BREAKDOWN'),
-                pw.SizedBox(height: 16),
-
-                if (_filteredExpenses.isNotEmpty) ...[
-                  ..._filteredExpenses.map((e) => buildDetailItem(
-                        label: e.title,
-                        value: amountFmt.format(e.amount),
-                        color: red,
-                      )),
-                  pw.SizedBox(height: 32),
+                  pw.SizedBox(height: 16),
+                  pw.Row(
+                    children: [
+                      buildMetricBox('COLLECTED', _totalCollected, teal),
+                      pw.SizedBox(width: 8),
+                      buildMetricBox('EXPENSES', _totalExpenses, red),
+                    ],
+                  ),
+                  pw.SizedBox(height: 8),
+                  buildBalanceBox(_balance, teal),
+                  pw.SizedBox(height: 20),
+                  buildSectionHeader('BREAKDOWN'),
+                  pw.SizedBox(height: 10),
                 ],
-
-                // Members List
-                ...widget.participants.map((p) {
-                  final paid = _filteredContributions
-                      .where((c) => c.userId == p.userId)
-                      .fold(0.0, (double sum, c) => sum + c.amount);
-                  return buildMemberRow(p.userName, paid);
-                }),
-
-                pw.SizedBox(height: 40),
-                pw.Center(child: pw.Text('Verified by KoFund • ${dateFmt.format(DateTime.now())}', style: pw.TextStyle(fontSize: 8, color: grey, fontWeight: pw.FontWeight.bold))),
-              ],
-            ),
+              ),
+            ],
+          ),
+          
+          if (_filteredExpenses.isNotEmpty) ...[
+            ..._filteredExpenses.map((e) => buildDetailItem(
+                  e.title,
+                  '${amountFormat.format(e.amount)}/-',
+                  red,
+                )),
+            pw.Divider(height: 32, thickness: 1, color: grey100),
+          ],
+          
+          ...widget.participants.map((p) {
+            final double paid = _filteredContributions
+                .where((c) => c.userId == p.userId)
+                .fold(0.0, (double sum, c) => sum + c.amount);
+            return buildMemberItem(
+              p.userName,
+              '${amountFormat.format(paid)}/-',
+              teal,
+            );
+          }),
+          
+          pw.SizedBox(height: 20),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.all(3),
+                decoration: pw.BoxDecoration(
+                  color: teal,
+                  shape: pw.BoxShape.circle,
+                ),
+                child: iconFont != null
+                    ? pw.Text(
+                        String.fromCharCode(0xe86c), // check_circle icon
+                        style: pw.TextStyle(
+                          font: iconFont,
+                          fontSize: 8,
+                          color: PdfColors.white,
+                        ),
+                      )
+                    : pw.Container(width: 4, height: 4, decoration: const pw.BoxDecoration(color: PdfColors.white, shape: pw.BoxShape.circle)),
+              ),
+              pw.SizedBox(width: 6),
+              pw.Text(
+                'Verified by KoFund • ${dateFormat.format(DateTime.now())}',
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: grey400,
+                  fontWeight: pw.FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -707,7 +900,7 @@ class _ReportContent extends StatelessWidget {
     const tealColor = Color(0xFF00BFA6);
     const darkTextColor = Color(0xFF0D1B2A);
     final dateFormat = DateFormat('dd MMM yyyy • hh:mm a');
-    final aamountFormat = NumberFormat.currency(symbol: 'Rs', decimalDigits: 0);
+    final aamountFormat = NumberFormat.currency(symbol: '', decimalDigits: 0);
 
     return Container(
       width: 360,
@@ -754,18 +947,8 @@ class _ReportContent extends StatelessWidget {
                     height: 1.1,
                   ),
                 ),
-                Text(
-                  selectedMonthName != null 
-                    ? selectedMonthName!.toUpperCase() 
-                    : 'EVENT SUMMARY REPORT',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w800,
-                    color: tealColor.withValues(alpha: 0.6),
-                    letterSpacing: 2.0,
-                  ),
-                ),
-                const SizedBox(height: 12),
+              
+                const SizedBox(height: 2),
                 
                 // Badge Row
                 Row(
@@ -815,24 +998,12 @@ class _ReportContent extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 if (expenses.isNotEmpty) ...[
-                  ...expenses.take(10).map((e) => _buildDetailItem(
+                  ...expenses.map((e) => _buildDetailItem(
                     icon: Icons.receipt_long_rounded,
                     label: e.title,
-                    value: aamountFormat.format(e.amount),
+                    value: '${aamountFormat.format(e.amount)}/-',
                     color: Colors.redAccent,
                   )),
-                  if (expenses.length > 10)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 8),
-                      child: Text(
-                        '+ ${expenses.length - 10} more expenses (truncated)',
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: Colors.grey[400],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
                   const Divider(height: 32),
                 ],
 
@@ -843,7 +1014,7 @@ class _ReportContent extends StatelessWidget {
                        .fold(0.0, (double sum, c) => sum + c.amount);
                     return _buildMemberItem(
                       name: p.userName,
-                      value: aamountFormat.format(paid),
+                      value: '${aamountFormat.format(paid)}/-',
                       color: tealColor,
                     );
                  }),
@@ -853,21 +1024,20 @@ class _ReportContent extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
                         color: tealColor,
                         shape: BoxShape.circle,
                       ),
                       child: SvgPicture.asset(
                         'assets/logos/KoFund.svg',
-                        height: 15,
-                        color: Colors.white,
+                        height: 8,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Verified by KoFund • ${dateFormat.format(DateTime.now())}',
-                      style: TextStyle(fontSize: 8, color: Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      style: TextStyle(fontSize: 9, color: Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),
                   ],
                 ),
@@ -896,7 +1066,7 @@ class _ReportContent extends StatelessWidget {
   }
 
   Widget _buildMetricBox(String label, double amount, Color color) {
-    final format = NumberFormat.currency(symbol: 'Rs', decimalDigits: 0);
+    final format = NumberFormat.currency(symbol: '', decimalDigits: 0);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -909,7 +1079,7 @@ class _ReportContent extends StatelessWidget {
           children: [
             Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.8)),
             const SizedBox(height: 2),
-            Text(format.format(amount), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
+            Text('${format.format(amount)}/-', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: color)),
           ],
         ),
       ),
@@ -917,7 +1087,7 @@ class _ReportContent extends StatelessWidget {
   }
 
   Widget _buildBalanceBox(double amount, Color color) {
-    final format = NumberFormat.currency(symbol: 'Rs', decimalDigits: 0);
+    final format = NumberFormat.currency(symbol: '', decimalDigits: 0);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -930,7 +1100,7 @@ class _ReportContent extends StatelessWidget {
         children: [
           const Text('CURRENT BALANCE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white70, letterSpacing: 1.2)),
           const SizedBox(height: 2),
-          Text(format.format(amount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+          Text('${format.format(amount)}/-', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
         ],
       ),
     );

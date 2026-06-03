@@ -1,5 +1,6 @@
 // lib/features/events/screens/edit_event_screen.dart
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -989,7 +990,7 @@ final update = widget.event.copyWith(
         ),
       ],
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: AppStyles.screenPadding,
         child: SingleChildScrollView(
             child: Column(
               children: [

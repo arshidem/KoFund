@@ -481,7 +481,7 @@ class _ReceiptCard extends StatelessWidget {
                   ],
 
                   _buildDetailDivider(),
-                  _buildDetailItem(Icons.card_membership_rounded, 'event', name, tealColor),
+                  _buildDetailItem(Icons.card_membership_rounded, 'Event', name, tealColor),
                   _buildDetailDivider(),
                   _buildDetailItem(Icons.account_balance_wallet_outlined, 'Payment Method', paymentMethod, tealColor),
                   
@@ -778,8 +778,9 @@ class _ReceiptCard extends StatelessWidget {
             Expanded(child: Divider(color: color.withValues(alpha: 0.15), thickness: 2)),
             const SizedBox(width: 20),
             Container(
-              width: 38,
-              height: 38,
+              width: 24,
+              height: 24,
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,

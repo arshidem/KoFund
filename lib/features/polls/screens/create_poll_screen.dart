@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/polls/providers/poll_provider.dart';
 import 'package:kofund/features/polls/models/poll_model.dart';
@@ -352,7 +353,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -561,7 +562,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
 
     if (_events.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: AppStyles.screenPadding,
         decoration: BoxDecoration(
           color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
@@ -801,7 +802,7 @@ class _CreatePollScreenState extends State<CreatePollScreen> {
       onTap: _selectDate,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: AppStyles.screenPadding,
         decoration: BoxDecoration(
           color: isDarkMode ? AppColors.darkCard : AppColors.lightCard,
           borderRadius: BorderRadius.circular(12),

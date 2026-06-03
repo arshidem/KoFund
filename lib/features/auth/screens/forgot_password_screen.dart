@@ -77,7 +77,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return GradientSheetScaffold(
       title: 'Reset Password',
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: AppStyles.screenPadding,
         child: _emailSent ? _buildSuccessUI() : _buildFormUI(),
       ),
     );
@@ -91,6 +91,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 24),
             // Decorative Header
             Center(
               child: Column(

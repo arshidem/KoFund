@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
@@ -468,7 +469,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
           // SCROLLABLE CONTENT
           SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
+            padding: AppStyles.screenPadding,
             child: Form(
               key: _formKey,
               child: Column(

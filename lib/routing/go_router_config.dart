@@ -74,6 +74,21 @@ class GoRouterConfig {
           return '/splash';
         }
 
+        // ⭐ CRITICAL: Guard community-dashboard route
+        // Prevent users without a community from accessing the dashboard
+        if (path == '/community-dashboard') {
+          if (!loggedIn) {
+            return '/login';
+          }
+          final user = authProvider.user;
+          if (user != null && (user.communityId == null || user.communityId!.isEmpty)) {
+            return '/join-community';
+          }
+          if (user != null && !user.isApproved) {
+            return '/pending-approval';
+          }
+        }
+
         return null;
       },
       routes: [

@@ -583,6 +583,7 @@ Widget _buildContributionSummary(BuildContext context, List<ContributionModel> a
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         Colors.white,
                       ),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                   ),
 
@@ -1063,14 +1064,15 @@ void _navigateToDeletedContributions(BuildContext context) {
     return PopupMenuButton<String>(
       icon: Icon(
         Icons.more_vert,
-        color: AppColors.textSecondary(context),
-        size: 20,
+        color: AppColors.textTertiary(context),
+        size: 22,
       ),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(
-        minWidth: 36,
-        minHeight: 36,
+      offset: const Offset(0, 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
+      elevation: 4,
+      color: AppColors.card(context),
       onSelected: (value) {
         _handleMenuAction(value, contribution, context);
       },
@@ -1081,30 +1083,22 @@ void _navigateToDeletedContributions(BuildContext context) {
         
         // View Details - Always available
         items.add(
-          const PopupMenuItem<String>(
+          _buildPopupMenuItem(
             value: 'view_details',
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 18),
-                SizedBox(width: 8),
-                Text('View Details'),
-              ],
-            ),
+            icon: Icons.info_outline_rounded,
+            label: 'View Details',
+            color: AppColors.primary(context),
           ),
         );
         
         // Edit - Only for admin
         if (isAdmin) {
           items.add(
-            const PopupMenuItem<String>(
+            _buildPopupMenuItem(
               value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit_outlined, size: 18),
-                  SizedBox(width: 8),
-                  Text('Edit'),
-                ],
-              ),
+              icon: Icons.edit_rounded,
+              label: 'Edit',
+              color: AppColors.primary(context),
             ),
           );
         }
@@ -1112,15 +1106,11 @@ void _navigateToDeletedContributions(BuildContext context) {
         // Get Receipt - Available to contributor and admin
         if (isContributor || isAdmin) {
           items.add(
-            const PopupMenuItem<String>(
+            _buildPopupMenuItem(
               value: 'receipt',
-              child: Row(
-                children: [
-                  Icon(Icons.receipt_long_outlined, size: 18),
-                  SizedBox(width: 8),
-                  Text('Get Receipt'),
-                ],
-              ),
+              icon: Icons.receipt_long_rounded,
+              label: 'Get Receipt',
+              color: Colors.teal,
             ),
           );
         }
@@ -1131,21 +1121,50 @@ void _navigateToDeletedContributions(BuildContext context) {
             const PopupMenuDivider(),
           );
           items.add(
-            const PopupMenuItem<String>(
+            _buildPopupMenuItem(
               value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
-                ],
-              ),
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete',
+              color: AppColors.error(context),
             ),
           );
         }
         
         return items;
       },
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupMenuItem({
+    required String value,
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 44,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

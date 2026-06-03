@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/gradient_sheet_scaffold.dart';
@@ -8,6 +9,7 @@ import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/app_styles.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'create_community_screen.dart';
 
@@ -213,6 +215,10 @@ Future<void> _joinCommunity() async {
     userName: userName,
   );
 
+  if (success) {
+    await authProvider.refreshUserData();
+  }
+
   if (!mounted) {
     setState(() {
       _autoJoining = false;
@@ -222,7 +228,7 @@ Future<void> _joinCommunity() async {
 
   if (success) {
     // ✅ Navigate ALL users to pending approval
-    Navigator.pushReplacementNamed(context, RouteNames.pendingApproval);
+    context.go(RouteNames.pendingApproval);
   } else {
     SnackbarHelper.showError(
       context,
@@ -315,24 +321,30 @@ Future<void> _joinCommunity() async {
 
 @override
 Widget build(BuildContext context) {
-  return GradientSheetScaffold(
-    title: 'Join Community',
-    leading: IconButton(
-      icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-      onPressed: () {
-        Navigator.pushReplacementNamed(context, RouteNames.login);
-      },
-    ),
-    body: SafeArea(
-      // ... rest of the body code remains the same
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // ✅ Logo Header (consistent with CreateCommunityScreen)
-              Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 16),
+  return PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, result) {
+      if (didPop) return;
+      context.read<AppAuthProvider>().signOut(context);
+      context.go(RouteNames.login);
+    },
+    child: GradientSheetScaffold(
+      title: 'Join Community',
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+        onPressed: () {
+          context.read<AppAuthProvider>().signOut(context);
+          context.go(RouteNames.login);
+        },
+      ),
+      body: Padding(
+      padding: AppStyles.screenPadding,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // ✅ Logo Header (consistent with CreateCommunityScreen)
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 20),
                 child: Column(
                   children: [
                     // Logo with rounded background
@@ -358,14 +370,7 @@ Widget build(BuildContext context) {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Join Community',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary(context),
-                      ),
-                    ),
+                 
                   ],
                 ),
               ),

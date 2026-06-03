@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:kofund/core/constants/app_styles.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
+import 'package:kofund/features/profile/providers/profile_provider.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/constants/app_colors.dart';
@@ -16,6 +19,38 @@ class PendingApprovalScreen extends StatefulWidget {
 
 class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
   bool _isCheckingStatus = false;
+  bool _isLeavingCommunity = false;
+
+  Future<void> _leaveAndJoinAnother() async {
+    setState(() => _isLeavingCommunity = true);
+    try {
+      final profileProvider = context.read<ProfileProvider>();
+      final authProvider = context.read<AppAuthProvider>();
+      
+      final success = await profileProvider.leaveCommunity();
+      if (!mounted) return;
+      
+      if (success) {
+        await authProvider.refreshUserData();
+        if (!mounted) return;
+        SnackbarHelper.showSuccess(context, 'Left current community. Choose a new one.');
+        context.go(RouteNames.joinCommunity);
+      } else {
+        SnackbarHelper.showError(
+          context,
+          profileProvider.error ?? 'Failed to leave community',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarHelper.showError(context, 'Error: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLeavingCommunity = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -48,7 +83,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     else if (authProvider.user?.communityId == null && !authProvider.isLoading) {
       authProvider.removeListener(_onAuthStatusChanged);
       if (mounted) {
-        Navigator.pushReplacementNamed(context, RouteNames.joinCommunity);
+        context.go(RouteNames.joinCommunity);
       }
     }
   }
@@ -64,7 +99,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
   void _navigateToDashboard() {
     if (mounted) {
-      Navigator.pushReplacementNamed(context, RouteNames.communityDashboard);
+      context.go(RouteNames.communityDashboard);
     }
   }
 
@@ -90,43 +125,36 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     return GradientSheetScaffold(
       title: 'Verification',
       automaticallyImplyLeading: false,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+      body: Padding(
+        padding: AppStyles.screenPadding,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              const Spacer(),
-              // Premium Illustration / Icon
-              Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: AppColors.primary(context).withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primary(context).withValues(alpha: 0.15),
-                      AppColors.primary(context).withValues(alpha: 0.05),
-                    ],
+              const SizedBox(height: 24),
+              // Concentric Circle Icon
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
                   ),
-                ),
-                child: Center(
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.primary(context).withValues(alpha: 0.2),
+                      color: AppColors.primary(context).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.shield_moon_outlined,
-                      size: 56,
+                      size: 48,
                       color: AppColors.primary(context),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
               // Main Text
               Text(
                 "Verification in Progress",
@@ -148,7 +176,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
 
               // Status Card
               Container(
@@ -202,7 +230,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 48),
               
               // Actions
               SizedBox(
@@ -241,27 +269,30 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton(
-                    onPressed: () async {
-                      await context.read<AppAuthProvider>().signOut(context);
-                      if (mounted) {
-                        Navigator.pushReplacementNamed(context, RouteNames.login);
-                      }
-                    },
+                    onPressed: _isLeavingCommunity || _isCheckingStatus ? null : _leaveAndJoinAnother,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.error(context).withValues(alpha: 0.5), width: 1.5),
+                      side: BorderSide(color: AppColors.primary(context).withValues(alpha: 0.5), width: 1.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                       ),
                       backgroundColor: AppColors.surface(context),
-                      foregroundColor: AppColors.error(context),
+                      foregroundColor: AppColors.primary(context),
                     ),
-                    child: const Text(
-                      "Sign out from account",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isLeavingCommunity
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Join another community",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 32),

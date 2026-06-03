@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/constants/app_styles.dart';
 import '../providers/app_auth_provider.dart';
 import 'login_screen.dart';
 import 'verification_pending_screen.dart';
@@ -798,7 +799,7 @@ Widget _buildTermsCheckbox() {
       backgroundColor: AppColors.background(context),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: AppStyles.screenPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

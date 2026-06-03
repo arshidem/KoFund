@@ -46,13 +46,11 @@ class UserModel {
 
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'uid': uid,
       'email': email,
       'displayName': displayName,
       'phoneNumber': phoneNumber,
-      'communityId': communityId,
-      'communityName': communityName,
       'role': role,
       'isApproved': isApproved,
       'isAdmin': isAdmin,
@@ -66,6 +64,12 @@ class UserModel {
       'showDetailedProfile': showDetailedProfile,
       'notificationsEnabled': notificationsEnabled,
     };
+    // ⭐ Only include community fields if they have values.
+    // After leaving a community these are deleted via FieldValue.delete();
+    // writing them back as null would re-create the fields in the document.
+    if (communityId != null) map['communityId'] = communityId;
+    if (communityName != null) map['communityName'] = communityName;
+    return map;
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -120,31 +124,30 @@ class UserModel {
     bool? isDeveloper,
     bool? isVirtualUser,
     String? createdBy,
-String? mergedIntoUserId,
-String? createdByName, // 🆕 ADD THIS
-
+    String? mergedIntoUserId,
+    String? createdByName,
     Timestamp? createdAt,
     Timestamp? updatedAt,
     Timestamp? approvedAt,
     bool? showDetailedProfile,
     bool? notificationsEnabled,
+    bool clearCommunity = false, // ⭐ When true, clears communityId & communityName
   }) {
     return UserModel(
       uid: uid ?? this.uid,
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
-      communityId: communityId ?? this.communityId,
-      communityName: communityName ?? this.communityName,
+      communityId: clearCommunity ? null : (communityId ?? this.communityId),
+      communityName: clearCommunity ? null : (communityName ?? this.communityName),
       role: role ?? this.role,
       isApproved: isApproved ?? this.isApproved,
       isAdmin: isAdmin ?? this.isAdmin,
       isDeveloper: isDeveloper ?? this.isDeveloper,
       isVirtualUser: isVirtualUser ?? this.isVirtualUser,
       createdBy: createdBy ?? this.createdBy,
-mergedIntoUserId: mergedIntoUserId ?? this.mergedIntoUserId,
-createdByName: createdByName ?? this.createdByName, // 🆕 ADD THIS
-
+      mergedIntoUserId: mergedIntoUserId ?? this.mergedIntoUserId,
+      createdByName: createdByName ?? this.createdByName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       approvedAt: approvedAt ?? this.approvedAt,
