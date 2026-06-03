@@ -9,7 +9,98 @@ class WebsiteFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveLayout.isDesktop(context);
+    final isMobile = ResponsiveLayout.isMobile(context);
     final textTheme = Theme.of(context).textTheme;
+
+    final logoSlogan = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.primary(context),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'KoFund',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Manage Community Funds Without WhatsApp Confusion.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    );
+
+    final legalLinks = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Legal',
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FooterLink(
+          title: 'Privacy Policy',
+          onTap: () => context.go('/privacyPolicy'),
+        ),
+        _FooterLink(
+          title: 'Terms of Service',
+          onTap: () => context.go('/termsOfService'),
+        ),
+        _FooterLink(
+          title: 'Delete Account',
+          onTap: () => context.go('/deleteAccount'),
+        ),
+      ],
+    );
+
+    final resourceLinks = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Resources',
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FooterLink(
+          title: 'Data Safety',
+          onTap: () => context.go('/dataSafety'),
+        ),
+        _FooterLink(
+          title: 'Support',
+          onTap: () => context.go('/support'),
+        ),
+        _FooterLink(
+          title: 'About Us',
+          onTap: () => context.go('/about'),
+        ),
+      ],
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -24,148 +115,106 @@ class WebsiteFooter extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       child: Column(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Logo, Slogan, and Rights
-              Expanded(
-                flex: isDesktop ? 2 : 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (isMobile)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                logoSlogan,
+                const SizedBox(height: 32),
+                legalLinks,
+                const SizedBox(height: 32),
+                resourceLinks,
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: isDesktop ? 2 : 4,
+                  child: logoSlogan,
+                ),
+                if (isDesktop) const Spacer(),
+                Expanded(
+                  flex: isDesktop ? 1 : 3,
+                  child: legalLinks,
+                ),
+                Expanded(
+                  flex: isDesktop ? 1 : 3,
+                  child: resourceLinks,
+                ),
+              ],
+            ),
+          const SizedBox(height: 48),
+          const Divider(),
+          const SizedBox(height: 24),
+          isMobile
+              ? Column(
                   children: [
+                    Text(
+                      '© ${DateTime.now().year} KoFund. All rights reserved.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary(context),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.account_balance_wallet_rounded,
-                            color: Colors.white,
-                            size: 18,
+                        Text(
+                          'Built with ',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary(context),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.favorite_rounded,
+                          color: Colors.red,
+                          size: 12,
+                        ),
                         Text(
-                          'KoFund',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimary(context),
+                          ' using Flutter',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary(context),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Manage Community Funds Without WhatsApp Confusion.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
                   ],
-                ),
-              ),
-              if (isDesktop) const Spacer(),
-
-              // Quick Links Section 1: Legal
-              Expanded(
-                flex: isDesktop ? 1 : 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Legal',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(context),
+                      '© ${DateTime.now().year} KoFund. All rights reserved.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary(context),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _FooterLink(
-                      title: 'Privacy Policy',
-                      onTap: () => context.go('/privacyPolicy'),
-                    ),
-                    _FooterLink(
-                      title: 'Terms of Service',
-                      onTap: () => context.go('/termsOfService'),
-                    ),
-                    _FooterLink(
-                      title: 'Delete Account',
-                      onTap: () => context.go('/deleteAccount'),
+                    Row(
+                      children: [
+                        Text(
+                          'Built with ',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary(context),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.favorite_rounded,
+                          color: Colors.red,
+                          size: 12,
+                        ),
+                        Text(
+                          ' using Flutter',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textTertiary(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-
-              // Quick Links Section 2: Resources
-              Expanded(
-                flex: isDesktop ? 1 : 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Resources',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _FooterLink(
-                      title: 'Data Safety',
-                      onTap: () => context.go('/dataSafety'),
-                    ),
-                    _FooterLink(
-                      title: 'Support',
-                      onTap: () => context.go('/support'),
-                    ),
-                    _FooterLink(
-                      title: 'About Us',
-                      onTap: () => context.go('/about'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 48),
-          const Divider(),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '© ${DateTime.now().year} KoFund. All rights reserved.',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.textTertiary(context),
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    'Built with ',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary(context),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.favorite_rounded,
-                    color: Colors.red,
-                    size: 12,
-                  ),
-                  Text(
-                    ' using Flutter',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary(context),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ],
       ),
     );

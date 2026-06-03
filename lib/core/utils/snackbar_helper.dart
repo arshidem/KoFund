@@ -1,5 +1,6 @@
 // Snackbar utilities 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 
 class SnackbarHelper {
@@ -33,19 +34,15 @@ class SnackbarHelper {
           children: [
             // Small KoFund Logo with Primary Background (Branding)
             Container(
-              padding: const EdgeInsets.all(2),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppColors.primary(context),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Transform.scale(
-                scale: 1.6,
-                child: Image.asset(
-                  'assets/logos/KoFund.png',
-                  height: 18,
-                  width: 18,
-                  fit: BoxFit.contain,
-                ),
+              child: SvgPicture.asset(
+                'assets/logos/KoFund.svg',
+                height: 10,
+                width: 10,
               ),
             ),
             const SizedBox(width: 12),

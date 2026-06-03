@@ -32,7 +32,7 @@ class ContributionService {
           } catch (_) {}
         }
 
-        final title = '₹${contribution.amount.toStringAsFixed(0)} Recorded ✅';
+        final title = '₹${contribution.amount.toStringAsFixed(0)} Recorded';
         final body = contribution.isMonthlyContribution && contribution.monthId != null 
             ? '${contribution.monthDisplayName} contribution · $pName' 
             : pName;
@@ -67,11 +67,11 @@ class ContributionService {
           senderName: recorderName,
           data: {
             'contributionId': docRef.id,
-            'aamountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
-            'name': pName, // ✅ Fix: Use fetched/calculated pName
+            'amountRecorded': '₹${contribution.amount.toStringAsFixed(0)}',
+            'name': pName,
             'period': contribution.monthDisplayName.isNotEmpty 
                 ? contribution.monthDisplayName 
-                : 'General contribution', // ✅ Fix: Handle non-monthly period
+                : 'General contribution',
             'recordedBy': recorderName,
             'senderName': recorderName,
             'runningTotal': '₹${totalPaidSoFar.toStringAsFixed(0)}',

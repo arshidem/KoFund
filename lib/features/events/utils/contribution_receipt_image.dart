@@ -1,4 +1,3 @@
-// lib/features/events/utils/contribution_receipt_image.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kofund/features/contributions/models/contribution_model.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 
@@ -13,7 +13,6 @@ import 'package:kofund/core/skeleton/receipt_skeleton.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 
 class ContributionReceiptImage {
-  // Cache for user nnames (userId -> userName)
   static final Map<String, String> _userNnameCache = {};
 
   static Future<String> _getCommunityNnameFromId(String communityId) async {
@@ -789,9 +788,8 @@ class _ReceiptCard extends StatelessWidget {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: Transform.scale(
-                scale: 1.3,
-                child: Image.asset('assets/logos/KoFund.png'),
+              child: SvgPicture.asset(
+                'assets/logos/KoFund.svg',
               ),
             ),
             const SizedBox(width: 12),

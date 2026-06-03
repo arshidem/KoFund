@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/providers/app_auth_provider.dart';
 import '../../routing/route_names.dart';
+import 'package:go_router/go_router.dart';
 
 /// Simple, low-cost guard for community-related screens
 /// Uses cached data only - NO Firestore real-time listeners
@@ -41,7 +42,7 @@ class CommunityGuard extends StatelessWidget {
     // Schedule navigation for next frname
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
-        Navigator.pushReplacementNamed(context, route);
+        context.go(route);
       }
     });
     

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/responsive_layout.dart';
@@ -265,20 +264,48 @@ class _FeaturesSection extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 48),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isMobile ? 1 : (isTablet ? 2 : 3),
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 24,
-                childAspectRatio: isTablet ? 1.4 : 1.3,
-              ),
-              itemCount: features.length,
-              itemBuilder: (context, index) {
-                final item = features[index];
-                return _FeatureCard(item: item);
-              },
+            Builder(
+              builder: (context) {
+                if (isMobile) {
+                  return Column(
+                    children: features.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _FeatureCard(item: item),
+                    )).toList(),
+                  );
+                }
+                
+                final columnsCount = isTablet ? 2 : 3;
+                final rows = <List<_FeatureItem>>[];
+                for (var i = 0; i < features.length; i += columnsCount) {
+                  final end = (i + columnsCount < features.length) ? i + columnsCount : features.length;
+                  rows.add(features.sublist(i, end));
+                }
+                
+                return Column(
+                  children: rows.map((rowItems) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: rowItems.map((item) {
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: _FeatureCard(item: item),
+                              ),
+                            );
+                          }).toList() + List.generate(
+                            columnsCount - rowItems.length,
+                            (index) => const Expanded(child: SizedBox()),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              }
             ),
           ],
         ),
@@ -322,7 +349,7 @@ class _FeatureCardState extends State<_FeatureCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        transform: _isHovered ? (Matrix4.identity()..translate(0, -6, 0)) : Matrix4.identity(),
+        transform: _isHovered ? Matrix4.translationValues(0, -6, 0) : Matrix4.identity(),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.card(context),
@@ -380,6 +407,42 @@ class _WhyKoFundSection extends StatelessWidget {
     final isMobile = ResponsiveLayout.isMobile(context);
     final textTheme = Theme.of(context).textTheme;
 
+    Widget buildTableContent() {
+      return Table(
+        columnWidths: const {
+          0: FlexColumnWidth(2),
+          1: FlexColumnWidth(1.2),
+          2: FlexColumnWidth(1.2),
+          3: FlexColumnWidth(1.2),
+        },
+        border: TableBorder.symmetric(
+          inside: BorderSide(
+            color: AppColors.border(context),
+          ),
+        ),
+        children: [
+          // Header Row
+          TableRow(
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+            ),
+            children: [
+              _buildTableCell('Feature', isHeader: true),
+              _buildTableCell('WhatsApp', isHeader: true, alignCenter: true),
+              _buildTableCell('Notes App', isHeader: true, alignCenter: true),
+              _buildTableCell('KoFund', isHeader: true, alignCenter: true),
+            ],
+          ),
+          // Rows
+          _buildComparisonRow('Track Contributions', Icons.close_rounded, Colors.red, Icons.warning_amber_rounded, Colors.orange, Icons.check_circle_rounded, Colors.green),
+          _buildComparisonRow('Track Expenses', Icons.close_rounded, Colors.red, Icons.warning_amber_rounded, Colors.orange, Icons.check_circle_rounded, Colors.green),
+          _buildComparisonRow('Member Management', Icons.close_rounded, Colors.red, Icons.close_rounded, Colors.red, Icons.check_circle_rounded, Colors.green),
+          _buildComparisonRow('Reports & History', Icons.close_rounded, Colors.red, Icons.close_rounded, Colors.red, Icons.check_circle_rounded, Colors.green),
+          _buildComparisonRow('Transparency', Icons.close_rounded, Colors.red, Icons.close_rounded, Colors.red, Icons.check_circle_rounded, Colors.green),
+        ],
+      );
+    }
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 24 : 64,
@@ -409,6 +472,28 @@ class _WhyKoFundSection extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 48),
+            if (isMobile)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.swipe_left_alt_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary(context),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Swipe horizontally to view full comparison',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -418,39 +503,15 @@ class _WhyKoFundSection extends StatelessWidget {
                     color: AppColors.border(context),
                   ),
                 ),
-                child: Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(2),
-                    1: FlexColumnWidth(1.2),
-                    2: FlexColumnWidth(1.2),
-                    3: FlexColumnWidth(1.2),
-                  },
-                  border: TableBorder.symmetric(
-                    inside: BorderSide(
-                      color: AppColors.border(context),
-                    ),
-                  ),
-                  children: [
-                    // Header Row
-                    TableRow(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface(context),
-                      ),
-                      children: [
-                        _buildTableCell('Feature', isHeader: true),
-                        _buildTableCell('WhatsApp', isHeader: true, alignCenter: true),
-                        _buildTableCell('Notes App', isHeader: true, alignCenter: true),
-                        _buildTableCell('KoFund', isHeader: true, alignCenter: true),
-                      ],
-                    ),
-                    // Rows
-                    _buildComparisonRow('Track Contributions', '❌', '⚠️', '✅'),
-                    _buildComparisonRow('Track Expenses', '❌', '⚠️', '✅'),
-                    _buildComparisonRow('Member Management', '❌', '❌', '✅'),
-                    _buildComparisonRow('Reports & History', '❌', '❌', '✅'),
-                    _buildComparisonRow('Transparency', '❌', '❌', '✅'),
-                  ],
-                ),
+                child: isMobile
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: 560,
+                          child: buildTableContent(),
+                        ),
+                      )
+                    : buildTableContent(),
               ),
             ),
           ],
@@ -459,14 +520,21 @@ class _WhyKoFundSection extends StatelessWidget {
     );
   }
 
-  TableRow _buildComparisonRow(String feature, String whatsapp, String notes, String kofund) {
+  TableRow _buildComparisonRow(String feature, IconData whatsappIcon, Color whatsappColor, IconData notesIcon, Color notesColor, IconData kofundIcon, Color kofundColor) {
     return TableRow(
       children: [
         _buildTableCell(feature),
-        _buildTableCell(whatsapp, alignCenter: true),
-        _buildTableCell(notes, alignCenter: true),
-        _buildTableCell(kofund, alignCenter: true),
+        _buildIconTableCell(whatsappIcon, whatsappColor),
+        _buildIconTableCell(notesIcon, notesColor),
+        _buildIconTableCell(kofundIcon, kofundColor),
       ],
+    );
+  }
+
+  Widget _buildIconTableCell(IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Center(child: Icon(icon, color: color, size: 20)),
     );
   }
 
@@ -478,8 +546,7 @@ class _WhyKoFundSection extends StatelessWidget {
         textAlign: alignCenter ? TextAlign.center : TextAlign.left,
         style: TextStyle(
           fontWeight: isHeader ? FontWeight.bold : FontWeight.w500,
-          color: isHeader ? null : (text == '✅' ? AppColors.lightSuccess : null),
-          fontSize: isHeader ? 14 : 14,
+          fontSize: 14,
         ),
       ),
     );

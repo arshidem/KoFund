@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kofund/features/notifications/providers/notification_provider.dart';
 import 'package:kofund/routing/route_names.dart';
+import 'package:go_router/go_router.dart';
 
 class NotificationBadge extends StatelessWidget {
   final Color? badgeColor;
@@ -33,7 +34,7 @@ class NotificationBadge extends StatelessWidget {
                 color: Colors.white,
               ),
               onPressed: () {
-                Navigator.pushNamed(context, RouteNames.notifications);
+                context.push(RouteNames.notifications);
               },
             ),
             if (showBadge && unreadCount > 0) ...[

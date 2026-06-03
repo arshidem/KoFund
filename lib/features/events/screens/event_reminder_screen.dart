@@ -880,7 +880,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     final message = data['message'] ?? 'Completed';
     
     if (!success) {
-      SnackbarHelper.showError(context, '❌ Failed: $message');
+      SnackbarHelper.showError(context, 'Failed: $message');
       return;
     }
     

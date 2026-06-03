@@ -15,6 +15,9 @@ import './fcm_token_service.dart';
 import 'package:kofund/core/utils/notification_channels.dart';
 import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kofund/routing/go_router_config.dart';
+import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/main.dart' show navigatorKey;
 
 
@@ -646,26 +649,20 @@ Future<bool> _isNotificationTypeMuted(NotificationType type) async {
     // Wait for navigator to be ready
     await Future.delayed(const Duration(milliseconds: 500));
     
-    final nav = navigatorKey.currentState;
-    if (nav == null) return;
+    final context = GoRouterConfig.rootNavigatorKey.currentContext;
+    if (context == null) return;
 
     final eventId = data['eventId'];
     if (eventId != null && eventId.toString().isNotEmpty) {
       debugPrint("🚀 Navigating directly to event Details: $eventId");
-      nav.pushNamed(
-        '/event-details',
-        arguments: eventId.toString(),
-      );
+      context.push('${RouteNames.eventDetails}/${eventId.toString()}');
       return;
     }
 
     // Create AppNotification from data
     final notification = _createNotificationFromData(data);
     
-    nav.pushNamed(
-      '/notification-detail',
-      arguments: notification,
-    );
+    context.push(RouteNames.notificationDetail, extra: notification);
   }
 
   AppNotification _createNotificationFromData(Map<String, dynamic> data) {

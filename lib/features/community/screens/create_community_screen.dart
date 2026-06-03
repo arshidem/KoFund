@@ -9,6 +9,7 @@ import '../../../core/widgets/gradient_sheet_scaffold.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kofund/core/services/network_service.dart';
 class CreateCommunityScreen extends StatefulWidget {
   const CreateCommunityScreen({super.key});
@@ -388,13 +389,9 @@ Widget build(BuildContext context) {
                         ],
                       ),
                       child: Center(
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logos/KoFund.png',
-                            height: 80,
-                            width: 80,
-                            fit: BoxFit.contain,
-                          ),
+                        child: SvgPicture.asset(
+                          'assets/logos/KoFund.svg',
+                          height: 40,
                         ),
                       ),
                     ),

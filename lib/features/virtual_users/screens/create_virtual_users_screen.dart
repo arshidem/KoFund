@@ -233,7 +233,7 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
           ),
         );
       } else {
-        SnackbarHelper.showSuccess(context, '✅ Successfully created ${virtualUserProvider.successfulCreations} virtual users');
+        SnackbarHelper.showSuccess(context, 'Successfully created ${virtualUserProvider.successfulCreations} virtual users');
         Future.delayed(const Duration(seconds: 1), () {
           if (!mounted) return;
           setState(() {

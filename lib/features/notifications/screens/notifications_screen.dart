@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/constants/notification_Types.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/utils/dialog_helper.dart';
+import 'package:go_router/go_router.dart';
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -113,7 +114,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             _showClearAllDialog(context, provider);
           } else if (value == 'settings') {
             // Add navigation to settings if available
-            Navigator.pushNamed(context, '/notification-settings');
+            context.push('/notification-settings');
           }
         },
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -57,16 +57,8 @@ class WebsiteNavbar extends StatelessWidget implements PreferredSizeWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.all(4),
-                  child: Image.asset(
-                    'assets/logos/KoFund.png',
-                    height: 32,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.account_balance_wallet,
-                        color: Colors.white,
-                        size: 22,
-                      );
-                    },
+                  child: SvgPicture.asset(
+                    'assets/logos/KoFund.svg',
                   ),
                 ),
                 const SizedBox(width: 12),

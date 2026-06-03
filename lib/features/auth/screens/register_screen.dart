@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -17,6 +18,8 @@ import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/features/profile/screens/settings/terms_of_service_screen.dart';
 import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:go_router/go_router.dart';
+import 'package:kofund/routing/route_names.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -231,26 +234,15 @@ Future<void> _register() async {
       }
       
       // Navigate to verification screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VerificationPendingScreen(
-            email: email,
-            pendingInviteCode: widget.pendingInviteCode,
-          ),
-        ),
-      );
+      final inviteCode = widget.pendingInviteCode;
+      final codeParam = (inviteCode != null && inviteCode.isNotEmpty) ? '&code=$inviteCode' : '';
+      context.go('${RouteNames.verificationPending}?email=$email$codeParam');
     } else {
       if (authProvider.user != null && authProvider.needsEmailVerification) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VerificationPendingScreen(
-              email: authProvider.currentUserEmail ?? email,
-              pendingInviteCode: widget.pendingInviteCode,
-            ),
-          ),
-        );
+        final inviteCode = widget.pendingInviteCode;
+        final codeParam = (inviteCode != null && inviteCode.isNotEmpty) ? '&code=$inviteCode' : '';
+        final userEmail = authProvider.currentUserEmail ?? email;
+        context.go('${RouteNames.verificationPending}?email=$userEmail$codeParam');
       } else {
         _showError(authProvider.error ?? 'Registration failed. Please try again.');
       }
@@ -324,22 +316,12 @@ Future<void> _signInWithGoogle() async {
         // Navigate to SplashScreen which will handle the invite
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SplashScreen(
-              deepLinkInviteCode: widget.pendingInviteCode,
-            ),
-          ),
-        );
+        context.go('/splash?code=${widget.pendingInviteCode}');
       } else {
         // Normal flow
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SplashScreen()),
-        );
+        context.go('/splash');
       }
     } else {
       // Check if it's a cancellation error
@@ -492,23 +474,74 @@ String _getGoogleErrorMessage(dynamic error) {
   return '';
 }
 
+  String _cleanAuthErrorMessage(String message) {
+    final lower = message.toLowerCase();
+    
+    if (lower.contains('invalid-credential') || 
+        lower.contains('invalid_login_credentials') ||
+        lower.contains('invalid credential') || 
+        lower.contains('supplied auth credentials') ||
+        lower.contains('supplied auth credential') ||
+        lower.contains('bad-credential') || 
+        lower.contains('wrong-password') ||
+        lower.contains('incorrect password')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    
+    if (lower.contains('user-not-found') || 
+        lower.contains('no user found') ||
+        lower.contains('user not found')) {
+      return 'No account found with this email.';
+    }
+    
+    if (lower.contains('email-already-in-use') || 
+        lower.contains('email already exists') ||
+        lower.contains('email-already-exists')) {
+      return 'This email is already registered. Please sign in or use a different email.';
+    }
+
+    if (lower.contains('weak-password')) {
+      return 'The password is too weak. Please use a stronger password.';
+    }
+
+    if (lower.contains('invalid-email') || 
+        lower.contains('invalid email')) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (lower.contains('user-disabled')) {
+      return 'This account has been disabled. Please contact support.';
+    }
+
+    if (lower.contains('too-many-requests') || 
+        lower.contains('too many requests') ||
+        lower.contains('blocked all requests')) {
+      return 'Too many attempts. Please try again later.';
+    }
+
+    if (lower.contains('network-request-failed') || 
+        lower.contains('network error') ||
+        lower.contains('network_error') ||
+        lower.contains('connectivity') ||
+        lower.contains('internet')) {
+      return 'Network error. Please check your internet connection.';
+    }
+
+    if (lower.contains('channel-error')) {
+      return 'Please fill in all required fields.';
+    }
+    
+    if (lower.contains('firebase') || lower.contains('auth/') || lower.contains('exception:')) {
+      return 'Authentication failed. Please check your details and try again.';
+    }
+
+    return message;
+  }
+
   void _showError(String message) {
     if (message.isEmpty || _isCancellationError(message)) return;
-    
-    final lowerMessage = message.toLowerCase();
-    setState(() {
-      if (lowerMessage.contains('email') || lowerMessage.contains('user-not-found')) {
-        _emailError = message;
-      } else if (lowerMessage.contains('password')) {
-        _passwordError = message;
-      } else if (lowerMessage.contains('phone')) {
-        _phoneError = message;
-      } else if (lowerMessage.contains('name')) {
-        _nnameError = message;
-      } else {
-        _formError = message; // Show non-field errors in formError container
-      }
-    });
+    final cleanMsg = _cleanAuthErrorMessage(message);
+    SnackbarHelper.showError(context, cleanMsg);
   }
 
   void _showSuccess(String message) {
@@ -789,13 +822,9 @@ Widget _buildTermsCheckbox() {
                         ],
                       ),
                       child: Center(
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logos/KoFund.png',
-                            height: 80,
-                            width: 80,
-                            fit: BoxFit.contain,
-                          ),
+                        child: SvgPicture.asset(
+                          'assets/logos/KoFund.svg',
+                          height: 40,
                         ),
                       ),
                     ),
@@ -1121,17 +1150,15 @@ Widget _buildTermsCheckbox() {
                       ),
                     ),
                     TextButton(
-                      onPressed: isLoading
+                      onPressed: _isLoading
                           ? null
                           : () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => LoginScreen(
-                                    pendingInviteCode: widget.pendingInviteCode,
-                                  ),
-                                ),
-                              );
+                              final pendingInviteCode = widget.pendingInviteCode;
+                              if (pendingInviteCode != null && pendingInviteCode.isNotEmpty) {
+                                context.go('${RouteNames.login}?code=$pendingInviteCode');
+                              } else {
+                                context.go(RouteNames.login);
+                              }
                             },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
@@ -857,11 +858,10 @@ class _ReportContent extends StatelessWidget {
                         color: tealColor,
                         shape: BoxShape.circle,
                       ),
-                      child: Image.asset(
-                        'assets/logos/KoFund.png',
+                      child: SvgPicture.asset(
+                        'assets/logos/KoFund.svg',
                         height: 15,
                         color: Colors.white,
-                        errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                       ),
                     ),
                     const SizedBox(width: 6),

@@ -369,18 +369,18 @@ class DeletedContributionModel {
   // 🔹 HELPER: Get deletion status message
   String get deletionStatusMessage {
     if (isRestored) {
-      return '🔄 Restored on ${DateFormat('dd MMM yyyy').format(restoredAt!.toDate())}';
+      return 'Restored on ${DateFormat('dd MMM yyyy').format(restoredAt!.toDate())}';
     }
     
     if (daysUntilAutoDeletion < 0) {
-      return '🗑️ Auto-deleted';
+      return 'Auto-deleted';
     }
     
     if (shouldShowDeletionWarning) {
-      return '⚠️ Auto-deletes in $daysUntilAutoDeletion days';
+      return 'Auto-deletes in $daysUntilAutoDeletion days';
     }
     
-    return '📝 Deleted - Auto-deletes in $daysUntilAutoDeletion days';
+    return 'Deleted - Auto-deletes in $daysUntilAutoDeletion days';
   }
 
   // 🔹 HELPER: Check if can be restored

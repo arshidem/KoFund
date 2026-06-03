@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kofund/features/auth/providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/dialog_helper.dart';
@@ -68,12 +69,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     if (widget.pendingEventId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EventDetailsScreen(eventId: widget.pendingEventId!),
-            ),
-          );
+          context.push('${RouteNames.eventDetails}/${widget.pendingEventId!}');
         }
       });
     }
@@ -110,11 +106,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     if (authProvider.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            RouteNames.login, 
-            (route) => false
-          );
+          context.go(RouteNames.login);
         }
       });
       return DashboardSkeleton(isDarkMode: isDarkMode);
@@ -125,10 +117,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
         authProvider.user!.communityId!.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pushReplacementNamed(
-            context, 
-            RouteNames.joinCommunity
-          );
+          context.go(RouteNames.joinCommunity);
         }
       });
       return DashboardSkeleton(isDarkMode: isDarkMode);
@@ -138,10 +127,7 @@ class _CommunityDashboardState extends State<CommunityDashboard> {
     if (authProvider.user?.isApproved == false) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          Navigator.pushReplacementNamed(
-            context, 
-            RouteNames.pendingApproval
-          );
+          context.go(RouteNames.pendingApproval);
         }
       });
       return DashboardSkeleton(isDarkMode: isDarkMode);

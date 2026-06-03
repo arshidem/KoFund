@@ -42,6 +42,7 @@ import 'package:kofund/features/notifications/widgets/announcement_on_open_modal
 import 'package:kofund/features/notifications/widgets/app_update_dialog.dart';
 import 'package:kofund/core/services/app_update_service.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:go_router/go_router.dart';
 
 // 🆕 ADD INVITE IMPORTS
 
@@ -442,7 +443,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
 
   // 🆕 Navigate to edit community screen
   void _navigateToEditCommunity() {
-    Navigator.pushNamed(context, RouteNames.editCommunity);
+    context.push(RouteNames.editCommunity);
   }
 
 
@@ -465,7 +466,7 @@ void _initializeWidgetProviders(String userId, String communityId) {
               borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               onTap: () {
                 HapticHelper.light();
-                Navigator.pushNamed(context, RouteNames.notifications);
+                context.push(RouteNames.notifications);
               },
               child: Center(
                 child: badges.Badge(

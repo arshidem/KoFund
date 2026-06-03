@@ -8,6 +8,7 @@ import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
 import '../../../core/constants/app_dimensions.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'create_community_screen.dart';
 
 class JoinCommunityScreen extends StatefulWidget {
@@ -350,13 +351,9 @@ Widget build(BuildContext context) {
                         ],
                       ),
                       child: Center(
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logos/KoFund.png',
-                            height: 80,
-                            width: 80,
-                            fit: BoxFit.contain,
-                          ),
+                        child: SvgPicture.asset(
+                          'assets/logos/KoFund.svg',
+                          height: 40,
                         ),
                       ),
                     ),

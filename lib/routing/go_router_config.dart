@@ -39,6 +39,7 @@ import '../features/notifications/screens/notifications_screen.dart';
 import '../features/notifications/screens/notification_detail_screen.dart';
 import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/auth/models/user_model.dart';
+import '../features/notifications/models/notification_model.dart';
 
 // Public website screens
 import '../features/website/screens/landing_page.dart';
@@ -294,7 +295,10 @@ class GoRouterConfig {
         ),
         GoRoute(
           path: RouteNames.notificationDetail,
-          builder: (context, state) => NotificationDetailScreen(),
+          builder: (context, state) {
+            final notification = state.extra as AppNotification;
+            return NotificationDetailScreen(notification: notification);
+          },
         ),
         GoRoute(
           path: RouteNames.notificationSettings,

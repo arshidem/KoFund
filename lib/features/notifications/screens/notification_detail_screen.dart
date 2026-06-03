@@ -21,7 +21,8 @@ import 'package:kofund/features/contributions/providers/contribution_provider.da
 import 'package:kofund/features/events/utils/contribution_receipt_image.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
-  const NotificationDetailScreen({super.key});
+  final AppNotification notification;
+  const NotificationDetailScreen({super.key, required this.notification});
 
   @override
   State<NotificationDetailScreen> createState() =>
@@ -45,8 +46,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   }
 
   Future<void> _init() async {
-    final notification =
-        ModalRoute.of(context)!.settings.arguments as AppNotification;
+    final notification = widget.notification;
     final provider = context.read<NotificationProvider>();
 
     // Mark as read
@@ -148,7 +148,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         final currentUserName = auth.user?.displayName ?? 'User';
         NotificationService().sendUserNotification(
           userId: adminId,
-          title: 'Merge Accepted ✅',
+          title: 'Merge Accepted',
           body: '$currentUserName accepted the merge of virtual member "$virtualUserName" into their account.',
           type: NotificationType.update,
           communityId: data['communityId']?.toString(),
@@ -165,7 +165,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       if (mounted) {
         setState(() => _isConversionResolved = true);
         HapticHelper.success();
-        SnackbarHelper.showSuccess(context, 'Account merged successfully! 🎉');
+        SnackbarHelper.showSuccess(context, 'Account merged successfully!');
       }
     } catch (e) {
       if (mounted) {
@@ -190,7 +190,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         final currentUserName = auth.user?.displayName ?? 'User';
         await NotificationService().sendUserNotification(
           userId: adminId,
-          title: 'Merge Rejected ❌',
+          title: 'Merge Rejected',
           body: '$currentUserName rejected the merge of virtual member "$virtualUserName" into their account.',
           type: NotificationType.update,
           communityId: data['communityId']?.toString(),
@@ -283,7 +283,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       HapticHelper.success();
       if (mounted) {
         setState(() => _hasAlreadyJoined = true);
-        SnackbarHelper.showSuccess(context, 'Successfully joined the event! 🎉');
+        SnackbarHelper.showSuccess(context, 'Successfully joined the event!');
       }
     } catch (e) {
       if (mounted) SnackbarHelper.showError(context, 'Failed to join: $e');
@@ -324,8 +324,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final notification =
-        ModalRoute.of(context)!.settings.arguments as AppNotification;
+    final notification = widget.notification;
     final provider = context.read<NotificationProvider>();
 
     final eventId =

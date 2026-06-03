@@ -715,6 +715,19 @@ class AppAuthProvider with ChangeNotifier {
       _setLoading(true);
       _error = null;
 
+      // Check if user exists in the Firestore 'users' collection
+      final userQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isEmpty) {
+        _setError('No account found with this email.');
+        _setLoading(false);
+        return false;
+      }
+
       await _authService.sendPasswordResetEmail(email);
 
       _setLoading(false);

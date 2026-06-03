@@ -145,7 +145,7 @@ class UserService {
         // Fire and forget to avoid blocking the UI
         notificationService.sendUserNotification(
           userId: uid,
-          title: 'You\'re In! 🎉',
+          title: 'You\'re In!',
           body: 'Your request to join $communityName has been approved.',
           type: NotificationType.approval,
           senderName: adminName,

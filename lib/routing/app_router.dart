@@ -57,6 +57,7 @@ import '../features/auth/providers/app_auth_provider.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/notifications/screens/notification_detail_screen.dart';
 import '../features/notifications/screens/notification_settings_screen.dart';
+import 'package:kofund/features/notifications/models/notification_model.dart';
 import 'route_names.dart';
 
 class AppRouter {
@@ -277,8 +278,9 @@ case RouteNames.joinCommunity:
   return MaterialPageRoute(builder: (_) => const NotificationsScreen());
 
 case RouteNames.notificationDetail:
+  final notification = settings.arguments as AppNotification;
   return MaterialPageRoute(
-    builder: (_) => NotificationDetailScreen(),
+    builder: (_) => NotificationDetailScreen(notification: notification),
     settings: settings,
   );
 

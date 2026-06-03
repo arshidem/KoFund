@@ -83,6 +83,7 @@ flutter:
   assets:
     - assets/logos/google_logo.png
     - assets/logos/KoFund.png
+    - assets/logos/KoFund.svg
     - assets/fonts/NotoSans-Regular.ttf
     - assets/icons/checked.png
     - .env

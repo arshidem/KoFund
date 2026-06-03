@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../routing/route_names.dart';
 import '../../features/notifications/models/notification_model.dart';
 
@@ -22,43 +23,35 @@ class NotificationNavigator {
     if ((type.contains('announcement') || type.contains('event')) &&
         eventId != null &&
         eventId.isNotEmpty) {
-      Navigator.pushNamed(
-        context,
-        RouteNames.eventDetails,
-        arguments: eventId,
-      );
+      context.push('${RouteNames.eventDetails}/$eventId');
       return;
     }
 
     if (type.contains('contribution') || type.contains('reminder')) {
       if (eventId != null && eventId.isNotEmpty) {
-        Navigator.pushNamed(
-          context,
-          RouteNames.eventDetails,
-          arguments: eventId,
-        );
+        context.push('${RouteNames.eventDetails}/$eventId');
         return;
       }
     }
 
     if (type.contains('approval')) {
-      Navigator.pushNamed(context, RouteNames.communityDashboard);
+      context.go(RouteNames.communityDashboard);
       return;
     }
 
     // conversionRequest → stay on notification detail (has Accept/Reject)
     if (type.contains('conversionRequest')) {
-      Navigator.pushNamed(context, RouteNames.notifications);
+      context.go(RouteNames.notifications);
       return;
     }
 
     if (type.contains('pendingUser') || type.contains('request')) {
-      Navigator.pushNamed(context, RouteNames.allMembers);
+      context.push(RouteNames.allMembers);
       return;
     }
 
     // Default Fallback
-    Navigator.pushNamed(context, RouteNames.notifications);
+    context.go(RouteNames.notifications);
   }
 
   /// Called from FCM tap (cold / background start).
@@ -70,11 +63,7 @@ class NotificationNavigator {
     AppNotification? notification,
   }) {
     if (notification != null) {
-      Navigator.pushNamed(
-        context,
-        RouteNames.notificationDetail,
-        arguments: notification,
-      );
+      context.push(RouteNames.notificationDetail, extra: notification);
       return;
     }
     handleNotificationTap(context, data);
@@ -84,38 +73,29 @@ class NotificationNavigator {
     final segments = ddeepLink.split('/').where((s) => s.isNotEmpty).toList();
 
     if (segments.isEmpty) {
-      Navigator.pushNamed(context, RouteNames.notifications);
+      context.go(RouteNames.notifications);
       return;
     }
 
     switch (segments[0]) {
       case 'event':
         if (segments.length > 1) {
-          Navigator.pushNamed(
-            context,
-            RouteNames.eventDetails,
-            arguments: segments[1],
-          );
+          context.push('${RouteNames.eventDetails}/${segments[1]}');
         }
         break;
 
       case 'contribution':
         if (segments.length > 1) {
-          Navigator.pushNamed(context, RouteNames.communityDashboard);
+          context.go(RouteNames.communityDashboard);
         }
         break;
 
       case 'profile':
-        Navigator.pushNamed(context, RouteNames.profile);
+        context.push(RouteNames.profile);
         break;
 
       default:
-        Navigator.pushNamed(context, RouteNames.notifications);
+        context.go(RouteNames.notifications);
     }
   }
 }
-
-
-
-
-

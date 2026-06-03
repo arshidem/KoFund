@@ -146,15 +146,15 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
             _buildSectionHeader('What others can see'),
             _buildSettingsGroup(
               children: [
-                _buildVisibilityItem('👤', 'Your name', true),
+                _buildVisibilityItem(Icons.person_rounded, 'Your name', true),
                 _buildItemDivider(),
-                _buildVisibilityItem('📧', 'Your email', true),
+                _buildVisibilityItem(Icons.email_rounded, 'Your email', true),
                 _buildItemDivider(),
-                _buildVisibilityItem('📱', 'Your phone number', true),
+                _buildVisibilityItem(Icons.smartphone_rounded, 'Your phone number', true),
                 _buildItemDivider(),
-                _buildVisibilityItem('💰', 'Contribution aamounts', _showDetailedProfile),
+                _buildVisibilityItem(Icons.monetization_on_rounded, 'Contribution amounts', _showDetailedProfile),
                 _buildItemDivider(),
-                _buildVisibilityItem('📊', 'Contribution history', _showDetailedProfile),
+                _buildVisibilityItem(Icons.assessment_rounded, 'Contribution history', _showDetailedProfile),
               ],
             ),
             
@@ -289,7 +289,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     );
   }
 
-  Widget _buildVisibilityItem(String emoji, String text, bool isVisible) {
+  Widget _buildVisibilityItem(IconData icon, String text, bool isVisible) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       child: Row(
@@ -302,7 +302,13 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               color: AppColors.textPrimary(context).withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: Text(emoji, style: const TextStyle(fontSize: 16)),
+            child: Icon(
+              icon,
+              size: 18,
+              color: isVisible
+                  ? AppColors.primary(context)
+                  : AppColors.textPrimary(context).withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(

@@ -18,6 +18,7 @@ import 'package:kofund/core/services/network_service.dart';
 import 'package:kofund/core/utils/app_info.dart';
 import 'package:kofund/core/widgets/premium_switch.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
  
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -133,7 +134,7 @@ Future<void> _loadAppInfo() async {
                       icon: Icons.lock_outline_rounded,
                       subtitle: 'Update your security credentials',
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.changePassword),
+                          context.push(RouteNames.changePassword),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
@@ -142,7 +143,7 @@ Future<void> _loadAppInfo() async {
                       icon: Icons.privacy_tip_outlined,
                       subtitle: 'Manage your visibility and data',
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.privacySettings),
+                          context.push(RouteNames.privacySettings),
                     ),
                   ],
                 ),
@@ -157,7 +158,7 @@ Future<void> _loadAppInfo() async {
                       context: context,
                       title: 'Help & FAQ',
                       icon: Icons.help_outline_rounded,
-                      onTap: () => Navigator.pushNamed(context, RouteNames.helpFAQ),
+                      onTap: () => context.push(RouteNames.helpFAQ),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
@@ -165,7 +166,7 @@ Future<void> _loadAppInfo() async {
                       title: 'Contact Support',
                       icon: Icons.support_agent_rounded,
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.contactSupport),
+                          context.push(RouteNames.contactSupport),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
@@ -173,7 +174,7 @@ Future<void> _loadAppInfo() async {
                       title: 'Report Issue',
                       icon: Icons.bug_report_outlined,
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.reportIssue),
+                          context.push(RouteNames.reportIssue),
                     ),
                   ],
                 ),
@@ -216,7 +217,7 @@ Future<void> _loadAppInfo() async {
                       title: 'Terms of Service',
                       icon: Icons.description_outlined,
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.termsOfService),
+                          context.push(RouteNames.termsOfService),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
@@ -224,15 +225,14 @@ Future<void> _loadAppInfo() async {
                       title: 'Privacy Policy',
                       icon: Icons.security_rounded,
                       onTap: () =>
-                          Navigator.pushNamed(context, RouteNames.privacyPolicy),
+                          context.push(RouteNames.privacyPolicy),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
                       context: context,
                       title: 'Community Guidelines',
                       icon: Icons.groups_outlined,
-                      onTap: () => Navigator.pushNamed(
-                          context, RouteNames.communityGuidelines),
+                      onTap: () => context.push(RouteNames.communityGuidelines),
                     ),
                     _buildItemDivider(),
                     _buildSettingsItem(
@@ -595,11 +595,7 @@ void _showLeaveCommunityDialog(BuildContext context, AppAuthProvider authProvide
     if (success) {
       SnackbarHelper.showSuccess(context, 'Successfully left community');
       
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.login,
-        (route) => false,
-      );
+      context.go(RouteNames.login);
     } else {
       SnackbarHelper.showError(context, 'Failed to leave community: ${profileProvider.error}');
     }
@@ -839,11 +835,7 @@ Future<void> _attemptAccountDeletion(
       // Account deleted successfully
       SnackbarHelper.showError(context, 'Account deleted successfully');
       // Navigate to login screen
-      Navigator.pushNamedAndRemoveUntil(
-        context, 
-        RouteNames.login, // Make sure this is defined in your RouteNames
-        (route) => false,
-      );
+      context.go(RouteNames.login);
     }
   } on Exception catch (e) {
     if (e.toString().contains('password_required')) {
@@ -895,11 +887,7 @@ void _showReauthenticationRequiredDialog() async {
   if (result == true) {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      RouteNames.login,
-      (route) => false,
-    );
+    context.go(RouteNames.login);
   }
 }
 
@@ -941,11 +929,7 @@ void _showReauthenticationRequiredDialog() async {
       SnackbarHelper.showSuccess(context, 'Logged out successfully!');
 
       // 4. Navigate to login
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        RouteNames.login,
-        (route) => false,
-      );
+      context.go(RouteNames.login);
     }
   }
 

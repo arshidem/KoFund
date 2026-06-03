@@ -11,6 +11,7 @@ import '../../../routing/route_names.dart'; // Use route nnames
 import '../providers/app_auth_provider.dart';
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:go_router/go_router.dart';
 
 class VerificationPendingScreen extends StatefulWidget {
   final String email;
@@ -99,11 +100,7 @@ Future<void> _checkForPendingInvite() async {
           if (!mounted) return;
           
           // Navigate to splash screen which will handle the invite
-          Navigator.pushReplacementNamed(
-            context,
-            RouteNames.splash,
-            arguments: {'inviteCode': widget.pendingInviteCode},
-          );
+          context.go('/splash?code=${widget.pendingInviteCode}');
         } else {
           // Check storage for any pending invites
           final prefs = await SharedPreferences.getInstance();
@@ -113,14 +110,10 @@ Future<void> _checkForPendingInvite() async {
             debugPrint('📋 Found stored invite code after verification: $storedInviteCode');
             
             // Navigate to splash screen with stored invite
-            Navigator.pushReplacementNamed(
-              context,
-              RouteNames.splash,
-              arguments: {'inviteCode': storedInviteCode},
-            );
+            context.go('/splash?code=$storedInviteCode');
           } else {
             // Normal flow - no invite
-            Navigator.pushReplacementNamed(context, RouteNames.splash);
+            context.go('/splash');
           }
         }
       }
@@ -163,7 +156,7 @@ Future<void> _checkForPendingInvite() async {
     if (!mounted) return;
     
     if (mounted) {
-      Navigator.pushReplacementNamed(context, RouteNames.login);
+      context.go(RouteNames.login);
     }
   }
 

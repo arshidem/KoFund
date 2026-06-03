@@ -115,7 +115,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ),
       ],
       body: Padding(
-        padding: AppStyles.screenPadding.copyWith(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           child: _passwordChanged ? _buildSuccessUI() : _buildFormUI(),

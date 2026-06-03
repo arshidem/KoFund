@@ -20,6 +20,8 @@ import 'package:kofund/features/profile/screens/settings/privacy_policy_screen.d
 import 'package:kofund/core/constants/app_dimensions.dart';
 import 'package:kofund/core/constants/app_styles.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? pendingInviteCode;
@@ -95,12 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Clear the invite from storage
     unawaited(_clearPendingInviteCode());
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => JoinCommunityScreen(inviteCode: _cachedInviteCode),
-      ),
-    );
+    context.go('${RouteNames.joinCommunity}?code=$_cachedInviteCode');
   }
 
   @override
@@ -199,19 +196,13 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           // Normal flow - go to splash screen
           debugPrint('✅ Login successful, normal flow to splash');
-          Navigator.pushReplacementNamed(context, RouteNames.splash);
+          context.go(RouteNames.splash);
         }
       } else if (mounted) {
         if (authProvider.shouldNavigateToVerification) {
           _showError('Please verify your email to continue.');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VerificationPendingScreen(
-                email: authProvider.currentUserEmail ?? email,
-              ),
-            ),
-          );
+          final userEmail = authProvider.currentUserEmail ?? email;
+          context.go('${RouteNames.verificationPending}?email=$userEmail');
         } else {
           _showError(authProvider.error ?? 'Login failed. Please try again.');
         }
@@ -277,13 +268,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (needsPhone) {
           debugPrint('⚠️ Missing phone number. Redirecting to SetPhoneScreen.');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  SetPhoneScreen(pendingInviteCode: _cachedInviteCode),
-            ),
-          );
+          final codeParam = (_cachedInviteCode != null && _cachedInviteCode!.isNotEmpty) ? '?code=$_cachedInviteCode' : '';
+          context.go('${RouteNames.setPhone}$codeParam');
           return; // SetPhoneScreen will handle the rest of the flow
         }
 
@@ -294,19 +280,14 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           await Future.delayed(const Duration(seconds: 1));
           if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const SplashScreen()),
-          );
+          context.go('/splash');
         }
       } else {
         // Check provider error - ONLY show if not a cancellation
         final providerError = authProvider.error ?? '';
         if (providerError.isNotEmpty && !_isCancellationError(providerError)) {
           if (mounted) {
-            setState(() {
-              _errorMessage = providerError;
-            });
+            _showError(providerError);
           }
         }
       }
@@ -317,9 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final errorMsg = _getGoogleErrorMessage(e);
         if (errorMsg.isNotEmpty) {
           if (mounted) {
-            setState(() {
-              _errorMessage = errorMsg;
-            });
+            _showError(errorMsg);
           }
         }
       }
@@ -329,10 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToForgotPassword() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
-    );
+    context.push(RouteNames.forgotPassword);
   }
 
   bool _isCancellationError(String error) {
@@ -469,19 +445,74 @@ class _LoginScreenState extends State<LoginScreen> {
     return '';
   }
 
+  String _cleanAuthErrorMessage(String message) {
+    final lower = message.toLowerCase();
+    
+    if (lower.contains('invalid-credential') || 
+        lower.contains('invalid_login_credentials') ||
+        lower.contains('invalid credential') || 
+        lower.contains('supplied auth credentials') ||
+        lower.contains('supplied auth credential') ||
+        lower.contains('bad-credential') || 
+        lower.contains('wrong-password') ||
+        lower.contains('incorrect password')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    
+    if (lower.contains('user-not-found') || 
+        lower.contains('no user found') ||
+        lower.contains('user not found')) {
+      return 'No account found with this email.';
+    }
+    
+    if (lower.contains('email-already-in-use') || 
+        lower.contains('email already exists') ||
+        lower.contains('email-already-exists')) {
+      return 'This email is already registered. Please sign in or use a different email.';
+    }
+
+    if (lower.contains('weak-password')) {
+      return 'The password is too weak. Please use a stronger password.';
+    }
+
+    if (lower.contains('invalid-email') || 
+        lower.contains('invalid email')) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (lower.contains('user-disabled')) {
+      return 'This account has been disabled. Please contact support.';
+    }
+
+    if (lower.contains('too-many-requests') || 
+        lower.contains('too many requests') ||
+        lower.contains('blocked all requests')) {
+      return 'Too many attempts. Please try again later.';
+    }
+
+    if (lower.contains('network-request-failed') || 
+        lower.contains('network error') ||
+        lower.contains('network_error') ||
+        lower.contains('connectivity') ||
+        lower.contains('internet')) {
+      return 'Network error. Please check your internet connection.';
+    }
+
+    if (lower.contains('channel-error')) {
+      return 'Please fill in all required fields.';
+    }
+    
+    if (lower.contains('firebase') || lower.contains('auth/') || lower.contains('exception:')) {
+      return 'Authentication failed. Please check your details and try again.';
+    }
+
+    return message;
+  }
+
   void _showError(String message) {
     if (message.isEmpty || _isCancellationError(message)) return;
-
-    final lowerMessage = message.toLowerCase();
-    setState(() {
-      if (lowerMessage.contains('email') || lowerMessage.contains('user-not-found')) {
-        _emailError = message;
-      } else if (lowerMessage.contains('password')) {
-        _passwordError = message;
-      } else {
-        _formError = message; // General form/network errors
-      }
-    });
+    final cleanMsg = _cleanAuthErrorMessage(message);
+    SnackbarHelper.showError(context, cleanMsg);
   }
 
   void _showSuccess(String message) {
@@ -814,13 +845,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       child: Center(
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logos/KoFund.png',
-                            height: 80,
-                            width: 80,
-                            fit: BoxFit.contain,
-                          ),
+                        child: SvgPicture.asset(
+                          'assets/logos/KoFund.svg',
+                          height: 40,
                         ),
                       ),
                     ),
@@ -1165,17 +1192,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: isLoading
+                      onPressed: _isLoading
                           ? null
                           : () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => RegisterScreen(
-                                    pendingInviteCode: _cachedInviteCode,
-                                  ),
-                                ),
-                              );
+                              context.go('/register');
                             },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,

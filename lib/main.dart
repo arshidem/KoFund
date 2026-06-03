@@ -691,10 +691,14 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late AppLinks _appLinks;
   StreamSubscription<Uri?>? _linkSubscription; // ✅ CORRECT: StreamSubscription<Uri?>
+  late final GoRouter _router;
+
   @override
   void initState() {
     super.initState();
     _initAppLinks();
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    _router = GoRouterConfig.createRouter(authProvider);
   }
   
   Future<void> _initAppLinks() async {
@@ -891,13 +895,10 @@ void _navigateToSplashWithEvent(String? eventId) async {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
-    final router = GoRouterConfig.createRouter(authProvider);
-
     return MaterialApp.router(
       title: 'KoFund',
       debugShowCheckedModeBanner: false,
-      routerConfig: router,
+      routerConfig: _router,
       themeMode: themeProvider.themeMode,
       builder: (context, child) {
         return ThemeTransitionWrapper(

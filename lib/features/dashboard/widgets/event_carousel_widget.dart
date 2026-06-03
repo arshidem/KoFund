@@ -833,6 +833,7 @@ class _EventDashboardCardState extends State<_EventDashboardCard> {
                 minHeight: 8,
                 backgroundColor: AppColors.progressBackground(context),
                 color: primaryColor,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               ),
             ),
           ],
