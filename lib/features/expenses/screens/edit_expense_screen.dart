@@ -367,113 +367,105 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
           },
         ),
       ],
-      body: SafeArea(
-        child: Padding(
-          padding: AppStyles.screenPadding,
-          child: _isLoading
-              ? EditContributionSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
-              : _hasError
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error, size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text('Error loading expense', style: TextStyle(fontSize: 18, color: AppColors.textPrimary(context), fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 8),
-                          Text(_errorMessage, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14)),
-                          const SizedBox(height: 24),
-                          ElevatedButton(onPressed: _fetchExpenseAndEvents, child: const Text('Try Again')),
-                        ],
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                // event Selection
-                                DropdownButtonFormField<String>(
-                                  initialValue: (_selectedeventId != null && _availableEvents.any((p) => p.eventId == _selectedeventId)) 
-                                      ? _selectedeventId 
-                                      : null,
-                                  dropdownColor: AppColors.surface(context),
-                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
-                                  decoration: InputDecoration(
-                                    labelText: 'event *',
-                                    labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                    filled: true,
-                                    fillColor: AppColors.surface(context),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                    prefixIcon: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 20),
-                                  ),
-                                  items: _availableEvents.map((event) {
-                                    return DropdownMenuItem<String>(value: event.eventId, child: Text(event.title, style: TextStyle(color: AppColors.textPrimary(context))));
-                                  }).toList(),
-                                  onChanged: (value) => setState(() => _selectedeventId = value),
-                                  validator: (value) => value == null ? 'Please select a event' : null,
-                                  hint: const Text('Select event'),
+      body: Padding(
+        padding: AppStyles.screenPadding,
+        child: _isLoading
+            ? EditContributionSkeleton(isDarkMode: Theme.of(context).brightness == Brightness.dark)
+            : _hasError
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error loading expense', style: TextStyle(fontSize: 18, color: AppColors.textPrimary(context), fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 8),
+                        Text(_errorMessage, textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14)),
+                        const SizedBox(height: 24),
+                        ElevatedButton(onPressed: _fetchExpenseAndEvents, child: const Text('Try Again')),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              // event Selection
+                              DropdownButtonFormField<String>(
+                                initialValue: (_selectedeventId != null && _availableEvents.any((p) => p.eventId == _selectedeventId)) 
+                                    ? _selectedeventId 
+                                    : null,
+                                dropdownColor: AppColors.surface(context),
+                                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+                                decoration: InputDecoration(
+                                  labelText: 'Event *',
+                                  labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
+                                  filled: true,
+                                  fillColor: AppColors.surface(context),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                  prefixIcon: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 20),
                                 ),
-                                const SizedBox(height: 16),
-                                _buildInputField(
-                                  controller: _titleController,
-                                  label: 'Expense Ttitle',
-                                  icon: Icons.title,
-                                  hint: 'Enter expense title',
-                                  maxLength: 50,
-                                  isRequired: true,
-                                  showCharacterCounter: true,
-                                  validator: (value) => value == null || value.trim().length < 3 ? 'Small title' : null,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildInputField(controller: _descriptionController, label: 'Description', icon: Icons.description, hint: 'Add details...', maxLines: 3, maxLength: 200),
-                                const SizedBox(height: 16),
-                                _buildInputField(controller: _aamountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
-                                const SizedBox(height: 16),
-                                const SizedBox(height: 16),
-                                _buildDatePickerField(),
-                                const SizedBox(height: 16),
-                                _buildInputField(
-                                  controller: _editReasonController,
-                                  label: 'Reason for Edit',
-                                  icon: Icons.edit_note,
-                                  hint: 'Why are you editing?',
-                                  isRequired: true,
-                                  validator: (value) => value == null || value.trim().length < 3 ? 'Provide reason' : null,
-                                ),
-                              ],
-                            ),
+                                items: _availableEvents.map((event) {
+                                  return DropdownMenuItem<String>(value: event.eventId, child: Text(event.title, style: TextStyle(color: AppColors.textPrimary(context))));
+                                }).toList(),
+                                onChanged: (value) => setState(() => _selectedeventId = value),
+                                validator: (value) => value == null ? 'Please select a event' : null,
+                                hint: const Text('Select event'),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                controller: _titleController,
+                                label: 'Expense Ttitle',
+                                icon: Icons.title,
+                                hint: 'Enter expense title',
+                                maxLength: 50,
+                                isRequired: true,
+                                showCharacterCounter: true,
+                                validator: (value) => value == null || value.trim().length < 3 ? 'Small title' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(controller: _descriptionController, label: 'Description', icon: Icons.description, hint: 'Add details...', maxLines: 3, maxLength: 200),
+                              const SizedBox(height: 16),
+                              _buildInputField(controller: _aamountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
+                              const SizedBox(height: 16),
+                              const SizedBox(height: 16),
+                              _buildDatePickerField(),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                controller: _editReasonController,
+                                label: 'Reason for Edit',
+                                icon: Icons.edit_note,
+                                hint: 'Why are you editing?',
+                                isRequired: true,
+                                validator: (value) => value == null || value.trim().length < 3 ? 'Provide reason' : null,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 24),
-                          // Changes Summary
-                          if (_hasAnyChanges)
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    _buildChangeItem(label: 'Ttitle', oldValue: _expense!.title, newValue: _titleController.text, hasChanged: _expense!.title != _titleController.text),
-                                    _buildChangeItem(label: 'Amount', oldValue: _expense!.amount.toString(), newValue: _aamountController.text, hasChanged: _expense!.amount != double.tryParse(_aamountController.text)),
-                                  ],
-                                ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Changes Summary
+                        if (_hasAnyChanges)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  _buildChangeItem(label: 'Ttitle', oldValue: _expense!.title, newValue: _titleController.text, hasChanged: _expense!.title != _titleController.text),
+                                  _buildChangeItem(label: 'Amount', oldValue: _expense!.amount.toString(), newValue: _aamountController.text, hasChanged: _expense!.amount != double.tryParse(_aamountController.text)),
+                                ],
                               ),
                             ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _saveChanges,
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary(context), padding: const EdgeInsets.symmetric(vertical: 16)),
-                            child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
                           ),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
-        ),
+                  ),
       ),
     );
   }

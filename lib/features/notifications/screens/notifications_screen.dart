@@ -688,21 +688,7 @@ class NotificationCard extends StatelessWidget {
   const NotificationCard({super.key, required this.notification});
 
   Color _accentColor(BuildContext context) {
-    switch (notification.type) {
-      case NotificationType.payment:
-      case NotificationType.contribution:
-        return Colors.green;
-      case NotificationType.withdrawal:
-        return Colors.red;
-      case NotificationType.approval:
-        return Colors.blue;
-      case NotificationType.reminder:
-        return Colors.orange;
-      case NotificationType.pendingUser:
-        return Colors.orangeAccent;
-      default:
-        return AppColors.primary(context);
-    }
+    return AppColors.primary(context);
   }
 
   @override
@@ -788,17 +774,25 @@ class NotificationCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              notification.title,
-                              style: TextStyle(
-                                fontWeight:
-                                    isUnread ? FontWeight.w700 : FontWeight.w600,
-                                fontSize: 14,
-                                color: AppColors.textPrimary(context),
-                                letterSpacing: -0.1,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Builder(
+                              builder: (context) {
+                                final displayTitle = (notification.type == NotificationType.pendingUser &&
+                                        notification.title == 'New Join Request')
+                                    ? '${notification.data['memberName'] ?? notification.data['userName'] ?? 'Someone'} requested to join'
+                                    : notification.title;
+                                return Text(
+                                  displayTitle,
+                                  style: TextStyle(
+                                    fontWeight:
+                                        isUnread ? FontWeight.w700 : FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppColors.textPrimary(context),
+                                    letterSpacing: -0.1,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 8),

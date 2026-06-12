@@ -34,6 +34,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Check if provider already has data for the current user to prevent flashing loading skeletons
+    final profileProvider = context.read<ProfileProvider>();
+    if (profileProvider.isDataForCurrentUser) {
+      _isInitialLoad = false;
+      _lastLoadedUserId = FirebaseAuth.instance.currentUser?.uid;
+    }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProfileData(forceRefresh: false);
     });
@@ -65,12 +73,20 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Future<void> _loadProfileData({bool forceRefresh = false}) async {
     if (!mounted || _isLoadingProfile) return;
     
-    setState(() {
-      _isLoadingProfile = true;
-    });
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final targetUserId = firebaseUser?.uid;
+    
+    final profileProvider = context.read<ProfileProvider>();
+    final hasData = profileProvider.isDataForCurrentUser && _lastLoadedUserId == targetUserId;
+    final needsLoad = forceRefresh || !hasData;
+    
+    if (needsLoad) {
+      setState(() {
+        _isLoadingProfile = true;
+      });
+    }
     
     try {
-      final profileProvider = context.read<ProfileProvider>();
       final authProvider = context.read<AppAuthProvider>();
       
       final currentUser = authProvider.user;
@@ -79,8 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         return;
       }
 
-      // Also check FirebaseAuth directly
-      final firebaseUser = FirebaseAuth.instance.currentUser;
       if (firebaseUser == null) {
         debugPrint('❌ No Firebase user');
         return;
@@ -101,11 +115,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         _lastLoadedUserId = null;
       }
       
-      // Use FirebaseAuth user as source of truth
-      final targetUserId = firebaseUser.uid;
-      
       // Check if we need to load data
-      if (!forceRefresh && _lastLoadedUserId == targetUserId) {
+      if (!forceRefresh && _lastLoadedUserId == targetUserId && profileProvider.isDataForCurrentUser) {
         debugPrint('✅ Already loaded data for user $targetUserId');
       } else {
         // Clear old data if user changed
@@ -114,9 +125,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
           profileProvider.clearAllUserData();
         }
         
-        // ✅ NEW: Load all profile data in parallel with one call
         await profileProvider.loadFullProfileData(
-          userId: targetUserId,
+          userId: targetUserId!,
           communityId: currentUser.communityId ?? '',
           forceRefresh: forceRefresh,
         );

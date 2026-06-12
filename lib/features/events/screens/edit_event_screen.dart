@@ -507,29 +507,13 @@ class _EdiScreenState extends State<EdiScreen> {
       }
     }
 
-    // For non-monthly events, validate date
-// ✅ Fix: For non-monthly events, validate date is not null and is valid
+// For non-monthly events, validate date
 if (!_isMonthlyPayment) {
   if (_selectedDate == null) {
     setState(() {
-      _dateError = 'Please select a event date';
+      _dateError = 'Please select an event date';
     });
     hasErrors = true;
-  } else {
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final selectedOnly = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
-    
-    if (selectedOnly.isBefore(todayOnly) || selectedOnly.isAtSameMomentAs(todayOnly)) {
-      setState(() {
-        if (selectedOnly.isBefore(todayOnly)) {
-          _dateError = 'Cannot select a past date';
-        } else {
-          _dateError = 'event date must be at least 1 day from today';
-        }
-      });
-      hasErrors = true;
-    }
   }
 }
 
@@ -542,7 +526,7 @@ if (!_isMonthlyPayment) {
       children: [
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+            borderRadius: BorderRadius.circular(24.0),
             border: Border.all(
               color: _eventTypeError != null 
                   ? Colors.red.withValues(alpha: 0.8) 
@@ -664,18 +648,6 @@ if (!_isMonthlyPayment) {
 Widget _buildDatePickerField() {
   // Helper method to check if date is valid
   String? validateDate(DateTime? date) {
-    if (date == null) return null;
-    
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final selectedOnly = DateTime(date.year, date.month, date.day);
-    
-    if (selectedOnly.isBefore(todayOnly)) {
-      return 'Cannot select a past date';
-    }
-    if (selectedOnly.isAtSameMomentAs(todayOnly)) {
-      return 'event date must be at least 1 day from today';
-    }
     return null;
   }
 
@@ -687,7 +659,7 @@ Widget _buildDatePickerField() {
     children: [
       Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+          borderRadius: BorderRadius.circular(24.0),
           color: AppColors.surface(context),
           border: Border.all(
             color: currentDateError != null 
@@ -697,6 +669,9 @@ Widget _buildDatePickerField() {
           ),
         ),
         child: ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.0),
+          ),
           onTap: () => _selectDate(context),
           leading: Icon(
             Icons.calendar_today,
@@ -706,7 +681,7 @@ Widget _buildDatePickerField() {
             size: 20,
           ),
           title: Text(
-            'event Date *',
+            'Event Date *',
             style: TextStyle(
               fontSize: 14,
               color: currentDateError != null 
@@ -764,10 +739,12 @@ Widget _buildDatePickerField() {
 }
 
 Future<void> _selectDate(BuildContext context) async {
+  final safeInitial = _selectedDate ?? DateTime.now();
+
   final DateTime? picked = await showDatePicker(
     context: context,
-    initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
-    firstDate: DateTime.now(),
+    initialDate: safeInitial,
+    firstDate: DateTime(2000),
     lastDate: DateTime(2100),
     builder: (BuildContext context, Widget? child) {
       return Theme(
@@ -785,7 +762,7 @@ Future<void> _selectDate(BuildContext context) async {
       );
     },
   );
-  
+
   if (picked != null && picked != _selectedDate) {
     setState(() {
       _selectedDate = picked;
@@ -875,7 +852,7 @@ final update = widget.event.copyWith(
             'event reactivated! It is now active again.'
           );
         } else {
-          SnackbarHelper.showSuccess(context, 'event updated successfully!');
+          SnackbarHelper.showSuccess(context, 'Event updated successfully!');
         }
         
         widget.oUpdated?.call();
@@ -916,7 +893,7 @@ final update = widget.event.copyWith(
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isCompleted ? 'event Completed' : 'event Cancelled',
+                    isCompleted ? 'Event Completed' : 'Event Cancelled',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1006,7 +983,7 @@ final update = widget.event.copyWith(
                       // event Ttitle
                       _buildInputField(
                         controller: _titleController,
-                        label: 'event Ttitle',
+                        label: 'Event Ttitle',
                         icon: Icons.event,
                         hint: 'e.g., Monthly Savings, Trip to Goa, Birthday Fund',
                         isRequired: true,
@@ -1092,7 +1069,7 @@ final update = widget.event.copyWith(
                       // Participant type Selection - UPDATED with auto-calculation
                       Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(24.0),
                           color: AppColors.surface(context),
                           border: Border.all(
                             color: AppColors.border(context),

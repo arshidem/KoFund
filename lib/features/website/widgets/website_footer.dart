@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'responsive_layout.dart';
 
@@ -24,10 +25,9 @@ class WebsiteFooter extends StatelessWidget {
                 color: AppColors.primary(context),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.account_balance_wallet_rounded,
-                color: Colors.white,
-                size: 18,
+              padding: const EdgeInsets.all(8),
+              child: SvgPicture.asset(
+                'assets/logos/KoFund.svg',
               ),
             ),
             const SizedBox(width: 8),

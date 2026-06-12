@@ -13,11 +13,11 @@ flutter_icons:
   ios: true
   web:
     generate: true  # ✅ Web requires a map, not just true/false
-    image_path: "assets/logos/KoFund.png"
+    image_path: "assets/logos/KoFund_with_bg.png"
     background_color: "#00bfa6"  # Optional: background color for icons
-  image_path: "assets/logos/KoFund.png"
+  image_path: "assets/logos/KoFund_with_bg.png"
   adaptive_icon_background: "#00bfa6"
-  adaptive_icon_foreground: "assets/logos/KoFund.png"
+  adaptive_icon_foreground: "assets/logos/KoFund_with_bg.png"
 
 dependencies:
   flutter:
@@ -83,6 +83,7 @@ flutter:
   assets:
     - assets/logos/google_logo.png
     - assets/logos/KoFund.png
+    - assets/logos/KoFund_with_bg.png
     - assets/logos/KoFund.svg
     - assets/fonts/NotoSans-Regular.ttf
     - assets/icons/checked.png

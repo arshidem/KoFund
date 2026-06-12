@@ -41,128 +41,117 @@ class EditContributionSkeleton extends StatelessWidget {
                 
                 // Skeleton Month Dropdown (if applicable)
                 Container(
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Skeleton Edit Reason Field
-                _buildSkeletonInputField(
-                  label: 'Reason for Edit', 
-                  icon: Icons.edit_note,
-                  isMultiLine: true,
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Skeleton Changes Summary Card
-            _buildSkeletonChangesSummary(),
-            
-            const SizedBox(height: 24),
-            
-            // Skeleton Save Button
-            Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
+                   height: 54,
+                   decoration: BoxDecoration(
+                     color: Colors.white,
+                     borderRadius: BorderRadius.circular(100),
+                   ),
+                 ),
+                 
+                 const SizedBox(height: 16),
+                 
+                 // Skeleton Edit Reason Field
+                 _buildSkeletonInputField(
+                   label: 'Reason for Edit', 
+                   icon: Icons.edit_note,
+                   isMultiLine: true,
+                 ),
+               ],
+             ),
+             
+             const SizedBox(height: 24),
+             
+             // Skeleton Changes Summary Card
+             _buildSkeletonChangesSummary(),
+             
+             const SizedBox(height: 40),
+           ],
+         ),
+       ),
+     );
+   }
 
 
 
-  Widget _buildSkeletonDropdown({required String label}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            width: 60,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+   Widget _buildSkeletonDropdown({required String label}) {
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Shimmer.fromColors(
+           baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+           highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+           child: Container(
+             width: 60,
+             height: 14,
+             decoration: BoxDecoration(
+               color: Colors.white,
+               borderRadius: BorderRadius.circular(4),
+             ),
+           ),
+         ),
+         const SizedBox(height: 8),
+         Shimmer.fromColors(
+           baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+           highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+           child: Container(
+             height: 54,
+             decoration: BoxDecoration(
+               color: Colors.white,
+               borderRadius: BorderRadius.circular(100),
+             ),
+           ),
+         ),
+       ],
+     );
+   }
 
-  Widget _buildSkeletonInputField({
-    required String label,
-    required IconData icon,
-    bool isMultiLine = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            width: 80,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Shimmer.fromColors(
-          baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
-          child: Container(
-            height: isMultiLine ? 80 : 54,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+   Widget _buildSkeletonInputField({
+     required String label,
+     required IconData icon,
+     bool isMultiLine = false,
+   }) {
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Shimmer.fromColors(
+           baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+           highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+           child: Container(
+             width: 80,
+             height: 14,
+             decoration: BoxDecoration(
+               color: Colors.white,
+               borderRadius: BorderRadius.circular(4),
+             ),
+           ),
+         ),
+         const SizedBox(height: 8),
+         Shimmer.fromColors(
+           baseColor: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+           highlightColor: isDarkMode ? Colors.grey[600]! : Colors.grey[100]!,
+           child: Container(
+             height: isMultiLine ? 80 : 54,
+             decoration: BoxDecoration(
+               color: Colors.white,
+               borderRadius: BorderRadius.circular(isMultiLine ? 20 : 100),
+             ),
+           ),
+         ),
+       ],
+     );
+   }
 
-  Widget _buildSkeletonChangesSummary() {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+   Widget _buildSkeletonChangesSummary() {
+     return Container(
+       decoration: BoxDecoration(
+         color: isDarkMode ? Colors.grey[800] : Colors.white,
+         borderRadius: BorderRadius.circular(20),
+         border: Border.all(
+           color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+         ),
+       ),
+       child: Padding(
+         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

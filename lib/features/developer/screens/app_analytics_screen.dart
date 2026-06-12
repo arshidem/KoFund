@@ -212,7 +212,7 @@ class _AppAnalyticsScreenState extends State<AppAnalyticsScreen> {
                         const SizedBox(height: 28),
 
                         // — event Breakdown —
-                        _buildSectionHeader(context, icon: Icons.account_balance_wallet_rounded, title: 'event Breakdown', color: Colors.green),
+                        _buildSectionHeader(context, icon: Icons.account_balance_wallet_rounded, title: 'Event Breakdown', color: Colors.green),
                         const SizedBox(height: 12),
                         Card(
                           color: AppColors.card(context),

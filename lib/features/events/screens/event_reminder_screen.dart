@@ -11,6 +11,7 @@ import 'package:kofund/features/events/models/event_model.dart';
 import 'package:kofund/core/services/reminder_service.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
 import 'package:kofund/core/widgets/custom_button.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 
 class EventRemindersScreen extends StatefulWidget {
   final EventModel event;
@@ -29,6 +30,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   DateTime? _selectedDate;
   bool _enableReminders = false;
   bool _isSendingReminder = false;
+  bool _isSavingSettings = false;
   late ReminderService _reminderService;
   
   final TextEditingController _customTitleController = TextEditingController();
@@ -41,6 +43,9 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   bool _enableEscalation = false;
   final TextEditingController _escalationDaysController = TextEditingController();
   final FocusNode _escalationDaysFocus = FocusNode();
+
+  int _selectedWeekday = DateTime.monday;
+  int _selectedMonthDay = 1;
 
   @override
   void initState() {
@@ -56,6 +61,22 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     _enableEscalation = _event.enableAdminEscalation;
     _escalationDaysController.text = _event.escalationDaysAfter.toString();
     _reminderService = ReminderService();
+
+    if (_event.reminderFrequency == 'weekly' && _event.firstPaymentDueDate != null) {
+      _selectedWeekday = _event.firstPaymentDueDate!.weekday;
+    } else {
+      _selectedWeekday = DateTime.monday;
+    }
+    
+    if (_event.reminderFrequency == 'monthly' && _event.firstPaymentDueDate != null) {
+      _selectedMonthDay = _event.firstPaymentDueDate!.day;
+    } else {
+      _selectedMonthDay = 1;
+    }
+    
+    _daysController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -99,24 +120,13 @@ class _emindersScreenState extends State<EventRemindersScreen> {
         }
       }
       
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusLarge)),
-          title: const Text('Send Real Reminder?'),
-          content: const Text('This will send actual push notifications to all participants with unpaid contributions. Continue?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: AppColors.error(context)),
-              child: const Text('Send Real', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+      final confirm = await DialogHelper.showConfirmationDialog(
+        context,
+        title: 'Send Reminder?',
+        message: 'This will send actual push notifications to all participants with unpaid contributions. Continue?',
+        confirmLabel: 'Send',
+        cancelLabel: 'Cancel',
+        icon: Icons.notifications_active_rounded,
       );
       
       if (confirm != true) {
@@ -124,7 +134,7 @@ class _emindersScreenState extends State<EventRemindersScreen> {
         return;
       }
       
-      _showLoadingDialog('Sending real reminders...');
+      _showLoadingDialog('Sending reminders...');
       
       final result = await _reminderService.sendContributionReminders(
         communityId: _event.communityId,
@@ -295,6 +305,117 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     );
   }
 
+  String _getWeekdayName(int weekday) {
+    switch (weekday) {
+      case DateTime.monday: return 'Monday';
+      case DateTime.tuesday: return 'Tuesday';
+      case DateTime.wednesday: return 'Wednesday';
+      case DateTime.thursday: return 'Thursday';
+      case DateTime.friday: return 'Friday';
+      case DateTime.saturday: return 'Saturday';
+      case DateTime.sunday: return 'Sunday';
+      default: return '';
+    }
+  }
+
+  String _getDaySuffix(int day) {
+    if (day >= 11 && day <= 13) {
+      return 'th';
+    }
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
+
+  DateTime? _calculateFirstPaymentDueDate() {
+    if (_selectedFrequency == 'custom') return null;
+    
+    final now = DateTime.now();
+    if (_selectedFrequency == 'weekly') {
+      int daysToAdd = _selectedWeekday - now.weekday;
+      if (daysToAdd <= 0) {
+        daysToAdd += 7; // Ensure next week
+      }
+      return DateTime(now.year, now.month, now.day).add(Duration(days: daysToAdd));
+    } else if (_selectedFrequency == 'monthly') {
+      // If target day is in the future this month
+      if (_selectedMonthDay > now.day) {
+        final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+        final actualDay = _selectedMonthDay > daysInMonth ? daysInMonth : _selectedMonthDay;
+        return DateTime(now.year, now.month, actualDay);
+      } else {
+        // Next month
+        final nextMonth = now.month == 12 ? 1 : now.month + 1;
+        final nextYear = now.month == 12 ? now.year + 1 : now.year;
+        final daysInNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
+        final actualDay = _selectedMonthDay > daysInNextMonth ? daysInNextMonth : _selectedMonthDay;
+        return DateTime(nextYear, nextMonth, actualDay);
+      }
+    }
+    return null;
+  }
+
+  Widget _buildScheduleSummary() {
+    if (!_enableReminders) return const SizedBox.shrink();
+
+    String text = '';
+    IconData icon = Icons.info_outline;
+
+    if (_selectedFrequency == 'custom') {
+      final count = _event.contributionReminderDates.length;
+      text = count == 0
+          ? 'No one-time reminder dates scheduled yet. Pick a date below to get started.'
+          : 'Reminders will be sent on the $count specific dates listed below.';
+    } else {
+      final frequencyLabel = _selectedFrequency == 'monthly' ? 'monthly' : 'weekly';
+      
+      final computedDueDate = _calculateFirstPaymentDueDate();
+      if (computedDueDate == null) {
+        text = 'Reminders will run on a $frequencyLabel cycle.';
+      } else {
+        final formattedDate = DateFormat('MMM dd, yyyy').format(computedDueDate);
+        
+        final selectionDesc = _selectedFrequency == 'weekly'
+            ? 'every ${_getWeekdayName(_selectedWeekday)}'
+            : 'on the ${_selectedMonthDay}${_getDaySuffix(_selectedMonthDay)} of every month';
+        
+        text = '🔔 Reminders will automatically go out $selectionDesc (Next reminder: $formattedDate).';
+        icon = Icons.auto_awesome;
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary(context).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary(context)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.textPrimary(context).withValues(alpha: 0.9),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFrequencySelector() {
     return _buildCard(
       child: Column(
@@ -315,7 +436,6 @@ class _emindersScreenState extends State<EventRemindersScreen> {
             children: [
               _buildChoiceChip('monthly', 'Monthly'),
               _buildChoiceChip('weekly', 'Weekly'),
-              _buildChoiceChip('daily', 'Daily'),
               _buildChoiceChip('custom', 'Specific Dates'),
             ],
           ),
@@ -352,116 +472,189 @@ class _emindersScreenState extends State<EventRemindersScreen> {
     );
   }
 
-  Widget _buildSettingsDetail() {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  void _showDaySelectorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.card(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Lead Time',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Days before due date to start',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 100,
-                child: TextFormField(
-                  controller: _daysController,
-                  focusNode: _daysFocus,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    suffixText: 'days',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    filled: true,
-                    fillColor: AppColors.background(context),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                      borderSide: BorderSide(color: AppColors.border(context)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                      borderSide: BorderSide(color: AppColors.border(context)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                      borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _selectedFrequency == 'weekly' ? 'Select Weekday' : 'Select Day of Month',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Initial Payment Date',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'The very first due date of this event',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              InkWell(
-                onTap: _pickFirstPaymentDate,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                    border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
+                  IconButton(
+                    icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_month, size: 18, color: AppColors.primary(context)),
-                      const SizedBox(width: 8),
-                      Text(
-                        _event.firstPaymentDueDate != null
-                            ? DateFormat('MMM dd, yyyy').format(_event.firstPaymentDueDate!)
-                            : 'Set Date',
-                        style: TextStyle(
-                          color: AppColors.primary(context),
-                          fontWeight: FontWeight.bold,
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (_selectedFrequency == 'weekly')
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 2.2,
+                  ),
+                  itemCount: 7,
+                  itemBuilder: (context, index) {
+                    final weekday = index + 1;
+                    final isSelected = _selectedWeekday == weekday;
+                    final name = _getWeekdayName(weekday);
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedWeekday = weekday;
+                        });
+                        Navigator.pop(context);
+                        HapticHelper.selection();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary(context) : AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary(context) : AppColors.border(context),
+                            width: isSelected ? 1.5 : 0.8,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isSelected ? Colors.white : AppColors.textPrimary(context),
+                          ),
                         ),
                       ),
-                    ],
+                    );
+                  },
+                ),
+              if (_selectedFrequency == 'monthly')
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    crossAxisSpacing: 6,
+                    mainAxisSpacing: 6,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: 28,
+                  itemBuilder: (context, index) {
+                    final day = index + 1;
+                    final isSelected = _selectedMonthDay == day;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedMonthDay = day;
+                        });
+                        Navigator.pop(context);
+                        HapticHelper.selection();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary(context) : AppColors.surface(context),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary(context) : AppColors.border(context),
+                            width: isSelected ? 1.5 : 0.8,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '$day',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isSelected ? Colors.white : AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsDetail() {
+    final selectionText = _selectedFrequency == 'weekly'
+        ? _getWeekdayName(_selectedWeekday)
+        : '${_selectedMonthDay}${_getDaySuffix(_selectedMonthDay)}';
+
+    return _buildCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedFrequency == 'weekly' ? 'Weekly Reminder Day' : 'Monthly Reminder Day',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  _selectedFrequency == 'weekly'
+                      ? 'Select the day of the week to send reminders'
+                      : 'Select the day of the month to send reminders',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          InkWell(
+            onTap: _showDaySelectorDialog,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.3)),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_month, size: 18, color: AppColors.primary(context)),
+                  const SizedBox(width: 8),
+                  Text(
+                    selectionText,
+                    style: TextStyle(
+                      color: AppColors.primary(context),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.primary(context)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -588,154 +781,68 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   }
 
   Widget _buildAdvancedFeatures() {
-    return Column(
-      children: [
-        _buildCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Custom Notification Message',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Override the default push notification text',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _customTitleController,
-                decoration: InputDecoration(
-                  labelText: 'Custom Title (Optional)',
-                  filled: true,
-                  fillColor: AppColors.background(context),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _customMessageController,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: 'Custom Body Message (Optional)',
-                  filled: true,
-                  fillColor: AppColors.background(context),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
-                ),
-              ),
-            ],
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Custom Notification Message',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        
-        _buildCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                title: Text('Follow-up Retries', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(context))),
-                subtitle: Text('Send a second reminder if unpaid', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                value: _enableRetries,
-                activeThumbColor: AppColors.primary(context),
-                onChanged: (val) {
-                  HapticHelper.medium();
-                  setState(() => _enableRetries = val);
-                },
-              ),
-              if (_enableRetries) ...[
-                const Divider(height: 1),
-                Padding(
-                  padding: AppStyles.screenPadding,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Days after initial reminder',
-                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 100,
-                        child: TextFormField(
-                          controller: _retryDaysController,
-                          focusNode: _retryDaysFocus,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            suffixText: 'days',
-                            filled: true,
-                            fillColor: AppColors.background(context),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+          const SizedBox(height: 4),
+          Text(
+            'Override the default push notification text',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
-        ),
-        const SizedBox(height: 20),
-        
-        _buildCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                title: Text('Admin Escalation Alerts', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(context))),
-                subtitle: Text('Notify you when payments are overdue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                value: _enableEscalation,
-                activeThumbColor: AppColors.error(context),
-                onChanged: (val) {
-                  HapticHelper.medium();
-                  setState(() => _enableEscalation = val);
-                },
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _customTitleController,
+            decoration: InputDecoration(
+              labelText: 'Custom Title (Optional)',
+              filled: true,
+              fillColor: AppColors.background(context),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.border(context)),
               ),
-              if (_enableEscalation) ...[
-                const Divider(height: 1),
-                Padding(
-                  padding: AppStyles.screenPadding,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Days overdue to escalate',
-                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 100,
-                        child: TextFormField(
-                          controller: _escalationDaysController,
-                          focusNode: _escalationDaysFocus,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          decoration: InputDecoration(
-                            suffixText: 'days',
-                            filled: true,
-                            fillColor: AppColors.background(context),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _customMessageController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: 'Custom Body Message (Optional)',
+              filled: true,
+              fillColor: AppColors.background(context),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                borderSide: BorderSide(color: AppColors.primary(context), width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -836,14 +943,21 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   }
 
   void _saveReminders() async {
+    if (_isSavingSettings) return;
+    setState(() {
+      _isSavingSettings = true;
+    });
     try {
       HapticHelper.medium();
       final eventProvider = context.read<EventProvider>();
       
+      final calculatedDueDate = _calculateFirstPaymentDueDate();
+      
       final update = _event.copyWith(
         enableAutoReminders: _enableReminders,
-        reminderDaysBefore: int.tryParse(_daysController.text) ?? 7,
+        reminderDaysBefore: 0,
         reminderFrequency: _selectedFrequency,
+        firstPaymentDueDate: calculatedDueDate,
       );
       
       final nextReminderDate = _enableReminders 
@@ -853,10 +967,10 @@ class _emindersScreenState extends State<EventRemindersScreen> {
       await eventProvider.updateReminderSettings(
         eventId: _event.eventId,
         enableAutoReminders: _enableReminders,
-        reminderDaysBefore: int.tryParse(_daysController.text) ?? 7,
+        reminderDaysBefore: 0,
         reminderFrequency: _selectedFrequency,
         contributionReminderDates: _event.contributionReminderDates,
-        firstPaymentDueDate: _event.firstPaymentDueDate,
+        firstPaymentDueDate: calculatedDueDate,
         nextReminderDate: nextReminderDate,
         customReminderTitle: _customTitleController.text.trim().isEmpty ? null : _customTitleController.text.trim(),
         customReminderMessage: _customMessageController.text.trim().isEmpty ? null : _customMessageController.text.trim(),
@@ -872,6 +986,12 @@ class _emindersScreenState extends State<EventRemindersScreen> {
       }
     } catch (e) {
       if (mounted) SnackbarHelper.showError(context, 'Failed to save: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingSettings = false;
+        });
+      }
     }
   }
 
@@ -1045,17 +1165,31 @@ class _emindersScreenState extends State<EventRemindersScreen> {
   @override
   Widget build(BuildContext context) {
     return GradientSheetScaffold(
-      title: 'Reminder',
+      title: 'Reminder Settings',
       actions: [
-        IconButton(
-          onPressed: _saveReminders,
-          icon: Icon(
-            Icons.check_rounded,
-            color: AppColors.textPrimary(context),
-            size: 26,
-          ),
-          tooltip: 'Save Configuration',
-        ),
+        _isSavingSettings
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: AppColors.textPrimary(context),
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+              )
+            : IconButton(
+                onPressed: _saveReminders,
+                icon: Icon(
+                  Icons.check_rounded,
+                  color: AppColors.textPrimary(context),
+                  size: 26,
+                ),
+                tooltip: 'Save Configuration',
+              ),
       ],
       body: Column(
         children: [
@@ -1066,36 +1200,49 @@ class _emindersScreenState extends State<EventRemindersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildReminderToggle(),
+                  _buildScheduleSummary(),
                   
-                  _buildSectionHeader('Schedule Frequency', icon: Icons.repeat),
-                  _buildFrequencySelector(),
+                  if (_enableReminders) ...[
+                    _buildSectionHeader('Schedule Frequency', icon: Icons.repeat),
+                    _buildFrequencySelector(),
+                    
+                    if (_selectedFrequency != 'custom') ...[
+                      _buildSectionHeader('Parameters', icon: Icons.settings_outlined),
+                      _buildSettingsDetail(),
+                    ],
+                    
+                    if (_selectedFrequency == 'custom') ...[
+                      _buildSectionHeader('One-time Alerts', icon: Icons.calendar_today_outlined),
+                      _buildCustomDatesSection(),
+                    ],
+                    
+                    _buildSectionHeader('Advanced Settings', icon: Icons.tune),
+                    _buildAdvancedFeatures(),
+                  ],
                   
-                  _buildSectionHeader('Parameters', icon: Icons.settings_outlined),
-                  _buildSettingsDetail(),
                   
-                  _buildSectionHeader('One-time Alerts', icon: Icons.calendar_today_outlined),
-                  _buildCustomDatesSection(),
-                  
-                  _buildSectionHeader('Advanced Settings', icon: Icons.tune),
-                  _buildAdvancedFeatures(),
-                  
-                  const SizedBox(height: 32),
-                  
-                  _buildSectionHeader('Manual Execution', icon: Icons.bolt),
+                  _buildSectionHeader('Manual Reminder', icon: Icons.campaign_outlined),
                   _buildCard(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-
+                        Text(
+                          'Need to send a reminder immediately? Trigger a manual push notification to all participants with unpaid contributions.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         TextButton.icon(
                           onPressed: _sendRealReminder,
-                          icon: Icon(Icons.rocket_launch, color: AppColors.primary(context)),
-                          label: Text('Force Execution', style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
+                          icon: Icon(Icons.send_rounded, color: AppColors.primary(context)),
+                          label: Text('Send Reminders Now', style: TextStyle(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
                           style: TextButton.styleFrom(
                             backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusMedium)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull)),
                           ),
                         ),
                       ],

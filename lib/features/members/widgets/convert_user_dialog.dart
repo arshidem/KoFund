@@ -6,6 +6,7 @@ import 'package:kofund/core/constants/notification_Types.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/utils/haptic_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ConvertUserDialog extends StatefulWidget {
   final UserModel virtualUser;
@@ -27,7 +28,8 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
   List<UserModel> _realUsers = [];
   List<UserModel> _filteredUsers = [];
   UserModel? _selectedUser;
-  bool _isLoading = false;
+  bool _isLoadingUsers = false;
+  bool _isSendingRequest = false;
   String _search = '';
 
   @override
@@ -37,12 +39,12 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
   }
 
   Future<void> _loadRealUsers() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoadingUsers = true);
     try {
       final communityId = widget.virtualUser.communityId;
       if (communityId == null || communityId.isEmpty) {
         debugPrint('❌ Virtual user has no communityId — cannot load real users');
-        setState(() => _isLoading = false);
+        setState(() => _isLoadingUsers = false);
         return;
       }
       _realUsers = await _userService.getUsersByCommunity(
@@ -59,11 +61,12 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
     } catch (e) {
       debugPrint('❌ Failed to load real users: $e');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isLoadingUsers = false);
     }
   }
 
   void _filter(String query) {
+    if (_isSendingRequest) return;
     setState(() {
       _search = query;
       _filteredUsers = _realUsers
@@ -74,15 +77,16 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
 
   Future<void> _convert() async {
     if (_selectedUser == null) return;
+    final selectedUser = _selectedUser!;
     HapticHelper.light();
-    setState(() => _isLoading = true);
+    setState(() => _isSendingRequest = true);
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       final adminName = currentUser?.displayName ?? 'Admin';
 
       // Send a conversion request notification to the real user
       await _notificationService.sendUserNotification(
-        userId: _selectedUser!.uid,
+        userId: selectedUser.uid,
         title: 'Account Merge Request',
         body: 'Admin "$adminName" wants to merge the virtual member "${widget.virtualUser.displayName}" into your account. All data from the virtual user will be transferred to you.',
         type: NotificationType.conversionRequest,
@@ -93,8 +97,8 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
           'virtualUserName': widget.virtualUser.displayName ?? 'Unknown',
           'virtualUserEmail': widget.virtualUser.email,
           'virtualUserPhone': widget.virtualUser.phoneNumber ?? '',
-          'realUserId': _selectedUser!.uid,
-          'realUserName': _selectedUser!.displayName ?? _selectedUser!.email,
+          'realUserId': selectedUser.uid,
+          'realUserName': selectedUser.displayName ?? selectedUser.email,
           'communityId': widget.virtualUser.communityId ?? '',
           'adminId': currentUser?.uid ?? '',
           'adminName': adminName,
@@ -102,13 +106,62 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
       );
 
       HapticHelper.success();
-      SnackbarHelper.showSuccess(context, 'Conversion request sent to ${_selectedUser!.displayName ?? _selectedUser!.email}');
+      if (!mounted) return;
+      SnackbarHelper.showSuccess(context, 'Conversion request sent to ${selectedUser.displayName ?? selectedUser.email}');
       Navigator.of(context).pop(true);
     } catch (e) {
+      if (!mounted) return;
       SnackbarHelper.showError(context, 'Failed to send request: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isSendingRequest = false);
+      }
     }
+  }
+
+  Widget _buildUsersSkeleton() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300;
+    final highlightColor = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade100;
+
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: baseColor,
+          highlightColor: highlightColor,
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+            title: Container(
+              width: double.infinity,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Container(
+                width: 180,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -140,6 +193,7 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: TextField(
+                enabled: !_isSendingRequest,
                 decoration: const InputDecoration(
                   hintText: 'Search real users',
                   prefixIcon: Icon(Icons.search),
@@ -149,8 +203,8 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+              child: _isLoadingUsers
+                  ? _buildUsersSkeleton()
                   : ListView.builder(
                       itemCount: _filteredUsers.length,
                       itemBuilder: (context, index) {
@@ -161,7 +215,7 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
                           subtitle: Text(user.email),
                           trailing: selected ? const Icon(Icons.check, color: Colors.green) : null,
                           selected: selected,
-                          onTap: () => setState(() => _selectedUser = user),
+                          onTap: _isSendingRequest ? null : () => setState(() => _selectedUser = user),
                         );
                       },
                     ),
@@ -173,13 +227,22 @@ class _ConvertUserDialogState extends State<ConvertUserDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: _isSendingRequest ? null : () => Navigator.of(context).pop(false),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _selectedUser == null || _isLoading ? null : _convert,
-                    child: const Text('Send Request'),
+                    onPressed: _selectedUser == null || _isSendingRequest ? null : _convert,
+                    child: _isSendingRequest
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('Send Request'),
                   ),
                 ],
               ),

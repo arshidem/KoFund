@@ -203,7 +203,7 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
                   ),
                   
                   SliverToBoxAdapter(
-                    child: _buildParticipantsStats(context),
+                    child: _buildParticipantsStats(context, participants),
                   ),
 
                   // STICKY HEADER for Search & Filter
@@ -295,7 +295,7 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
     );
   }
 
-  Widget _buildParticipantsStats(BuildContext context) {
+  Widget _buildParticipantsStats(BuildContext context, List<ParticipantModel> participants) {
     return StreamBuilder<Map<String, dynamic>>(
       key: ValueKey(
         'stats-${widget.event.eventId}-${widget.selectedMonth ?? 'regular'}-$_streamKey',
@@ -314,8 +314,8 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
           }
         }
         
-        // Show shimmer only on first load when no cache exists
-        if ((snapshot.connectionState == ConnectionState.waiting || snapshot.hasError) && _cachedStats == null) {
+        // Show shimmer only on first load when no cache exists and participants list is empty
+        if (snapshot.connectionState == ConnectionState.waiting && _cachedStats == null && participants.isEmpty) {
           return _buildShimmerStats();
         }
 
@@ -328,11 +328,34 @@ class _ParticipantsTabState extends State<EventParticipantsTab> with AutomaticKe
           'totalExpected': 0.0,
         };
 
-        final int totalCount = data['totalParticipants'] ?? 0;
-        final int paidCount = data['paidParticipants'] ?? 0;
-        final int pendingCount = data['pendingParticipants'] ?? 0;
-        final double totalCollected = data['totalCollected'] ?? 0.0;
-        final double totalExpected = data['totalExpected'] ?? 0.0;
+        // Calculate stats locally from the participants list
+        int totalCount = participants.length;
+        int paidCount = participants.where((p) => p.hasPaidContribution).length;
+        int pendingCount = participants.where((p) => !p.hasPaidContribution).length;
+        double totalCollected = participants.fold(0.0, (sum, p) => sum + (p.contributionPaid ?? 0.0));
+        
+        // Calculate total expected
+        double totalExpected = 0.0;
+        final suggested = widget.event.suggestedContribution ?? 0.0;
+        if (widget.event.isMonthlyPayment) {
+          totalExpected = suggested * totalCount;
+        } else {
+          if (widget.event.totalAmount != null && widget.event.totalAmount! > 0) {
+            totalExpected = widget.event.totalAmount!;
+          } else {
+            totalExpected = suggested * totalCount;
+          }
+        }
+
+        // Fallback to stream/cached data if participants list is empty but stream has data
+        if (participants.isEmpty && (data['totalParticipants'] ?? 0) > 0) {
+          totalCount = data['totalParticipants'] ?? 0;
+          paidCount = data['paidParticipants'] ?? 0;
+          pendingCount = data['pendingParticipants'] ?? 0;
+          totalCollected = (data['totalCollected'] ?? 0.0).toDouble();
+          totalExpected = (data['totalExpected'] ?? 0.0).toDouble();
+        }
+
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return Padding(

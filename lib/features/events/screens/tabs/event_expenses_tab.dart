@@ -40,7 +40,9 @@ class EventExpensesTab extends StatefulWidget {
   State<EventExpensesTab> createState() => _ExpensesTabState();
 }
 
-class _ExpensesTabState extends State<EventExpensesTab> {
+class _ExpensesTabState extends State<EventExpensesTab> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _filterStatus = 'all';
@@ -149,6 +151,7 @@ class _ExpensesTabState extends State<EventExpensesTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final authProvider = Provider.of<AppAuthProvider>(context, listen: true);
     final isAdmin = _isAdmin(context);
     final currentUser = authProvider.user;
@@ -1863,9 +1866,6 @@ Future<void> _updateExpenseStatusWithHistory(
         'editHistory': updatedEditHistory,
       },
     );
-
-    // Close the bottom sheet
-    Navigator.pop(context);
     
     SnackbarHelper.showSuccess(context, 'Expense marked as $newStatus!');
     

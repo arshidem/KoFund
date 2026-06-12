@@ -300,8 +300,8 @@ String _generateInviteLink(String inviteCode, String communityId) {
         // Fire and forget, don't await to speed up UI navigation
         notificationService.sendCommunityNotification(
           communityId: communityId,
-          title: 'New Join Request',
-          body: '$userName wants to join ${communityData['name']}. Review now.',
+title: '$userName wants to join',
+body: 'Review the request to join ${communityData['name']}.',
           type: NotificationType.pendingUser,
           targetRole: 'admin',
           data: {

@@ -15,6 +15,7 @@ import '../../auth/providers/app_auth_provider.dart';
 import '../../events/models/event_model.dart';
 import 'package:kofund/core/skeleton/edit_contribution_skeleton.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
+import 'package:kofund/core/constants/app_dimensions.dart';
 
 class EditContributionScreen extends StatefulWidget {
   final String contributionId;
@@ -150,13 +151,11 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
 
   Future<void> _fetchAvailabls(String communityId) async {
     try {
-      debugPrint('📋 Fetching events for community: $communityId');
+      debugPrint('📋 Fetching events for community: $communityId from root collection');
       
       final querySnapshot = await FirebaseFirestore.instance
-          .collection('communities')
-          .doc(communityId)
           .collection('events')
-          .where('status', whereIn: ['active', 'ongoing'])
+          .where('communityId', isEqualTo: communityId)
           .get();
       
       _availableEvents = querySnapshot.docs.map((doc) {
@@ -166,51 +165,20 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
       }).toList();
       
       debugPrint('✅ Found ${_availableEvents.length} events');
-
-      // If no events found in subcollection, try root events collection
-      if (_availableEvents.isEmpty) {
-        debugPrint('⚠️ No events in subcollection, trying root collection...');
-        final rootQuery = await FirebaseFirestore.instance
-            .collection('events')
-            .where('communityId', isEqualTo: communityId)
-            .where('status', whereIn: ['active', 'ongoing'])
-            .get();
-        
-        _availableEvents = rootQuery.docs.map((doc) {
-          return EventModel.fromMap(doc.data(), doc.id);
-        }).toList();
-        
-        debugPrint('✅ Found ${_availableEvents.length} events in root collection');
-      }
       
       // Ensure the current event is in the list
       if (_contribution != null && !_availableEvents.any((p) => p.eventId == _contribution!.eventId)) {
         // Try to fetch the specific event to add to list
         try {
-          // Try community subcollection first
-          final doc = await FirebaseFirestore.instance
-              .collection('communities')
-              .doc(communityId)
+          final rooDoc = await FirebaseFirestore.instance
               .collection('events')
               .doc(_contribution!.eventId)
               .get();
           
-          if (doc.exists) {
-            final event = EventModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          if (rooDoc.exists) {
+            final event = EventModel.fromMap(rooDoc.data() as Map<String, dynamic>, rooDoc.id);
             _availableEvents.add(event);
-            debugPrint('➕ Added current event from subcollection');
-          } else {
-            // Try root collection
-            final rooDoc = await FirebaseFirestore.instance
-                .collection('events')
-                .doc(_contribution!.eventId)
-                .get();
-            
-            if (rooDoc.exists) {
-              final event = EventModel.fromMap(rooDoc.data() as Map<String, dynamic>, rooDoc.id);
-              _availableEvents.add(event);
-              debugPrint('➕ Added current event from root collection');
-            }
+            debugPrint('➕ Added current event from root collection');
           }
         } catch (e) {
           debugPrint('⚠️ Could not fetch current event: $e');
@@ -490,15 +458,15 @@ class _EditContributionScreenState extends State<EditContributionScreen> {
               vertical: maxLines == 1 ? 18 : 16,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(color: AppColors.border(context)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
               borderSide: BorderSide(
                 color: AppColors.primary(context),
                 width: 2,
@@ -770,7 +738,7 @@ Widget _buildChangeItem({
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'event *',
+                                      'Event *',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -780,18 +748,18 @@ Widget _buildChangeItem({
                                     const SizedBox(height: 8),
 
                                     DropdownButtonFormField<String>(
-                                      initialValue: _selecteId,
+                                      value: _selecteId,
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(color: AppColors.border(context)),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(color: AppColors.border(context)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(
                                             color: AppColors.primary(context),
                                             width: 2,
@@ -800,53 +768,72 @@ Widget _buildChangeItem({
                                         filled: true,
                                         fillColor: AppColors.surface(context),
                                         contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
+                                          horizontal: 20,
                                           vertical: 16,
                                         ),
                                       ),
-                                      items: _availableEvents.map((event) {
-                                        return DropdownMenuItem<String>(
-                                          value: event.eventId,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 4),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  event.title,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: AppColors.textPrimary(context),
+                                      items: (() {
+                                        final items = List<EventModel>.from(_availableEvents);
+                                        if (_selecteId != null && !items.any((e) => e.eventId == _selecteId)) {
+                                          items.add(EventModel(
+                                            eventId: _selecteId!,
+                                            communityId: _contribution?.communityId ?? '',
+                                            title: _contribution?.eventName ?? 'Event $_selecteId',
+                                            description: '',
+                                            eventDate: DateTime.now(),
+                                            location: '',
+                                            maxParticipants: 0,
+                                            participantType: 'fixed',
+                                            status: 'active',
+                                            createdBy: '',
+                                            createdAt: Timestamp.now(),
+                                            eventType: 'general',
+                                            isMonthlyPayment: false,
+                                          ));
+                                        }
+                                        return items.map((event) {
+                                          return DropdownMenuItem<String>(
+                                            value: event.eventId,
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 4),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    event.title,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      color: AppColors.textPrimary(context),
+                                                    ),
                                                   ),
-                                                ),
-                                                if (event.isMonthlyPayment) ...[
-                                                  const SizedBox(width: 8),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green.withValues(alpha: 0.12),
-                                                      borderRadius: BorderRadius.circular(6),
-                                                    ),
-                                                    child: Text(
-                                                      'Monthly',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: Colors.green[700],
-                                                        fontWeight: FontWeight.w500,
+                                                  if (event.isMonthlyPayment) ...[
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.green.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                      ),
+                                                      child: Text(
+                                                        'Monthly',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: Colors.green[700],
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
+                                                  ],
                                                 ],
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      }).toList(),
-
+                                          );
+                                        }).toList();
+                                      })(),
                                       onChanged: (value) {
                                         setState(() {
                                           _selecteId = value;
@@ -871,14 +858,12 @@ Widget _buildChangeItem({
                                           }
                                         });
                                       },
-
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
                                           return 'Please select a event';
                                         }
                                         return null;
                                       },
-
                                       hint: const Text('Select event'),
                                     ),
 
@@ -940,15 +925,15 @@ Widget _buildChangeItem({
                                           : (_paymentMethods.isNotEmpty ? _paymentMethods.first : null),
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(color: AppColors.border(context)),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(color: AppColors.border(context)),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                           borderSide: BorderSide(
                                             color: AppColors.primary(context),
                                             width: 2,
@@ -957,7 +942,7 @@ Widget _buildChangeItem({
                                         filled: true,
                                         fillColor: AppColors.surface(context),
                                         contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
+                                          horizontal: 20,
                                           vertical: 16,
                                         ),
                                       ),
@@ -1030,15 +1015,15 @@ Widget _buildChangeItem({
                                             : (_availableMonths.isNotEmpty ? _availableMonths.first : null),
                                         decoration: InputDecoration(
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                             borderSide: BorderSide(color: AppColors.border(context)),
                                           ),
                                           enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                             borderSide: BorderSide(color: AppColors.border(context)),
                                           ),
                                           focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                                             borderSide: BorderSide(
                                               color: AppColors.primary(context),
                                               width: 2,
@@ -1047,7 +1032,7 @@ Widget _buildChangeItem({
                                           filled: true,
                                           fillColor: AppColors.surface(context),
                                           contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
+                                            horizontal: 20,
                                             vertical: 16,
                                           ),
                                           hintText: 'Select Month',
@@ -1250,27 +1235,6 @@ Widget _buildChangeItem({
 ),
 
                           const SizedBox(height: 24),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                            
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _saveChanges,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary(context),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text('Save Changes'),
-                                ),
-                              ),
-                            ],
-                          ),
 
                           const SizedBox(height: 20),
                         ],

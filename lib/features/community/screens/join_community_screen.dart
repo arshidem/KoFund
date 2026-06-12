@@ -11,6 +11,7 @@ import '../providers/community_provider.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_styles.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:kofund/core/utils/dialog_helper.dart';
 import 'create_community_screen.dart';
 
 class JoinCommunityScreen extends StatefulWidget {
@@ -58,131 +59,112 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
            RegExp(r'^[A-Z0-9]{8}$').hasMatch(trimmedCode);
   }
 
-  void _showAutoJoinDialog() {
+  void _showAutoJoinDialog() async {
     if (!mounted || _showAutoJoinPrompt) return;
     
-    _showAutoJoinPrompt = true;
+    setState(() {
+      _showAutoJoinPrompt = true;
+    });
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.link, color: AppColors.primary(context)),
-            const SizedBox(width: 10),
-            Text('Join Invitation'),
-            
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'You\'ve received an invitation to join a community.',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textSecondary(context),
-              ),
+    final shouldJoin = await DialogHelper.showConfirmationDialog(
+      context,
+      title: 'Join Invitation',
+      icon: Icons.link_rounded,
+      confirmLabel: 'Join Now',
+      cancelLabel: 'Cancel',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'You\'ve received an invitation to join a community.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(context),
             ),
-            const SizedBox(height: 10),
-          Container(
-  padding: const EdgeInsets.all(14),
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(16),
-
-    // ✅ SAME gradient system used app-wide
-    gradient: LinearGradient(
-      colors: [
-        AppColors.primary(context).withValues(alpha: 0.15),
-        AppColors.primary(context).withValues(alpha: 0.05),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    ),
-
-    // ✅ SAME border style
-    border: Border.all(
-      color: AppColors.primary(context).withValues(alpha: 0.25),
-    ),
-
-    // ✅ SAME soft shadow
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.06),
-        blurRadius: 12,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  ),
-  child: Row(
-    children: [
-      Icon(
-        Icons.code,
-        color: AppColors.primary(context),
-        size: 20,
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Invite Code',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _codeController.text,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(context),
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-
-            const SizedBox(height: 15),
-            const Text(
-              'Would you like to join this community?',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _showAutoJoinPrompt = false;
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
+            textAlign: TextAlign.center,
           ),
-          ElevatedButton(
-            onPressed: () {
-              _showAutoJoinPrompt = false;
-              Navigator.pop(context);
-              _joinCommunity();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary(context),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary(context).withValues(alpha: 0.15),
+                  AppColors.primary(context).withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(
+                color: AppColors.primary(context).withValues(alpha: 0.25),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: const Text('Join Now'),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.code_rounded,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Invite Code',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _codeController.text,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary(context),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Would you like to join this community?',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary(context),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    ).then((_) {
-      _showAutoJoinPrompt = false;
-    });
+    );
+
+    if (mounted) {
+      setState(() {
+        _showAutoJoinPrompt = false;
+      });
+      if (shouldJoin == true) {
+        _joinCommunity();
+      }
+    }
   }
 
 Future<void> _joinCommunity() async {

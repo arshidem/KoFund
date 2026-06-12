@@ -336,6 +336,7 @@ Future<void> storeCurrentUserToken({
       debugPrint("🔍 Getting tokens for community: $communityId");
       
       final Set<String> allTokens = {};
+      final Set<String> realUserIds = {};
 
       // 1. Try dedicated tokens collection
       final tokensSnapshot = await _firestore
@@ -343,14 +344,7 @@ Future<void> storeCurrentUserToken({
           .where('isActive', isEqualTo: true)
           .where('communityIds', arrayContains: communityId)
           .get();
-      
-      for (final doc in tokensSnapshot.docs) {
-        final token = doc.data()['token'] as String?;
-        if (token != null && token.isNotEmpty) allTokens.add(token);
-      }
-      debugPrint("   Found ${tokensSnapshot.docs.length} tokens in dedicated collection");
 
-      // 2. BACKUP: Try users collection (the source of truth)
       final usersSnapshot = await _firestore
           .collection('users')
           .where('communityId', isEqualTo: communityId)
@@ -358,6 +352,24 @@ Future<void> storeCurrentUserToken({
       
       for (final doc in usersSnapshot.docs) {
         final userData = doc.data();
+        if (userData['isVirtualUser'] == true) continue;
+        realUserIds.add(doc.id);
+      }
+      
+      for (final doc in tokensSnapshot.docs) {
+        final userId = doc.data()['userId'] as String?;
+        if (userId == null || !realUserIds.contains(userId)) continue;
+
+        final token = doc.data()['token'] as String?;
+        if (token != null && token.isNotEmpty) allTokens.add(token);
+      }
+      debugPrint("   Found ${tokensSnapshot.docs.length} tokens in dedicated collection");
+
+      // 2. BACKUP: Try users collection (the source of truth)
+      for (final doc in usersSnapshot.docs) {
+        final userData = doc.data();
+        if (userData['isVirtualUser'] == true) continue;
+
         final tokens = userData['fcmTokens'] as List<dynamic>?;
         if (tokens != null) {
           for (final token in tokens) {
@@ -510,6 +522,9 @@ Future<bool> isNotificationForCurrentUser(Map<String, dynamic> notificationData)
 
       final List<String> allTokens = [];
       for (final doc in snapshot.docs) {
+        final userData = doc.data() as Map<String, dynamic>;
+        if (userData['isVirtualUser'] == true) continue;
+
         final tokens = await getActiveTokens(doc.id);
         allTokens.addAll(tokens);
       }
@@ -532,13 +547,14 @@ Future<bool> isUserEligibleForNotifications() async {
     
     final userData = userDoc.data();
     final isApproved = userData?['isApproved'] ?? false;
+    final isVirtualUser = userData?['isVirtualUser'] == true;
     final hasCommunity = userData?['communityId'] != null && (userData?['communityId'] as String).isNotEmpty;
     
     debugPrint("📋 User eligibility check:");
     debugPrint("   isApproved: $isApproved");
     debugPrint("   hasCommunity: $hasCommunity");
 
-    return isApproved && hasCommunity;
+    return isApproved && hasCommunity && !isVirtualUser;
   } catch (e) {
     debugPrint("❌ Error checking user eligibility: $e");
     return false;

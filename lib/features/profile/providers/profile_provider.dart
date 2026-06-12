@@ -650,19 +650,30 @@ Future<bool> leaveCommunity() async {
     _error = null;
     
     try {
-      // Run ALL requests in parallel with shared context
+      // Run statistics queries in parallel (awaited, fast)
       await Future.wait([
-        // Statistics (loads data into other providers)
         _EventProvider.loadMyParticipations(userId, communityId),
         _contributionProvider.loadUserContributions(userId, communityId),
-        
-        // Histories (loads data into this provider's local cache)
-        _participantService.getUserParticipationHistoryWithContributions(userId).then((res) => _participationHistory = res),
-        _contributionProvider.getUserPaymentHistoryWithDetails(userId, communityId).then((res) => _contributionHistory = res),
       ]);
       
       _loadedUserId = userId;
-      debugPrint('🚀 ProfileProvider: Full parallel load complete');
+      debugPrint('🚀 ProfileProvider: Core parallel load complete');
+      
+      // Trigger history loading asynchronously in the background so it doesn't block screen initialization
+      _participantService.getUserParticipationHistoryWithContributions(userId).then((res) {
+        _participationHistory = res;
+        _safeNotifyListeners();
+      }).catchError((e) {
+        debugPrint('⚠️ Background loading of participation history failed: $e');
+      });
+
+      _contributionProvider.getUserPaymentHistoryWithDetails(userId, communityId).then((res) {
+        _contributionHistory = res;
+        _safeNotifyListeners();
+      }).catchError((e) {
+        debugPrint('⚠️ Background loading of contribution history failed: $e');
+      });
+
     } catch (e) {
       debugPrint('❌ ProfileProvider: Error during full load: $e');
       _error = 'Failed to load profile data: $e';

@@ -19,6 +19,15 @@ class ContributionService {
       
       // 🔔 Trigger User Notification (Contribution Added for Me)
       try {
+        final userDoc = await _firestore.collection('users').doc(contribution.userId).get();
+        final userData = userDoc.data();
+        final isRealUser = userDoc.exists && userData?['isVirtualUser'] != true;
+
+        if (!isRealUser) {
+          debugPrint('Skipping contribution notification for virtual user: ${contribution.userId}');
+          return docRef.id;
+        }
+
         final notificationService = NotificationService();
         
         // 🚀 OPTIMIZATION: Use passed name to avoid extra read
@@ -64,6 +73,7 @@ class ContributionService {
           title: title,
           body: body,
           type: NotificationType.contribution,
+          communityId: contribution.communityId,
           senderName: recorderName,
           data: {
             'contributionId': docRef.id,

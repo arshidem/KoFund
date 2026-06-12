@@ -7,6 +7,7 @@
  * UPDATED FOR COMMUNITY-BASED NOTIFICATION SYSTEM
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
@@ -71,6 +72,11 @@ exports.registerFCMToken = onCall(
       }
       
       const userId = auth.uid;
+      const currentUserDoc = await db.collection('users').doc(userId).get();
+      const currentUserData = currentUserDoc.data() || {};
+      if (!currentUserDoc.exists || currentUserData.isVirtualUser === true) {
+        throw new HttpsError("failed-precondition", "Only real users can register notification tokens");
+      }
       console.log(`📱 Registering token for user: ${userId}`);
       console.log(`   Token: ${token.substring(0, 20)}...`);
       console.log(`   Communities: ${JSON.stringify(communityIds)}`);
@@ -460,7 +466,9 @@ exports.sendCommunityNotification = onCall(
       // Create a map of member IDs to their data for quick role lookups
       const memberDataMap = new Map();
       for (const doc of communityMembersSnapshot.docs) {
-        memberDataMap.set(doc.id, doc.data());
+        const memberData = doc.data();
+        if (memberData.isVirtualUser === true) continue;
+        memberDataMap.set(doc.id, memberData);
       }
 
       console.log(`👥 Found ${communityMembersSnapshot.size} approved members in users collection`);
@@ -478,11 +486,13 @@ exports.sendCommunityNotification = onCall(
         const userId = tData.userId;
         
         if (userId === auth.uid) continue; // Skip sender
+
+        const mData = memberDataMap.get(userId);
+        if (!mData) continue;
         
         // Filter by role if specified
         if (targetRole) {
-          const mData = memberDataMap.get(userId);
-          if (!mData || mData.role !== targetRole) continue;
+          if (mData.role !== targetRole) continue;
         }
         
         if (typeof token === 'string' && token.length >= 50) {
@@ -1100,7 +1110,7 @@ exports.sendeventContributionReminders = onCall(
       const { data, auth } = request;
       
       if (!auth) {
-        throw new Error("Authentication required");
+        throw new HttpsError("unauthenticated", "Authentication required");
       }
       
       const { 
@@ -1115,21 +1125,18 @@ exports.sendeventContributionReminders = onCall(
       console.log("event:", eventId || "All events");
       
       if (!communityId) {
-        throw new Error("Missing required field: communityId");
+        throw new HttpsError("invalid-argument", "Missing required field: communityId");
       }
 
       // 🛡️ SECURITY: Verify sender is an admin of the community
       const senderDoc = await db.collection('users').doc(auth.uid).get();
       if (!senderDoc.exists) {
-        throw new Error("Sender user not found");
+        throw new HttpsError("not-found", "Sender user not found");
       }
       const senderData = senderDoc.data();
-      if (senderData.role !== 'admin' || senderData.communityId !== communityId) {
-         // Also check if they are an admin in notificationCommunities if that's allowed
-         // For now, strict check on primary communityId
-         if (senderData.role !== 'admin') {
-           throw new HttpsError("permission-denied", "Only admins can send reminders");
-         }
+      const isAdminUser = senderData.role === 'admin' || senderData.isAdmin === true;
+      if (!isAdminUser) {
+        throw new HttpsError("permission-denied", "Only admins can send reminders");
       }
       
       const now = new Date();
@@ -1220,7 +1227,7 @@ exports.sendeventContributionReminders = onCall(
       const communityTokensSnapshot = await db
         .collection('user_notification_tokens')
         .where('isActive', '==', true)
-        .where('communityIds', 'arrayContains', communityId)
+        .where('communityIds', 'array-contains', communityId)
         .get();
       
       const userTokensMap = new Map(); // userId -> Set of tokens
@@ -1419,7 +1426,7 @@ exports.sendeventContributionReminders = onCall(
                 const invalidTokens = [];
                 response.responses.forEach((resp, idx) => {
                   if (!resp.success && (resp.error?.code === 'messaging/registration-token-not-registered')) {
-                    invalidTokens.push(fcmTokens[idx]);
+                    invalidTokens.push(combinedTokens[idx]);
                   }
                 });
                 if (invalidTokens.length > 0) {
@@ -1474,12 +1481,272 @@ exports.sendeventContributionReminders = onCall(
       
     } catch (error) {
       console.error("❌ Error in sendeventContributionReminders:", error);
-      throw new Error(`Failed to send contribution reminders: ${error.message}`);
+      // Re-throw HttpsError as-is so client gets proper error code/message
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", `Failed to send contribution reminders: ${error.message}`);
     }
   }
 );
 
 
+
+// ==================== SCHEDULED CONTRIBUTION REMINDERS ====================
+
+exports.runScheduledContributionReminders = onSchedule(
+  {
+    schedule: "every 1 hours",
+    timeZone: "Asia/Kolkata",
+    region: "us-central1",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async () => {
+    const now = new Date();
+    const dueEventsSnapshot = await db
+      .collection('events')
+      .where('enableAutoReminders', '==', true)
+      .where('status', '==', 'active')
+      .where('nextReminderDate', '<=', admin.firestore.Timestamp.fromDate(now))
+      .limit(100)
+      .get();
+
+    if (dueEventsSnapshot.empty) {
+      console.log('No due contribution reminders found');
+      return null;
+    }
+
+    let totalEventsProcessed = 0;
+    let totalNotificationsCreated = 0;
+    let totalPushNotificationsSent = 0;
+
+    for (const eventDoc of dueEventsSnapshot.docs) {
+      const event = { id: eventDoc.id, ...eventDoc.data() };
+      const communityId = event.communityId;
+      const suggestedContribution = parseFloat(event.suggestedContribution) || 0;
+
+      if (!communityId || suggestedContribution <= 0) {
+        continue;
+      }
+
+      const baseNotificationId = `${now.getTime()}_scheduled_${event.id}`;
+      const communityUsersSnapshot = await db
+        .collection('users')
+        .where('communityId', '==', communityId)
+        .where('isApproved', '==', true)
+        .get();
+
+      const userMap = new Map();
+      communityUsersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        if (userData.isVirtualUser === true) return;
+        userMap.set(doc.id, userData);
+      });
+
+      const communityTokensSnapshot = await db
+        .collection('user_notification_tokens')
+        .where('isActive', '==', true)
+        .where('communityIds', 'array-contains', communityId)
+        .get();
+
+      const userTokensMap = new Map();
+      communityTokensSnapshot.forEach(doc => {
+        const tokenData = doc.data();
+        if (!userMap.has(tokenData.userId) || !tokenData.token) return;
+        if (!userTokensMap.has(tokenData.userId)) {
+          userTokensMap.set(tokenData.userId, new Set());
+        }
+        userTokensMap.get(tokenData.userId).add(tokenData.token);
+      });
+
+      const allContributionsSnapshot = await db
+        .collection('contributions')
+        .where('eventId', '==', event.id)
+        .where('status', '==', 'completed')
+        .get();
+
+      const userContributionsMap = new Map();
+      allContributionsSnapshot.forEach(doc => {
+        const contribution = doc.data();
+        const amount = parseFloat(contribution.amount) || 0;
+        userContributionsMap.set(contribution.userId, (userContributionsMap.get(contribution.userId) || 0) + amount);
+      });
+
+      const participantsSnapshot = await db
+        .collection('participants')
+        .where('eventId', '==', event.id)
+        .where('status', '==', 'joined')
+        .get();
+
+      const participantsToRemind = [];
+      const processedUserIds = new Set();
+
+      for (const participantDoc of participantsSnapshot.docs) {
+        const participant = participantDoc.data();
+        const userId = participant.userId;
+        if (!userId || processedUserIds.has(userId)) continue;
+        processedUserIds.add(userId);
+
+        const userData = userMap.get(userId);
+        if (!userData) continue;
+
+        const totalPaid = userContributionsMap.get(userId) || 0;
+        const amountRemaining = Math.max(0, suggestedContribution - totalPaid);
+        if (amountRemaining <= 0) continue;
+
+        participantsToRemind.push({
+          userId,
+          userData,
+          userName: userData.displayName || participant.userName || 'User',
+          amountRemaining,
+          body: `Hi ${userData.displayName || participant.userName || 'User'}, you have ?${amountRemaining.toFixed(0)} remaining for ${event.title}.`,
+        });
+      }
+
+      if (participantsToRemind.length === 0) {
+        await updateEventNextReminderDate(eventDoc.ref, event);
+        continue;
+      }
+
+      const reminderTitle = event.customReminderTitle || `Contribution Reminder: ${event.title}`;
+      const batch = db.batch();
+      let eventNotificationsCreated = 0;
+
+      for (const participant of participantsToRemind) {
+        const notificationId = `${baseNotificationId}_${participant.userId}`;
+        const body = event.customReminderMessage || participant.body;
+        const notificationRef = db
+          .collection('users')
+          .doc(participant.userId)
+          .collection('notifications')
+          .doc(notificationId);
+
+        batch.set(notificationRef, {
+          id: notificationId,
+          title: reminderTitle,
+          body,
+          type: 'reminder',
+          subtype: 'contribution',
+          priority: 'high',
+          data: {
+            communityId,
+            eventId: event.id,
+            eventName: event.title,
+            amountRemaining: participant.amountRemaining,
+            suggestedContribution,
+            sentFromApp: true,
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            notificationId: baseNotificationId,
+          },
+          userId: participant.userId,
+          communityId,
+          eventId: event.id,
+          senderName: 'KoFund Reminder',
+          isRead: false,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          deepLink: `/events/${event.id}/contribute`,
+        });
+        eventNotificationsCreated++;
+      }
+
+      await batch.commit();
+      totalNotificationsCreated += eventNotificationsCreated;
+
+      let eventPushSent = 0;
+      for (const participant of participantsToRemind) {
+        const tokensFromDoc = participant.userData.fcmTokens || [];
+        const tokensFromCollection = userTokensMap.get(participant.userId) || new Set();
+        const tokens = [...new Set([...tokensFromDoc, ...Array.from(tokensFromCollection)])]
+          .filter(token => typeof token === 'string' && token.length >= 50);
+
+        if (tokens.length === 0) continue;
+
+        const body = event.customReminderMessage || participant.body;
+        const response = await messaging.sendEachForMulticast({
+          notification: { title: reminderTitle, body },
+          data: ensureStringData({
+            communityId,
+            eventId: event.id,
+            type: 'reminder',
+            subtype: 'contribution',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            senderName: 'KoFund Reminder',
+            sentFromApp: 'true',
+            notificationId: baseNotificationId,
+          }),
+          tokens,
+          android: {
+            priority: 'high',
+            notification: { icon: 'ic_notification', color: '#764ba2' },
+          },
+          apns: {
+            payload: { aps: { contentAvailable: true, badge: 1, sound: 'default' } },
+          },
+        });
+        eventPushSent += response.successCount;
+      }
+
+      totalPushNotificationsSent += eventPushSent;
+      totalEventsProcessed++;
+      await updateEventNextReminderDate(eventDoc.ref, event);
+    }
+
+    console.log(`Scheduled reminders processed ${totalEventsProcessed} events, created ${totalNotificationsCreated} notifications, sent ${totalPushNotificationsSent} pushes`);
+    return null;
+  }
+);
+
+async function updateEventNextReminderDate(eventRef, event) {
+  const now = new Date();
+  const candidateSendDates = [];
+
+  const reminderDates = event.contributionReminderDates || [];
+  for (const timestamp of reminderDates) {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    if (date > now) candidateSendDates.push(date);
+  }
+
+  if (event.firstPaymentDueDate) {
+    let currentDueDate = event.firstPaymentDueDate.toDate ? event.firstPaymentDueDate.toDate() : new Date(event.firstPaymentDueDate);
+    const reminderDaysBefore = Number.isFinite(event.reminderDaysBefore) ? event.reminderDaysBefore : 7;
+    const frequency = event.reminderFrequency || 'monthly';
+
+    for (let safeguard = 0; safeguard < 24; safeguard++) {
+      const sendDate = new Date(currentDueDate);
+      sendDate.setDate(sendDate.getDate() - reminderDaysBefore);
+
+      if (sendDate > now) {
+        candidateSendDates.push(sendDate);
+        break;
+      }
+
+      if (frequency === 'daily') {
+        currentDueDate.setDate(currentDueDate.getDate() + 1);
+      } else if (frequency === 'weekly') {
+        currentDueDate.setDate(currentDueDate.getDate() + 7);
+      } else if (frequency === 'monthly') {
+        currentDueDate = new Date(currentDueDate.getFullYear(), currentDueDate.getMonth() + 1, currentDueDate.getDate());
+      } else {
+        break;
+      }
+    }
+  }
+
+  candidateSendDates.sort((a, b) => a.getTime() - b.getTime());
+  const updates = {
+    lastReminderSent: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (candidateSendDates.length > 0) {
+    updates.nextReminderDate = admin.firestore.Timestamp.fromDate(candidateSendDates[0]);
+  } else {
+    updates.nextReminderDate = admin.firestore.FieldValue.delete();
+  }
+
+  await eventRef.update(updates);
+}
 // ==================== GLOBAL NOTIFICATION FUNCTION ====================
 
 /**
@@ -1490,50 +1757,120 @@ exports.sendGlobalNotification = onCall(
   {
     region: "us-central1",
     cors: true,
-    timeoutSeconds: 120, // Longer timeout for large broadcast
+    timeoutSeconds: 120,
     enforceAppCheck: false,
   },
   async (request) => {
     try {
       const { data, auth } = request;
-      
+
       if (!auth) throw new Error("Authentication required");
-      
-      // Verify sender is admin
+
       const senderDoc = await db.collection('users').doc(auth.uid).get();
       if (!senderDoc.exists || senderDoc.data().role !== 'admin') {
         throw new Error("Admin access required for global broadcast");
       }
-      
+
       const { title, body, data: notificationData = {} } = data || {};
       if (!title || !body) throw new Error("Missing title or body");
 
       const now = new Date();
       const baseNotificationId = `global_${now.getTime()}`;
 
-      // 1. Fetch ALL active tokens in batches
+      const usersSnapshot = await db
+        .collection('users')
+        .where('isApproved', '==', true)
+        .get();
+
+      const realUsers = usersSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(user => user.isVirtualUser !== true);
+
+      const realUserIds = new Set(realUsers.map(user => user.id));
+      const tokens = [];
+      const seenTokens = new Set();
+
+      for (const user of realUsers) {
+        const fcmTokens = user.fcmTokens || [];
+        for (const token of fcmTokens) {
+          if (typeof token === 'string' && token.length >= 50 && !seenTokens.has(token)) {
+            tokens.push(token);
+            seenTokens.add(token);
+          }
+        }
+      }
+
       const tokensSnapshot = await db
         .collection('user_notification_tokens')
         .where('isActive', '==', true)
         .get();
 
-      const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
-      console.log(`📡 Broadcast: Sending to ${tokens.length} tokens`);
+      for (const tokenDoc of tokensSnapshot.docs) {
+        const tokenData = tokenDoc.data();
+        const token = tokenData.token;
+        const userId = tokenData.userId;
+        if (!realUserIds.has(userId)) continue;
+        if (typeof token === 'string' && token.length >= 50 && !seenTokens.has(token)) {
+          tokens.push(token);
+          seenTokens.add(token);
+        }
+      }
 
-      if (tokens.length === 0) return { success: true, sentCount: 0 };
+      const notificationsBatch = db.batch();
+      let notificationsCreated = 0;
 
-      // 2. Send in chunks of 500
+      for (const user of realUsers) {
+        const notificationId = `${baseNotificationId}_${user.id}`;
+        const notificationRef = db
+          .collection('users')
+          .doc(user.id)
+          .collection('notifications')
+          .doc(notificationId);
+
+        notificationsBatch.set(notificationRef, {
+          id: notificationId,
+          title,
+          body,
+          type: 'system',
+          priority: 'normal',
+          data: {
+            ...notificationData,
+            userId: user.id,
+            type: 'system',
+            senderId: auth.uid,
+            senderName: 'KoFund',
+            sentFromApp: true,
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            notificationId: baseNotificationId,
+            timestamp: now.toISOString(),
+          },
+          userId: user.id,
+          communityId: user.communityId || null,
+          eventId: null,
+          isRead: false,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          deepLink: notificationData.deepLink || null,
+          senderName: 'KoFund',
+          senderId: auth.uid,
+        });
+        notificationsCreated++;
+      }
+
+      if (notificationsCreated > 0) {
+        await notificationsBatch.commit();
+      }
+
       let sentCount = 0;
-      for (let i = 0; i < tokens.length; i += 500) {
-        const chunk = tokens.slice(i, i + 500);
-        
-        // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
+      for (let index = 0; index < tokens.length; index += 500) {
+        const chunk = tokens.slice(index, index + 500);
         const sanitizedData = ensureStringData({
           ...notificationData,
-          type: 'global_announcement',
+          type: 'system',
           sentFromApp: 'true',
           notificationId: baseNotificationId,
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          title,
+          body,
         });
 
         const message = {
@@ -1552,15 +1889,15 @@ exports.sendGlobalNotification = onCall(
       return {
         success: true,
         sentCount,
-        message: `Global notification sent to ${sentCount} devices`,
+        notificationsCreated,
+        message: `Global notification saved for ${notificationsCreated} users and sent to ${sentCount} devices`,
       };
     } catch (error) {
-      console.error("❌ Error in sendGlobalNotification:", error);
+      console.error("Error in sendGlobalNotification:", error);
       throw new Error(`Failed: ${error.message}`);
     }
   }
 );
-
 // ==================== TARGETED NOTIFICATION FUNCTION ====================
 
 /**
@@ -1583,7 +1920,6 @@ exports.sendTargetedNotifications = onCall(
       }
       if (!title || !body) throw new Error("Missing title or body");
 
-      // 🛡️ SECURITY: Verify sender permissions
       const senderDoc = await db.collection('users').doc(auth.uid).get();
       if (!senderDoc.exists) throw new Error("Sender not found");
       if (senderDoc.data().role !== 'admin') {
@@ -1592,294 +1928,130 @@ exports.sendTargetedNotifications = onCall(
 
       const now = new Date();
       const baseNotificationId = `target_${now.getTime()}`;
+      const requestedUserIds = [...new Set(userIds.map(id => String(id)).filter(Boolean))].slice(0, 30);
 
-      // 1. Fetch tokens for these specific users
+      const usersSnapshot = await db
+        .collection('users')
+        .where(admin.firestore.FieldPath.documentId(), 'in', requestedUserIds)
+        .get();
+
+      const realUsers = usersSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(user => user.isApproved === true && user.isVirtualUser !== true);
+
+      const realUserIds = new Set(realUsers.map(user => user.id));
+      const tokens = [];
+      const seenTokens = new Set();
+
+      for (const user of realUsers) {
+        const fcmTokens = user.fcmTokens || [];
+        for (const token of fcmTokens) {
+          if (typeof token === 'string' && token.length >= 50 && !seenTokens.has(token)) {
+            tokens.push(token);
+            seenTokens.add(token);
+          }
+        }
+      }
+
       const tokensSnapshot = await db
         .collection('user_notification_tokens')
-        .where('userId', 'in', userIds.slice(0, 30)) // Firestore 'in' limit is 30
+        .where('userId', 'in', requestedUserIds)
         .where('isActive', '==', true)
         .get();
 
-      const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
-      
-      console.log(`🎯 Targeted: Sending to ${tokens.length} tokens for ${userIds.length} users`);
+      for (const tokenDoc of tokensSnapshot.docs) {
+        const tokenData = tokenDoc.data();
+        const token = tokenData.token;
+        const userId = tokenData.userId;
+        if (!realUserIds.has(userId)) continue;
+        if (typeof token === 'string' && token.length >= 50 && !seenTokens.has(token)) {
+          tokens.push(token);
+          seenTokens.add(token);
+        }
+      }
 
-      if (tokens.length === 0) return { success: true, sentCount: 0 };
+      const notificationsBatch = db.batch();
+      let notificationsCreated = 0;
 
-      // 2. Send the message
-      // ⭐ CRITICAL: Ensure ALL data values are strings for FCM
-      const sanitizedData = ensureStringData({
-        ...notificationData,
-        type: 'targeted_notification',
-        sentFromApp: 'true',
-        notificationId: baseNotificationId,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-      });
+      for (const user of realUsers) {
+        const notificationId = `${baseNotificationId}_${user.id}`;
+        const notificationRef = db
+          .collection('users')
+          .doc(user.id)
+          .collection('notifications')
+          .doc(notificationId);
 
-      const message = {
-        notification: { title, body },
-        data: sanitizedData,
-        tokens: tokens,
-        android: {
-          priority: 'high',
-          notification: { icon: 'ic_notification', color: '#764ba2' },
-        },
-      };
+        notificationsBatch.set(notificationRef, {
+          id: notificationId,
+          title,
+          body,
+          type: 'system',
+          priority: 'normal',
+          data: {
+            ...notificationData,
+            userId: user.id,
+            type: 'system',
+            senderId: auth.uid,
+            senderName: 'KoFund',
+            sentFromApp: true,
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            notificationId: baseNotificationId,
+            timestamp: now.toISOString(),
+          },
+          userId: user.id,
+          communityId: user.communityId || null,
+          eventId: null,
+          isRead: false,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          deepLink: notificationData.deepLink || null,
+          senderName: 'KoFund',
+          senderId: auth.uid,
+        });
+        notificationsCreated++;
+      }
 
-      const response = await messaging.sendEachForMulticast(message);
+      if (notificationsCreated > 0) {
+        await notificationsBatch.commit();
+      }
+
+      let sentCount = 0;
+      if (tokens.length > 0) {
+        const sanitizedData = ensureStringData({
+          ...notificationData,
+          type: 'system',
+          sentFromApp: 'true',
+          notificationId: baseNotificationId,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          title,
+          body,
+        });
+
+        const message = {
+          notification: { title, body },
+          data: sanitizedData,
+          tokens,
+          android: {
+            priority: 'high',
+            notification: { icon: 'ic_notification', color: '#764ba2' },
+          },
+        };
+
+        const response = await messaging.sendEachForMulticast(message);
+        sentCount = response.successCount;
+      }
 
       return {
         success: true,
-        sentCount: response.successCount,
-        message: `Targeted notification sent to ${response.successCount} devices`,
+        sentCount,
+        notificationsCreated,
+        message: `Targeted notification saved for ${notificationsCreated} users and sent to ${sentCount} devices`,
       };
     } catch (error) {
-      console.error("❌ Error in sendTargetedNotifications:", error);
+      console.error("Error in sendTargetedNotifications:", error);
       throw new Error(`Failed: ${error.message}`);
     }
   }
 );
-
-/**
- * 🚀 SUPER LINK: Fast, standalone HTML page for Public Events
- * Bypasses Flutter app for instant loading.
- */
-
-exports.viewEvent = functions.https.onRequest(async (req, res) => {
-  try {
-    const eventId = req.path.split('/').pop();
-    if (!eventId) {
-      return res.status(400).send('Event ID required.');
-    }
-
-    // 📄 Fetch Event Data
-    const eventSnapshot = await db.collection('events').doc(eventId).get();
-    if (!eventSnapshot.exists) {
-      return res.status(404).send('Event not found.');
-    }
-    const event = eventSnapshot.data();
-
-    const templates = require('./templates');
-
-    // 🔒 PRIVACY CHECK (Bug Fix)
-    if (event.isPublicEnabled === false) {
-      if (req.query.json === 'true') {
-        return res.status(403).json({ error: 'This event is private.' });
-      }
-      return res.status(200).send(templates.getPrivateEventHtml({ title: event.title }));
-    }
-
-    // 🖼️ TEMPLATE DATA (ENRICHED)
-    const title = event.title || 'Event Details';
-    const icon = _getEventIcon(event.eventType);
-    const downloadUrl = (event.communityId ? `https://kofund.app/d/${event.communityId}` : "https://kofund.app");
-    const appWebLink = (event.communityId ? `https://kofund.app/communities/${event.communityId}` : "https://kofund.app");
-
-    // Safety check for date
-    let date = event.isMonthlyPayment ? '' : 'To be announced';
-    if (event.eventDate) {
-      const dt = typeof event.eventDate.toDate === 'function' ? event.eventDate.toDate() : new Date((event.eventDate.seconds || 0) * 1000);
-      date = dt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    }
-
-    // 🐚 SHELL HTML (Initial Load)
-    if (req.query.json !== 'true') {
-      const shellHtml = templates.getEventHtml({
-        event: { 
-          isPublicEnabled: event.isPublicEnabled, 
-          isMonthlyPayment: event.isMonthlyPayment,
-          hasPassword: !!(event.publicPassword && event.publicPassword.trim())
-        },
-        title,
-        date,
-        icon,
-        eventId,
-        downloadUrl,
-        appWebLink
-      });
-      return res.status(200).send(shellHtml);
-    }
-
-    // 🔐 PASSWORD VERIFICATION (for JSON Data)
-    if (event.isPublicEnabled && event.publicPassword && event.publicPassword.trim() !== '') {
-      const providedPassword = req.query.password || req.body.password;
-      const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-      const rateLimitKey = `rate_limit_${eventId}_${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      
-      // Check rate limit
-      const rateLimitDoc = await db.collection('rate_limits').doc(rateLimitKey).get();
-      const now = admin.firestore.Timestamp.now();
-      
-      if (rateLimitDoc.exists) {
-        const rlData = rateLimitDoc.data();
-        // If more than 5 attempts within 15 minutes, block
-        const fifteenMinutesAgo = now.toMillis() - (15 * 60 * 1000);
-        if (rlData.attempts >= 5 && rlData.lastAttempt.toMillis() > fifteenMinutesAgo) {
-          return res.status(429).json({ 
-            error: 'Too many attempts. Please try again in 15 minutes.' 
-          });
-        }
-      }
-
-      if (providedPassword !== event.publicPassword) {
-        // Record failed attempt
-        const currentAttempts = rateLimitDoc.exists ? rateLimitDoc.data().attempts : 0;
-        await db.collection('rate_limits').doc(rateLimitKey).set({
-          attempts: currentAttempts + 1,
-          lastAttempt: now,
-          eventId,
-          ip
-        }, { merge: true });
-        
-        return res.status(401).json({ error: 'Unauthorized' });
-      } else if (rateLimitDoc.exists) {
-        // Clear rate limit on success
-        await db.collection('rate_limits').doc(rateLimitKey).delete();
-      }
-    }
-
-    // 📊 DATA FETCHING (Only for JSON)
-    const [participantsSnapshot, expensesSnapshot] = await Promise.all([
-      admin.firestore().collection('participants').where('eventId', '==', eventId).where('status', '==', 'joined').get(),
-      admin.firestore().collection('expenses').where('eventId', '==', eventId).get()
-    ]);
-
-    const selectedMonth = req.query.month || 'all';
-
-    // Fetch Contributions (Filtered by Month if applicable)
-    let contributionsQuery = admin.firestore().collection('contributions').where('eventId', '==', eventId);
-    if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
-      contributionsQuery = contributionsQuery.where('monthId', '==', selectedMonth);
-    }
-    const contributionsSnapshot = await contributionsQuery.limit(50).get();
-
-    // Process Participants
-    const participants = participantsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
-        const monthContributions = contributionsSnapshot.docs
-          .map(cdoc => cdoc.data())
-          .filter(c => c.userId === data.userId);
-        data.contributionPaid = monthContributions.reduce((sum, c) => sum + (c.amount || 0), 0);
-      }
-      return data;
-    });
-
-    // Process Contributions
-    const contributions = contributionsSnapshot.docs
-      .map(doc => doc.data())
-      .sort((a, b) => {
-        const timeA = a.createdAt ? (a.createdAt._seconds || a.createdAt.seconds || 0) : 0;
-        const timeB = b.createdAt ? (b.createdAt._seconds || b.createdAt.seconds || 0) : 0;
-        return timeB - timeA;
-      });
-
-    // Process Expenses
-    let expenses = expensesSnapshot.docs.map(doc => doc.data());
-    if (event.isMonthlyPayment && selectedMonth && selectedMonth !== 'all') {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        expenses = expenses.filter(e => {
-            if (!e.expenseDate) return false;
-            const dt = typeof e.expenseDate.toDate === 'function' ? e.expenseDate.toDate() : new Date((e.expenseDate.seconds || 0) * 1000);
-            return dt.getFullYear() === year && (dt.getMonth() + 1) === month;
-        });
-    }
-    expenses.sort((a, b) => {
-        const timeA = a.expenseDate ? (a.expenseDate._seconds || a.expenseDate.seconds || 0) : 0;
-        const timeB = b.expenseDate ? (b.expenseDate._seconds || b.expenseDate.seconds || 0) : 0;
-        return timeB - timeA;
-    });
-
-    const totalCollected = contributionsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    // 🧱 FINAL RESPONSE (JSON)
-    const secureEvent = { ...event };
-    delete secureEvent.publicPassword; // Never leak password in JSON
-
-    return res.status(200).json({
-      event: secureEvent,
-      participants,
-      contributions,
-      expenses,
-      totalCollected,
-      totalExpenses,
-      selectedMonth
-    });
-  } catch (error) {
-    console.error('❌ Super Link error:', error);
-    res.status(500).send('Something went wrong. Please try again later.');
-  }
-});
-
-function _getEventIcon(type) {
-  return (type || 'default').toLowerCase();
-}
-
-function _getPasswordPrompt(eventId, error) {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Locked Event | KoFund</title>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Outfit', sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; }
-        .card { background: white; padding: 40px 30px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
-        .icon { font-size: 60px; margin-bottom: 20px; }
-        h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #1E293B; }
-        p { color: #64748B; font-size: 15px; margin-bottom: 24px; }
-        input { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #E2E8F0; font-family: inherit; font-size: 16px; margin-bottom: 20px; outline: none; transition: border-color 0.2s; text-align: center; display: block; box-sizing: border-box; }
-        input:focus { border-color: #00C6A2; }
-        button { width: 100%; background: linear-gradient(135deg, #00C6A2, #00E3C3); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; box-shadow: 0 4px 12px rgba(0, 198, 162, 0.2); display: block; }
-        .error { color: #EF4444; font-size: 13px; margin-bottom: 15px; font-weight: 600; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="icon">
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#00C6A2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <h1>Protected Event</h1>
-        <p>This event link is password protected.</p>
-        ${error ? `<div class="error">${error}</div>` : ''}
-        <form method="POST">
-          <input type="password" name="password" placeholder="Enter password" autofocus required>
-          <button type="submit">Unlock Now</button>
-        </form>
-      </div>
-      <script>
-        if ("${error || ''}") {
-          sessionStorage.removeItem('event_pwd_' + "${eventId}");
-        }
-      </script>
-    </body>
-    </html>
-  `;
-}
-
-exports.privacyPolicy = functions.https.onRequest((req, res) => {
-  if (req.method !== 'GET') {
-    return res.status(405).send('Method Not Allowed');
-  }
-  const templates = require('./templates');
-  res.setHeader('Content-Type', 'text/html');
-  return res.status(200).send(templates.getPrivacyPolicyHtml());
-});
-
-exports.termsOfService = functions.https.onRequest((req, res) => {
-  if (req.method !== 'GET') {
-    return res.status(405).send('Method Not Allowed');
-  }
-  const templates = require('./templates');
-  res.setHeader('Content-Type', 'text/html');
-  return res.status(200).send(templates.getTermsOfServiceHtml());
-});
-
-// ==================== PUBLIC PAGES (Super Links) ====================
-
 /**
  * Support / Help page
  * GET /support

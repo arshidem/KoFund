@@ -1056,7 +1056,7 @@ Widget _builCard(
         _buildPopupMenuItem(
           value: 'edit',
           icon: Icons.edit_rounded,
-          label: 'Edit event',
+          label: 'Edit Event',
           color: AppColors.primary(context),
         ),
         _buildPopupMenuItem(
@@ -1116,7 +1116,7 @@ Widget _builCard(
           event: event,
           oUpdated: () {
             _loadEvents();
-            SnackbarHelper.showSuccess(context, 'event updated successfully!');
+            SnackbarHelper.showSuccess(context, 'Event updated successfully!');
           },
         ),
       ),
@@ -1142,7 +1142,7 @@ Widget _builCard(
     try {
       await eventProvider.delete(event.eventId);
       if (!mounted) return;
-      SnackbarHelper.showSuccess(context, 'event deleted successfully');
+      SnackbarHelper.showSuccess(context, 'Event deleted successfully');
       _loadEvents();
     } catch (e) {
       SnackbarHelper.showError(context, 'Failed to delete event: $e');
@@ -1457,7 +1457,7 @@ class _FilterSheetState extends State<FilterSheet> {
             // Filters Content Area
             _buildSection('Status', _buildStatusFilter()),
             const SizedBox(height: 24),
-            _buildSection('event Categories', _builTeventTypeFilter()),
+            _buildSection('Event Categories', _builTeventTypeFilter()),
             const SizedBox(height: 32),
             
             // Primary Action Button

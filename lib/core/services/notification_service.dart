@@ -893,6 +893,7 @@ Future<void> _sendCommunityNotificationLocalFallback({
     for (final userDoc in usersSnapshot.docs) {
       final userData = userDoc.data();
       if (userData['isVirtualUser'] == true) continue;
+      if (userData['isApproved'] != true) continue;
       
       // Filter by role if specified
       if (targetRole != null && userData['role'] != targetRole) continue;

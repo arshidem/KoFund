@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kofund/core/constants/app_styles.dart';
+import 'package:kofund/core/constants/notification_Types.dart';
+import 'package:kofund/core/services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:kofund/core/constants/app_colors.dart';
 import 'package:kofund/core/utils/snackbar_helper.dart';
 import 'package:kofund/core/widgets/gradient_sheet_scaffold.dart';
@@ -15,7 +16,7 @@ class PushNotificationToolScreen extends StatefulWidget {
 
 class _PushNotificationToolScreenState extends State<PushNotificationToolScreen> {
   final _fs = FirebaseFirestore.instance;
-  final _functions = FirebaseFunctions.instance;
+  final _notificationService = NotificationService();
   
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
@@ -49,7 +50,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
     return GradientSheetScaffold(
       title: 'Push Notification Tool',
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       body: SingleChildScrollView(
@@ -127,6 +128,7 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
         
         for (var doc in snapshot.docs) {
           final data = doc.data();
+          if (data['isVirtualUser'] == true) continue;
           final name = data['displayName']?.toString().toLowerCase() ?? '';
           if (name.contains(queryStr)) {
             data['id'] = doc.id;
@@ -370,6 +372,42 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
     );
   }
 
+  Future<List<Map<String, dynamic>>> _getRealUsers({String? communityId}) async {
+    Query<Map<String, dynamic>> query = _fs.collection('users');
+
+    if (communityId != null && communityId.isNotEmpty) {
+      query = query.where('communityId', isEqualTo: communityId);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs
+        .map((doc) => {'id': doc.id, ...doc.data()})
+        .where((user) => user['isVirtualUser'] != true)
+        .toList();
+  }
+
+  Future<void> _sendSystemNotificationToUsers({
+    required List<Map<String, dynamic>> users,
+    required String title,
+    required String body,
+    String? communityId,
+  }) async {
+    for (final user in users) {
+      await _notificationService.sendUserNotification(
+        userId: user['id'].toString(),
+        title: title,
+        body: body,
+        type: NotificationType.system,
+        communityId: communityId,
+        senderName: 'KoFund',
+        data: {
+          'title': title,
+          'body': body,
+        },
+      );
+    }
+  }
+
   Widget _buildSafetyWarning() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -434,25 +472,29 @@ class _PushNotificationToolScreenState extends State<PushNotificationToolScreen>
       
       switch (_targetTeventType) {
         case 'Global':
-          await _functions.httpsCallable('sendGlobalNotification').call({
-            'title': title,
-            'body': body,
-          });
+          final users = await _getRealUsers();
+          await _sendSystemNotificationToUsers(
+            users: users,
+            title: title,
+            body: body,
+          );
           break;
         case 'Targeted':
-          await _functions.httpsCallable('sendTargetedNotifications').call({
-            'userIds': [_selectedUser!['id']],
-            'title': title,
-            'body': body,
-          });
+          await _sendSystemNotificationToUsers(
+            users: [_selectedUser!],
+            title: title,
+            body: body,
+          );
           break;
         case 'Community':
-          await _functions.httpsCallable('sendCommunityNotification').call({
-            'communityId': _selectedCommunity!['id'],
-            'title': title,
-            'body': body,
-            'type': 'admin_announcement',
-          });
+          final communityId = _selectedCommunity!['id'].toString();
+          final users = await _getRealUsers(communityId: communityId);
+          await _sendSystemNotificationToUsers(
+            users: users,
+            title: title,
+            body: body,
+            communityId: communityId,
+          );
           break;
       }
 

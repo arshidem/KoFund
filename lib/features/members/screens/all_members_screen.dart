@@ -445,11 +445,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final memberProvider = context.read<MemberProvider>();
     final uids = members.map((m) => m.uid).toList();
 
+    _clearSelection();
+
     final success = await memberProvider.bulkUpdateMemberRoles(uids, true);
 
-    if (success && mounted) {
-      _clearSelection();
-      SnackbarHelper.showSuccess(context, 'Made ${members.length} users admin');
+    if (mounted) {
+      if (success) {
+        SnackbarHelper.showSuccess(context, 'Made ${members.length} users admin');
+      }
       _refreshDataSilent();
     }
   }
@@ -458,11 +461,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final memberProvider = context.read<MemberProvider>();
     final uids = members.map((m) => m.uid).toList();
 
+    _clearSelection();
+
     final success = await memberProvider.bulkUpdateMemberRoles(uids, false);
 
-    if (success && mounted) {
-      _clearSelection();
-      SnackbarHelper.showSuccess(context, 'Removed admin role from ${members.length} users');
+    if (mounted) {
+      if (success) {
+        SnackbarHelper.showSuccess(context, 'Removed admin role from ${members.length} users');
+      }
       _refreshDataSilent();
     }
   }
@@ -471,11 +477,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final memberProvider = context.read<MemberProvider>();
     final uids = members.map((m) => m.uid).toList();
 
+    _clearSelection();
+
     final success = await memberProvider.bulkUnapproveUsers(uids);
 
-    if (success && mounted) {
-      _clearSelection();
-      SnackbarHelper.showSuccess(context, 'Unapproved ${members.length} users');
+    if (mounted) {
+      if (success) {
+        SnackbarHelper.showSuccess(context, 'Unapproved ${members.length} users');
+      }
       _refreshDataSilent();
     }
   }
@@ -484,11 +493,14 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
     final memberProvider = context.read<MemberProvider>();
     final uids = members.map((m) => m.uid).toList();
 
+    _clearSelection();
+
     final success = await memberProvider.bulkRemoveFromCommunity(uids);
 
-    if (success && mounted) {
-      _clearSelection();
-      SnackbarHelper.showSuccess(context, 'Removed ${members.length} users from community');
+    if (mounted) {
+      if (success) {
+        SnackbarHelper.showSuccess(context, 'Removed ${members.length} users from community');
+      }
       _refreshDataSilent();
     }
   }
@@ -1574,6 +1586,7 @@ class _AllMembersScreenBodyState extends State<_AllMembersScreenBody>
                       await userProvider.approveUser(
                         member.uid,
                         currentUser!.communityId!,
+                        adminName: currentUser.displayName,
                       );
                       if (mounted) {
                         SnackbarHelper.showSuccess(context, 'User approved');

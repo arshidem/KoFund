@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../auth/providers/app_auth_provider.dart';
@@ -50,13 +51,13 @@ class WebsiteNavbar extends StatelessWidget implements PreferredSizeWidget {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
                   ),
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(9),
                   child: SvgPicture.asset(
                     'assets/logos/KoFund.svg',
                   ),
@@ -96,17 +97,19 @@ class WebsiteNavbar extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 16),
           ],
 
-          // Theme Toggle
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              color: AppColors.textSecondary(context),
+          // Theme Toggle (Desktop/Tablet only)
+          if (!ResponsiveLayout.isMobile(context)) ...[
+            IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                color: AppColors.textSecondary(context),
+              ),
+              onPressed: () {
+                themeProvider.toggleTheme(!isDark);
+              },
             ),
-            onPressed: () {
-              themeProvider.toggleTheme(!isDark);
-            },
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
 
           // Open Web App Button (Desktop/Tablet)
           if (!ResponsiveLayout.isMobile(context))
@@ -206,9 +209,10 @@ class WebsiteDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AppAuthProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
     final isLoggedIn = authProvider.user != null;
     final primaryColor = AppColors.primary(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = themeProvider.isDarkMode;
     
     return Drawer(
       backgroundColor: AppColors.background(context),
@@ -244,6 +248,30 @@ class WebsiteDrawer extends StatelessWidget {
               _buildDrawerItem(context, 'Terms of Service', '/termsOfService'),
               _buildDrawerItem(context, 'Delete Account', '/deleteAccount'),
               const Spacer(),
+              // Mobile Theme Toggle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isDark ? 'Light Mode' : 'Dark Mode',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      color: AppColors.primary(context),
+                    ),
+                    onPressed: () {
+                      themeProvider.toggleTheme(!isDark);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -268,6 +296,40 @@ class WebsiteDrawer extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       const Icon(Icons.open_in_new_rounded, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final url = Uri.parse('https://drive.google.com/file/d/1jQEGYyfAZjnt9L8PPqYpANaizGaq0gq0/view?usp=sharing');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: primaryColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.download_rounded, size: 16, color: primaryColor),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Download Android App',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
                     ],
                   ),
                 ),
