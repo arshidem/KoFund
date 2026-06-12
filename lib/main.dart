@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'dart:async';
+import 'package:kofund/core/utils/web_splash_helper.dart';
 import 'package:flutter/services.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_dimensions.dart';
@@ -451,6 +452,8 @@ class _AppProvidersState extends State<AppProviders> {
         _isAuthInitialized = true;
       });
       
+      hideWebSplash();
+      
       debugPrint("✅ AppAuthProvider initialization status:");
       debugPrint("   - User exists: ${_authProvider.user != null}");
       debugPrint("   - Offline mode: ${_authProvider.isOfflineMode}");
@@ -461,6 +464,7 @@ class _AppProvidersState extends State<AppProviders> {
       setState(() {
         _isAuthInitialized = true; // Still mark as initialized to show UI
       });
+      hideWebSplash();
     }
   }
 
