@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/widgets/gradient_sheet_scaffold.dart';
 import '../../../routing/route_names.dart';
 import '../../auth/providers/app_auth_provider.dart';
 import '../providers/community_provider.dart';
@@ -91,18 +90,18 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
               borderRadius: BorderRadius.circular(16),
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primary(context).withValues(alpha: 0.15),
-                  AppColors.primary(context).withValues(alpha: 0.05),
+                  AppColors.primary(context).withOpacity(0.15),
+                  AppColors.primary(context).withOpacity(0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               border: Border.all(
-                color: AppColors.primary(context).withValues(alpha: 0.25),
+                color: AppColors.primary(context).withOpacity(0.25),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withOpacity(0.06),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -167,61 +166,61 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     }
   }
 
-Future<void> _joinCommunity() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _joinCommunity() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _autoJoining = true;
-  });
-
-  final authProvider = context.read<AppAuthProvider>();
-  final communityProvider = context.read<CommunityProvider>();
-
-  final user = authProvider.user;
-  if (user == null) {
-    SnackbarHelper.showError(context, 'User not authenticated');
     setState(() {
-      _autoJoining = false;
+      _autoJoining = true;
     });
-    return;
-  }
 
-  final String userName = user.displayName ??
-      user.email.split('@').first ??
-      'User';
+    final authProvider = context.read<AppAuthProvider>();
+    final communityProvider = context.read<CommunityProvider>();
 
-  final success = await communityProvider.joinCommunityByCode(
-    code: _codeController.text.trim().toUpperCase(),
-    userId: user.uid,
-    userEmail: user.email,
-    userName: userName,
-  );
+    final user = authProvider.user;
+    if (user == null) {
+      SnackbarHelper.showError(context, 'User not authenticated');
+      setState(() {
+        _autoJoining = false;
+      });
+      return;
+    }
 
-  if (success) {
-    await authProvider.refreshUserData();
-  }
+    final String userName = user.displayName ??
+        user.email?.split('@').first ??
+        'User';
 
-  if (!mounted) {
-    setState(() {
-      _autoJoining = false;
-    });
-    return;
-  }
-
-  if (success) {
-    // ✅ Navigate ALL users to pending approval
-    context.go(RouteNames.pendingApproval);
-  } else {
-    SnackbarHelper.showError(
-      context,
-      communityProvider.error ?? 'Failed to join community',
+    final success = await communityProvider.joinCommunityByCode(
+      code: _codeController.text.trim().toUpperCase(),
+      userId: user.uid,
+      userEmail: user.email,
+      userName: userName,
     );
-  }
 
-  setState(() {
-    _autoJoining = false;
-  });
-}
+    if (success) {
+      await authProvider.refreshUserData();
+    }
+
+    if (!mounted) {
+      setState(() {
+        _autoJoining = false;
+      });
+      return;
+    }
+
+    if (success) {
+      // ✅ Navigate ALL users to pending approval
+      context.go(RouteNames.pendingApproval);
+    } else {
+      SnackbarHelper.showError(
+        context,
+        communityProvider.error ?? 'Failed to join community',
+      );
+    }
+
+    setState(() {
+      _autoJoining = false;
+    });
+  }
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -233,444 +232,574 @@ Future<void> _joinCommunity() async {
     bool isRequired = false,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLength: maxLength,
-      inputFormatters: [
-        LengthLimitingTextInputFormatter(maxLength),
-      ],
-      validator: validator,
-      textCapitalization: TextCapitalization.characters,
-      style: TextStyle(
-        color: AppColors.textPrimary(context),
-        fontSize: 14,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          color: AppColors.textSecondary(context),
-          fontSize: 14,
-        ),
-        floatingLabelStyle: TextStyle(
-          color: AppColors.primary(context),
-          fontWeight: FontWeight.w600,
-        ),
-        hintText: hint,
-        hintStyle: TextStyle(
-          color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-          fontSize: 14,
-        ),
-        prefixIcon: Icon(
-          icon,
-          color: AppColors.primary(context),
-          size: 20,
-        ),
-        filled: true,
-        fillColor: AppColors.surface(context),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(color: AppColors.border(context)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(color: AppColors.border(context)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(
-            color: AppColors.primary(context),
-            width: 2,
+    final List<TextInputFormatter> formatters = [
+      LengthLimitingTextInputFormatter(maxLength),
+    ];
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            inputFormatters: formatters,
+            validator: validator,
+            textCapitalization: TextCapitalization.characters,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 22,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              filled: false,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              counterText: '',
+            ),
+            onChanged: (_) => setState(() {}),
           ),
         ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        counterText: '',
-      ),
-      onChanged: (_) => setState(() {}),
+      ],
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  return PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, result) {
-      if (didPop) return;
-      context.read<AppAuthProvider>().signOut(context);
-      context.go(RouteNames.login);
-    },
-    child: GradientSheetScaffold(
-      title: 'Join Community',
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-        onPressed: () {
-          context.read<AppAuthProvider>().signOut(context);
-          context.go(RouteNames.login);
-        },
-      ),
-      body: Padding(
-      padding: AppStyles.screenPadding,
-      child: SingleChildScrollView(
-        child: Column(
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.read<AppAuthProvider>().signOut(context);
+        context.go(RouteNames.login);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary(context)),
+            onPressed: () {
+              context.read<AppAuthProvider>().signOut(context);
+              context.go(RouteNames.login);
+            },
+          ),
+        ),
+        extendBodyBehindAppBar: true,
+        body: Stack(
           children: [
-            // ✅ Logo Header (consistent with CreateCommunityScreen)
-            Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 20),
-                child: Column(
-                  children: [
-                    // Logo with rounded background
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary(context),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary(context).withValues(alpha: 0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: SvgPicture.asset(
-                          'assets/logos/KoFund.svg',
-                          height: 40,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                 
-                  ],
+            // Curved Decorative Background Shapes (Teal/Mint overlays)
+            Positioned(
+              top: -180,
+              left: -80,
+              child: Container(
+                width: 320,
+                height: 320,
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context).withOpacity(0.06),
+                  shape: BoxShape.circle,
                 ),
               ),
-
-              // Deep link indicator
-              if (widget.inviteCode != null)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.link, color: Colors.green),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Invitation Received',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Code pre-filled from invitation link',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+            ),
+            Positioned(
+              top: -120,
+              left: -120,
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context).withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-
-              const SizedBox(height: 8),
-              Text(
-                'Enter the community code to send a join request',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(context),
-                ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+            ),
+            Positioned(
+              top: -60,
+              left: -140,
+              child: Container(
+                width: 240,
+                height: 240,
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context).withOpacity(0.04),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
 
-              // Rest of your form...
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      // Community Code Input
-                      _buildInputField(
-                        controller: _codeController,
-                        label: 'Community Code',
-                        hint: 'Enter 8-digit code (e.g., ABC12345)',
-                        icon: Icons.code,
-                        maxLength: 8,
-                        isRequired: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter community code';
-                          }
-                          final trimmedValue = value.trim();
-                          if (trimmedValue.length != 8) {
-                            return 'Code must be 8 characters';
-                          }
-                          if (!RegExp(r'^[A-Z0-9]{8}$').hasMatch(trimmedValue)) {
-                            return 'Code must contain only letters and numbers';
-                          }
-                          return null;
-                        },
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Info Card - Matching CreateCommunityScreen style
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.blue.withValues(alpha: 0.15),
-                              Colors.blue.withValues(alpha: 0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.25),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.info_outline_rounded,
-                                color: Colors.blue.shade700,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'How to Join',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.blue.shade800,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '• Ask the community admin for the 8-digit code\n'
-                                      '• Public communities will add you immediately\n'
-                                      '• Private communities require admin approval\n'
-                                      '• Codes contain only uppercase letters & numbers',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue.shade800,
-                                        height: 1.45,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Join Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _autoJoining ? null : _joinCommunity,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary(context),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                            ),
-                            elevation: 8,
-                            shadowColor: AppColors.primary(context).withValues(alpha: 0.4),
-                          ),
-                          child: _autoJoining
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.group_add_rounded, size: 20),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Join Community',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-
-
-                      const SizedBox(height: 20),
-
-                      // OR Divider
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'OR',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Create Community Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CreateCommunityScreen(),
-                              ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            color: AppColors.primary(context),
-                          ),
-                          label: Text(
-                            'Create New Community',
-                            style: TextStyle(
-                              color: AppColors.primary(context),
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: AppColors.primary(context),
-                              width: 1.5,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Help Section
-                      Container(
-                        margin: const EdgeInsets.only(top: 20),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              'Having trouble?',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(context),
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 0),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                IconButton(
-                                    onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('How to Get a Code'),
-                                        content: const Text(
-                                          '1. Ask a community admin for the 8-digit code\n'
-                                          '2. Make sure the code is in uppercase\n'
-                                          '3. Codes contain only letters (A-Z) and numbers (0-9)\n'
-                                          '4. Click "Join Community" to send request after fiil the code',
+                            const SizedBox(height: 10),
+                            // Brand Logo & Text
+                            Center(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 96,
+                                    height: 96,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary(context),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary(context).withOpacity(0.25),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 8),
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context),
-                                            child: const Text('OK'),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: SvgPicture.asset(
+                                        'assets/logos/KoFund.svg',
+                                        height: 44,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  RichText(
+                                    text: TextSpan(
+                                      style: const TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: -0.8,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Ko',
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: 'Fund',
+                                          style: TextStyle(
+                                            color: AppColors.primary(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Header Typography
+                            Center(
+                              child: Text(
+                                'Join Community',
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Center(
+                              child: Text(
+                                'Enter the community code to send a join request',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 15,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Deep link indicator
+                            if (widget.inviteCode != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.green.withOpacity(0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.link, color: Colors.green),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Invitation Received',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade800,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Code pre-filled from invitation link',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.green.shade600,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    );
-                                  },
-                                  icon: Icon(Icons.help_outline, 
-                                      color: AppColors.primary(context), size: 20),
-                                  tooltip: 'Help',
-                                )
-                               
-                              ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            Form(
+                              key: _formKey,
+                              child: Column(
+                                children: [
+                                  // Community Code Input
+                                  _buildInputField(
+                                    controller: _codeController,
+                                    label: 'Community Code',
+                                    hint: 'Enter 8-digit code (e.g., ABC12345)',
+                                    icon: Icons.code,
+                                    maxLength: 8,
+                                    isRequired: true,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter community code';
+                                      }
+                                      final trimmedValue = value.trim();
+                                      if (trimmedValue.length != 8) {
+                                        return 'Code must be 8 characters';
+                                      }
+                                      if (!RegExp(r'^[A-Z0-9]{8}$').hasMatch(trimmedValue)) {
+                                        return 'Code must contain only letters and numbers';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Info Card
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(24),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.blue.withOpacity(0.12),
+                                          Colors.blue.withOpacity(0.04),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      border: Border.all(
+                                        color: Colors.blue.withOpacity(0.2),
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.03),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(18),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline_rounded,
+                                            color: Colors.blue.shade700,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'How to Join',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.blue.shade800,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  '• Ask the community admin for the 8-digit code\n'
+                                                  '• Public communities will add you immediately\n'
+                                                  '• Private communities require admin approval\n'
+                                                  '• Codes contain only uppercase letters & numbers',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.blue.shade800,
+                                                    height: 1.45,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 24),
+
+                                  // Join Button
+                                  Container(
+                                    height: 56,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(100),
+                                      boxShadow: [
+                                        if (!_autoJoining)
+                                          BoxShadow(
+                                            color: AppColors.primary(context).withOpacity(0.25),
+                                            blurRadius: 16,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: _autoJoining ? null : _joinCommunity,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary(context),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                      ),
+                                      child: _autoJoining
+                                          ? const SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2.5,
+                                              ),
+                                            )
+                                          : const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.group_add_rounded, size: 20),
+                                                SizedBox(width: 12),
+                                                Text(
+                                                  'Join Community',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 18),
+
+                                  // OR Divider
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Divider(
+                                          color: AppColors.border(context),
+                                          thickness: 1,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        child: Text(
+                                          'OR',
+                                          style: TextStyle(
+                                            color: AppColors.textTertiary(context),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Divider(
+                                          color: AppColors.border(context),
+                                          thickness: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 18),
+
+                                  // Create Community Button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 56,
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const CreateCommunityScreen(),
+                                          ),
+                                        );
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: AppColors.primary(context),
+                                          width: 1.5,
+                                        ),
+                                        backgroundColor: isDark ? AppColors.surface(context) : Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_circle_outline_rounded,
+                                            color: AppColors.primary(context),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            'Create New Community',
+                                            style: TextStyle(
+                                              color: AppColors.primary(context),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // Help Section
+                                  Center(
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          'Having trouble?',
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary(context),
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        IconButton(
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('How to Get a Code'),
+                                                content: const Text(
+                                                  '1. Ask a community admin for the 8-digit code\n'
+                                                  '2. Make sure the code is in uppercase\n'
+                                                  '3. Codes contain only letters (A-Z) and numbers (0-9)\n'
+                                                  '4. Click "Join Community" to send request after filling the code',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: const Text('OK'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                          icon: Icon(
+                                            Icons.help_outline_rounded,
+                                            color: AppColors.primary(context),
+                                            size: 22,
+                                          ),
+                                          tooltip: 'Help',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
-
-
-
-
-

@@ -238,7 +238,7 @@ class _EdiScreenState extends State<EdiScreen> {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
-    int maxLength = 50,
+    int maxLength = 30,
     List<TextInputFormatter>? inputFormatters,
     String? errorText,
     bool isRequired = false,
@@ -250,76 +250,94 @@ class _EdiScreenState extends State<EdiScreen> {
       LengthLimitingTextInputFormatter(maxLength),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String displayLabel = label;
+    if (isRequired && !label.trim().endsWith('*')) {
+      displayLabel = '$label *';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          inputFormatters: formatters,
-          validator: validator,
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            labelText: isRequired ? '$label *' : label,
-            labelStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
-            ),
-            floatingLabelStyle: TextStyle(
-              color: AppColors.primary(context),
-              fontWeight: FontWeight.w600,
-            ),
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: maxLines > 1 ? 13 : 14,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: maxLines == 1 ? 18 : 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
               ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            maxLength: maxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            inputFormatters: formatters,
+            validator: validator,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
             ),
-            errorText: errorText,
-            errorStyle: const TextStyle(
-              fontSize: 12,
-              height: 1.2,
+            decoration: InputDecoration(
+              hintText: displayLabel,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 22,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              filled: false,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: maxLines == 1 ? 18 : 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              errorText: errorText,
+              errorStyle: const TextStyle(
+                fontSize: 12,
+                height: 1.2,
+              ),
+              counterText: '',
             ),
-            counterText: showCharacterCounter ? '' : null,
           ),
         ),
         
         if (showCharacterCounter)
           Padding(
-            padding: const EdgeInsets.only(top: 4, right: 4),
+            padding: const EdgeInsets.only(top: 4, right: 16),
             child: Align(
               alignment: Alignment.centerRight,
               child: ValueListenableBuilder<TextEditingValue>(
@@ -331,11 +349,10 @@ class _EdiScreenState extends State<EdiScreen> {
                   return Text(
                     '$currentLength/$maxLength',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: remaining <= 10 
                         ? Colors.orange 
                         : AppColors.textSecondary(context),
-                      fontWeight: remaining <= 10 ? FontWeight.bold : FontWeight.normal,
                     ),
                   );
                 },
@@ -987,7 +1004,7 @@ final update = widget.event.copyWith(
                         icon: Icons.event,
                         hint: 'e.g., Monthly Savings, Trip to Goa, Birthday Fund',
                         isRequired: true,
-                        maxLength: 50,
+                        maxLength: 30,
                         showCharacterCounter: true,
                         validator: (value) {
                           if (value == null || value.isEmpty) {

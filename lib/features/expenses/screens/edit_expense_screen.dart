@@ -194,6 +194,8 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       LengthLimitingTextInputFormatter(maxLength),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     String displayLabel = label;
     if (isRequired && !label.trim().endsWith('*')) {
       displayLabel = '$label *';
@@ -202,72 +204,83 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          inputFormatters: formatters,
-          validator: validator,
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            labelText: displayLabel,
-            labelStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
-            ),
-            floatingLabelStyle: TextStyle(
-              color: AppColors.primary(context),
-              fontWeight: FontWeight.w600,
-            ),
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: maxLines > 1 ? 13 : 14,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: maxLines == 1 ? 18 : 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(maxLines > 1 ? AppDimensions.radiusLarge : 100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
               ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            maxLength: maxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            inputFormatters: formatters,
+            validator: validator,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
             ),
-            errorText: errorText,
-            errorStyle: const TextStyle(
-              fontSize: 12,
-              height: 1.2,
+            decoration: InputDecoration(
+              hintText: displayLabel,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 22,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              filled: false,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: maxLines == 1 ? 18 : 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(maxLines > 1 ? AppDimensions.radiusLarge : 100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(maxLines > 1 ? AppDimensions.radiusLarge : 100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(maxLines > 1 ? AppDimensions.radiusLarge : 100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              errorText: errorText,
+              errorStyle: const TextStyle(
+                fontSize: 12,
+                height: 1.2,
+              ),
+              counterText: '',
             ),
-            counterText: '',
           ),
         ),
         if (showCharacterCounter)
           Padding(
-            padding: const EdgeInsets.only(top: 4, right: 4),
+            padding: const EdgeInsets.only(top: 4, right: 16),
             child: Align(
               alignment: Alignment.centerRight,
               child: ValueListenableBuilder<TextEditingValue>(
@@ -323,6 +336,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GradientSheetScaffold(
       title: 'Edit Expense',
       leading: IconButton(
@@ -353,7 +367,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                         final bool isOnline = snapshot.data ?? true;
                         
                         return IconButton(
-                          icon: isOnline
+                           icon: isOnline
                               ? Icon(Icons.check, color: AppColors.textPrimary(context), size: 26)
                               : Icon(Icons.wifi_off, color: AppColors.textPrimary(context).withValues(alpha: 0.7), size: 26),
                           tooltip: isOnline 
@@ -395,28 +409,51 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                           child: Column(
                             children: [
                               // event Selection
-                              DropdownButtonFormField<String>(
-                                initialValue: (_selectedeventId != null && _availableEvents.any((p) => p.eventId == _selectedeventId)) 
-                                    ? _selectedeventId 
-                                    : null,
-                                dropdownColor: AppColors.surface(context),
-                                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
-                                decoration: InputDecoration(
-                                  labelText: 'Event *',
-                                  labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusFull), borderSide: BorderSide(color: AppColors.border(context))),
-                                  filled: true,
-                                  fillColor: AppColors.surface(context),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                  prefixIcon: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 20),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.surface(context) : Colors.white,
+                                  borderRadius: BorderRadius.circular(100),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.035),
+                                      blurRadius: 12,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
                                 ),
-                                items: _availableEvents.map((event) {
-                                  return DropdownMenuItem<String>(value: event.eventId, child: Text(event.title, style: TextStyle(color: AppColors.textPrimary(context))));
-                                }).toList(),
-                                onChanged: (value) => setState(() => _selectedeventId = value),
-                                validator: (value) => value == null ? 'Please select a event' : null,
-                                hint: const Text('Select event'),
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: (_selectedeventId != null && _availableEvents.any((p) => p.eventId == _selectedeventId)) 
+                                      ? _selectedeventId 
+                                      : null,
+                                  dropdownColor: AppColors.surface(context),
+                                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 15),
+                                  decoration: InputDecoration(
+                                    hintText: 'Select Event *',
+                                    hintStyle: TextStyle(color: AppColors.textTertiary(context), fontSize: 15),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(100), borderSide: BorderSide.none),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(100),
+                                      borderSide: BorderSide(
+                                        color: AppColors.primary(context).withOpacity(0.5),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    filled: false,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                    prefixIcon: Padding(
+                                      padding: const EdgeInsets.only(left: 20, right: 12),
+                                      child: Icon(Icons.assignment_outlined, color: AppColors.primary(context), size: 22),
+                                    ),
+                                    prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                                  ),
+                                  items: _availableEvents.map((event) {
+                                    return DropdownMenuItem<String>(value: event.eventId, child: Text(event.title, style: TextStyle(color: AppColors.textPrimary(context))));
+                                  }).toList(),
+                                  onChanged: (value) => setState(() => _selectedeventId = value),
+                                  validator: (value) => value == null ? 'Please select a event' : null,
+                                ),
                               ),
                               const SizedBox(height: 16),
                               _buildInputField(
@@ -430,7 +467,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                                 validator: (value) => value == null || value.trim().length < 3 ? 'Small title' : null,
                               ),
                               const SizedBox(height: 16),
-                              _buildInputField(controller: _descriptionController, label: 'Description', icon: Icons.description, hint: 'Add details...', maxLines: 3, maxLength: 200),
+                              _buildInputField(controller: _descriptionController, label: 'Description', icon: Icons.description, hint: 'Add details...', maxLines: 1, maxLength: 200),
                               const SizedBox(height: 16),
                               _buildInputField(controller: _aamountController, label: 'Amount', icon: Icons.currency_rupee, hint: 'e.g. 500', keyboardType: TextInputType.number, isRequired: true),
                               const SizedBox(height: 16),

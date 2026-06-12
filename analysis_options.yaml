@@ -6,6 +6,22 @@ analyzer:
     - '**/*.freezed.dart'
     - '**/generated/**'
     - 'build/**'
+  errors:
+    # Downgrade warnings to info/warning
+    deprecated_member_use: info
+    unused_import: info
+    unused_local_variable: info
+    unused_element: info
+    unused_field: info
+    unreachable_switch_case: info
+    dead_code: info
+    unnecessary_type_check: info
+    avoid_print: info
+    prefer_final_fields: info
+    use_build_context_synchronously: info
+    non_constant_identifier_names: info
+    avoid_types_as_parameter_names: info
+    with_opacity: info
 
 linter:
   rules:
@@ -22,74 +38,3 @@ linter:
     - unnecessary_type_check
     - unused_element
     - unused_field
-
-
-analyzer:
-  exclude:
-    - '**/*.g.dart'
-    - '**/*.freezed.dart'
-    - '**/generated/**'
-    - 'build/**'
-  errors:
-    # Ignore warnings that break the build
-    avoid_print: ignore
-    prefer_final_fields: ignore
-    use_build_context_synchronously: ignore
-    unused_element: ignore
-    unused_field: ignore
-    dead_code: ignore
-    unreachable_switch_case: ignore
-    unnecessary_type_check: ignore
-    non_constant_identifier_names: ignore
-    avoid_types_as_parameter_names: ignore
-    deprecated_member_use: ignore
-    unused_local_variable: ignore
-    unused_import: ignore
-    # Keep other rules as warnings/info
-    # deprecated_member_use already ignored above
-    # any other rules default behavior
-
-linter:
-  rules:
-    - use_build_context_synchronously
-    - avoid_print
-    - prefer_final_fields
-
-analyzer:
-  exclude:
-    - '**/*.g.dart'
-    - '**/*.freezed.dart'
-    - '**/generated/**'
-    - 'build/**'
-  
-  errors:
-    # Existing downgrade rules
-    deprecated_member_use: warning
-    unused_import: warning
-    unused_local_variable: warning
-    unused_element: info
-    unused_field: info
-    unreachable_switch_case: info
-    dead_code: info
-    unnecessary_type_check: info
-    # Additional lints
-    avoid_print: info
-    prefer_final_fields: info
-    use_build_context_synchronously: info
-    non_constant_identifier_names: info
-    avoid_types_as_parameter_names: info
-    # Downgrade warnings to info
-    unused_local_variable: info
-    deprecated_member_use: info
-    unused_import: info
-    with_opacity: info
-
-linter:
-  rules:
-    - use_build_context_synchronously
-    - avoid_print
-    - prefer_final_fields
-    - unused_local_variable
-    - deprecated_member_use
-    - non_constant_identifier_names
-    - avoid_types_as_parameter_names

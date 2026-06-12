@@ -270,11 +270,11 @@ void _onParticipantsChanged() {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
-    int maxLength = 50,
+    int maxLength = 30,
     List<TextInputFormatter>? inputFormatters,
     String? errorText,
     bool isRequired = false,
-    bool showCharacterCounter = false, // Only true for title field
+    bool showCharacterCounter = false,
     String? Function(String?)? validator,
   }) {
     final List<TextInputFormatter> formatters = [
@@ -282,81 +282,94 @@ void _onParticipantsChanged() {
       LengthLimitingTextInputFormatter(maxLength),
     ];
 
-    // Only add asterisk to label if isRequired is true and label does not already have one
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     String displayLabel = label;
     if (isRequired && !label.trim().endsWith('*')) {
       displayLabel = '$label *';
     }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-          inputFormatters: formatters,
-          validator: validator,
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            labelText: displayLabel,
-            labelStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: 14,
-            ),
-            floatingLabelStyle: TextStyle(
-              color: AppColors.primary(context),
-              fontWeight: FontWeight.w600,
-            ),
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontSize: maxLines > 1 ? 13 : 14,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: maxLines == 1 ? 18 : 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(
-                color: AppColors.primary(context),
-                width: 2,
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
               ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            maxLength: maxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            inputFormatters: formatters,
+            validator: validator,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
             ),
-            errorText: errorText,
-            errorStyle: const TextStyle(
-              fontSize: 12,
-              height: 1.2,
+            decoration: InputDecoration(
+              hintText: displayLabel,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 22,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              filled: false,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: maxLines == 1 ? 18 : 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              errorText: errorText,
+              errorStyle: const TextStyle(
+                fontSize: 12,
+                height: 1.2,
+              ),
+              counterText: '',
             ),
-            counterText: '', // Always hide default counter
           ),
         ),
         // Custom character counter - ONLY shown for title field
         if (showCharacterCounter)
           Padding(
-            padding: const EdgeInsets.only(top: 4, right: 4),
+            padding: const EdgeInsets.only(top: 4, right: 16),
             child: Align(
               alignment: Alignment.centerRight,
               child: ValueListenableBuilder<TextEditingValue>(
@@ -824,7 +837,7 @@ void _onParticipantsChanged() {
                         icon: Icons.event,
                         hint: 'e.g., Monthly Savings, Trip to Goa, Birthday Fund',
                         isRequired: true,
-                        maxLength: 50,
+                        maxLength: 30,
                         showCharacterCounter: true, // Only true here
                         focusNode: FocusNode(),
                         validator: (value) {

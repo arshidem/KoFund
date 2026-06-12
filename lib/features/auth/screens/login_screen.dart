@@ -537,61 +537,107 @@ class _LoginScreenState extends State<LoginScreen> {
       LengthLimitingTextInputFormatter(maxLength),
     ];
 
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText && _obscurePassword,
-      keyboardType: keyboardType,
-      inputFormatters: formatters,
-      style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label, // ⭐ FLOATING LABEL
-        labelStyle: TextStyle(
-          color: AppColors.textSecondary(context),
-          fontSize: 14,
-        ),
-        floatingLabelStyle: TextStyle(
-          color: AppColors.primary(context),
-          fontWeight: FontWeight.w600,
-        ),
-        prefixIcon: Icon(icon, color: AppColors.primary(context), size: 20),
-        suffixIcon: showObscureToggle
-            ? IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  size: 20,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: obscureText && _obscurePassword,
+            keyboardType: keyboardType,
+            inputFormatters: formatters,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              hintText: label,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 22,
                 ),
-                onPressed: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-              )
-            : null,
-        filled: true,
-        fillColor: AppColors.surface(context),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              suffixIcon: showObscureToggle
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          size: 20,
+                          color: AppColors.textTertiary(context),
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    )
+                  : null,
+              filled: false,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            onChanged: (_) {
+              setState(() {
+                if (controller == _emailController) _emailError = null;
+                if (controller == _passwordController) _passwordError = null;
+                _formError = null;
+              });
+            },
+          ),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(color: AppColors.border(context)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(color: AppColors.border(context)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-          borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-        ),
-        errorText: errorText,
-        errorStyle: const TextStyle(fontSize: 12, height: 1.2),
-      ),
-      onChanged: (_) {
-        setState(() {
-          if (controller == _emailController) _emailError = null;
-          if (controller == _passwordController) _passwordError = null;
-          _formError = null;
-        });
-      },
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 20, top: 6),
+            child: Text(
+              errorText,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -604,18 +650,12 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.max,
           children: [
-            // Checkbox with individual control
             Container(
-              margin: const EdgeInsets.only(
-                right: 0,
-              ), // ⭐ Control checkbox right spacing
+              margin: const EdgeInsets.only(right: 0),
               child: Transform.translate(
-                offset: const Offset(
-                  -4,
-                  0,
-                ), // ⭐ Move checkbox horizontally/vertically
+                offset: const Offset(-4, 0),
                 child: Transform.scale(
-                  scale: 0.8, // ⭐ Control checkbox size
+                  scale: 0.9,
                   child: Checkbox(
                     value: _termsAccepted,
                     onChanged: (value) {
@@ -625,13 +665,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                     },
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.radiusSmall / 2,
-                      ), // 4
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    // ⭐ Control colors
                     fillColor: WidgetStateProperty.resolveWith<Color?>((
                       Set<WidgetState> states,
                     ) {
@@ -644,20 +681,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     overlayColor: WidgetStateProperty.resolveWith<Color?>((
                       Set<WidgetState> states,
                     ) {
-                      return AppColors.primary(context).withValues(alpha: 0.1);
+                      return AppColors.primary(context).withOpacity(0.1);
                     }),
                   ),
                 ),
               ),
             ),
-
-            // Text with individual control
             Expanded(
               child: Transform.translate(
-                offset: const Offset(
-                  -6,
-                  0,
-                ), // ⭐ Move text horizontally/vertically
+                offset: const Offset(-4, 0),
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onTap: () {
@@ -667,21 +699,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     });
                   },
                   child: Container(
-                    constraints: const BoxConstraints(
-                      minHeight: 24, // ⭐ Control minimum touch area height
-                    ),
-                    padding: EdgeInsets.zero, // ⭐ Zero container padding
-                    margin: EdgeInsets.zero, // ⭐ Zero container margin
-                    alignment: Alignment.centerLeft, // ⭐ Force left alignment
+                    constraints: const BoxConstraints(minHeight: 24),
+                    alignment: Alignment.centerLeft,
                     child: RichText(
-                      textAlign: TextAlign.left, // ⭐ Force text alignment
-                      textWidthBasis: TextWidthBasis.parent,
-                      overflow: TextOverflow.visible,
                       text: TextSpan(
                         style: TextStyle(
-                          fontSize: 10, // ⭐ Control text size
-                          height: 1.2, // ⭐ Control line height
-                          color: AppColors.textPrimary(context),
+                          fontSize: 12,
+                          height: 1.3,
+                          color: AppColors.textSecondary(context),
                         ),
                         children: [
                           const TextSpan(text: 'I agree to the '),
@@ -691,8 +716,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.primary(context),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
-                              decorationThickness:
-                                  1.5, // ⭐ Control underline thickness
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () async {
@@ -711,18 +734,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.primary(context),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
-                              decorationThickness:
-                                  1.5, // ⭐ Control underline thickness
                             ),
-                             recognizer: TapGestureRecognizer()
-                               ..onTap = () async {
-                                 final url = Uri.parse('https://kofund-153ba.web.app/privacyPolicy');
-                                 try {
-                                   await launchUrl(url, mode: LaunchMode.externalApplication);
-                                 } catch (e) {
-                                   debugPrint('Could not launch $url: $e');
-                                 }
-                               },
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = Uri.parse('https://kofund-153ba.web.app/privacyPolicy');
+                                try {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                } catch (e) {
+                                  debugPrint('Could not launch $url: $e');
+                                }
+                              },
                           ),
                         ],
                       ),
@@ -733,20 +754,16 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
-
-        // Error message with individual control
         if (_termsError != null)
           Transform.translate(
-            offset: const Offset(-6, 0), // ⭐ Position error message
+            offset: const Offset(-4, 0),
             child: Container(
               padding: const EdgeInsets.only(left: 8, top: 4),
-              margin: EdgeInsets.zero,
               child: Text(
                 _termsError!,
                 style: const TextStyle(
                   color: Colors.red,
                   fontSize: 12,
-                  height: 1.1,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -756,39 +773,38 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ⭐ MINIMAL: Build invite notification banner
   Widget _buildInviteBanner() {
     if (_cachedInviteCode == null) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
+        color: AppColors.primary(context).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(100),
         border: Border.all(
-          color: AppColors.primary(context).withValues(alpha: 0.2),
+          color: AppColors.primary(context).withOpacity(0.15),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.link_rounded, size: 16, color: AppColors.primary(context)),
+          Icon(Icons.link_rounded, size: 18, color: AppColors.primary(context)),
           const SizedBox(width: 8),
           Text(
             'Invite code: ',
-            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
           ),
           Text(
             _cachedInviteCode!,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: AppColors.primary(context),
-              fontSize: 13,
+              fontSize: 14,
             ),
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.copy_rounded, size: 16, color: AppColors.primary(context)),
+            icon: Icon(Icons.copy_rounded, size: 18, color: AppColors.primary(context)),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: _cachedInviteCode!));
               SnackbarHelper.showInfo(context, 'Copied');
@@ -796,8 +812,9 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
+          const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.close_rounded, size: 16, color: AppColors.textTertiary(context)),
+            icon: Icon(Icons.close_rounded, size: 18, color: AppColors.textTertiary(context)),
             onPressed: () {
               unawaited(_clearPendingInviteCode());
               setState(() => _cachedInviteCode = null);
@@ -814,422 +831,483 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AppAuthProvider>(context);
     final isLoading = authProvider.isLoading || _isLoading;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppStyles.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Logo and Header
-              Center(
-                child: Column(
-                  children: [
-                    // Logo with rounded background
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary(context),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary(
-                              context,
-                            ).withValues(alpha: 0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: SvgPicture.asset(
-                          'assets/logos/KoFund.svg',
-                          height: 40,
-                        ),
-                      ),
+      body: Stack(
+        children: [
+          // Curved Decorative Background Shapes (Teal/Mint overlays)
+          Positioned(
+            top: -180,
+            left: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.06),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            top: -120,
+            left: -120,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            top: -60,
+            left: -140,
+            child: Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withOpacity(0.04),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'KoFund',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary(context),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // ⭐ NEW: Invite Notification Banner
-
-              // Form Ttitle
-              Center(
-                child: Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Center(
-                child: Text(
-                  _cachedInviteCode != null
-                      ? 'Sign in to join the community'
-                      : 'Sign in to your account',
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Note: Top-level error container removed as errors are now routed to specific fields
-              
-              // Display network/form errors (using formError for general messaging)
-              if (_formError != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.wifi_off, color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _formError!,
-                          style: TextStyle(
-                            color: Colors.orange.shade800,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Email field
-              _buildInputField(
-                controller: _emailController,
-                label: 'Email Address *',
-                // hint: 'Enter your email',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                maxLength: 100,
-                errorText: _emailError, // Pass error here
-              ),
-              const SizedBox(height: 16),
-
-              // Password field
-              _buildInputField(
-                controller: _passwordController,
-                label: 'Password *',
-                // hint: 'Enter your password',
-                icon: Icons.lock_outline,
-                obscureText: true,
-                showObscureToggle: true,
-                maxLength: 128,
-                errorText: _passwordError, // Pass error here
-              ),
-
-              // Forgot Password Button
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: isLoading ? null : _navigateToForgotPassword,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.primary(context),
-                      fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Terms checkbox
-              _buildTermsCheckbox(),
-              const SizedBox(height: 20),
-
-              // Login Button
-              // Replace your current login button with this:
-              // Network-aware Login Button (SAME PATTERN AS CREATE COMMUNITY)
-              // Login Button - Fixed
-              FutureBuilder<bool>(
-                future: NetworkService().isConnected,
-                builder: (context, futureSnapshot) {
-                  final bool isOnlineFromFuture = futureSnapshot.data ?? true;
-
-                  return StreamBuilder<bool>(
-                    stream: NetworkService().onConnectionChanged,
-                    builder: (context, streamSnapshot) {
-                      // ⭐ REMOVE initialData and use conditional logic
-                      final bool currentIsOnline = streamSnapshot.hasData
-                          ? streamSnapshot.data!
-                          : (futureSnapshot.hasData
-                                ? futureSnapshot.data!
-                                : true);
-
-                      final bool isDisabled = _isLoading || !currentIsOnline;
-
-                      return Column(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: isDisabled ? null : _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary(context),
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppColors.primary(
-                                  context,
-                                ).withValues(alpha: 0.5),
-                                disabledForegroundColor: Colors.white70,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
+                          const SizedBox(height: 20),
+                          // Brand Logo & Text
+                          Center(
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary(context),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary(context).withOpacity(0.25),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
                                       ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          currentIsOnline
-                                              ? Icons.login
-                                              : Icons.wifi_off,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Text(
-                                          currentIsOnline
-                                              ? (_cachedInviteCode != null
-                                                    ? 'Sign In & Join Community'
-                                                    : 'Sign In')
-                                              : 'Offline',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: SvgPicture.asset(
+                                      'assets/logos/KoFund.svg',
+                                      height: 44,
                                     ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                RichText(
+                                  text: TextSpan(
+                                    style: const TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -0.8,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: 'Ko',
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: 'Fund',
+                                        style: TextStyle(
+                                          color: AppColors.primary(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
-                          // Network status message
-                          if (!currentIsOnline)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
+                          const SizedBox(height: 20),
+
+                          // Header Typography
+                          Center(
+                            child: Text(
+                              'Welcome back',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: Text(
+                              _cachedInviteCode != null
+                                  ? 'Sign in to join the community'
+                                  : 'Sign in to your account',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Form Errors
+                          if (_formError != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.2),
+                                ),
+                              ),
                               child: Row(
-                                children: const [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 14,
-                                    color: Colors.redAccent,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Connect to internet to login',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.redAccent,
+                                children: [
+                                  const Icon(Icons.wifi_off, color: Colors.orange, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _formError!,
+                                      style: TextStyle(
+                                        color: Colors.orange.shade800,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
+                            const SizedBox(height: 16),
+                          ],
 
-              // Divider
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(
-                      color: AppColors.border(context),
-                      thickness: 1,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'OR',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Divider(
-                      color: AppColors.border(context),
-                      thickness: 1,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Google Sign-In Button
-              // Google Sign-In Button - Fixed
-              FutureBuilder<bool>(
-                future: NetworkService().isConnected,
-                builder: (context, futureSnapshot) {
-                  return StreamBuilder<bool>(
-                    stream: NetworkService().onConnectionChanged,
-                    builder: (context, streamSnapshot) {
-                      final isOnline = streamSnapshot.hasData
-                          ? streamSnapshot.data!
-                          : (futureSnapshot.hasData
-                                ? futureSnapshot.data!
-                                : true);
-                      final isDisabled = _isLoading || !isOnline;
-
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton.icon(
-                          icon: Image.asset(
-                            'assets/logos/google_logo.png',
-                            height: 20,
-                            width: 20,
+                          // Inputs
+                          _buildInputField(
+                            controller: _emailController,
+                            label: 'Email Address *',
+                            icon: Icons.mail_outline_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            maxLength: 100,
+                            errorText: _emailError,
                           ),
-                          label: Text(
-                            isOnline
-                                ? (_cachedInviteCode != null
-                                      ? 'Join with Google'
-                                      : 'Continue with Google')
-                                : 'Offline',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: isOnline
-                                  ? AppColors.textPrimary(context)
-                                  : AppColors.textPrimary(
-                                      context,
-                                    ).withValues(alpha: 0.5),
+                          const SizedBox(height: 14),
+
+                          _buildInputField(
+                            controller: _passwordController,
+                            label: 'Password *',
+                            icon: Icons.lock_outline_rounded,
+                            obscureText: true,
+                            showObscureToggle: true,
+                            maxLength: 128,
+                            errorText: _passwordError,
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          // Forgot Password
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: isLoading ? null : _navigateToForgotPassword,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Forgot password?',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.primary(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                          onPressed: isDisabled ? null : _signInWithGoogle,
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: isOnline
-                                  ? AppColors.border(context)
-                                  : AppColors.border(
-                                      context,
-                                    ).withValues(alpha: 0.5),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                            ),
-                            backgroundColor: AppColors.surface(context),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
 
-              const SizedBox(height: 16),
+                          const SizedBox(height: 14),
 
-              // Sign Up Link
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Don\'t have an account? ',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 14,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              context.go('/register');
+                          // Terms and Conditions
+                          _buildTermsCheckbox(),
+
+                          const SizedBox(height: 20),
+
+                          // Sign In Button
+                          FutureBuilder<bool>(
+                            future: NetworkService().isConnected,
+                            builder: (context, futureSnapshot) {
+                              return StreamBuilder<bool>(
+                                stream: NetworkService().onConnectionChanged,
+                                builder: (context, streamSnapshot) {
+                                  final bool currentIsOnline = streamSnapshot.hasData
+                                      ? streamSnapshot.data!
+                                      : (futureSnapshot.hasData
+                                            ? futureSnapshot.data!
+                                            : true);
+
+                                  final bool isDisabled = isLoading || !currentIsOnline;
+
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Container(
+                                        height: 56,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(100),
+                                          boxShadow: [
+                                            if (!isDisabled)
+                                              BoxShadow(
+                                                color: AppColors.primary(context).withOpacity(0.25),
+                                                blurRadius: 16,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                          ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed: isDisabled ? null : _login,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.primary(context),
+                                            foregroundColor: Colors.white,
+                                            disabledBackgroundColor: AppColors.primary(context).withOpacity(0.5),
+                                            disabledForegroundColor: Colors.white70,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(100),
+                                            ),
+                                          ),
+                                          child: isLoading
+                                              ? const SizedBox(
+                                                  height: 24,
+                                                  width: 24,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2.5,
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              : Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      currentIsOnline
+                                                          ? Icons.arrow_forward_rounded
+                                                          : Icons.wifi_off,
+                                                      size: 20,
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Text(
+                                                      currentIsOnline
+                                                          ? (_cachedInviteCode != null
+                                                                ? 'Sign In & Join Community'
+                                                                : 'Sign In')
+                                                          : 'Offline',
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                        ),
+                                      ),
+                                      if (!currentIsOnline)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 8, left: 16),
+                                          child: Row(
+                                            children: const [
+                                              Icon(
+                                                Icons.info_outline_rounded,
+                                                size: 14,
+                                                color: Colors.redAccent,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'Connect to internet to login',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.redAccent,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              );
                             },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'Create one',
-                        style: TextStyle(
-                          color: AppColors.primary(context),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
-                        ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // OR Divider
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  color: AppColors.border(context),
+                                  thickness: 1,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'OR',
+                                  style: TextStyle(
+                                    color: AppColors.textTertiary(context),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  color: AppColors.border(context),
+                                  thickness: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // Google Sign-In Button
+                          FutureBuilder<bool>(
+                            future: NetworkService().isConnected,
+                            builder: (context, futureSnapshot) {
+                              return StreamBuilder<bool>(
+                                stream: NetworkService().onConnectionChanged,
+                                builder: (context, streamSnapshot) {
+                                  final isOnline = streamSnapshot.hasData
+                                      ? streamSnapshot.data!
+                                      : (futureSnapshot.hasData
+                                            ? futureSnapshot.data!
+                                            : true);
+                                  final isDisabled = isLoading || !isOnline;
+
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    height: 56,
+                                    child: OutlinedButton(
+                                      onPressed: isDisabled ? null : _signInWithGoogle,
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(
+                                          color: AppColors.border(context),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        backgroundColor: isDark ? AppColors.surface(context) : Colors.white,
+                                        elevation: 0,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/logos/google_logo.png',
+                                            height: 22,
+                                            width: 22,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            isOnline
+                                                ? (_cachedInviteCode != null
+                                                      ? 'Join with Google'
+                                                      : 'Continue with Google')
+                                                : 'Offline',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: isOnline
+                                                  ? AppColors.textPrimary(context)
+                                                  : AppColors.textPrimary(context).withOpacity(0.5),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Create Account
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Don\'t have an account? ',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () {
+                                          context.go('/register');
+                                        },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    'Create one',
+                                    style: TextStyle(
+                                      color: AppColors.primary(context),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+                          _buildInviteBanner(),
+                          const SizedBox(height: 12),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              _buildInviteBanner(),
-            ],
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ⭐ NEW: Add unawaited helper function
 void unawaited(Future<void> future) {}
-
-
-
-
-

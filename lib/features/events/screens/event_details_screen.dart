@@ -405,13 +405,21 @@ Widget build(BuildContext context) {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            _cache?.title ?? 'Event Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
+          Builder(
+            builder: (context) {
+              final title = _cache?.title ?? 'Event Details';
+              final isLong = title.length > 20;
+              return Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isLong ? 14 : 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+              );
+            },
           ),
           if (_cache?.isMonthlyPayment ?? false) ...[
             const SizedBox(width: 12),

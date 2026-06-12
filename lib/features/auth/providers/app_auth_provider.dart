@@ -43,13 +43,14 @@ class AppAuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   StreamSubscription<User?>? _userSubscription;
+  bool _isInitialized = false;
   bool _isOfflineMode = false;
 
   AppAuthProvider(this._authService) {
     _initializeWithOfflineSupport();
   }
-  // ⭐ ADD THIS: Public method to wait for initialization
-  bool get isInitialized => _user != null || _isOfflineMode;
+  // ⭐ Public method to check if initialization is complete
+  bool get isInitialized => _isInitialized;
 
   // ⭐ ADD THIS: Wait for initialization to complete
   Future<void> waitForInitialization() async {
@@ -170,6 +171,8 @@ class AppAuthProvider with ChangeNotifier {
       }
     } finally {
       _setLoading(false);
+      _isInitialized = true;
+      notifyListeners();
     }
 
     // 4. Setup auth state listener for future changes

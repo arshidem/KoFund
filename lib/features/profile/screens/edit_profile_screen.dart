@@ -174,54 +174,121 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    bool readOnly = false,
+    bool enabled = true,
+    int maxLength = 50,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    Widget? suffixIcon,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: enabled 
+                ? (isDark ? AppColors.surface(context) : Colors.white)
+                : (isDark ? AppColors.surface(context).withOpacity(0.5) : Colors.grey[100]),
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              if (enabled)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.035),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            readOnly: readOnly,
+            enabled: enabled,
+            maxLength: maxLength,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            style: TextStyle(
+              color: enabled ? AppColors.textPrimary(context) : AppColors.textSecondary(context),
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              hintText: label,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 15,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: enabled ? AppColors.primary(context) : AppColors.textTertiary(context),
+                  size: 22,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              suffixIcon: suffixIcon,
+              filled: false,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              counterText: '',
+            ),
+            validator: validator,
+            onChanged: (value) {
+              if (mounted) setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFormFields() {
+    final emailController = TextEditingController(text: widget.user.email);
     return Column(
       children: [
         // Display Name Field
-        TextFormField(
+        _buildInputField(
           controller: _nameController,
-          decoration: InputDecoration(
-            labelText: 'Display Name *',
-            hintText: 'Enter your display name',
-            prefixIcon: const Icon(Icons.person),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
-            ),
-            filled: true,
-            fillColor: AppColors.card(context),
-            counterText: '${_nameController.text.length}/25',
-            suffixIcon: _nameController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
-                    onPressed: () {
-                      _nameController.clear();
-                      if (mounted) setState(() {});
-                    },
-                  )
-                : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          ),
-          style: TextStyle(color: AppColors.textPrimary(context)),
+          label: 'Display Name *',
+          hint: 'Enter your display name',
+          icon: Icons.person,
           maxLength: 25,
-          onChanged: (value) {
-            if (mounted) setState(() {});
-          },
+          suffixIcon: _nameController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
+                  onPressed: () {
+                    _nameController.clear();
+                    if (mounted) setState(() {});
+                  },
+                )
+              : null,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Please enter your display name';
@@ -232,7 +299,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             if (value.trim().length > 50) {
               return 'Name must be 50 characters or less';
             }
-            // Check for excessive spaces
             if (value.trim().contains('  ')) {
               return 'Avoid multiple spaces in name';
             }
@@ -242,99 +308,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 20),
 
         // Email Field (Read-only)
-        TextFormField(
-          initialValue: widget.user.email,
-          decoration: InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: const Icon(Icons.email),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-            ),
-            filled: true,
-            fillColor: AppColors.card(context).withValues(alpha: 0.5),
-            counterText: '${widget.user.email.length}/100',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          ),
-          style: TextStyle(color: AppColors.textSecondary(context)),
+        _buildInputField(
+          controller: emailController,
+          label: 'Email Address',
+          hint: 'Email Address',
+          icon: Icons.email,
+          maxLength: 100,
           readOnly: true,
           enabled: false,
-          maxLength: 100,
         ),
         const SizedBox(height: 20),
 
         // Phone Number Field
-        TextFormField(
+        _buildInputField(
           controller: _phoneController,
-          decoration: InputDecoration(
-            labelText: 'Phone Number',
-            hintText: 'Enter your phone number',
-            prefixIcon: const Icon(Icons.phone),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.primary(context), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
-            ),
-            filled: true,
-            fillColor: AppColors.card(context),
-            counterText: '${_phoneController.text.length}/10',
-            suffixIcon: _phoneController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
-                    onPressed: () {
-                      _phoneController.clear();
-                      if (mounted) setState(() {});
-                    },
-                  )
-                : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          ),
-          style: TextStyle(color: AppColors.textPrimary(context)),
+          label: 'Phone Number',
+          hint: 'Enter your phone number',
+          icon: Icons.phone,
           maxLength: 10,
           keyboardType: TextInputType.phone,
-          onChanged: (value) {
-            if (mounted) setState(() {});
-          },
+          suffixIcon: _phoneController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, size: 20, color: AppColors.textSecondary(context)),
+                  onPressed: () {
+                    _phoneController.clear();
+                    if (mounted) setState(() {});
+                  },
+                )
+              : null,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
           validator: (value) {
             if (value != null && value.trim().isNotEmpty) {
-              // Remove any non-digit characters for validation
               final ddigitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
-              
               if (ddigitsOnly.length != 10) {
                 return 'Please enter a valid 10-digit phone number';
               }
-              
-              // Check if it's a realistic phone number (doesn't start with 0)
               if (ddigitsOnly.startsWith('0')) {
                 return 'Phone number cannot start with 0';
               }
             }
             return null;
           },
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly, // Only allow digits
-          ],
         ),
         const SizedBox(height: 20),
 

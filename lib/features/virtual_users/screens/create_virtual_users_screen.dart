@@ -537,7 +537,6 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     return 'User \\${userIndex + 1}: \\$title – \\$suggestion';
   }
 
-  // Builds a modern styled text field with optional required indicator
   Widget _buildModernTextField({
     required String initialValue,
     required String label,
@@ -547,40 +546,75 @@ class _CreateVirtualUsersScreenState extends State<CreateVirtualUsersScreen> {
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String displayLabel = label;
+    if (isRequired && !label.trim().endsWith('*')) {
+      displayLabel = '$label *';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 6),
-          child: RichText(
-            text: TextSpan(
-              text: label,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary(context)),
-              children: isRequired
-                  ? [const TextSpan(text: ' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))]
-                  : [],
-            ),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surface(context) : Colors.white,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.035),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ),
-        TextFormField(
-          initialValue: initialValue,
-          onChanged: onChanged,
-          keyboardType: keyboardType,
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textTertiary(context).withOpacity(0.5), fontSize: 14, fontWeight: FontWeight.normal),
-            prefixIcon: Icon(icon, size: 18, color: AppColors.primary(context)),
-            filled: true,
-            fillColor: AppColors.surface(context),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.border(context).withOpacity(0.6)),
+          child: TextFormField(
+            initialValue: initialValue,
+            onChanged: onChanged,
+            keyboardType: keyboardType,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-              borderSide: BorderSide(color: AppColors.primary(context), width: 1.5),
+            decoration: InputDecoration(
+              hintText: displayLabel,
+              hintStyle: TextStyle(
+                color: AppColors.textTertiary(context),
+                fontSize: 14,
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 12),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 40,
+                minHeight: 40,
+              ),
+              filled: false,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(100),
+                borderSide: BorderSide(
+                  color: AppColors.primary(context).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
             ),
           ),
         ),

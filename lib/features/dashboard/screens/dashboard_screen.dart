@@ -513,10 +513,6 @@ void _initializeWidgetProviders(String userId, String communityId) {
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withValues(alpha: 0.15) : AppColors.primary(context).withValues(alpha: 0.1),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1),
-          width: 1.5,
-        ),
       ),
       child: logoUrl != null && logoUrl.isNotEmpty
           ? ClipOval(

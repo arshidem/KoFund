@@ -2378,18 +2378,18 @@ String _formatPaymentMethod(String method) {
                   TextField(
                     controller: descriptionController,
                     maxLength: 200,
-                    maxLines: 2,
+                    maxLines: 1,
                     decoration: InputDecoration(
                       labelText: 'Description (optional)',
                       hintText: 'Additional details...',
                       prefixIcon: const Icon(Icons.description_rounded, size: 20),
                       counterText: descriptionController.text.length >= 200 ? null : "",
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         borderSide: BorderSide(color: AppColors.border(context)),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
                         borderSide: BorderSide(color: AppColors.border(context)),
                       ),
                       filled: true,

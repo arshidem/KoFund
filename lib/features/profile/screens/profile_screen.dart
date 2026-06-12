@@ -801,24 +801,8 @@ if (_isLoadingProfile) {
             ),
         ],
       ),
-      child: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isDark ? Colors.white.withValues(alpha: 0.8) : AppColors.textPrimary(context).withValues(alpha: 0.6),
-                width: dart_ui.lerpDouble(1.5, 3.0, expandRatio)!,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: ClipOval(
-              child: _buildAvatarPlaceholder(isDark, initial, fontSize),
-            ),
-          ),
-        ],
+      child: ClipOval(
+        child: _buildAvatarPlaceholder(isDark, initial, fontSize),
       ),
     );
   }

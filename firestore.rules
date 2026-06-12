@@ -96,6 +96,8 @@ service cloud.firestore {
     match /app_config/{docId} {
       // Allow signed‑in users to read configuration (e.g., version checks)
       allow read: if isSignedIn();
+      // Allow admins and developers to update app configuration
+      allow write: if isSignedIn() && (isAdmin() || isDeveloper());
     }
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
