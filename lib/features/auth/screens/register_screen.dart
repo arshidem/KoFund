@@ -31,6 +31,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static const String _externalWebsiteUrl = 'https://kofund.app';
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -710,7 +711,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () async {
-                                final url = Uri.parse('https://kofund-153ba.web.app/termsOfService');
+                                final url = Uri.parse('$_externalWebsiteUrl/terms-of-service');
                                 try {
                                   await launchUrl(url, mode: LaunchMode.externalApplication);
                                 } catch (e) {
@@ -728,7 +729,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () async {
-                                final url = Uri.parse('https://kofund-153ba.web.app/privacyPolicy');
+                                final url = Uri.parse('$_externalWebsiteUrl/privacy-policy');
                                 try {
                                   await launchUrl(url, mode: LaunchMode.externalApplication);
                                 } catch (e) {

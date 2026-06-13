@@ -293,8 +293,9 @@ Future<void> storeCurrentUserToken({
 
   // ⭐ NEW: Get device identifier
   Future<String> _getDeviceIdentifier() async {
-    // You might want to use a package like device_info_plus
-    // For now, use a combination of platform and timestamp
+    if (kIsWeb) {
+      return 'web_${DateTime.now().millisecondsSinceEpoch}';
+    }
     if (Platform.isIOS) {
       return 'ios_${DateTime.now().millisecondsSinceEpoch}';
     } else if (Platform.isAndroid) {

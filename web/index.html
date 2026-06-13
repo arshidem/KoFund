@@ -28,14 +28,15 @@
   <title>KoFund - Transparent Community Fund & Committee Expense Manager</title>
   <link rel="manifest" href="manifest.json">
   
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       overflow: hidden;
-      background-color: #f4fbf9;
+      background-color: #0b0e11; /* Dark theme default to match premium dark style */
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     #loading {
@@ -49,128 +50,224 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background: radial-gradient(circle at center, #ffffff 0%, #e8f7f5 100%);
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      background: radial-gradient(circle at center, #0e1716 0%, #050a09 100%);
+      transition: opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0.5s;
     }
     
-    .splash-container {
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-container {
       position: relative;
-      width: 220px;
-      height: 220px;
-      background: rgba(0, 191, 166, 0.1);
-      border-radius: 50%;
+      width: 160px;
+      height: 160px;
       display: flex;
       justify-content: center;
       align-items: center;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
     }
-    
-    .ripple {
+
+    /* Ambient glow behind logo */
+    .logo-glow {
       position: absolute;
-      width: 170px;
-      height: 170px;
+      width: 130px;
+      height: 130px;
+      background: radial-gradient(circle, rgba(0, 191, 166, 0.4) 0%, rgba(0, 191, 166, 0) 70%);
       border-radius: 50%;
-      border: 2px solid rgba(0, 191, 166, 0.5);
-      opacity: 0;
-      transform: scale(1);
-      animation: ripple-effect 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+      filter: blur(8px);
+      animation: pulse-glow 3s ease-in-out infinite alternate;
     }
-    
-    .ripple:nth-child(1) {
-      animation-delay: 0s;
-    }
-    .ripple:nth-child(2) {
-      animation-delay: 0.4s;
-    }
-    .ripple:nth-child(3) {
-      animation-delay: 0.8s;
+
+    .logo-outer-ring {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      border: 2px dashed rgba(0, 191, 166, 0.2);
+      animation: rotate-ring 20s linear infinite;
     }
     
     .logo-bg {
       position: absolute;
-      width: 170px;
-      height: 170px;
-      background: #00BFA6;
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, #00BFA6 0%, #008f7d 100%);
       border-radius: 50%;
-      box-shadow: 0 12px 50px 6px rgba(0, 191, 166, 0.4);
+      box-shadow: 0 8px 32px 0 rgba(0, 191, 166, 0.3);
       z-index: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     
     .logo-wrapper {
-      position: absolute;
-      width: 90px;
-      height: 90px;
+      width: 65px;
+      height: 65px;
       z-index: 2;
       display: flex;
       justify-content: center;
       align-items: center;
-      animation: logo-breath 2.5s ease-in-out infinite alternate;
+      animation: logo-float 4s ease-in-out infinite alternate;
     }
     
     .kofund-logo-svg {
-      width: 90px;
-      height: 90px;
-    }
-    
-    @keyframes ripple-effect {
-      0% {
-        transform: scale(1);
-        opacity: 0.4;
-      }
-      100% {
-        transform: scale(1.8);
-        opacity: 0;
-      }
-    }
-    
-    @keyframes logo-breath {
-      0% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(1.05);
-        opacity: 0.85;
-      }
-    }
-    
-    /* Hide loading when app loaded */
-    .flutter-loaded #loading {
-      opacity: 0;
-      pointer-events: none;
-    }
-    
-    /* Flutter app container */
-    #flutter-app {
       width: 100%;
       height: 100%;
+      filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15));
+    }
+
+    /* Loading text & progress */
+    .brand-name {
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-top: 10px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fade-up 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+      animation-delay: 0.2s;
+    }
+
+    .brand-subtitle {
+      color: #7a8c8a;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      margin-bottom: 35px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fade-up 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+      animation-delay: 0.4s;
+    }
+
+    .progress-bar-container {
+      width: 180px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00BFA6, #00ffd0);
+      border-radius: 10px;
+      animation: loader-running 3.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+
+    .status-text {
+      color: #00BFA6;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      height: 18px;
+      animation: pulse-text 1.5s ease-in-out infinite alternate;
+    }
+
+    /* Keyframes */
+    @keyframes pulse-glow {
+      0% { transform: scale(0.9); opacity: 0.3; }
+      100% { transform: scale(1.15); opacity: 0.6; }
+    }
+
+    @keyframes rotate-ring {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes logo-float {
+      0% { transform: translateY(0px) scale(1); }
+      100% { transform: translateY(-6px) scale(1.03); }
+    }
+
+    @keyframes fade-up {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes loader-running {
+      0% { width: 0%; }
+      20% { width: 15%; }
+      45% { width: 50%; }
+      75% { width: 85%; }
+      100% { width: 95%; } /* Stays at 95% until loaded */
+    }
+
+    @keyframes pulse-text {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+    
+    /* Finished loading state */
+    .flutter-loaded #loading {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .flutter-loaded .progress-bar {
+      width: 100% !important;
+      transition: width 0.2s ease-out;
     }
   </style>
 </head>
-<body style="background:#f4fbf9">
+<body style="background:#0b0e11">
   <!-- Loading screen -->
   <div id="loading">
-    <div class="splash-container">
-      <div class="ripple"></div>
-      <div class="ripple"></div>
-      <div class="ripple"></div>
-      <div class="logo-bg"></div>
-      <div class="logo-wrapper">
-        <svg class="kofund-logo-svg" viewBox="0 0 96 90.59">
-          <polygon points="89.84 0 23.76 66.63 0 90.59 0 15.9 23.76 15.9 23.76 47.01 89.84 0" style="fill: #052224;"/>
-          <polygon points="84.66 90.59 52.18 90.59 31.7 69.71 48.04 53.24 84.66 90.59" style="fill: #fff;"/>
-          <polygon points="96 4.88 67.69 60.18 54.5 46.73 96 4.88" style="fill: #fff;"/>
-        </svg>
+    <div class="splash-content">
+      <div class="logo-container">
+        <div class="logo-glow"></div>
+        <div class="logo-outer-ring"></div>
+        <div class="logo-bg">
+          <div class="logo-wrapper">
+            <svg class="kofund-logo-svg" viewBox="0 0 96 90.59">
+              <polygon points="89.84 0 23.76 66.63 0 90.59 0 15.9 23.76 15.9 23.76 47.01 89.84 0" style="fill: #052224;"/>
+              <polygon points="84.66 90.59 52.18 90.59 31.7 69.71 48.04 53.24 84.66 90.59" style="fill: #ffffff;"/>
+              <polygon points="96 4.88 67.69 60.18 54.5 46.73 96 4.88" style="fill: #ffffff;"/>
+            </svg>
+          </div>
+        </div>
       </div>
+      
+      <div class="brand-name">KoFund</div>
+      <div class="brand-subtitle">Transparent Community Ledgers</div>
+      
+      <div class="progress-bar-container">
+        <div class="progress-bar"></div>
+      </div>
+      <div id="status-message" class="status-text">Connecting...</div>
     </div>
   </div>
 
-  <!-- Flutter app container -->
-  <div id="flutter-app"></div>
-
   <!-- Custom pre-Flutter logic -->
   <script>
+    // Status message cycler
+    const messages = [
+      "Connecting to ledger...",
+      "Securing connection...",
+      "Loading dashboard...",
+      "Finishing setup..."
+    ];
+    let messageIdx = 0;
+    const statusEl = document.getElementById('status-message');
+    const interval = setInterval(() => {
+      if (statusEl && messageIdx < messages.length - 1) {
+        messageIdx++;
+        statusEl.textContent = messages[messageIdx];
+      }
+    }, 1200);
+
     // Extract invite code
     function extractInviteCode() {
       try {
@@ -198,66 +295,27 @@
       window.inviteCode = window.inviteCode.replace(/[^a-zA-Z0-9]/g, '');
     }
 
-    function tryOpenNativeAppForInvite() {
-      const code = window.inviteCode;
-      if (!code) return;
-
-      const userAgent = navigator.userAgent || '';
-      const isAndroid = /Android/i.test(userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-      if (!isAndroid && !isIOS) return;
-
-      const attemptKey = `kofund-native-open:${code}`;
-      try {
-        if (sessionStorage.getItem(attemptKey) === '1') return;
-        sessionStorage.setItem(attemptKey, '1');
-      } catch (e) {
-        console.log('Could not store native-open attempt:', e);
-      }
-
-      const encodedCode = encodeURIComponent(code);
-      const currentUrl = window.location.href;
-
-      if (isAndroid) {
-        const fallbackUrl = encodeURIComponent(currentUrl);
-        window.location.href =
-          `intent://join?code=${encodedCode}` +
-          `#Intent;scheme=kofund;package=com.kofund.app;` +
-          `S.browser_fallback_url=${fallbackUrl};end`;
-        return;
-      }
-
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = `kofund://join?code=${encodedCode}`;
-      document.body.appendChild(iframe);
-
-      setTimeout(() => {
-        try {
-          document.body.removeChild(iframe);
-        } catch (e) {
-          console.log('Could not remove native-open iframe:', e);
-        }
-      }, 1500);
-    }
     var splashHidden = false;
     window.hideFlutterSplash = function() {
       if (splashHidden) return;
       splashHidden = true;
+      clearInterval(interval);
+      if (statusEl) statusEl.textContent = "Ready";
       console.log('Hiding Flutter splash screen...');
-      const loading = document.getElementById('loading');
-      if (loading) {
-        loading.style.opacity = '0';
-        setTimeout(() => {
-          loading.style.display = 'none';
-        }, 300);
-      }
       document.body.classList.add('flutter-loaded');
+      setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.display = 'none';
+        }
+      }, 500); // Allow fade animation to play out
     };
 
-    // Automatically hide splash when Flutter's glass-pane canvas is injected into DOM
+    // Automatically hide splash when Flutter view/canvas is injected into DOM
     const observer = new MutationObserver((mutationsList, obs) => {
-      const glassPane = document.querySelector('flt-glass-pane') || document.querySelector('flt-scene-host');
+      const glassPane = document.querySelector('flt-glass-pane') || 
+                        document.querySelector('flt-scene-host') ||
+                        document.querySelector('flutter-view');
       if (glassPane) {
         window.hideFlutterSplash();
         obs.disconnect();
@@ -265,37 +323,38 @@
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Fallback: hide splash after 10 seconds if observer hasn't triggered yet
+    // Also trigger on standard Flutter events
+    window.addEventListener('flutter-first-frame', window.hideFlutterSplash);
+    window.addEventListener('flutter-initialized', window.hideFlutterSplash);
+
+    // Fallback: hide splash after 12 seconds if observer hasn't triggered yet
     setTimeout(() => {
       if (!splashHidden) {
         console.log('Fallback: Hiding splash screen (timeout)...');
         window.hideFlutterSplash();
       }
-    }, 10000);
+    }, 12000);
 
     // Handle Flutter errors
     window.addEventListener('flutter-loading-error', function(event) {
       console.error('Flutter failed to load:', event);
+      clearInterval(interval);
       const loading = document.getElementById('loading');
       if (loading) {
         loading.innerHTML = `
-          <div style="text-align: center; color: #333; padding: 20px;">
-            <h3>Failed to load application</h3>
-            <p>Please refresh the page or check your connection.</p>
+          <div style="text-align: center; color: #fff; padding: 24px; font-family: sans-serif;">
+            <h3 style="color: #ff5252;">Failed to load application</h3>
+            <p style="color: #7a8c8a; font-size: 14px;">Please refresh the page or check your connection.</p>
             <button onclick="window.location.reload()" 
                     style="background: #00BFA6; color: white; border: none; 
-                           padding: 10px 20px; border-radius: 5px; cursor: pointer;
-                           margin-top: 20px;">
+                           padding: 12px 24px; border-radius: 24px; cursor: pointer;
+                           margin-top: 20px; font-weight: bold; font-family: inherit;
+                           box-shadow: 0 4px 12px rgba(0, 191, 166, 0.3);">
               Refresh Page
             </button>
           </div>
         `;
       }
-    });
-
-    // Try the installed app for invite links, then fall back to Flutter web.
-    window.addEventListener('load', function() {
-      setTimeout(tryOpenNativeAppForInvite, 300);
     });
   </script>
 

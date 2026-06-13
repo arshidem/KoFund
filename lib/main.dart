@@ -54,8 +54,6 @@ import 'core/providers/theme_provider.dart';
 import 'core/widgets/theme_transition_wrapper.dart';
 
 // 🚀 Routing
-import 'routing/app_router.dart';
-import 'routing/route_names.dart';
 import 'routing/go_router_config.dart';
 import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform, kIsWeb, kDebugMode;
 import 'package:go_router/go_router.dart';
@@ -144,12 +142,14 @@ void main() async {
     if (kDebugMode) debugPrint('✅ Firebase initialized');
 
     // 🛡️ Initialize App Check to secure Cloud Functions
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-      appleProvider: AppleProvider.appAttest,
-      webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'), // Use actual key if targeting web
-    );
-    if (kDebugMode) debugPrint('✅ Firebase App Check activated');
+    if (!kIsWeb) {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider: AppleProvider.appAttest,
+        webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'), // Use actual key if targeting web
+      );
+      if (kDebugMode) debugPrint('✅ Firebase App Check activated');
+    }
   } catch (e) {
     if (kDebugMode) debugPrint('❌ Firebase init/AppCheck FAILED: $e');
   }
@@ -164,12 +164,14 @@ void main() async {
 
   // Initialize Storage & Migration
   final prefs = await SharedPreferences.getInstance();
-  await SecureStorageService().migrateFromSharedPrefs([
-    'kofund_auth_state',
-    'kofund_user_data',
-    'kofund_last_login',
-    'cached_community'
-  ]);
+  if (!kIsWeb) {
+    await SecureStorageService().migrateFromSharedPrefs([
+      'kofund_auth_state',
+      'kofund_user_data',
+      'kofund_last_login',
+      'cached_community'
+    ]);
+  }
   if (kDebugMode) debugPrint('✅ Storage migrated/initialized');
 
   // ⭐ KEY FIX: Read the saved theme before runApp so the first frame
@@ -177,22 +179,22 @@ void main() async {
   final bool initialDarkMode = prefs.getBool('isDarkMode') ?? false;
   if (kDebugMode) debugPrint('🎨 Initial theme: ${initialDarkMode ? "dark" : "light"}');
 
-  // Register Background FCM Handler
-  FirebaseMessaging.onBackgroundMessage(
-    NotificationService.firebaseMessagingBackgroundHandler
-  );
-  if (kDebugMode) debugPrint('✅ FCM Background registered');
+  // Register Background FCM Handler (only on mobile/desktop, not web)
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(
+      NotificationService.firebaseMessagingBackgroundHandler
+    );
+    if (kDebugMode) debugPrint('✅ FCM Background registered');
+  }
 
   // Initialize AdMob in background (non-critical)
   unawaited(_initializeAdMobSafely());
 
   // Global error handlers
   FlutterError.onError = (details) {
-    if (kDebugMode) {
-      debugPrint('🐛 Flutter Error: ${details.exception}');
-      if (details.stack != null) {
-        debugPrint('📌 Stack: ${details.stack}');
-      }
+    debugPrint('🐛 Flutter Error: ${details.exception}');
+    if (details.stack != null) {
+      debugPrint('📌 Stack: ${details.stack}');
     }
   };
 
@@ -225,10 +227,8 @@ void main() async {
   runZonedGuarded(() {
     runApp(AppProviders(initialDarkMode: initialDarkMode));
   }, (error, stackTrace) {
-    if (kDebugMode) {
-      debugPrint('🐛 Dart Error: $error');
-      debugPrint('📌 Stack: $stackTrace');
-    }
+    debugPrint('🐛 Dart Error: $error');
+    debugPrint('📌 Stack: $stackTrace');
   });
 }
 // In main.dart - Add a Firebase config validation
@@ -254,6 +254,7 @@ Future<void> validateFirebaseConfig() async {
 // 🔰 AdMob Initialization
 // =============================
 Future<void> _initializeAdMobSafely() async {
+  if (kIsWeb) return;
   if (kDebugMode) debugPrint('🔄 Initializing AdMob...');
 
   try {
@@ -382,6 +383,7 @@ class _AppProvidersState extends State<AppProviders> {
   String? _webInviteCode;
   
   late AppAuthProvider _authProvider;
+  // Keep it false initially to prevent white flash and ensure splash screen handles routing
   bool _isAuthInitialized = false;
   
   @override
@@ -434,17 +436,12 @@ class _AppProvidersState extends State<AppProviders> {
     try {
       debugPrint("🔄 Initializing AppAuthProvider with offline support...");
       
-      // ⭐ NEW: Use public initialization method if available
-      // Try to access initialization via reflection or public method
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Check if auth provider has a public initialization method
-      // If not, wait for it to initialize on its own
       final startTime = DateTime.now();
       
-      while (!_authProvider.canAccessApp && 
+      // Wait for the auth provider to finish its internal initialization (usually fast)
+      while (!_authProvider.isInitialized && 
              DateTime.now().difference(startTime).inSeconds < 5) {
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 50));
       }
           
       setState(() {
@@ -478,6 +475,10 @@ class _AppProvidersState extends State<AppProviders> {
 
   
   Future<void> _initializeNotificationServices() async {
+    if (kIsWeb) {
+      debugPrint("🌐 Notification service initialization skipped on Web");
+      return;
+    }
     try {
       await notificationService.init(
         storage: notificationStorageService,
@@ -702,6 +703,7 @@ class _MyAppState extends State<MyApp> {
   }
   
   Future<void> _initAppLinks() async {
+    if (kIsWeb) return;
     _appLinks = AppLinks();
     
     // ✅ CORRECT: Returns Uri?
@@ -719,19 +721,6 @@ class _MyAppState extends State<MyApp> {
   }
   
 void _handleDdeepLink(Uri uri) {
-  // Ignore public pages so they don't get processed as app deep links
-  final publicPaths = [
-    '/termsOfService',
-    '/privacyPolicy',
-    '/support',
-    '/dataSafety',
-    '/about',
-    '/deleteAccount'
-  ];
-  if (publicPaths.contains(uri.path)) {
-    debugPrint('ℹ️ Public page deep link ignored (handled by web server/browser): ${uri.path}');
-    return;
-  }
 
   debugPrint('📱 Deep link received: $uri');
   debugPrint('Full URI parse - Scheme: ${uri.scheme}, Host: "${uri.host}", Path: "${uri.path}", Query: ${uri.queryParameters}');

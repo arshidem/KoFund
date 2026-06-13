@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../features/auth/providers/app_auth_provider.dart';
@@ -41,14 +40,7 @@ import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/auth/models/user_model.dart';
 import '../features/notifications/models/notification_model.dart';
 
-// Public website screens
-import '../features/website/screens/landing_page.dart';
-import '../features/website/screens/privacy_policy_page.dart';
-import '../features/website/screens/terms_of_service_page.dart';
-import '../features/website/screens/delete_account_page.dart';
-import '../features/website/screens/support_page.dart';
-import '../features/website/screens/data_safety_page.dart';
-import '../features/website/screens/about_page.dart';
+
 
 import 'route_names.dart';
 
@@ -64,9 +56,10 @@ class GoRouterConfig {
         final path = state.uri.path;
         final loggedIn = authProvider.user != null;
 
-        // On mobile app, we always route '/' to '/splash' first
-        if (!kIsWeb && path == '/') {
-          return '/splash';
+        // Route '/' to '/splash' first on both web and mobile, preserving query parameters
+        if (path == '/') {
+          final query = state.uri.query;
+          return query.isEmpty ? '/splash' : '/splash?$query';
         }
 
         // Web logic: if logged in and navigating to login/register, route to splash to handle dashboards
@@ -92,35 +85,19 @@ class GoRouterConfig {
         return null;
       },
       routes: [
-        // Public website routes
+        // Public website routes (mapped to SplashScreen to bypass LandingPage)
         GoRoute(
           path: '/',
-          builder: (context, state) => const LandingPage(),
+          builder: (context, state) {
+            final inviteCode = state.uri.queryParameters['code'];
+            final eventId = state.uri.queryParameters['eventId'];
+            return SplashScreen(
+              deepLinkInviteCode: inviteCode,
+              deepLinkEventId: eventId,
+            );
+          },
         ),
-        GoRoute(
-          path: '/privacyPolicy',
-          builder: (context, state) => const PrivacyPolicyPage(),
-        ),
-        GoRoute(
-          path: '/termsOfService',
-          builder: (context, state) => const TermsOfServicePage(),
-        ),
-        GoRoute(
-          path: '/deleteAccount',
-          builder: (context, state) => const DeleteAccountPage(),
-        ),
-        GoRoute(
-          path: '/support',
-          builder: (context, state) => const SupportPage(),
-        ),
-        GoRoute(
-          path: '/dataSafety',
-          builder: (context, state) => const DataSafetyPage(),
-        ),
-        GoRoute(
-          path: '/about',
-          builder: (context, state) => const AboutPage(),
-        ),
+
 
         // App routes
         GoRoute(

@@ -22,6 +22,8 @@ import '../../../core/widgets/animated_logo.dart';
 import 'package:go_router/go_router.dart';
 import '../../../routing/route_names.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 void unawaited(Future<void> future) {}
 
 class SplashScreen extends StatefulWidget {
@@ -210,9 +212,9 @@ class _SplashScreenState extends State<SplashScreen> {
         listen: false,
       );
 
-      // ⭐ Start the 1.0-second animation timer (skip if deep link)
+      // ⭐ Start the animation timer (skip/instant on web, very fast on mobile)
       final splashTimer = Future.delayed(
-        Duration(milliseconds: widget.deepLinkEventId != null ? 0 : 1000),
+        Duration(milliseconds: (widget.deepLinkEventId != null || kIsWeb) ? 0 : 100),
       );
 
       // ⭐ WAIT for auth provider to be initialized
@@ -220,7 +222,7 @@ class _SplashScreenState extends State<SplashScreen> {
       await authProvider.waitForInitialization();
       debugPrint("✅ Auth provider initialized");
 
-      // ⭐ Ensure we wait at least for the 1-second shimmer to finish
+      // ⭐ Ensure we wait at least for the shimmer to finish
       await splashTimer;
 
       // Now perform navigation

@@ -393,6 +393,7 @@ class AppAuthProvider with ChangeNotifier {
 
 
   Future<void> saveFcmTokenForCurrentUser() async {
+    if (kIsWeb) return;
     try {
       final current = FirebaseAuth.instance.currentUser;
       if (current == null) return;
