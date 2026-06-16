@@ -32,7 +32,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static const String _externalWebsiteUrl = 'https://kofund.app';
+  static const String _externalWebsiteUrl = 'https://kofund.vercel.app';
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -720,7 +720,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () async {
-                                final url = Uri.parse('$_externalWebsiteUrl/terms-of-service');
+                                final url = Uri.parse('$_externalWebsiteUrl/terms');
                                 try {
                                   await launchUrl(url, mode: LaunchMode.externalApplication);
                                 } catch (e) {
@@ -738,7 +738,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () async {
-                                final url = Uri.parse('$_externalWebsiteUrl/privacy-policy');
+                                final url = Uri.parse('$_externalWebsiteUrl/privacy');
                                 try {
                                   await launchUrl(url, mode: LaunchMode.externalApplication);
                                 } catch (e) {

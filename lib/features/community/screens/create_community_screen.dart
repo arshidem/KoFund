@@ -27,19 +27,13 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _locationController = TextEditingController();
 
   String? _selectedType;
-  String? _TypeError;
+  String? _typeError;
+
+  // Track field errors in parent state so they survive rebuilds
+  String? _nameError;
+  String? _locationError;
+
   bool _isLoading = false;
-  
-  void _scrollToCommunityTeventType() {
-    final BuildContext currentContext = context;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Scrollable.ensureVisible(
-        currentContext,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
 
   @override
   void dispose() {
@@ -50,33 +44,18 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   }
 
   Future<void> _createCommunity() async {
-    bool hasErrors = false;
-    
+    // Run all validators and push results into parent state
+    _validateName(_nameController.text);
+    _validateLocation(_locationController.text);
+
     setState(() {
-      _TypeError = null;
+      _typeError = (_selectedType == null || _selectedType!.isEmpty)
+          ? 'Please select a community type'
+          : null;
     });
 
-    _formKey.currentState!.validate();
-
-    if (_nameController.text.isEmpty || _nameController.text.length < 3) {
-      hasErrors = true;
-    }
-
-    if (_locationController.text.isEmpty || _locationController.text.length < 3) {
-      hasErrors = true;
-    }
-
-    if (_selectedType == null || _selectedType!.isEmpty) {
-      setState(() {
-        _TypeError = 'Please select a community type';
-      });
-      hasErrors = true;
-    }
-
-    if (hasErrors) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToFirstError();
-      });
+    // Read errors after setState has flushed
+    if (_nameError != null || _locationError != null || _typeError != null) {
       return;
     }
 
@@ -84,12 +63,10 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       final hasNetwork = await NetworkService().isConnected;
       if (!mounted) return;
       if (!hasNetwork) {
-        if (mounted) {
-          SnackbarHelper.showError(
-            context, 
-            'Internet connection required to create a community. Please check your network and try again.'
-          );
-        }
+        SnackbarHelper.showError(
+          context,
+          'Internet connection required to create a community. Please check your network and try again.',
+        );
         return;
       }
     } catch (e) {
@@ -99,9 +76,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final authProvider = context.read<AppAuthProvider>();
@@ -120,7 +95,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         adminEmail: authProvider.user!.email,
         adminName: adminName,
         type: _selectedType!,
-        description: _descriptionController.text.trim().isNotEmpty 
+        description: _descriptionController.text.trim().isNotEmpty
             ? _descriptionController.text.trim()
             : 'Community for ${_nameController.text.trim()}',
         location: _locationController.text.trim(),
@@ -128,7 +103,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
       if (success && communityProvider.currentCommunity != null) {
         final community = communityProvider.currentCommunity!;
-        
+
         await authProvider.setUserAsCommunityAdmin(
           communityId: community.communityId,
           communityName: community.name,
@@ -137,13 +112,11 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         await authProvider.refreshUserData();
         if (!mounted) return;
 
-        if (mounted) {
-          SnackbarHelper.showSuccess(
-            context, 
-            'Community "${_nameController.text.trim()}" created successfully!'
-          );
-          context.go(RouteNames.communityDashboard);
-        }
+        SnackbarHelper.showSuccess(
+          context,
+          'Community "${_nameController.text.trim()}" created successfully!',
+        );
+        context.go(RouteNames.communityDashboard);
       } else {
         if (mounted) {
           SnackbarHelper.showError(
@@ -157,121 +130,145 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         SnackbarHelper.showError(context, 'Error creating community: $e');
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _validateName(String? value) {
+    setState(() {
+      if (value == null || value.trim().isEmpty) {
+        _nameError = 'Please enter community name';
+      } else if (value.trim().length < 3) {
+        _nameError = 'Name must be at least 3 characters';
+      } else {
+        _nameError = null;
       }
-    }
+    });
   }
 
-  void _scrollToFirstError() {
-    final context = _formKey.currentContext;
-    if (context != null) {
-      Scrollable.ensureVisible(
-        context,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+  void _validateLocation(String? value) {
+    setState(() {
+      if (value == null || value.trim().isEmpty) {
+        _locationError = 'Please enter location';
+      } else if (value.trim().length < 3) {
+        _locationError = 'Location must be at least 3 characters';
+      } else {
+        _locationError = null;
+      }
+    });
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-    int maxLength = 100,
-    List<TextInputFormatter>? inputFormatters,
-    String? errorText,
-    bool isRequired = false,
-    String? Function(String?)? validator,
-  }) {
-    final List<TextInputFormatter> formatters = [
-      if (inputFormatters != null) ...inputFormatters,
-      LengthLimitingTextInputFormatter(maxLength),
-    ];
+Widget _buildInputField({
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  required String hint,
+  required String? errorText,
+  required void Function(String?) onValidate,
+  bool obscureText = false,
+  TextInputType keyboardType = TextInputType.text,
+  int maxLines = 1,
+  int maxLength = 100,
+  List<TextInputFormatter>? inputFormatters,
+  bool isRequired = false,
+}) {
+  final List<TextInputFormatter> formatters = [
+    if (inputFormatters != null) ...inputFormatters,
+    LengthLimitingTextInputFormatter(maxLength),
+  ];
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = maxLines > 1 ? 24.0 : 100.0;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final radius = maxLines > 1 ? 24.0 : 100.0;
+  final primary = AppColors.primary(context);
+  final errorColor = Theme.of(context).colorScheme.error;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surface(context) : Colors.white,
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.035),
-                blurRadius: 12,
-                spreadRadius: 0,
-                offset: const Offset(0, 6),
-              ),
-            ],
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surface(context) : Colors.white,
+          borderRadius: BorderRadius.circular(radius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.035),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          inputFormatters: formatters,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 15,
           ),
-          child: TextFormField(
-            controller: controller,
-            obscureText: obscureText,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            inputFormatters: formatters,
-            validator: validator,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
+          decoration: InputDecoration(
+            hintText: isRequired ? '$label *' : label,
+            hintStyle: TextStyle(
+              color: AppColors.textTertiary(context),
               fontSize: 15,
             ),
-            decoration: InputDecoration(
-              hintText: isRequired ? '$label *' : label,
-              hintStyle: TextStyle(
-                color: AppColors.textTertiary(context),
-                fontSize: 15,
+            prefixIcon: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 12,
+                bottom: maxLines > 1 ? 40 : 0,
               ),
-              prefixIcon: Padding(
-                padding: EdgeInsets.only(left: 20, right: 12, bottom: maxLines > 1 ? 40 : 0),
-                child: Icon(
-                  icon,
-                  color: AppColors.primary(context),
-                  size: 22,
-                ),
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 40,
-                minHeight: 40,
-              ),
-              filled: false,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: maxLines == 1 ? 18 : 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(radius),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(radius),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(radius),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context).withOpacity(0.5),
-                  width: 1.5,
-                ),
+              child: Icon(icon, color: primary, size: 22),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 54,
+              minHeight: 40,
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: maxLines == 1 ? 18 : 16,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(radius),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(radius),
+              borderSide: BorderSide(
+                color: primary.withValues(alpha: 0.5),
+                width: 1.5,
               ),
             ),
+            counterText: '',
           ),
+          onChanged: (value) => onValidate(value),
         ),
-      ],
-    );
-  }
+      ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: errorText != null
+            ? Padding(
+                padding: const EdgeInsets.only(left: 20, top: 6),
+                child: Text(
+                  errorText,
+                  style: TextStyle(
+                    color: errorColor,
+                    fontSize: 12,
+                    height: 1.2,
+                  ),
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+    ],
+  );
+}
 
-  Widget _buildCommunityTeventTypeDropdown() {
+  Widget _buildCommunityTypeDropdown() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final errorColor = Theme.of(context).colorScheme.error;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,9 +279,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             borderRadius: BorderRadius.circular(100),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.035),
+                color: Colors.black.withValues(alpha: 0.035),
                 blurRadius: 12,
-                spreadRadius: 0,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -316,12 +312,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 ),
               ),
               prefixIconConstraints: const BoxConstraints(
-                minWidth: 40,
+                minWidth: 54,
                 minHeight: 40,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(100),
-                borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(100),
@@ -330,7 +322,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(100),
                 borderSide: BorderSide(
-                  color: AppColors.primary(context).withOpacity(0.5),
+                  color: AppColors.primary(context).withValues(alpha: 0.5),
                   width: 1.5,
                 ),
               ),
@@ -365,22 +357,28 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             onChanged: (value) {
               setState(() {
                 _selectedType = value;
-                _TypeError = null;
+                _typeError = null;
               });
             },
           ),
         ),
-        if (_TypeError != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 20, top: 6),
-            child: Text(
-              _TypeError!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-                fontSize: 12,
-              ),
-            ),
-          ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          child: _typeError != null
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 20, top: 6),
+                  child: Text(
+                    _typeError!,
+                    style: TextStyle(
+                      color: errorColor,
+                      fontSize: 12,
+                      height: 1.2,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
         const SizedBox(height: 14),
       ],
     );
@@ -403,7 +401,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Curved Decorative Background Shapes (Teal/Mint overlays)
           Positioned(
             top: -180,
             left: -80,
@@ -411,7 +408,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               width: 320,
               height: 320,
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.06),
+                color: AppColors.primary(context).withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
             ),
@@ -423,7 +420,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               width: 280,
               height: 280,
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.1),
+                color: AppColors.primary(context).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
             ),
@@ -435,7 +432,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               width: 240,
               height: 240,
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withOpacity(0.04),
+                color: AppColors.primary(context).withValues(alpha: 0.04),
                 shape: BoxShape.circle,
               ),
             ),
@@ -447,9 +444,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                       child: Column(
@@ -457,7 +452,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 10),
-                          // Brand Logo & Text
                           Center(
                             child: Column(
                               children: [
@@ -469,7 +463,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary(context).withOpacity(0.25),
+                                        color: AppColors.primary(context).withValues(alpha: 0.25),
                                         blurRadius: 20,
                                         offset: const Offset(0, 8),
                                       ),
@@ -512,7 +506,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
                           const SizedBox(height: 20),
 
-                          // Header Typography
                           Center(
                             child: Text(
                               'Create Community',
@@ -539,24 +532,22 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                           const SizedBox(height: 24),
 
                           Form(
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             key: _formKey,
                             child: Column(
                               children: [
-                                // Community Name
                                 _buildInputField(
                                   controller: _nameController,
                                   label: 'Community Name',
                                   icon: Icons.group_outlined,
                                   hint: 'e.g., Tech Enthusiasts Club, Fitness Group',
                                   isRequired: true,
+                                  errorText: _nameError,
+                                  onValidate: _validateName,
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Category Dropdown
-                                _buildCommunityTeventTypeDropdown(),
+                                _buildCommunityTypeDropdown(),
 
-                                // Description
                                 _buildInputField(
                                   controller: _descriptionController,
                                   label: 'Description',
@@ -564,41 +555,34 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                   hint: 'Describe purpose, goals, rules, or activities...',
                                   maxLines: 3,
                                   maxLength: 200,
+                                  errorText: null,
+                                  onValidate: (_) {},
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Location
                                 _buildInputField(
                                   controller: _locationController,
                                   label: 'Location',
                                   icon: Icons.location_on_outlined,
                                   hint: 'e.g., Kochi, Chennai, Bangalore',
                                   isRequired: true,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please enter location';
-                                    }
-                                    if (value.length < 3) {
-                                      return 'Location must be at least 3 characters';
-                                    }
-                                    return null;
-                                  },
+                                  errorText: _locationError,
+                                  onValidate: _validateLocation,
                                 ),
 
                                 const SizedBox(height: 24),
 
-                                // Create Button
                                 FutureBuilder<bool>(
                                   future: NetworkService().isConnected,
                                   builder: (context, snapshot) {
                                     final bool isOnline = snapshot.data ?? true;
-                                    
+
                                     return StreamBuilder<bool>(
                                       stream: NetworkService().onConnectionChanged,
                                       builder: (context, streamSnapshot) {
                                         final bool currentIsOnline = streamSnapshot.data ?? isOnline;
                                         final bool isDisabled = _isLoading || !currentIsOnline;
-                                        
+
                                         return Column(
                                           crossAxisAlignment: CrossAxisAlignment.stretch,
                                           children: [
@@ -609,7 +593,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                                 boxShadow: [
                                                   if (!isDisabled)
                                                     BoxShadow(
-                                                      color: AppColors.primary(context).withOpacity(0.25),
+                                                      color: AppColors.primary(context).withValues(alpha: 0.25),
                                                       blurRadius: 16,
                                                       offset: const Offset(0, 6),
                                                     ),
@@ -638,7 +622,9 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                                         mainAxisAlignment: MainAxisAlignment.center,
                                                         children: [
                                                           Icon(
-                                                            currentIsOnline ? Icons.group_add_rounded : Icons.wifi_off_rounded,
+                                                            currentIsOnline
+                                                                ? Icons.group_add_rounded
+                                                                : Icons.wifi_off_rounded,
                                                             size: 20,
                                                           ),
                                                           const SizedBox(width: 10),
@@ -663,7 +649,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                                       size: 14,
                                                       color: Colors.redAccent,
                                                     ),
-                                                    const SizedBox(width: 6),
+                                                    SizedBox(width: 6),
                                                     Text(
                                                       'Internet connection required',
                                                       style: TextStyle(
@@ -683,15 +669,9 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
                                 const SizedBox(height: 18),
 
-                                // OR Divider
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: Divider(
-                                        color: AppColors.border(context),
-                                        thickness: 1,
-                                      ),
-                                    ),
+                                    Expanded(child: Divider(color: AppColors.border(context), thickness: 1)),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 16),
                                       child: Text(
@@ -703,41 +683,26 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                         ),
                                       ),
                                     ),
-                                    Expanded(
-                                      child: Divider(
-                                        color: AppColors.border(context),
-                                        thickness: 1,
-                                      ),
-                                    ),
+                                    Expanded(child: Divider(color: AppColors.border(context), thickness: 1)),
                                   ],
                                 ),
 
                                 const SizedBox(height: 18),
 
-                                // Join Existing Community Button
                                 SizedBox(
                                   width: double.infinity,
                                   height: 56,
                                   child: OutlinedButton(
                                     onPressed: () => Navigator.pop(context),
                                     style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: AppColors.primary(context),
-                                        width: 1.5,
-                                      ),
+                                      side: BorderSide(color: AppColors.primary(context), width: 1.5),
                                       backgroundColor: isDark ? AppColors.surface(context) : Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(100),
-                                      ),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                                     ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                          Icons.search_rounded,
-                                          color: AppColors.primary(context),
-                                          size: 20,
-                                        ),
+                                        Icon(Icons.search_rounded, color: AppColors.primary(context), size: 20),
                                         const SizedBox(width: 10),
                                         Text(
                                           'Join Existing Community',
@@ -754,24 +719,21 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
                                 const SizedBox(height: 24),
 
-                                // Features Info Card
                                 Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(24),
                                     gradient: LinearGradient(
                                       colors: [
-                                        Colors.blue.withOpacity(0.12),
-                                        Colors.blue.withOpacity(0.04),
+                                        Colors.blue.withValues(alpha: 0.12),
+                                        Colors.blue.withValues(alpha: 0.04),
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    border: Border.all(
-                                      color: Colors.blue.withOpacity(0.2),
-                                    ),
+                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.03),
+                                        color: Colors.black.withValues(alpha: 0.03),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
                                       ),
@@ -782,10 +744,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          Icons.info_outline_rounded,
-                                          color: Colors.blue.shade700,
-                                        ),
+                                        Icon(Icons.info_outline_rounded, color: Colors.blue.shade700),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(

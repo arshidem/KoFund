@@ -222,94 +222,158 @@ class _JoinCommunityScreenState extends State<JoinCommunityScreen> {
     });
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLength = 100,
-    bool isRequired = false,
-    String? Function(String?)? validator,
-  }) {
-    final List<TextInputFormatter> formatters = [
-      LengthLimitingTextInputFormatter(maxLength),
-    ];
+Widget _buildInputField({
+  required TextEditingController controller,
+  required String label,
+  required String hint,
+  required IconData icon,
+  TextInputType keyboardType = TextInputType.text,
+  int maxLength = 100,
+  bool isRequired = false,
+  String? Function(String?)? validator,
+}) {
+  final List<TextInputFormatter> formatters = [
+    LengthLimitingTextInputFormatter(maxLength),
+  ];
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final primary = AppColors.primary(context);
+  final errorColor = Theme.of(context).colorScheme.error;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surface(context) : Colors.white,
-            borderRadius: BorderRadius.circular(100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.035),
-                blurRadius: 12,
-                spreadRadius: 0,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: formatters,
-            validator: validator,
-            textCapitalization: TextCapitalization.characters,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 15,
+  String? _currentError;
+
+  return StatefulBuilder(
+    builder: (context, setFieldState) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surface(context) : Colors.white,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.035),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: AppColors.textTertiary(context),
+            child: TextFormField(
+              controller: controller,
+              keyboardType: keyboardType,
+              inputFormatters: formatters,
+              textCapitalization: TextCapitalization.characters,
+              validator: (value) {
+                final error = validator?.call(value);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  setFieldState(() => _currentError = error);
+                });
+                return error;
+              },
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
                 fontSize: 15,
               ),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 12),
-                child: Icon(
-                  icon,
-                  color: AppColors.primary(context),
-                  size: 22,
-                ),
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 40,
-                minHeight: 40,
-              ),
-              filled: false,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(100),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(100),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(100),
-                borderSide: BorderSide(
-                  color: AppColors.primary(context).withOpacity(0.5),
-                  width: 1.5,
-                ),
-              ),
-              counterText: '',
+            decoration: InputDecoration(
+  hintText: hint,
+  hintStyle: TextStyle(
+    color: AppColors.textTertiary(context),
+    fontSize: 15,
+  ),
+  // Suppress Flutter's native error text and space
+  errorStyle: const TextStyle(
+    fontSize: 0,
+    height: 0.001,
+    color: Colors.transparent,
+  ),
+  prefixIcon: Padding(
+    padding: const EdgeInsets.only(left: 20, right: 12),
+    child: Icon(
+      icon,
+      color: primary,
+      size: 22,
+    ),
+  ),
+  prefixIconConstraints: const BoxConstraints(
+    minWidth: 54,
+    minHeight: 40,
+  ),
+  contentPadding: const EdgeInsets.symmetric(
+    horizontal: 20,
+    vertical: 18,
+  ),
+  // Set ALL border states to the same style (no red border)
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide.none,
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide.none,
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide(
+      color: primary.withValues(alpha: 0.5),
+      width: 1.5,
+    ),
+  ),
+  errorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide.none, // No red border on error
+  ),
+  focusedErrorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide.none, // No red border on focused error
+  ),
+  disabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(100),
+    borderSide: BorderSide.none,
+  ),
+  counterText: '',
+),
+              onChanged: (value) {
+                setFieldState(() {
+                  _currentError = validator?.call(value);
+                });
+              },
             ),
-            onChanged: (_) => setState(() {}),
           ),
-        ),
-      ],
-    );
-  }
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: _currentError != null
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 20, top: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          color: errorColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _currentError!,
+                            style: TextStyle(
+                              color: errorColor,
+                              fontSize: 12,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {

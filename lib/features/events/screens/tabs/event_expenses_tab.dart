@@ -2375,28 +2375,46 @@ String _formatPaymentMethod(String method) {
                   ),
                   const SizedBox(height: 16),
 
-                  TextField(
-                    controller: descriptionController,
-                    maxLength: 200,
-                    maxLines: 1,
-                    decoration: InputDecoration(
-                      labelText: 'Description (optional)',
-                      hintText: 'Additional details...',
-                      prefixIcon: const Icon(Icons.description_rounded, size: 20),
-                      counterText: descriptionController.text.length >= 200 ? null : "",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                        borderSide: BorderSide(color: AppColors.border(context)),
-                      ),
-                      filled: true,
-                      fillColor: AppColors.surface(context),
-                    ),
-                    onChanged: (_) => setBottomSheetState(() {}),
-                  ),
+                 TextField(
+  controller: descriptionController,
+  maxLength: 200,
+  maxLines: 2,
+  decoration: InputDecoration(
+    labelText: 'Description (optional)',
+    hintText: 'Additional details...',
+    alignLabelWithHint: true, // ← This aligns label to the top
+    prefixIcon: Padding(
+      padding: const EdgeInsets.only(top: 10, left: 20, right: 12, bottom: 40),
+      child: Icon(
+        Icons.description_rounded,
+        size: 20,
+      ),
+    ),
+    counterText: descriptionController.text.length >= 200 ? null : "",
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: AppColors.border(context)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: AppColors.border(context)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(
+        color: AppColors.primary(context),
+        width: 1.5,
+      ),
+    ),
+    filled: true,
+    fillColor: AppColors.surface(context),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: 20,
+      vertical: 16,
+    ),
+  ),
+  onChanged: (_) => setBottomSheetState(() {}),
+),
                   const SizedBox(height: 16),
 
                   TextField(
