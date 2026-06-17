@@ -1113,7 +1113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   children: [
                                                     Icon(
                                                       currentIsOnline
-                                                          ? Icons.arrow_forward_rounded
+                                                          ? Icons.login_rounded
                                                           : Icons.wifi_off,
                                                       size: 20,
                                                     ),

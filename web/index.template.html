@@ -27,36 +27,24 @@
       box-sizing: border-box;
     }
 
-    :root {
-      --bg: #F8F9FA;            /* AppColors.lightBackground */
-      --primary: #00BFA6;       /* AppColors.lightPrimary */
-      --wave-color: #00BFA6;    /* AppColors.lightPrimary, used as wave ring color */
-      --logo-dark: #052224;     /* polygon 1 fill */
-      --logo-white: #FFFFFF;    /* polygon 2 & 3 fill */
-      --status-text: #1A2E2A;   /* AppColors.lightTextPrimary, for contrast on light bg */
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      background: var(--bg);
+    body {
+      background: #ffffff;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     }
 
-    /* ===========================================================
-       Loader container — mirrors Scaffold + Stack + Center column
-       =========================================================== */
+    /* Loader container */
     #loader {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: var(--bg);
+      background: #ffffff;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       justify-content: center;
+      align-items: center;
       z-index: 9999;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
@@ -66,140 +54,72 @@
       visibility: hidden;
     }
 
-    .splash-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* ===========================================================
-       220x220 circular halo container
-       decoration: color = primary @ 10% alpha, shape: circle
-       =========================================================== */
-    .halo {
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      background: rgba(0, 191, 166, 0.1); /* lightPrimary @ alpha 0.1 */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* ===========================================================
-       AnimatedLogo root.
-       widget.size = 90 -> SizedBox is size*5 = 450, but we don't
-       need that much empty space here; we size the stacking
-       context to comfortably contain the largest wave ring.
-       logoBgSize = size * 1.888888 ≈ 170
-       =========================================================== */
-    .animated-logo {
-      position: relative;
-      width: 260px;
-      height: 260px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* ===========================================================
-       Wave rings (_WaveCircle)
-       - 3 rings, staggered start: 0s, 0.4s, 0.8s
-       - duration: 2000ms, curve: easeOutExpo (approximated)
-       - scale: 1.0 -> 1.8 (1.0 + value*0.8)
-       - opacity: (1-value)*0.4  -> fades from 0.4 to 0
-       - border: 2px solid wave-color @ 50% alpha
-       - repeats indefinitely
-       =========================================================== */
-    .wave {
-      position: absolute;
-      width: 170px;  /* logoBgSize, since showBackground = true */
-      height: 170px;
-      border-radius: 50%;
-      border: 2px solid rgba(0, 191, 166, 0.5);
-      opacity: 0;
-      animation: waveRipple 2000ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
-    }
-    .wave--1 { animation-delay: 0ms; }
-    .wave--2 { animation-delay: 400ms; }
-    .wave--3 { animation-delay: 800ms; }
-
-    @keyframes waveRipple {
-      0%   { transform: scale(1.0); opacity: 0.4; }
-      100% { transform: scale(1.8); opacity: 0; }
-    }
-
-    /* ===========================================================
-       Solid rounded background circle behind the logo mark
-       logoBgSize = 170, fill = primaryColor, with soft glow shadow
-       boxShadow: color primary @ 40%, blur 50, spread 6, offset (0,12)
-       =========================================================== */
-    .logo-bg {
-      position: absolute;
-      width: 170px;
-      height: 170px;
-      border-radius: 50%;
-      background: var(--primary);
-      box-shadow: 0 12px 50px 6px rgba(0, 191, 166, 0.4);
-    }
-
-    /* ===========================================================
-       The logo mark itself (CustomPaint -> SVG here)
-       widget.size = 90
-       Entrance: 1000ms (scale 1->1, opacity 1->1 -- effectively a
-         no-op fade-in look in source, kept for parity/fade-in feel)
-       Breath: 2500ms easeInOutSine, scale 1.0 -> 1.05,
-         opacity 1.0 -> 0.85, starts after entrance, reverses, loops
-       =========================================================== */
-    .logo-mark {
-      position: relative;
+    /* Logo container */
+    #logo-canvas-container {
       width: 90px;
       height: 90px;
-      opacity: 0;
-      animation:
-        entranceFade 700ms ease-out forwards,
-        breathe 2500ms ease-in-out 1000ms infinite alternate;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    @keyframes entranceFade {
-      from { opacity: 0; transform: scale(0.92); }
-      to   { opacity: 1; transform: scale(1); }
+    /* Breathing animation for the logo */
+    .logo-breath {
+      animation: breath 2.5s ease-in-out infinite alternate;
     }
 
-    @keyframes breathe {
-      0%   { transform: scale(1.0); opacity: 1.0; }
-      100% { transform: scale(1.05); opacity: 0.85; }
-    }
-
-    .logo-mark svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* Spacing below logo, matching SizedBox(height: 100) in source */
-    .splash-spacer {
-      height: 70px;
-    }
-
-    /* Status text styling, matching Text(_status.toUpperCase()) */
-    .status-text {
-      color: var(--status-text);
-      font-size: 12px;
-      letter-spacing: 3px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .wave, .logo-mark {
-        animation: none !important;
+    @keyframes breath {
+      0% {
+        transform: scale(1);
         opacity: 1;
+      }
+      100% {
+        transform: scale(1.05);
+        opacity: 0.85;
       }
     }
 
-    /* ========== OPEN APP / CONTINUE POPUP ========== */
+    /* Wave circles */
+    .wave-circle {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 191, 166, 0.5);
+      animation: wave 2s ease-out infinite;
+      width: 90px;
+      height: 90px;
+    }
+
+    .wave-circle:nth-child(1) {
+      animation-delay: 0s;
+    }
+    .wave-circle:nth-child(2) {
+      animation-delay: 0.4s;
+    }
+    .wave-circle:nth-child(3) {
+      animation-delay: 0.8s;
+    }
+
+    @keyframes wave {
+      0% {
+        transform: scale(1);
+        opacity: 0.4;
+      }
+      100% {
+        transform: scale(1.8);
+        opacity: 0;
+      }
+    }
+
+    /* SVG styling */
+    .logo-svg {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* ========== INSTALL / OPEN POPUP ========== */
     #install-popup {
       position: fixed;
       bottom: 30px;
@@ -322,52 +242,20 @@
 <body>
   <!-- Loader -->
   <div id="loader">
-    <div class="splash-center">
-      <div class="halo">
-        <div class="animated-logo">
-
-          <!-- 🌊 Wave ripples (3x, staggered) -->
-          <div class="wave wave--1"></div>
-          <div class="wave wave--2"></div>
-          <div class="wave wave--3"></div>
-
-          <!-- 🟢 Solid background circle -->
-          <div class="logo-bg"></div>
-
-          <!-- 🚀 Logo mark (SVG, direct port of _SvgLogoPainter) -->
-          <div class="logo-mark">
-            <!--
-              viewBox uses the same normalized space as the Dart painter:
-              w = 96, h = 90.59 (the denominators used throughout paint())
-            -->
-            <svg viewBox="0 0 96 90.59" xmlns="http://www.w3.org/2000/svg">
-              <!-- Polygon 1: dark branding shape -->
-              <polygon
-                points="89.84,0 23.76,66.63 0,90.59 0,15.9 23.76,15.9 23.76,47.01 89.84,0"
-                fill="#052224" />
-
-              <!-- Polygon 2: white accent (lower) -->
-              <polygon
-                points="84.66,90.59 52.18,90.59 31.7,69.71 48.04,53.24 84.66,90.59"
-                fill="#FFFFFF" />
-
-              <!-- Polygon 3: white accent (top) -->
-              <polygon
-                points="96,4.88 67.69,60.18 54.5,46.73 96,4.88"
-                fill="#FFFFFF" />
-            </svg>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="splash-spacer"></div>
-      <!-- Optional status label, hidden by default since _status is usually empty -->
-      <!-- <div class="status-text">LOADING</div> -->
+    <div id="logo-canvas-container">
+      <div class="wave-circle"></div>
+      <div class="wave-circle"></div>
+      <div class="wave-circle"></div>
+      
+      <svg class="logo-svg logo-breath" viewBox="0 0 96 90.59" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="89.84,0 23.76,66.63 0,90.59 0,15.9 23.76,15.9 23.76,47.01 89.84,0" fill="#052224"/>
+        <polygon points="84.66,90.59 52.18,90.59 31.7,69.71 48.04,53.24 84.66,90.59" fill="#ffffff"/>
+        <polygon points="96,4.88 67.69,60.18 54.5,46.73 96,4.88" fill="#ffffff"/>
+      </svg>
     </div>
   </div>
 
-  <!-- ========== OPEN APP / CONTINUE POPUP ========== -->
+  <!-- ========== INSTALL / OPEN POPUP ========== -->
   <div id="install-popup">
     <div class="popup-icon">
       <svg viewBox="0 0 24 24">
@@ -375,23 +263,13 @@
       </svg>
     </div>
     <div class="popup-content">
-      <div class="popup-title" id="popup-title">Open in Kofund App</div>
-      <div class="popup-subtitle" id="popup-subtitle">Continue to the app for the best experience</div>
+      <div class="popup-title" id="popup-title">Get Kofund App</div>
+      <div class="popup-subtitle" id="popup-subtitle">Install for a better experience</div>
     </div>
-    <button class="popup-button" id="popup-action-button">Continue</button>
+    <button class="popup-button" id="popup-action-button">Install</button>
     <button class="popup-close" id="popup-close">✕</button>
   </div>
- <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('firebase-messaging-sw.js')
-        .then(function(registration) {
-          console.log('✅ Service Worker registered:', registration);
-        })
-        .catch(function(error) {
-          console.log('❌ Service Worker registration failed:', error);
-        });
-    }
-  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 
   <script>
@@ -401,15 +279,15 @@
       // ======================== LOAD ENVIRONMENT VARIABLES ========================
       // These will be replaced during build process
       const APP_CONFIG = {
-        name: 'Kofund',
-        androidPackage: 'com.kofund.app',
-        iosBundleId: 'com.kofund.app',
-        urlScheme: 'kofund',
-        deepLinkBase: 'https://kofund-153ba.firebaseapp.com',
+        name: '${APP_NAME}',
+        androidPackage: '${ANDROID_PACKAGE}',
+        iosBundleId: '${IOS_BUNDLE_ID}',
+        urlScheme: '${URL_SCHEME}',
+        deepLinkBase: '${DEEP_LINK_BASE}',
         firebase: {
-          apiKey: 'AIzaSyBBgRegrFPDpsYi_-P_mM-fMnzdGywsuJo',
-          projectId: 'kofund-153ba',
-          webClientId: '136492130886-esp1pngi4cim7sjbdb1hvsgl67cf3c58.apps.googleusercontent.com'
+          apiKey: '${FIREBASE_API_KEY}',
+          projectId: '${FIREBASE_PROJECT_ID}',
+          webClientId: '${FIREBASE_WEB_CLIENT_ID}'
         }
       };
 
@@ -459,6 +337,7 @@
         } else if (platform === 'android') {
           appLink = `intent://open#Intent;package=${APP_CONFIG.androidPackage};scheme=${APP_CONFIG.urlScheme};end`;
         } else {
+          showInstallOption();
           return;
         }
 
@@ -469,20 +348,68 @@
 
         setTimeout(() => {
           document.body.removeChild(iframe);
+          if (!document.hidden) {
+            showInstallOption();
+          }
         }, 2500);
       }
 
-      // ======================== SHOW CONTINUE POPUP ========================
-      function showContinuePopup() {
-        popupTitle.textContent = `Open in ${APP_CONFIG.name} App`;
-        popupSubtitle.textContent = 'Continue to the app for the best experience';
-        actionButton.textContent = 'Continue';
-        actionButton.onclick = () => {
-          openApp();
-          popup.classList.remove('show');
-        };
+      // ======================== SHOW INSTALL OPTION ========================
+      function showInstallOption() {
+        const platform = getPlatform();
+        
+        if (platform === 'ios') {
+          popupTitle.textContent = `Get ${APP_CONFIG.name} App`;
+          popupSubtitle.textContent = 'Available on the App Store';
+          actionButton.textContent = 'View in App Store';
+          actionButton.onclick = () => {
+            window.open(`https://apps.apple.com/app/${APP_CONFIG.iosBundleId}`, '_blank');
+          };
+        } else if (platform === 'android') {
+          popupTitle.textContent = `Get ${APP_CONFIG.name} App`;
+          popupSubtitle.textContent = 'Available on Google Play';
+          actionButton.textContent = 'View in Play Store';
+          actionButton.onclick = () => {
+            window.open(`https://play.google.com/store/apps/details?id=${APP_CONFIG.androidPackage}`, '_blank');
+          };
+        } else {
+          popupTitle.textContent = `Install ${APP_CONFIG.name}`;
+          popupSubtitle.textContent = 'Install as a Progressive Web App';
+          actionButton.textContent = 'Install App';
+          actionButton.onclick = () => {
+            promptPWAInstall();
+          };
+        }
 
         popup.classList.add('show');
+      }
+
+      // ======================== PWA INSTALL PROMPT ========================
+      let deferredPrompt = null;
+
+      function promptPWAInstall() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('User accepted the install prompt');
+              popup.classList.remove('show');
+            }
+            deferredPrompt = null;
+          });
+        } else {
+          let instructions = 'To install this app:\n\n';
+          if (navigator.userAgent.includes('Chrome')) {
+            instructions += '1. Tap the menu (⋮) in the top-right\n2. Select "Add to Home screen"';
+          } else if (navigator.userAgent.includes('Firefox')) {
+            instructions += '1. Tap the menu (☰) in the bottom-right\n2. Select "Add to Home screen"';
+          } else if (navigator.userAgent.includes('Safari')) {
+            instructions += '1. Tap the share icon (□↑)\n2. Scroll down and tap "Add to Home Screen"';
+          } else {
+            instructions += 'Open your browser menu and select "Add to Home Screen" or "Install App"';
+          }
+          alert(instructions);
+        }
       }
 
       // ======================== DEEP LINK HANDLING ========================
@@ -495,10 +422,52 @@
         }
       }
 
-      // ======================== HANDLE APP INSTALLED (native app launch) ========================
+      // ======================== HANDLE BEFOREINSTALLPROMPT ========================
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        if (!isAppInstalled()) {
+          setTimeout(() => {
+            showInstallOption();
+          }, 3000);
+        }
+      });
+
+      // ======================== HANDLE APP INSTALLED ========================
       window.addEventListener('appinstalled', () => {
         console.log('App was installed');
+        popup.classList.remove('show');
+        showToast(`${APP_CONFIG.name} installed successfully! 🎉`);
       });
+
+      // ======================== TOAST NOTIFICATION ========================
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #333;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 14px;
+          z-index: 10001;
+          animation: slideUp 0.3s ease-out;
+          max-width: 90%;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.3s';
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
 
       // ======================== MAIN LOGIC ========================
       function init() {
@@ -522,9 +491,15 @@
         }
 
         if (platform === 'ios' || platform === 'android') {
-          setTimeout(() => {
-            showContinuePopup();
-          }, 1500);
+          openApp();
+        } else {
+          if (deferredPrompt) {
+            setTimeout(() => {
+              if (!isAppInstalled()) {
+                showInstallOption();
+              }
+            }, 3000);
+          }
         }
       }
 

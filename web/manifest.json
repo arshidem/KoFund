@@ -1,11 +1,11 @@
 {
-    "name": "Kofund",
-    "short_name": "Kofund",
+    "name": "kofund",
+    "short_name": "kofund",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#00BFA6",
-    "theme_color": "#00BFA6",
-    "description": "Manage contributions and expenses efficiently",
+    "theme_color": "#0175C2",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

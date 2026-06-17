@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SimpleBannerAd extends StatefulWidget {
   const SimpleBannerAd({super.key});
@@ -20,13 +19,10 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) {
       _loadAd();
-    }
   }
 
   void _loadAd() {
-    if (kIsWeb) return;
     _bannerAd = BannerAd(
       size: AdSize.banner,
       adUnitId: adUnitId,
@@ -55,9 +51,7 @@ class _SimpleBannerAdState extends State<SimpleBannerAd> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
       return const SizedBox.shrink();
-    }
     if (!_isLoaded || _bannerAd == null) {
       return Container(
         width: 320,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,6 +10,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Web-specific imports
+// ignore: avoid_web_libraries_in_flutter
+// ✅ Correct — default is the safe stub, web overrides it
+import 'notification_service_stub.dart'
+    if (dart.library.html) 'notification_service_web.dart'
+    as web_helper;
 import 'package:kofund/features/notifications/models/notification_model.dart';
 import './notification_storage_service.dart';
 import './fcm_token_service.dart';
@@ -20,7 +27,6 @@ import 'package:go_router/go_router.dart';
 import 'package:kofund/routing/go_router_config.dart';
 import 'package:kofund/routing/route_names.dart';
 import 'package:kofund/main.dart' show navigatorKey;
-
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -36,163 +42,149 @@ class NotificationService {
   late NotificationStorageService _storage;
   late FCMTokenService _tokenService;
 
-  // ⭐ NEW: Callbacks for notification actions to avoid circular dependencies
+  // Callbacks for notification actions
   Future<void> Function(Map<String, dynamic>)? onApproveUser;
   Future<void> Function(Map<String, dynamic>)? onRejectUser;
 
-  // ⭐ NEW: Store notification preferences
+  // Notification preferences
   static const String _notificationPrefsKey = 'notification_settings';
   
-  // ⭐ NEW: Background handler with community validation
-@pragma('vm:entry-point')
-static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint("🌙 Handling background message");
-  
-  await Firebase.initializeApp();
-  
-  try {
-    final data = message.data;
-    final notification = message.notification;
+  // ⭐ Background handler with community validation
+  @pragma('vm:entry-point')
+  static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+    debugPrint("🌙 Handling background message");
     
-    final now = DateTime.now();
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    await Firebase.initializeApp();
     
-    // ⭐ NEW: Validate if notification is for current user's communities
-    final notificationCommunityId = data['communityId'];
-    
-    // If notification has community ID, we need to validate
-    if (notificationCommunityId != null) {
-      final prefs = await SharedPreferences.getInstance();
-      final storedUserId = prefs.getString('current_notification_user_id');
+    try {
+      final data = message.data;
+      final notification = message.notification;
       
-      // Check if notification is for current user
-      if (storedUserId != currentUserId) {
-        debugPrint("⚠️ Background: User ID mismatch. Stored: $storedUserId, Current: $currentUserId");
-        debugPrint("   🔕 Filtering notification for different user");
-        return; // Don't show notification for different user
-      }
+      final now = DateTime.now();
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
       
-      // 🚀 OPTIMIZATION: Check local cache first
-      final cachedCommunities = prefs.getStringList('cached_notification_communities') ?? [];
+      // Validate if notification is for current user's communities
+      final notificationCommunityId = data['communityId'];
       
-      if (cachedCommunities.isNotEmpty) {
-        if (!cachedCommunities.contains(notificationCommunityId)) {
-          debugPrint("⚠️ Background: User not in cached notification community");
+      if (notificationCommunityId != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final storedUserId = prefs.getString('current_notification_user_id');
+        
+        if (storedUserId != currentUserId) {
+          debugPrint("⚠️ Background: User ID mismatch. Stored: $storedUserId, Current: $currentUserId");
           return;
         }
-      } else if (currentUserId != null) {
-        // Fallback to Firestore only if cache is empty
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUserId)
-            .get();
-            
-        final userCommunities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ?? [];
-            
-        if (!userCommunities.contains(notificationCommunityId)) {
-          debugPrint("⚠️ Background: User not in notification community (Firestore fallback)");
-          return; // Don't show notification
+        
+        final cachedCommunities = prefs.getStringList('cached_notification_communities') ?? [];
+        
+        if (cachedCommunities.isNotEmpty) {
+          if (!cachedCommunities.contains(notificationCommunityId)) {
+            debugPrint("⚠️ Background: User not in cached notification community");
+            return;
+          }
+        } else if (currentUserId != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUserId)
+              .get();
+              
+          final userCommunities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+              
+          if (!userCommunities.contains(notificationCommunityId)) {
+            debugPrint("⚠️ Background: User not in notification community (Firestore fallback)");
+            return;
+          }
         }
       }
-    }
-    
-    // 🆕 Use notificationId from data if available (from Cloud Function)
-    final String baseId = data['notificationId'] ?? 
-                          '${now.millisecondsSinceEpoch}_bg_${currentUserId ?? 'anonymous'}';
-    
-    // Ensure ID consistency with foreground: baseId_userId
-    final notificationId = (currentUserId != null && !baseId.contains('_$currentUserId'))
-        ? '${baseId}_$currentUserId'
-        : baseId;
-    
-    // 🆕 Check if this is from Cloud Function (has sentFromApp flag)
-    final isFromCloudFunction = data['sentFromApp'] == 'true' || 
-                               data['sentFromApp'] == true;
-    
-    if (isFromCloudFunction) {
-      debugPrint("📦 Background message is from Cloud Function, ID: $notificationId");
       
-      // ⭐ CRITICAL: DO NOT save to Firestore - Cloud Function already did!
-      // Only show local notification
+      final String baseId = data['notificationId'] ?? 
+                            '${now.millisecondsSinceEpoch}_bg_${currentUserId ?? 'anonymous'}';
+      
+      final notificationId = (currentUserId != null && !baseId.contains('_$currentUserId'))
+          ? '${baseId}_$currentUserId'
+          : baseId;
+      
+      final isFromCloudFunction = data['sentFromApp'] == 'true' || 
+                                 data['sentFromApp'] == true;
+      
+      if (isFromCloudFunction) {
+        debugPrint("📦 Background message is from Cloud Function, ID: $notificationId");
+      }
+
+      final appNotification = AppNotification(
+        id: notificationId,
+        title: notification?.title ?? data['title'] ?? 'New Notification',
+        body: notification?.body ?? data['body'] ?? '',
+        type: _parseNotificationTypeFromString(data['type']),
+        priority: _parsePriorityFromString(data['priority']),
+        data: data,
+        userId: currentUserId,
+        eventId: data['eventId'],
+        communityId: data['communityId'],
+        isRead: false,
+        timestamp: now,
+        deepLink: data['deepLink'],
+        senderName: data['senderName'],
+        imageUrl: data['imageUrl'],
+      );
+
+      // Show local notification with actions
+      final List<AndroidNotificationAction> actions = [];
+      final type = _parseNotificationTypeFromString(data['type']);
+      final eventId = data['eventId'];
+
+      if (type == NotificationType.pendingUser) {
+        actions.add(const AndroidNotificationAction('approve_user', 'Approve', showsUserInterface: true, cancelNotification: true));
+        actions.add(const AndroidNotificationAction('reject_user', 'Reject', showsUserInterface: true, cancelNotification: true));
+      }
+      
+      if ((type == NotificationType.announcement || type == NotificationType.event) && eventId != null) {
+        actions.add(const AndroidNotificationAction('join_event', 'Join event 🎯', showsUserInterface: true, cancelNotification: true));
+      }
+
+      final channelId = NotificationChannels.getChannelId(type);
+      final channelName = NotificationChannels.getChannelName(type);
+
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: channelName,
+        importance: Importance.max,
+        priority: Priority.high,
+        actions: actions,
+        styleInformation: BigTextStyleInformation(appNotification.body),
+      );
+      
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+      
+      final localNotifications = FlutterLocalNotificationsPlugin();
+      await localNotifications.show(
+        appNotification.hashCode,
+        appNotification.title,
+        appNotification.body,
+        details,
+        payload: jsonEncode({
+          ...data,
+          'id': notificationId,
+        }),
+      );
+      
+      debugPrint("✅ Background notification handled");
+    } catch (e) {
+      debugPrint("❌ Background handler error: $e");
     }
-
-    final appNotification = AppNotification(
-      id: notificationId,
-      title: notification?.title ?? data['title'] ?? 'New Notification',
-      body: notification?.body ?? data['body'] ?? '',
-      type: _parseNotificationTypeFromString(data['type']),
-      priority: _parsePriorityFromString(data['priority']),
-      data: data,
-      userId: currentUserId,
-      eventId: data['eventId'],
-      communityId: data['communityId'],
-      isRead: false,
-      timestamp: now,
-      deepLink: data['deepLink'],
-      senderName: data['senderName'],
-      imageUrl: data['imageUrl'],
-    );
-
-    // ⭐ REMOVED: Firestore saving logic here
-    // Cloud Function already saved the notification
-
-    // Show local notification with actions in background
-    final List<AndroidNotificationAction> actions = [];
-    final type = _parseNotificationTypeFromString(data['type']);
-    final eventId = data['eventId'];
-
-    if (type == NotificationType.pendingUser) {
-      actions.add(const AndroidNotificationAction('approve_user', 'Approve', showsUserInterface: true, cancelNotification: true));
-      actions.add(const AndroidNotificationAction('reject_user', 'Reject', showsUserInterface: true, cancelNotification: true));
-    }
-    
-    if ((type == NotificationType.announcement || type == NotificationType.event) && eventId != null) {
-      actions.add(const AndroidNotificationAction('join_event', 'Join event 🎯', showsUserInterface: true, cancelNotification: true));
-    }
-
-    final channelId = NotificationChannels.getChannelId(type);
-    final channelName = NotificationChannels.getChannelName(type);
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: channelName,
-      importance: Importance.max,
-      priority: Priority.high,
-      actions: actions,
-      styleInformation: BigTextStyleInformation(appNotification.body),
-    );
-    
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-    
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-    
-    final localNotifications = FlutterLocalNotificationsPlugin();
-    await localNotifications.show(
-      appNotification.hashCode,
-      appNotification.title,
-      appNotification.body,
-      details,
-      payload: jsonEncode({
-        ...data,
-        'id': notificationId,
-      }),
-    );
-    
-    debugPrint("✅ Background notification handled");
-  } catch (e) {
-    debugPrint("❌ Background handler error: $e");
   }
-}
 
   static NotificationType _parseNotificationTypeFromString(String? type) {
     if (type == null) return NotificationType.announcement;
@@ -217,35 +209,31 @@ static Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) as
     }
   }
 
-Future<void> init({
-  required NotificationStorageService storage,
-  required FCMTokenService tokenService,
-}) async {
-  try {
-    debugPrint("🔄 Starting NotificationService initialization...");
-    
-    _storage = storage;
-    _tokenService = tokenService;
+  Future<void> init({
+    required NotificationStorageService storage,
+    required FCMTokenService tokenService,
+  }) async {
+    try {
+      debugPrint("🔄 Starting NotificationService initialization...");
+      
+      _storage = storage;
+      _tokenService = tokenService;
 
-    // Initialize storage FIRST (works offline)
-    await _storage.init();
-    debugPrint("✅ Storage initialized");
+      await _storage.init();
+      debugPrint("✅ Storage initialized");
 
-    // Try to initialize local notifications (works offline)
-    await _initLocalNotifications();
-    debugPrint("✅ Local notifications initialized");
-    
-    // Try to request permissions (silently fails if offline)
-    await _requestNotificationPermissions();
-    
-    // Setup FCM in background without blocking
-    _setupFCMInBackground();
-    
-    debugPrint("✅ NotificationService initialized successfully");
-  } catch (e) {
-    debugPrint("⚠️ NotificationService init error (non-critical): $e");
+      await _initLocalNotifications();
+      debugPrint("✅ Local notifications initialized");
+      
+      await _requestNotificationPermissions();
+      
+      await _configureFCM();
+      
+      debugPrint("✅ NotificationService initialized successfully");
+    } catch (e) {
+      debugPrint("⚠️ NotificationService init error (non-critical): $e");
+    }
   }
-}
 
 // ⭐ UPDATED: Setup FCM with community validation
 void _setupFCMInBackground() {
@@ -351,45 +339,59 @@ if (user != null) {
     await NotificationChannels.createAllChannels(_localNotifications);
   }
 
-// ⭐ UPDATED: Configure FCM with community filtering
-Future<void> _configureFCM() async {
-  try {
-    if (!kIsWeb) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    }
-    
-    String? token = await _messaging.getToken();
-    debugPrint("📨 FCM Token: $token");
-    
-    // ⭐ UPDATED: Foreground message handler with validation
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      debugPrint("📩 Foreground Message: ${message.notification?.title}");
-      
-      // ⭐ NEW: Validate if notification is for current user
-      final isValid = await _tokenService.isNotificationForCurrentUser(message.data);
-      if (!isValid) {
-        debugPrint("🔕 Filtered foreground notification (not for current user/community)");
-        return;
+  Future<void> _configureFCM() async {
+    try {
+      if (!kIsWeb) {
+        // Mobile: Background handler
+        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      } else {
+        // Web: Initialize web notifications
+        await _initWebNotifications();
       }
       
-      await _handleForegroundMessage(message);
-    });
-    
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      debugPrint("🚀 App opened from terminated state");
-      _handleNotificationMessage(initialMessage);
+      // Get token (different for web vs mobile)
+      String? token;
+      if (kIsWeb) {
+        final vapidKey = dotenv.get('VAPID_KEY', fallback: '');
+        if (vapidKey.isNotEmpty) {
+          token = await _messaging.getToken(vapidKey: vapidKey);
+        }
+      } else {
+        token = await _messaging.getToken();
+      }
+      
+      debugPrint("📨 FCM Token: ${token?.substring(0, 20)}...");
+      
+      // Foreground message handler (works for both web and mobile)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        debugPrint("📩 Foreground Message: ${message.notification?.title}");
+        
+        final isValid = await _tokenService.isNotificationForCurrentUser(message.data);
+        if (!isValid) {
+          debugPrint("🔕 Filtered foreground notification");
+          return;
+        }
+        
+        await _handleForegroundMessage(message);
+      });
+      
+      // Handle app opened from terminated state
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint("🚀 App opened from terminated state");
+        _handleNotificationMessage(initialMessage);
+      }
+      
+      // Handle app opened from background
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint("📌 App opened from background");
+        _handleNotificationMessage(message);
+      });
+      
+    } catch (e) {
+      debugPrint("❌ Error configuring FCM: $e");
     }
-    
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint("📌 App opened from background");
-      _handleNotificationMessage(message);
-    });
-    
-  } catch (e) {
-    debugPrint("❌ Error configuring FCM: $e");
   }
-}
 
 // ⭐ UPDATED: Handle foreground message with community check
 Future<void> _handleForegroundMessage(RemoteMessage message) async {
@@ -1167,6 +1169,139 @@ static Future<void> unlinkDeviceTokenFromUser() async {
     
     return settings;
   }
+
+
+
+  // Add to NotificationService class
+
+// ⭐ WEB-SPECIFIC: Initialize web push notifications
+  Future<void> _initWebNotifications() async {
+    if (!kIsWeb) return;
+    
+    try {
+      debugPrint("🌐 Initializing web notifications...");
+      
+      // Check if browser supports notifications
+      final hasSupport = await _checkWebNotificationSupport();
+      if (!hasSupport) {
+        debugPrint("⚠️ Browser doesn't support notifications");
+        return;
+      }
+      
+      // Request permission
+      final permission = await _requestWebNotificationPermission();
+      if (permission != 'granted') {
+        debugPrint("⚠️ Web notification permission denied");
+        return;
+      }
+      
+      // Get VAPID key from .env
+      final vapidKey = dotenv.get('VAPID_KEY', fallback: '');
+      if (vapidKey.isEmpty) {
+        debugPrint("⚠️ VAPID key not found in .env");
+        return;
+      }
+      
+      // Get web push token
+      final token = await _messaging.getToken(vapidKey: vapidKey);
+      if (token != null) {
+        debugPrint("✅ Web push token: ${token.substring(0, 20)}...");
+        
+        // Store token with community context
+        final user = _auth.currentUser;
+        if (user != null) {
+          final userDoc = await _firestore.collection('users').doc(user.uid).get();
+          final communities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+          
+          await _tokenService.storeCurrentUserToken(communityIds: communities);
+        }
+      }
+      
+      debugPrint("✅ Web notifications initialized");
+      
+    } catch (e) {
+      debugPrint("❌ Web notification init error: $e");
+    }
+  }
+
+
+  // ⭐ WEB-SPECIFIC: Check browser support
+  Future<bool> _checkWebNotificationSupport() async {
+    if (!kIsWeb) return false;
+    
+    try {
+      // Use the web helper (only available on web)
+      return web_helper.WebNotificationHelper.checkWebNotificationSupport();
+    } catch (e) {
+      debugPrint("⚠️ Web notification support check failed: $e");
+      return false;
+    }
+  }
+
+// ⭐ WEB-SPECIFIC: Request permission
+  Future<String?> _requestWebNotificationPermission() async {
+    if (!kIsWeb) return null;
+    
+    try {
+      return await web_helper.WebNotificationHelper.requestWebNotificationPermission();
+    } catch (e) {
+      debugPrint("⚠️ Web permission request failed: $e");
+      return null;
+    }
+  }
+// ⭐ WEB-SPECIFIC: Handle foreground messages
+  Future<void> _handleWebForegroundMessage(RemoteMessage message) async {
+    try {
+      final isValid = await _tokenService.isNotificationForCurrentUser(message.data);
+      if (!isValid) {
+        debugPrint("🔕 Filtered web notification (not for current user)");
+        return;
+      }
+      
+      final notification = _createNotificationFromMessage(message);
+      
+      final isFromCloudFunction = message.data['sentFromApp'] == 'true' || 
+                                 message.data['sentFromApp'] == true;
+      
+      if (!isFromCloudFunction) {
+        await _storage.saveNotification(notification);
+      }
+      
+      await _showLocalNotification(notification);
+      
+    } catch (e) {
+      debugPrint("❌ Error handling web foreground message: $e");
+    }
+  }
+
+// ⭐ WEB-SPECIFIC: Update token when user changes communities
+Future<void> updateWebToken() async {
+  if (!kIsWeb) return;
+  
+  try {
+    final vapidKey = dotenv.get('VAPID_KEY', fallback: '');
+    if (vapidKey.isEmpty) return;
+    
+    final token = await _messaging.getToken(vapidKey: vapidKey);
+    if (token != null) {
+      debugPrint("🔄 Web token updated: ${token.substring(0, 20)}...");
+      
+      final user = _auth.currentUser;
+      if (user != null) {
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final communities = (userDoc.data()?['notificationCommunities'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ?? [];
+        
+        await _tokenService.storeCurrentUserToken(communityIds: communities);
+      }
+    }
+  } catch (e) {
+    debugPrint("❌ Error updating web token: $e");
+  }
+}
 }
 
 
